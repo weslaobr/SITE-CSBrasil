@@ -24,7 +24,9 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
             {
                 ...SteamProvider(req!, {
                     clientSecret: process.env.STEAM_API_KEY!,
-                    callbackUrl: req ? `${new URL(req.url).origin}/api/auth/callback/steam` : `${process.env.NEXTAUTH_URL}/api/auth/callback/steam`,
+                    callbackUrl: req 
+                        ? `${process.env.NEXTAUTH_URL || new URL(req.url).origin}/api/auth/callback/steam` 
+                        : `${process.env.NEXTAUTH_URL}/api/auth/callback/steam`,
                     profile(profile: any) {
                         return {
                             id: profile.steamid,

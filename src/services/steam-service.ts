@@ -23,13 +23,29 @@ export interface CS2Stats {
 }
 
 export const getPlayerProfile = async (steamId: string): Promise<SteamProfile> => {
-    const response = await axios.get(`${STEAM_BASE_URL}/ISteamUser/GetPlayerSummaries/v0002/`, {
-        params: {
-            key: STEAM_API_KEY,
-            steamids: steamId,
-        },
-    });
-    return response.data.response.players[0];
+    if (!STEAM_API_KEY) {
+        console.error("STEAM_API_KEY is not defined in environment variables");
+        throw new Error("STEAM_API_KEY_MISSING");
+    }
+
+    try {
+        const response = await axios.get(`${STEAM_BASE_URL}/ISteamUser/GetPlayerSummaries/v0002/`, {
+            params: {
+                key: STEAM_API_KEY,
+                steamids: steamId,
+            },
+        });
+
+        if (!response.data?.response?.players?.[0]) {
+            console.warn("No player profile found for SteamID:", steamId);
+            return null as any;
+        }
+
+        return response.data.response.players[0];
+    } catch (error: any) {
+        console.error("Steam API Error (GetPlayerSummaries):", error.response?.status, error.message);
+        throw error;
+    }
 };
 
 export const getCS2Stats = async (steamId: string): Promise<CS2Stats> => {

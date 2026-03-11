@@ -41,10 +41,18 @@ export async function GET(
             inventory,
             matches: dbUser?.matches || []
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error fetching dynamic player data:", error);
+        
+        if (error.message === 'STEAM_API_KEY_MISSING') {
+            return NextResponse.json(
+                { error: "Configuração do servidor incompleta: STEAM_API_KEY ausente." },
+                { status: 500 }
+            );
+        }
+
         return NextResponse.json(
-            { error: "Failed to fetch player data" },
+            { error: "Falha ao buscar dados do jogador na Steam/Leetify. Verifique se o SteamID é válido." },
             { status: 500 }
         );
     }
