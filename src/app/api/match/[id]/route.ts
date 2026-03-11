@@ -6,9 +6,9 @@ const LEETIFY_BASE_URL = 'https://api-public.cs-prod.leetify.com';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    const matchId = params.id;
+    const { id: matchId } = await params;
 
     if (!LEETIFY_API_KEY) {
         return NextResponse.json({ error: "LEETIFY_API_KEY missing" }, { status: 500 });
