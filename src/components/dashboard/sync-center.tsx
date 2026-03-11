@@ -23,8 +23,9 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
     const [message, setMessage] = useState({ type: '', text: '' });
 
     useEffect(() => {
+        const botUrl = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3005';
         const checkBot = () => {
-            fetch('http://localhost:3005/pulse')
+            fetch(`${botUrl}/pulse`)
                 .then(res => res.json())
                 .then(data => setBotOnline(data.gc === 'Online'))
                 .catch(() => setBotOnline(false));

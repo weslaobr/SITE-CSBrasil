@@ -99,14 +99,18 @@ export async function POST(req: NextRequest) {
                     if (m.id === 'sync-ready' || m.id === 'error-412') continue;
 
                     let realDetails = null;
-                    try {
-                        // Call local Bot API for real details
-                        const botRes = await axios.get(`http://localhost:3005/match/${m.externalId}`, { timeout: 2000 }); // Faster timeout for bulk sync
-                        if (botRes.status === 200) {
-                            realDetails = botRes.data;
+                    const botUrl = process.env.BOT_API_URL;
+
+                    if (botUrl) {
+                        try {
+                            // Call local Bot API for real details
+                            const botRes = await axios.get(`${botUrl}/match/${m.externalId}`, { timeout: 2000 }); // Faster timeout for bulk sync
+                            if (botRes.status === 200) {
+                                realDetails = botRes.data;
+                            }
+                        } catch (e) {
+                            // Silently continue if bot is not available
                         }
-                    } catch (e) {
-                        // Silently continue if bot is not available
                     }
 
                     const matchData: any = {

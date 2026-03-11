@@ -58,16 +58,20 @@ export async function POST(req: NextRequest) {
                 if (match.id === 'sync-ready' || match.id === 'error-412') continue;
 
                 let realDetails = null;
-                try {
-                    // Call local Bot API for real details
-                    // @ts-ignore
-                    const axios = require('axios');
-                    const botRes = await axios.get(`http://localhost:3005/match/${match.externalId}`, { timeout: 2000 });
-                    if (botRes.status === 200) {
-                        realDetails = botRes.data;
+                const botUrl = process.env.BOT_API_URL;
+
+                if (botUrl) {
+                    try {
+                        // Call local Bot API for real details
+                        // @ts-ignore
+                        const axios = require('axios');
+                        const botRes = await axios.get(`${botUrl}/match/${match.externalId}`, { timeout: 2000 });
+                        if (botRes.status === 200) {
+                            realDetails = botRes.data;
+                        }
+                    } catch (e) {
+                        // Silently continue if bot is not available
                     }
-                } catch (e) {
-                    // Silently continue if bot is not available
                 }
 
                 await prisma.match.upsert({
