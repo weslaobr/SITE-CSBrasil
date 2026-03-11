@@ -1,0 +1,58 @@
+import NextAuth from "next-auth";
+import SteamProvider from "next-auth-steam";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { prisma } from "@/lib/prisma";
+import type { NextAuthOptions } from "next-auth";
+import { NextRequest } from "next/server";
+
+export function getAuthOptions(req?: NextRequest): NextAuthOptions {
+    const adapter = PrismaAdapter(prisma) as any;
+
+    if (adapter.linkAccount) {
+        const originalLinkAccount = adapter.linkAccount;
+        adapter.linkAccount = async (account: any) => {
+            if ('steamId' in account) {
+                delete account.steamId;
+            }
+            return originalLinkAccount(account);
+        };
+    }
+
+    return {
+        adapter: adapter,
+        providers: [
+            {
+                ...SteamProvider(req!, {
+                    clientSecret: process.env.STEAM_API_KEY!,
+                    callbackUrl: req ? `${new URL(req.url).origin}/api/auth/callback/steam` : `${process.env.NEXTAUTH_URL}/api/auth/callback/steam`,
+                    profile(profile: any) {
+                        return {
+                            id: profile.steamid,
+                            name: profile.personaname,
+                            email: `${profile.steamid}@steam.local`,
+                            image: profile.avatarfull,
+                            steamId: profile.steamid,
+                        }
+                    }
+                } as any),
+                allowDangerousEmailAccountLinking: true,
+            },
+        ],
+        callbacks: {
+            async session({ session, user }) {
+                if (session.user) {
+                    (session.user as any).id = user.id;
+                    (session.user as any).steamId = (user as any).steamId;
+                }
+                return session;
+            },
+            async signIn({ user, account, profile }) {
+                if (account?.provider === "steam") {
+                    (user as any).steamId = account.providerAccountId;
+                }
+                return true;
+            },
+        },
+        secret: process.env.NEXTAUTH_SECRET,
+    };
+}
