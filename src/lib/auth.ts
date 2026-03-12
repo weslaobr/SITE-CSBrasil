@@ -22,21 +22,25 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
         adapter: adapter,
         providers: [
             {
-                ...SteamProvider(req!, {
-                    clientSecret: process.env.STEAM_API_KEY!,
-                    callbackUrl: req 
-                        ? `${process.env.NEXTAUTH_URL || new URL(req.url).origin}/api/auth/callback/steam` 
-                        : `${process.env.NEXTAUTH_URL}/api/auth/callback/steam`,
-                    profile(profile: any) {
-                        return {
-                            id: profile.steamid,
-                            name: profile.personaname,
-                            email: `${profile.steamid}@steam.local`,
-                            image: profile.avatarfull,
-                            steamId: profile.steamid,
+                ...(() => {
+                    const url = req ? new URL(req.url) : null;
+                    const protocol = (url?.protocol === 'http:' && !url.hostname.includes('localhost')) ? 'https:' : (url?.protocol || 'https:');
+                    const origin = url ? `${protocol}//${url.host}` : process.env.NEXTAUTH_URL;
+                    
+                    return SteamProvider(req!, {
+                        clientSecret: process.env.STEAM_API_KEY!,
+                        callbackUrl: `${process.env.NEXTAUTH_URL || origin}/api/auth/callback/steam`,
+                        profile(profile: any) {
+                            return {
+                                id: profile.steamid,
+                                name: profile.personaname,
+                                email: `${profile.steamid}@steam.local`,
+                                image: profile.avatarfull,
+                                steamId: profile.steamid,
+                            }
                         }
-                    }
-                } as any),
+                    } as any);
+                })(),
                 allowDangerousEmailAccountLinking: true,
             },
         ],

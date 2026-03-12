@@ -112,19 +112,27 @@ export const getPlayerInventory = async (steamId: string) => {
         const descriptions = response.data.descriptions || [];
         const assets = response.data.assets || [];
 
+        // Fetch prices from CSGOTrader
+        const { fetchPrices } = await import('./price-service');
+        const prices = await fetchPrices();
+
         // Map assets to descriptions
         const items = assets.map((asset: any) => {
             const description = descriptions.find((d: any) => d.classid === asset.classid && d.instanceid === asset.instanceid);
             if (!description) return null;
 
+            const market_name = description.market_name;
+            const price = prices[market_name] || null;
+
             return {
                 assetid: asset.assetid,
                 name: description.name,
-                market_name: description.market_name,
+                market_name: market_name,
                 icon_url: `https://steamcommunity-a.akamaihd.net/economy/image/${description.icon_url}`,
                 rarity: description.tags?.find((t: any) => t.category === 'Rarity')?.internal_name,
                 rarity_color: description.tags?.find((t: any) => t.category === 'Rarity')?.color,
                 type: description.tags?.find((t: any) => t.category === 'Type')?.name,
+                price: price,
             };
         }).filter(Boolean);
 
