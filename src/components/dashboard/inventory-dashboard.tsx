@@ -31,6 +31,11 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
     const [showRoiAssetId, setShowRoiAssetId] = useState<string | null>(null);
     const [localItems, setLocalItems] = useState<InventoryItem[]>(items);
 
+    // Sincronizar localItems quando a prop items mudar (busca da API terminar)
+    React.useEffect(() => {
+        setLocalItems(items);
+    }, [items]);
+
     // Extrair raridades únicas presentes no inventário
     const rarities = Array.from(new Set(localItems.map(i => i.rarity).filter(Boolean)));
     
@@ -338,12 +343,16 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                             </span>
                                         )}
                                     </div>
-                                    <div className="pt-2 border-t border-white/5 mt-1 flex flex-col gap-2">
-                                        <div className="flex justify-between gap-1">
-                                            <p className="text-[8px] text-zinc-600 font-bold truncate uppercase">
+                                    <div className="pt-2 border-t border-white/5 mt-1 flex flex-col gap-1">
+                                        <h3 className="text-[11px] font-black text-white leading-tight line-clamp-2 min-h-[2.4em] group-hover:text-green-400 transition-colors">
+                                            {language === 'pt' ? (item.name_pt || item.name) : (item.name_en || item.name)}
+                                        </h3>
+
+                                        <div className="flex justify-between gap-1 items-center mt-1">
+                                            <p className="text-[8px] text-zinc-500 font-bold truncate uppercase tracking-tighter">
                                                 {(item.type_label && !item.type_label.includes('WEARCATEGORY')) ? item.type_label : (item.category_name && !item.category_name.includes('WEARCATEGORY') ? item.category_name : '')}
                                             </p>
-                                            <p className="text-[8px] text-zinc-400 font-bold truncate uppercase">
+                                            <p className="text-[8px] text-zinc-400 font-bold truncate uppercase tracking-tighter">
                                                 {(item.exterior_label && !item.exterior_label.includes('WEARCATEGORY')) ? item.exterior_label : ''}
                                             </p>
                                         </div>
