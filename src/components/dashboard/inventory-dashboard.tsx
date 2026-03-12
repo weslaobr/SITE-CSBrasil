@@ -11,14 +11,28 @@ interface InventoryItem {
     rarity: string;
     rarity_color: string;
     type: string;
+    price?: number | null;
 }
 
 const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // Taxa de conversão aproximada USD -> BRL
+    const BRL_CONVERSION = 6.0;
 
     const filteredItems = items.filter(item =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const totalValueUSD = items.reduce((acc, item) => acc + (item.price || 0), 0);
+    const totalValueBRL = totalValueUSD * BRL_CONVERSION;
+
+    const formatCurrency = (value: number, currency: 'USD' | 'BRL') => {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: currency,
+        }).format(value);
+    };
 
     return (
         <div className="p-6 text-white">
@@ -48,8 +62,8 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                 <div className="bg-gradient-to-br from-green-500/10 to-blue-500/5 border border-green-500/20 p-6 rounded-2xl backdrop-blur-sm">
                     <p className="text-zinc-500 text-xs uppercase font-bold tracking-widest mb-2">Valor Estimado</p>
-                    <h2 className="text-2xl font-black text-white">R$ ---</h2>
-                    <p className="text-[10px] text-zinc-600 mt-1">Sincronização de preços em breve</p>
+                    <h2 className="text-2xl font-black text-white">{totalValueBRL > 0 ? formatCurrency(totalValueBRL, 'BRL') : 'Consultando...'}</h2>
+                    <p className="text-[10px] text-zinc-400 mt-1">Baseado nos preços sugeridos pela CSGOTrader ({formatCurrency(totalValueUSD, 'USD')})</p>
                 </div>
                 <div className="bg-zinc-900/40 border border-white/5 p-6 rounded-2xl backdrop-blur-sm">
                     <p className="text-zinc-500 text-xs uppercase font-bold tracking-widest mb-2">Total de Itens</p>
@@ -101,12 +115,19 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                 </div>
 
                                 <div className="space-y-1">
-                                    <p
-                                        className="text-[10px] font-bold uppercase truncate"
-                                        style={{ color: `#${item.rarity_color}` }}
-                                    >
-                                        {item.rarity}
-                                    </p>
+                                    <div className="flex justify-between items-start">
+                                        <p
+                                            className="text-[10px] font-bold uppercase truncate"
+                                            style={{ color: `#${item.rarity_color}` }}
+                                        >
+                                            {item.rarity}
+                                        </p>
+                                        {item.price && (
+                                            <span className="text-[10px] font-black text-green-400 bg-green-500/10 px-1.5 rounded">
+                                                {formatCurrency(item.price * BRL_CONVERSION, 'BRL')}
+                                            </span>
+                                        )}
+                                    </div>
                                     <h4 className="text-xs font-bold text-white leading-tight line-clamp-2">{item.market_name}</h4>
                                     <p className="text-[10px] text-zinc-500">{item.type}</p>
                                 </div>
