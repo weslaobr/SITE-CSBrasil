@@ -95,7 +95,7 @@ export const getPlayerInventory = async (steamId: string) => {
     try {
         const response = await axios.get(`https://steamcommunity.com/inventory/${steamId}/730/2`, {
             params: {
-                l: 'english',
+                l: 'brazilian',
                 count: 2000,
             },
             headers: {
@@ -124,12 +124,14 @@ export const getPlayerInventory = async (steamId: string) => {
             const description = descriptions.find((d: any) => d.classid === asset.classid && d.instanceid === asset.instanceid);
             if (!description) continue;
 
-            const market_name = description.market_name;
-            
+            const name_pt = description.market_name;
+            const name_en = description.market_hash_name || description.market_name;
+
             // Se já buscamos o preço desse item nesta requisição, reutilizamos
-            if (!priceMap.has(market_name)) {
-                const price = await getItemPrice(market_name);
-                priceMap.set(market_name, price);
+            // IMPORTANTE: Preços devem ser buscados pelo market_hash_name (Inglês)
+            if (!priceMap.has(name_en)) {
+                const price = await getItemPrice(name_en);
+                priceMap.set(name_en, price);
             }
 
             // Extrair URL de inspeção (in-game)
@@ -142,15 +144,17 @@ export const getPlayerInventory = async (steamId: string) => {
 
             items.push({
                 assetid: asset.assetid,
-                name: description.name,
-                market_name: market_name,
+                name: name_pt,
+                name_pt: name_pt,
+                name_en: name_en,
+                market_name: name_pt,
                 icon_url: `https://steamcommunity-a.akamaihd.net/economy/image/${description.icon_url}`,
                 rarity: description.tags?.find((t: any) => t.category === 'Rarity')?.internal_name,
                 rarity_color: description.tags?.find((t: any) => t.category === 'Rarity')?.color,
                 type: description.tags?.find((t: any) => t.category === 'Type')?.name,
-                price: priceMap.get(market_name),
+                price: priceMap.get(name_en),
                 inspect_url: inspect_url,
-                market_url: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(market_name)}`
+                market_url: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(name_en)}`
             });
         }
 

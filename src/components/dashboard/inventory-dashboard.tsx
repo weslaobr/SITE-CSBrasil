@@ -6,6 +6,8 @@ import { Search, Filter, Box, Eye, ShoppingCart, Info, ChevronDown } from 'lucid
 interface InventoryItem {
     assetid: string;
     name: string;
+    name_pt?: string;
+    name_en?: string;
     market_name: string;
     icon_url: string;
     rarity: string;
@@ -20,6 +22,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('all'); // all, weapon, knife, gloves
     const [filterRarity, setFilterRarity] = useState('all');
+    const [language, setLanguage] = useState<'pt' | 'en'>('pt');
 
     // Extrair raridades únicas presentes no inventário
     const rarities = Array.from(new Set(items.map(i => i.rarity).filter(Boolean)));
@@ -32,7 +35,13 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
     ];
 
     const filteredItems = items.filter(item => {
-        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+        // Busca agora funciona em ambos os idiomas
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = 
+            item.name_pt?.toLowerCase().includes(searchLower) || 
+            item.name_en?.toLowerCase().includes(searchLower) ||
+            item.name.toLowerCase().includes(searchLower);
+
         const matchesRarity = filterRarity === 'all' || item.rarity === filterRarity;
         
         let matchesType = true;
@@ -56,7 +65,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
     return (
         <div className="p-6 text-white min-h-screen">
             {/* Header section com Filtros */}
-            <div className="mb-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="mb-10 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
                 <div className="flex-shrink-0">
                     <h1 className="text-3xl font-black tracking-tighter flex items-center gap-3">
                         <Box className="text-green-500 w-8 h-8" />
@@ -69,9 +78,9 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                     </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row gap-4 flex-grow max-w-4xl">
+                <div className="flex flex-col md:flex-row gap-4 flex-grow max-w-5xl lg:justify-end">
                     {/* Barra de Busca */}
-                    <div className="relative flex-grow">
+                    <div className="relative flex-grow md:max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <input
                             type="text"
@@ -82,8 +91,32 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                         />
                     </div>
 
+                    {/* Botão de Idioma (PT-BR / EN) */}
+                    <div className="flex bg-zinc-900/50 p-1 border border-white/10 rounded-xl backdrop-blur-md shadow-inner self-start">
+                        <button
+                            onClick={() => setLanguage('pt')}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${
+                                language === 'pt' 
+                                ? 'bg-zinc-800 text-white shadow-lg' 
+                                : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                        >
+                            <span className="text-sm">🇧🇷</span> PT
+                        </button>
+                        <button
+                            onClick={() => setLanguage('en')}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${
+                                language === 'en' 
+                                ? 'bg-zinc-800 text-white shadow-lg' 
+                                : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                        >
+                            <span className="text-sm">🇺🇸</span> EN
+                        </button>
+                    </div>
+
                     {/* Filtro de Categorias */}
-                    <div className="flex gap-1 bg-zinc-900/50 p-1 border border-white/10 rounded-xl backdrop-blur-md overflow-x-auto no-scrollbar shadow-inner">
+                    <div className="flex gap-1 bg-zinc-900/50 p-1 border border-white/10 rounded-xl backdrop-blur-md overflow-x-auto no-scrollbar shadow-inner self-start">
                         {categories.map(cat => (
                             <button
                                 key={cat.id}
@@ -100,7 +133,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                     </div>
 
                     {/* Filtro de Raridade */}
-                    <div className="relative min-w-[180px]">
+                    <div className="relative min-w-[180px] self-start">
                         <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                         <select
                             value={filterRarity}
@@ -118,6 +151,8 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
             </div>
 
             {/* Cards de Resumo */}
+            {/* ... o restante do componente permanece igual, mas onde renderiza h4 {item.market_name} vamos trocar */}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                 <div className="bg-gradient-to-br from-green-500/10 to-blue-500/5 border border-green-500/20 p-6 rounded-2xl backdrop-blur-md relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -219,7 +254,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                         )}
                                     </div>
                                     <h4 className="text-[10px] sm:text-[11px] font-bold text-zinc-100 leading-tight line-clamp-2 min-h-[2.4em] group-hover:text-white transition-colors">
-                                        {item.market_name}
+                                        {language === 'pt' ? item.name_pt : item.name_en}
                                     </h4>
                                     <div className="pt-2 border-t border-white/5 mt-1">
                                         <p className="text-[8px] text-zinc-600 font-bold truncate uppercase tracking-tighter">
