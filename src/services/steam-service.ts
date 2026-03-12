@@ -112,19 +112,27 @@ export const getPlayerInventory = async (steamId: string) => {
         const descriptions = response.data.descriptions || [];
         const assets = response.data.assets || [];
 
-        // Fetch prices from CSGOTrader
-        const { fetchPrices } = await import('./price-service');
-        const prices = await fetchPrices();
+        // Import do serviço de preço
+        const { getItemPrice } = await import('./price-service');
 
-        // Map assets to descriptions
-        const items = assets.map((asset: any) => {
+        // Mapear itens de forma assíncrona e sequencial para evitar Rate Limit na Steam
+        const items = [];
+        // Usamos um Set para não buscar o preço do mesmo item várias vezes (ex: caixas repetidas)
+        const priceMap = new Map<string, number | null>();
+
+        for (const asset of assets) {
             const description = descriptions.find((d: any) => d.classid === asset.classid && d.instanceid === asset.instanceid);
-            if (!description) return null;
+            if (!description) continue;
 
             const market_name = description.market_name;
-            const price = prices[market_name] || null;
+            
+            // Se já buscamos o preço desse item nesta requisição, reutilizamos
+            if (!priceMap.has(market_name)) {
+                const price = await getItemPrice(market_name);
+                priceMap.set(market_name, price);
+            }
 
-            return {
+            items.push({
                 assetid: asset.assetid,
                 name: description.name,
                 market_name: market_name,
@@ -132,9 +140,9 @@ export const getPlayerInventory = async (steamId: string) => {
                 rarity: description.tags?.find((t: any) => t.category === 'Rarity')?.internal_name,
                 rarity_color: description.tags?.find((t: any) => t.category === 'Rarity')?.color,
                 type: description.tags?.find((t: any) => t.category === 'Type')?.name,
-                price: price,
-            };
-        }).filter(Boolean);
+                price: priceMap.get(market_name),
+            });
+        }
 
         return items;
     } catch (error: any) {

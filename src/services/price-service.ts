@@ -1,42 +1,69 @@
 import axios from 'axios';
 
-const CSGO_TRADER_PRICES_URL = 'https://prices.csgotrader.app/latest/prices_v6.json';
+// Cache simples em memória para evitar rate limit da Steam
+// Em produção (Vercel), esse cache é efêmero por instância, mas ajuda em rajadas de requests
+const priceCache: Record<string, { price: number, timestamp: number }> = {};
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
 
-interface PriceData {
-    [key: string]: number;
-}
-
-let cachedPrices: PriceData | null = null;
-let lastFetchTime: number = 0;
-const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas em milissegundos
-
-export const fetchPrices = async (): Promise<PriceData> => {
-    const now = Date.now();
-
-    if (cachedPrices && (now - lastFetchTime < CACHE_TTL)) {
-        return cachedPrices;
-    }
-
-    try {
-        console.log('Fetching latest prices from CSGOTrader...');
-        const response = await axios.get(CSGO_TRADER_PRICES_URL);
-        
-        if (response.data) {
-            cachedPrices = response.data;
-            lastFetchTime = now;
-            console.log('Prices cached successfully.');
-            return cachedPrices as PriceData;
-        }
-        
-        throw new Error('Empty response from CSGOTrader');
-    } catch (error: any) {
-        console.error('Error fetching prices from CSGOTrader:', error.message);
-        // Retorna o cache antigo se houver, ou um objeto vazio
-        return cachedPrices || {};
-    }
+/**
+ * Função mock para manter compatibilidade com chamadas antigas que esperavam o objeto completo
+ */
+export const fetchPrices = async (): Promise<Record<string, number>> => {
+    return {}; 
 };
 
+/**
+ * Busca o preço de um item individual diretamente no Steam Community Market
+ * Moeda: 7 (BRL - Real Brasileiro)
+ */
 export const getItemPrice = async (marketHashName: string): Promise<number | null> => {
-    const prices = await fetchPrices();
-    return prices[marketHashName] || null;
+    // 1. Verificar Cache
+    const cached = priceCache[marketHashName];
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.price;
+    }
+
+    // 2. Buscar da Steam
+    try {
+        // Adicionamos um pequeno delay aleatório para evitar detecção de bot em massa
+        await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+
+        const url = `https://steamcommunity.com/market/priceoverview/?appid=730&currency=7&market_hash_name=${encodeURIComponent(marketHashName)}`;
+        
+        const response = await axios.get(url, { 
+            headers: { 
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                'Accept': 'application/json'
+            },
+            timeout: 10000 
+        });
+
+        if (response.data && response.data.success && response.data.lowest_price) {
+            // Limpa a string da moeda: "R$ 40,25" ou "40,25€" dependendo da config, mas aqui forçamos BRL
+            // Remove tudo que não é número, vírgula ou ponto
+            let priceStr = response.data.lowest_price;
+            
+            // Tratamento específico para o formato brasileiro da Steam "R$ 1.234,56"
+            priceStr = priceStr.replace('R$', '').trim();
+            priceStr = priceStr.replace(/\./g, ''); // Remove separador de milhar
+            priceStr = priceStr.replace(',', '.');  // Troca vírgula decimal por ponto
+            
+            const price = parseFloat(priceStr);
+            
+            if (!isNaN(price)) {
+                priceCache[marketHashName] = { price, timestamp: Date.now() };
+                return price;
+            }
+        }
+        
+        return null;
+    } catch (error: any) {
+        // Se der erro 429 (Too Many Requests), logamos mas não travamos
+        if (error.response?.status === 429) {
+            console.warn(`[PriceService] Rate limit atingido na Steam para "${marketHashName}"`);
+        } else {
+            console.error(`[PriceService] Erro ao buscar preço de "${marketHashName}":`, error.message);
+        }
+        return null;
+    }
 };
