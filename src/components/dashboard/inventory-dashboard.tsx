@@ -88,7 +88,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
 
             switch (filterType) {
                 case 'knife': matchesType = typeLower.includes('knife') || catInternal.includes('knife'); break;
-                case 'gloves': matchesType = typeLower.includes('gloves') || catInternal.includes('gloves'); break;
+                case 'gloves': matchesType = typeLower.includes('gloves') || catInternal.includes('gloves') || typeLower.includes('hands') || catInternal.includes('hands') || nameLower.includes('gloves'); break;
                 case 'rifle': matchesType = typeLower.includes('rifle') || (catInternal.includes('rifle') && !nameLower.includes('awp') && !nameLower.includes('scar-20') && !nameLower.includes('g3sg1') && !nameLower.includes('ssg 08')); break;
                 case 'pistol': matchesType = typeLower.includes('pistol') || catInternal.includes('pistol'); break;
                 case 'smg': matchesType = typeLower.includes('smg') || catInternal.includes('smg'); break;
