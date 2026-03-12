@@ -61,6 +61,9 @@ model User {
   matches       Match[]
   lobbiesCreated Lobby[] @relation("LobbyCreator")
   lobbyParticipations LobbyPlayer[]
+  
+  // Relação com inventário personalizado
+  inventoryItems UserInventoryItem[]
 }
 
 model VerificationToken {
@@ -179,4 +182,30 @@ model Stats {
   gcLevel       Int?
   premierRating Int?
   Player        Player   @relation(fields: [playerId], references: [id])
+}
+
+// --- Novos Modelos de Inventário e Preços ---
+
+model UserInventoryItem {
+  id            String   @id @default(cuid())
+  userId        String
+  assetId       String   // ID único do item no inventário Steam
+  marketHashName String  // Nome em inglês para referência de preço
+  paidPrice     Float?   // Preço pago pelo usuário
+  currency      String   @default("BRL")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetId])
+}
+
+model ItemPriceBase {
+  id             String   @id @default(cuid())
+  marketHashName String   @unique // Chave única (ex: AK-47 | Redline (Field-Tested))
+  price          Float
+  currency       String   @default("BRL")
+  source         String   @default("csgotrader")
+  lastUpdate     DateTime @default(now())
 }

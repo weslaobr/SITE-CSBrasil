@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Box, Eye, ShoppingCart, Info, ChevronDown, Loader2 } from 'lucide-react';
+import { Search, Filter, Box, Eye, ShoppingCart, Info, ChevronDown, Loader2, DollarSign, Check } from 'lucide-react';
 
 interface InventoryItem {
     assetid: string;
@@ -16,9 +16,9 @@ interface InventoryItem {
     type_label?: string;
     category_internal?: string;
     category_name?: string;
-    exterior?: string;
     exterior_label?: string;
     price?: number | null;
+    paidPrice?: number | null; // Adicionado: Preço que o usuário pagou
     inspect_url?: string | null;
     market_url?: string | null;
 }
@@ -28,6 +28,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
     const [filterType, setFilterType] = useState('all');
     const [filterRarity, setFilterRarity] = useState('all');
     const [language, setLanguage] = useState<'pt' | 'en'>('pt');
+    const [showRoiAssetId, setShowRoiAssetId] = useState<string | null>(null);
 
     // Extrair raridades únicas presentes no inventário
     const rarities = Array.from(new Set(items.map(i => i.rarity).filter(Boolean)));
@@ -112,6 +113,31 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
             style: 'currency',
             currency: 'BRL',
         }).format(value);
+    };
+
+    const handleSavePaidPrice = async (assetId: string, marketHashName: string, price: string) => {
+        try {
+            const cleanPrice = price.replace(/[R$\s]/g, '').replace(',', '.');
+            const numericPrice = parseFloat(cleanPrice);
+            
+            if (isNaN(numericPrice)) return;
+
+            const response = await fetch('/api/inventory/save-price', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    assetId,
+                    marketHashName,
+                    paidPrice: numericPrice
+                })
+            });
+            
+            if (response.ok) {
+                window.location.reload(); 
+            }
+        } catch (error) {
+            console.error("Erro ao salvar preço:", error);
+        }
     };
 
     return (
@@ -262,6 +288,17 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                             <ShoppingCart className="w-4 h-4" />
                                         </a>
                                     )}
+                                    <button 
+                                        onClick={() => setShowRoiAssetId(showRoiAssetId === item.assetid ? null : item.assetid)}
+                                        className={`p-2.5 rounded-xl border shadow-xl transition-all hover:scale-110 active:scale-95 ${
+                                            item.paidPrice 
+                                            ? 'bg-green-600/20 text-green-400 border-green-500/30 hover:bg-green-600/40' 
+                                            : 'bg-black/90 text-white border-white/10 hover:bg-yellow-600'
+                                        }`}
+                                        title={language === 'pt' ? "Gerenciar Preço Pago" : "Manage Purchase Price"}
+                                    >
+                                        <DollarSign className={`w-4 h-4 ${showRoiAssetId === item.assetid ? 'animate-pulse' : ''}`} />
+                                    </button>
                                 </div>
 
                                 <div className="aspect-square mb-4 relative flex items-center justify-center">
@@ -280,16 +317,69 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                             </span>
                                         )}
                                     </div>
-                                    <h4 className="text-[10px] sm:text-[11px] font-bold text-zinc-100 leading-tight line-clamp-2 min-h-[2.4em]">
-                                        {language === 'pt' ? item.name_pt : item.name_en}
-                                    </h4>
-                                    <div className="pt-2 border-t border-white/5 mt-1 flex justify-between gap-2">
-                                        <p className="text-[8px] text-zinc-600 font-bold truncate uppercase">
-                                            {(item.type_label && !item.type_label.includes('WEARCATEGORY')) ? item.type_label : (item.category_name && !item.category_name.includes('WEARCATEGORY') ? item.category_name : '')}
-                                        </p>
-                                        <p className="text-[8px] text-zinc-400 font-bold truncate uppercase">
-                                            {(item.exterior_label && !item.exterior_label.includes('WEARCATEGORY')) ? item.exterior_label : ''}
-                                        </p>
+                                    <div className="pt-2 border-t border-white/5 mt-1 flex flex-col gap-2">
+                                        <div className="flex justify-between gap-1">
+                                            <p className="text-[8px] text-zinc-600 font-bold truncate uppercase">
+                                                {(item.type_label && !item.type_label.includes('WEARCATEGORY')) ? item.type_label : (item.category_name && !item.category_name.includes('WEARCATEGORY') ? item.category_name : '')}
+                                            </p>
+                                            <p className="text-[8px] text-zinc-400 font-bold truncate uppercase">
+                                                {(item.exterior_label && !item.exterior_label.includes('WEARCATEGORY')) ? item.exterior_label : ''}
+                                            </p>
+                                        </div>
+
+                                        {/* Seção de Preço Pago / ROI (Expansível) */}
+                                        <AnimatePresence>
+                                            {showRoiAssetId === item.assetid && (
+                                                <motion.div 
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    className="overflow-hidden"
+                                                >
+                                                    <div className="bg-black/60 p-2 rounded-lg border border-yellow-500/20 mt-1 space-y-2 shadow-inner">
+                                                        <div className="flex justify-between items-center gap-2">
+                                                            <span className="text-[7px] text-zinc-500 font-black uppercase tracking-tighter">Preço Pago</span>
+                                                            <div className="flex items-center gap-1 bg-zinc-800/50 border border-white/5 rounded px-1.5 py-0.5">
+                                                                <input 
+                                                                    id={`price-input-${item.assetid}`}
+                                                                    type="text"
+                                                                    defaultValue={item.paidPrice ? item.paidPrice.toFixed(2) : ''}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            handleSavePaidPrice(item.assetid, item.name_en || item.name, (e.target as HTMLInputElement).value);
+                                                                        }
+                                                                    }}
+                                                                    autoFocus
+                                                                    placeholder="0,00"
+                                                                    className="w-14 bg-transparent text-[8px] font-black text-right text-white focus:outline-none transition-colors"
+                                                                />
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        const input = document.getElementById(`price-input-${item.assetid}`) as HTMLInputElement;
+                                                                        if (input) handleSavePaidPrice(item.assetid, item.name_en || item.name, input.value);
+                                                                    }}
+                                                                    className="p-0.5 hover:text-green-400 transition-colors"
+                                                                    title={language === 'pt' ? 'Confirmar' : 'Confirm'}
+                                                                >
+                                                                    <Check className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {item.paidPrice && item.price ? (
+                                                            <div className="flex justify-between items-center border-t border-white/5 pt-1">
+                                                                <span className="text-[7px] text-zinc-500 font-black uppercase tracking-tighter">Resultado</span>
+                                                                <span className={`text-[8px] font-black ${item.price >= item.paidPrice ? 'text-green-400' : 'text-red-400'}`}>
+                                                                    {item.price >= item.paidPrice ? '+' : ''}{formatCurrency(item.price - item.paidPrice)}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-[6px] text-zinc-600 text-center italic">Informe o valor para calcular ROI</p>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
                                 </div>
                             </motion.div>
