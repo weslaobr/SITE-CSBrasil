@@ -29,9 +29,10 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
     const [filterRarity, setFilterRarity] = useState('all');
     const [language, setLanguage] = useState<'pt' | 'en'>('pt');
     const [showRoiAssetId, setShowRoiAssetId] = useState<string | null>(null);
+    const [localItems, setLocalItems] = useState<InventoryItem[]>(items);
 
     // Extrair raridades únicas presentes no inventário
-    const rarities = Array.from(new Set(items.map(i => i.rarity).filter(Boolean)));
+    const rarities = Array.from(new Set(localItems.map(i => i.rarity).filter(Boolean)));
     
     const categories = [
         { id: 'all', label: language === 'pt' ? 'Todos' : 'All' },
@@ -69,7 +70,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
         return rarityTranslations[clean]?.[language] || clean;
     };
 
-    const filteredItems = items.filter(item => {
+    const filteredItems = localItems.filter(item => {
         // 1. Busca
         const searchLower = searchTerm.toLowerCase();
         const matchesSearch = 
@@ -106,7 +107,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
         return matchesSearch && matchesRarity && matchesType;
     });
 
-    const totalValueBRL = items.reduce((acc, item) => acc + (item.price || 0), 0);
+    const totalValueBRL = localItems.reduce((acc, item) => acc + (item.price || 0), 0);
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
@@ -122,6 +123,11 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
             
             if (isNaN(numericPrice)) return;
 
+            // Atualiza o estado localmente para feedback instantâneo (Optimistic Update)
+            setLocalItems(prev => prev.map(item => 
+                item.assetid === assetId ? { ...item, paidPrice: numericPrice } : item
+            ));
+
             const response = await fetch('/api/inventory/save-price', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -132,11 +138,19 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                 })
             });
             
-            if (response.ok) {
-                window.location.reload(); 
+            if (!response.ok) {
+                // Se falhar na API, reverte
+                console.error("Erro ao salvar preço na API.");
+                setLocalItems(prev => prev.map(item => 
+                    item.assetid === assetId ? { ...item, paidPrice: items.find(i => i.assetid === assetId)?.paidPrice || null } : item
+                ));
             }
         } catch (error) {
             console.error("Erro ao salvar preço:", error);
+            // Se der erro na rede, reverte
+            setLocalItems(prev => prev.map(item => 
+                item.assetid === assetId ? { ...item, paidPrice: items.find(i => i.assetid === assetId)?.paidPrice || null } : item
+            ));
         }
     };
 
@@ -151,7 +165,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                     </h1>
                     <div className="flex items-center gap-2 mt-1">
                         <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">
-                            {filteredItems.length} {language === 'pt' ? 'de' : 'of'} {items.length} {language === 'pt' ? 'itens encontrados' : 'items found'}
+                            {filteredItems.length} {language === 'pt' ? 'de' : 'of'} {localItems.length} {language === 'pt' ? 'itens encontrados' : 'items found'}
                         </p>
                     </div>
                 </div>
@@ -239,12 +253,12 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                 <div className="bg-zinc-900/40 border border-white/5 p-6 rounded-2xl backdrop-blur-sm">
                     <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-2">{language === 'pt' ? 'Resultados' : 'Results'}</p>
                     <h2 className="text-2xl font-black text-white">{filteredItems.length} {language === 'pt' ? 'Itens' : 'Items'}</h2>
-                    <p className="text-[10px] text-zinc-600 mt-1">{language === 'pt' ? `Filtrados de ${items.length}` : `Filtered from ${items.length}`}</p>
+                    <p className="text-[10px] text-zinc-600 mt-1">{language === 'pt' ? `Filtrados de ${localItems.length}` : `Filtered from ${localItems.length}`}</p>
                 </div>
                 <div className="bg-zinc-900/40 border border-white/5 p-6 rounded-2xl backdrop-blur-sm">
                     <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-2">High Tier</p>
                     <h2 className="text-2xl font-black text-white">
-                        {items.filter(i => i.rarity === 'Rarity_Ancient' || i.rarity === 'Rarity_Legendary').length}
+                        {localItems.filter(i => i.rarity === 'Rarity_Ancient' || i.rarity === 'Rarity_Legendary').length}
                     </h2>
                     <p className="text-[10px] text-zinc-600 mt-1">{language === 'pt' ? 'Skins Raras' : 'Rare Skins'}</p>
                 </div>
@@ -311,9 +325,13 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                         <p className="text-[9px] font-black uppercase truncate flex-grow" style={{ color: `#${item.rarity_color}` }}>
                                             {translateRarity(item.rarity)}
                                         </p>
-                                        {item.price && (
+                                        {item.price ? (
                                             <span className="text-[9px] font-black text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20">
                                                 {formatCurrency(item.price)}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[9px] font-black text-zinc-500 bg-zinc-800/50 px-1.5 py-0.5 rounded border border-white/5" title="Preço indisponível no momento">
+                                                N/A
                                             </span>
                                         )}
                                     </div>
@@ -338,8 +356,8 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                                 >
                                                     <div className="bg-black/60 p-2 rounded-lg border border-yellow-500/20 mt-1 space-y-2 shadow-inner">
                                                         <div className="flex justify-between items-center gap-2">
-                                                            <span className="text-[7px] text-zinc-500 font-black uppercase tracking-tighter">Preço Pago</span>
-                                                            <div className="flex items-center gap-1 bg-zinc-800/50 border border-white/5 rounded px-1.5 py-0.5">
+                                                            <span className="text-[10px] text-zinc-400 font-black uppercase tracking-tighter">Preço Pago</span>
+                                                            <div className="flex items-center gap-1 bg-zinc-800/50 border border-white/5 rounded px-2 py-1">
                                                                 <input 
                                                                     id={`price-input-${item.assetid}`}
                                                                     type="text"
@@ -351,30 +369,30 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                                                     }}
                                                                     autoFocus
                                                                     placeholder="0,00"
-                                                                    className="w-14 bg-transparent text-[8px] font-black text-right text-white focus:outline-none transition-colors"
+                                                                    className="w-16 bg-transparent text-[11px] font-black text-right text-white focus:outline-none transition-colors"
                                                                 />
                                                                 <button 
                                                                     onClick={() => {
                                                                         const input = document.getElementById(`price-input-${item.assetid}`) as HTMLInputElement;
                                                                         if (input) handleSavePaidPrice(item.assetid, item.name_en || item.name, input.value);
                                                                     }}
-                                                                    className="p-0.5 hover:text-green-400 transition-colors"
+                                                                    className="p-1 hover:text-green-400 transition-colors"
                                                                     title={language === 'pt' ? 'Confirmar' : 'Confirm'}
                                                                 >
-                                                                    <Check className="w-3 h-3" />
+                                                                    <Check className="w-3.5 h-3.5" />
                                                                 </button>
                                                             </div>
                                                         </div>
                                                         
                                                         {item.paidPrice && item.price ? (
-                                                            <div className="flex justify-between items-center border-t border-white/5 pt-1">
-                                                                <span className="text-[7px] text-zinc-500 font-black uppercase tracking-tighter">Resultado</span>
-                                                                <span className={`text-[8px] font-black ${item.price >= item.paidPrice ? 'text-green-400' : 'text-red-400'}`}>
-                                                                    {item.price >= item.paidPrice ? '+' : ''}{formatCurrency(item.price - item.paidPrice)}
+                                                            <div className="flex justify-between items-center border-t border-white/5 pt-2 mt-1">
+                                                                <span className={`text-[10px] font-black uppercase tracking-tighter ${item.price > item.paidPrice ? 'text-green-500' : item.price < item.paidPrice ? 'text-red-500' : 'text-zinc-400'}`}>Resultado</span>
+                                                                <span className={`text-[11px] font-black ${item.price > item.paidPrice ? 'text-green-500' : item.price < item.paidPrice ? 'text-red-500' : 'text-zinc-400'}`}>
+                                                                    {item.price > item.paidPrice ? '+' : ''}{formatCurrency(item.price - item.paidPrice)}
                                                                 </span>
                                                             </div>
                                                         ) : (
-                                                            <p className="text-[6px] text-zinc-600 text-center italic">Informe o valor para calcular ROI</p>
+                                                            <p className="text-[9px] text-zinc-500 text-center italic mt-2">Informe o valor para calcular ROI</p>
                                                         )}
                                                     </div>
                                                 </motion.div>

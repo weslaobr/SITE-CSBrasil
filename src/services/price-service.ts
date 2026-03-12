@@ -1,9 +1,7 @@
 import axios from 'axios';
+import { prisma } from '@/lib/prisma'; // Corrigido a importacao do prisma para poder fazer a comunicação com o Banco
 
-// Cache simples em memória para evitar rate limit da Steam
-// Em produção (Vercel), esse cache é efêmero por instância, mas ajuda em rajadas de requests
-const priceCache: Record<string, { price: number, timestamp: number }> = {};
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
+const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 dias em ms. Demora pra atualizar, poupa requisições à Steam
 
 /**
  * Função mock para manter compatibilidade com chamadas antigas que esperavam o objeto completo
@@ -13,20 +11,25 @@ export const fetchPrices = async (): Promise<Record<string, number>> => {
 };
 
 /**
- * Busca o preço de um item individual diretamente no Steam Community Market
- * Moeda: 7 (BRL - Real Brasileiro)
+ * Busca o preço de um item individual
+ * Primeiro verifica a tabela ItemPriceBase. Se o dado existir e for recente, retorna ele.
+ * Caso contrário, busca na Steam, salva no Banco e retorna o valor.
  */
 export const getItemPrice = async (marketHashName: string): Promise<number | null> => {
-    // 1. Verificar Cache
-    const cached = priceCache[marketHashName];
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        return cached.price;
-    }
-
-    // 2. Buscar da Steam
     try {
+        // 1. Verificar Tabela de Preços do Banco
+        const dbPrice = await prisma.itemPriceBase.findUnique({
+            where: { marketHashName }
+        });
+
+        // 2. Se o preço existe e for menor que o Tempo Máximo de Cache, retorne o preço do banco
+        if (dbPrice && (Date.now() - dbPrice.lastUpdate.getTime() < CACHE_TTL)) {
+            return dbPrice.price;
+        }
+
+        // 3. Caso não exista no banco ou passou do TTL, buscar da Steam
         // Adicionamos um pequeno delay aleatório para evitar detecção de bot em massa
-        await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+        await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
 
         const url = `https://steamcommunity.com/market/priceoverview/?appid=730&currency=7&market_hash_name=${encodeURIComponent(marketHashName)}`;
         
@@ -39,11 +42,7 @@ export const getItemPrice = async (marketHashName: string): Promise<number | nul
         });
 
         if (response.data && response.data.success && response.data.lowest_price) {
-            // Limpa a string da moeda: "R$ 40,25" ou "40,25€" dependendo da config, mas aqui forçamos BRL
-            // Remove tudo que não é número, vírgula ou ponto
             let priceStr = response.data.lowest_price;
-            
-            // Tratamento específico para o formato brasileiro da Steam "R$ 1.234,56"
             priceStr = priceStr.replace('R$', '').trim();
             priceStr = priceStr.replace(/\./g, ''); // Remove separador de milhar
             priceStr = priceStr.replace(',', '.');  // Troca vírgula decimal por ponto
@@ -51,12 +50,17 @@ export const getItemPrice = async (marketHashName: string): Promise<number | nul
             const price = parseFloat(priceStr);
             
             if (!isNaN(price)) {
-                priceCache[marketHashName] = { price, timestamp: Date.now() };
+                // 4. Salvar ou atualizar no Banco
+                await prisma.itemPriceBase.upsert({
+                    where: { marketHashName },
+                    update: { price, lastUpdate: new Date(), source: 'steam_community' },
+                    create: { marketHashName, price, currency: 'BRL', source: 'steam_community' }
+                });
+
                 return price;
             }
         }
         
-        return null;
     } catch (error: any) {
         // Se der erro 429 (Too Many Requests), logamos mas não travamos
         if (error.response?.status === 429) {
@@ -64,6 +68,17 @@ export const getItemPrice = async (marketHashName: string): Promise<number | nul
         } else {
             console.error(`[PriceService] Erro ao buscar preço de "${marketHashName}":`, error.message);
         }
-        return null;
     }
+    
+    // Se falhou requisição para a Steam, mas tínhamos dado obsoleto no banco, ainda assim retorna o dado desatualizado pra não ficar N/A
+    try {
+        const fallbackPrice = await prisma.itemPriceBase.findUnique({
+            where: { marketHashName }
+        });
+        if (fallbackPrice) return fallbackPrice.price;
+    } catch (e) {
+        // Ignorar
+    }
+
+    return null;
 };
