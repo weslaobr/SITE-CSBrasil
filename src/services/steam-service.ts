@@ -151,7 +151,12 @@ export const getPlayerInventory = async (steamId: string) => {
                 icon_url: `https://steamcommunity-a.akamaihd.net/economy/image/${description.icon_url}`,
                 rarity: description.tags?.find((t: any) => t.category === 'Rarity')?.internal_name,
                 rarity_color: description.tags?.find((t: any) => t.category === 'Rarity')?.color,
-                type: description.tags?.find((t: any) => t.category === 'Type')?.name,
+                type: description.tags?.find((t: any) => t.category === 'Type')?.internal_name,
+                type_label: description.tags?.find((t: any) => t.category === 'Type')?.name,
+                category_internal: description.tags?.find((t: any) => t.category === 'Type' || t.category === 'Weapon')?.internal_name || description.tags?.find((t: any) => t.category === 'Category')?.internal_name,
+                category_name: description.tags?.find((t: any) => t.category === 'Type' || t.category === 'Weapon')?.name || description.tags?.find((t: any) => t.category === 'Category')?.name,
+                exterior: description.tags?.find((t: any) => t.category === 'Exterior')?.internal_name,
+                exterior_label: description.tags?.find((t: any) => t.category === 'Exterior')?.name,
                 price: priceMap.get(name_en),
                 inspect_url: inspect_url,
                 market_url: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(name_en)}`
