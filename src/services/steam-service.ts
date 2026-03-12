@@ -132,6 +132,14 @@ export const getPlayerInventory = async (steamId: string) => {
                 priceMap.set(market_name, price);
             }
 
+            // Extrair URL de inspeção (in-game)
+            let inspect_url = null;
+            if (description.actions && description.actions.length > 0) {
+                inspect_url = description.actions[0].link
+                    .replace('%owner_steamid%', steamId)
+                    .replace('%assetid%', asset.assetid);
+            }
+
             items.push({
                 assetid: asset.assetid,
                 name: description.name,
@@ -141,6 +149,8 @@ export const getPlayerInventory = async (steamId: string) => {
                 rarity_color: description.tags?.find((t: any) => t.category === 'Rarity')?.color,
                 type: description.tags?.find((t: any) => t.category === 'Type')?.name,
                 price: priceMap.get(market_name),
+                inspect_url: inspect_url,
+                market_url: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(market_name)}`
             });
         }
 
