@@ -16,21 +16,17 @@ interface InventoryItem {
 
 const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    
-    // Taxa de conversão aproximada USD -> BRL
-    const BRL_CONVERSION = 6.0;
 
     const filteredItems = items.filter(item =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const totalValueUSD = items.reduce((acc, item) => acc + (item.price || 0), 0);
-    const totalValueBRL = totalValueUSD * BRL_CONVERSION;
+    const totalValueBRL = items.reduce((acc, item) => acc + (item.price || 0), 0);
 
-    const formatCurrency = (value: number, currency: 'USD' | 'BRL') => {
+    const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
-            currency: currency,
+            currency: 'BRL',
         }).format(value);
     };
 
@@ -62,8 +58,8 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                 <div className="bg-gradient-to-br from-green-500/10 to-blue-500/5 border border-green-500/20 p-6 rounded-2xl backdrop-blur-sm">
                     <p className="text-zinc-500 text-xs uppercase font-bold tracking-widest mb-2">Valor Estimado</p>
-                    <h2 className="text-2xl font-black text-white">{totalValueBRL > 0 ? formatCurrency(totalValueBRL, 'BRL') : 'Consultando...'}</h2>
-                    <p className="text-[10px] text-zinc-400 mt-1">Baseado nos preços sugeridos pela CSGOTrader ({formatCurrency(totalValueUSD, 'USD')})</p>
+                    <h2 className="text-2xl font-black text-white">{totalValueBRL > 0 ? formatCurrency(totalValueBRL) : 'Consultando...'}</h2>
+                    <p className="text-[10px] text-zinc-400 mt-1">Baseado nos preços sugeridos pelo Mercado da Steam (Direto)</p>
                 </div>
                 <div className="bg-zinc-900/40 border border-white/5 p-6 rounded-2xl backdrop-blur-sm">
                     <p className="text-zinc-500 text-xs uppercase font-bold tracking-widest mb-2">Total de Itens</p>
@@ -124,7 +120,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                         </p>
                                         {item.price && (
                                             <span className="text-[10px] font-black text-green-400 bg-green-500/10 px-1.5 rounded">
-                                                {formatCurrency(item.price * BRL_CONVERSION, 'BRL')}
+                                                {formatCurrency(item.price)}
                                             </span>
                                         )}
                                     </div>
