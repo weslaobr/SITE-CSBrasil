@@ -28,11 +28,27 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
     const rarities = Array.from(new Set(items.map(i => i.rarity).filter(Boolean)));
     
     const categories = [
-        { id: 'all', label: 'Todos' },
-        { id: 'weapon', label: 'Armas' },
-        { id: 'knife', label: 'Facas' },
-        { id: 'gloves', label: 'Luvas' }
+        { id: 'all', label: language === 'pt' ? 'Todos' : 'All' },
+        { id: 'weapon', label: language === 'pt' ? 'Armas' : 'Weapons' },
+        { id: 'knife', label: language === 'pt' ? 'Facas' : 'Knives' },
+        { id: 'gloves', label: language === 'pt' ? 'Luvas' : 'Gloves' }
     ];
+
+    const rarityTranslations: Record<string, { pt: string, en: string }> = {
+        'Common': { pt: 'Comum', en: 'Common' },
+        'Uncommon': { pt: 'Incomum', en: 'Uncommon' },
+        'Rare': { pt: 'Raro', en: 'Rare' },
+        'Mythical': { pt: 'Mítico', en: 'Mythical' },
+        'Legendary': { pt: 'Lendário', en: 'Legendary' },
+        'Ancient': { pt: 'Antigo', en: 'Ancient' },
+        'Contraband': { pt: 'Contrabandeado', en: 'Contraband' }
+    };
+
+    const translateRarity = (rarity: string) => {
+        if (!rarity) return '';
+        const clean = rarity.replace('Rarity_', '').replace('_Weapon', '').replace('Rarity_Custom_', '');
+        return rarityTranslations[clean]?.[language] || clean;
+    };
 
     const filteredItems = items.filter(item => {
         // Busca agora funciona em ambos os idiomas
@@ -140,9 +156,11 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                             onChange={(e) => setFilterRarity(e.target.value)}
                             className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:border-green-500/50 transition-all backdrop-blur-md text-[10px] font-black appearance-none cursor-pointer uppercase text-zinc-300"
                         >
-                            <option value="all">Todas Raridades</option>
+                            <option value="all">
+                                {language === 'pt' ? 'Todas Raridades' : 'All Rarities'}
+                            </option>
                             {rarities.sort().map(r => (
-                                <option key={r} value={r}>{r}</option>
+                                <option key={r} value={r}>{translateRarity(r)}</option>
                             ))}
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
@@ -158,23 +176,31 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                     <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                         <ShoppingCart className="w-12 h-12" />
                     </div>
-                    <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-2">Valor Estimado</p>
+                    <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-2">
+                        {language === 'pt' ? 'Valor Estimado' : 'Estimated Value'}
+                    </p>
                     <h2 className="text-2xl font-black text-white">{totalValueBRL > 0 ? formatCurrency(totalValueBRL) : 'Consultando...'}</h2>
                     <p className="text-[10px] text-zinc-500 mt-1 flex items-center gap-1">
-                        <Info className="w-3 h-3" /> Mercado da Steam (Base)
+                        <Info className="w-3 h-3" /> {language === 'pt' ? 'Mercado da Steam (Base)' : 'Steam Market (Basis)'}
                     </p>
                 </div>
                 <div className="bg-zinc-900/40 border border-white/5 p-6 rounded-2xl backdrop-blur-sm">
-                    <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-2">Resultados</p>
-                    <h2 className="text-2xl font-black text-white">{filteredItems.length} Itens</h2>
-                    <p className="text-[10px] text-zinc-600 mt-1">Filtrados de {items.length} no total</p>
+                    <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-2">
+                        {language === 'pt' ? 'Resultados' : 'Results'}
+                    </p>
+                    <h2 className="text-2xl font-black text-white">{filteredItems.length} {language === 'pt' ? 'Itens' : 'Items'}</h2>
+                    <p className="text-[10px] text-zinc-600 mt-1">
+                        {language === 'pt' ? `Filtrados de ${items.length} no total` : `Filtered from ${items.length} total`}
+                    </p>
                 </div>
                 <div className="bg-zinc-900/40 border border-white/5 p-6 rounded-2xl backdrop-blur-sm">
                     <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-2">Facas & Luvas</p>
                     <h2 className="text-2xl font-black text-white">
                         {items.filter(i => i.type?.toLowerCase().includes('knife') || i.type?.toLowerCase().includes('gloves')).length}
                     </h2>
-                    <p className="text-[10px] text-zinc-600 mt-1">Colecionáveis de prestígio</p>
+                    <p className="text-[10px] text-zinc-600 mt-1">
+                        {language === 'pt' ? 'Colecionáveis de prestígio' : 'Prestige collectibles'}
+                    </p>
                 </div>
             </div>
 
@@ -206,7 +232,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                     {item.inspect_url && (
                                         <a
                                             href={item.inspect_url}
-                                            title="Inspecionar no Jogo"
+                                            title={language === 'pt' ? 'Inspecionar no Jogo' : 'Inspect in Game'}
                                             className="p-2 bg-black/80 hover:bg-green-500 text-white hover:text-black rounded-lg transition-colors border border-white/10 shadow-xl"
                                         >
                                             <Eye className="w-3.5 h-3.5" />
@@ -217,7 +243,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                             href={item.market_url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            title="Ver no Mercado Steam"
+                                            title={language === 'pt' ? 'Ver no Mercado Steam' : 'View on Steam Market'}
                                             className="p-2 bg-black/80 hover:bg-blue-500 text-white rounded-lg transition-colors border border-white/10 shadow-xl"
                                         >
                                             <ShoppingCart className="w-3.5 h-3.5" />
@@ -245,7 +271,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                             className="text-[9px] font-black uppercase truncate flex-grow leading-none"
                                             style={{ color: `#${item.rarity_color}` }}
                                         >
-                                            {item.rarity?.replace('Rarity_', '')?.replace('_Weapon', '')?.replace('Rarity_Custom_', '')}
+                                            {translateRarity(item.rarity)}
                                         </p>
                                         {item.price && (
                                             <span className="text-[9px] font-black text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20 whitespace-nowrap shadow-sm">
