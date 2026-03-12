@@ -46,10 +46,11 @@ export async function POST(req: NextRequest) {
             let result;
             if (existing) {
                 console.log("[SAVE-PRICE] Updating existing record ID:", existing.id);
+                // Se paidPrice for null no request, ele salva null no banco e para de aparecer na UI
                 result = await prisma.userInventoryItem.update({
                     where: { id: existing.id },
                     data: {
-                        paidPrice: priceValue || 0,
+                        paidPrice: priceValue === null ? null : (priceValue || 0),
                         marketHashName,
                     },
                 });
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
                         userId,
                         assetId,
                         marketHashName,
-                        paidPrice: priceValue || 0,
+                        paidPrice: priceValue === null ? null : (priceValue || 0),
                     },
                 });
             }

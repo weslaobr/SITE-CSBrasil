@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Box, Eye, ShoppingCart, Info, ChevronDown, Loader2, DollarSign, Check } from 'lucide-react';
+import { Search, Filter, Box, Eye, ShoppingCart, Info, ChevronDown, Loader2, DollarSign, Check, X } from 'lucide-react';
 
 interface InventoryItem {
     assetid: string;
@@ -121,11 +121,14 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
             const cleanPrice = price.replace(/[R$\s]/g, '').replace(',', '.');
             const numericPrice = parseFloat(cleanPrice);
             
-            if (isNaN(numericPrice)) return;
+            // Se string for vazia, significa que o usuário quer DELETAR o preço
+            const finalPrice = price.trim() === '' ? null : numericPrice;
+
+            if (finalPrice !== null && isNaN(finalPrice)) return;
 
             // Atualiza o estado localmente para feedback instantâneo (Optimistic Update)
             setLocalItems(prev => prev.map(item => 
-                item.assetid === assetId ? { ...item, paidPrice: numericPrice } : item
+                item.assetid === assetId ? { ...item, paidPrice: finalPrice } : item
             ));
 
             const response = await fetch('/api/inventory/save-price', {
@@ -134,7 +137,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                 body: JSON.stringify({
                     assetId,
                     marketHashName,
-                    paidPrice: numericPrice
+                    paidPrice: finalPrice
                 })
             });
             
@@ -376,11 +379,24 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                                                         const input = document.getElementById(`price-input-${item.assetid}`) as HTMLInputElement;
                                                                         if (input) handleSavePaidPrice(item.assetid, item.name_en || item.name, input.value);
                                                                     }}
-                                                                    className="p-1 hover:text-green-400 transition-colors"
+                                                                    className="p-1 hover:text-green-400 text-zinc-400 transition-colors"
                                                                     title={language === 'pt' ? 'Confirmar' : 'Confirm'}
                                                                 >
                                                                     <Check className="w-3.5 h-3.5" />
                                                                 </button>
+                                                                {item.paidPrice && (
+                                                                    <button 
+                                                                        onClick={() => {
+                                                                            const input = document.getElementById(`price-input-${item.assetid}`) as HTMLInputElement;
+                                                                            if (input) input.value = '';
+                                                                            handleSavePaidPrice(item.assetid, item.name_en || item.name, '');
+                                                                        }}
+                                                                        className="p-1 hover:text-red-400 text-zinc-500 transition-colors ml-1 border-l border-white/10"
+                                                                        title={language === 'pt' ? 'Remover Preço' : 'Remove Price'}
+                                                                    >
+                                                                        <X className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         
