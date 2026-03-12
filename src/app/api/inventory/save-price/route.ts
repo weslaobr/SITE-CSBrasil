@@ -67,13 +67,16 @@ export async function POST(req: NextRequest) {
 
             console.log("[SAVE-PRICE] Success!");
             return NextResponse.json({ success: true, item: result });
-        } catch (dbError: any) {
-            console.error("[SAVE-PRICE] Database operation failed:", dbError.message);
-            throw dbError; // Será capturado pelo catch externo
+        } catch (dbError) {
+            const message = dbError instanceof Error ? dbError.message : "Database error";
+            console.error("[SAVE-PRICE] Database operation failed:", message);
+            throw dbError; 
         }
-    } catch (error: any) {
-        console.error("CRITICAL ERROR in save-price:", error.message);
-        console.error("Stack:", error.stack);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        const stack = error instanceof Error ? error.stack : "";
+        console.error("CRITICAL ERROR in save-price:", message);
+        console.error("Stack:", stack);
         return NextResponse.json(
             { error: "Failed to save purchase price" },
             { status: 500 }
