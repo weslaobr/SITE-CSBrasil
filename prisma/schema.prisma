@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// --- Autenticação (NextAuth) ---
+
 model Account {
   id                 String  @id @default(cuid())
   userId             String
@@ -69,22 +71,24 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// --- Sistema de Partidas ---
+
 model Match {
   id          String   @id @default(cuid())
   userId      String
-  source      String   @default("internal") // "internal", "steam", "faceit", "gamersclub"
+  source      String   @default("internal")
   externalId  String?  @unique
-  gameMode    String?  // "premier", "competitive", "wingman"
+  gameMode    String?  
   mapName     String
   kills       Int
   deaths      Int
   assists     Int
-  score       String   // Changed from Int
+  score       String   
   mvps        Int
-  duration    String?  // New field
-  url         String?  // New field
+  duration    String?  
+  url         String?  
   matchDate   DateTime @default(now())
-  result      String   // "Win", "Loss", "Tie"
+  result      String   
   adr         Float?
   hsPercentage Float?
   metadata     Json?     @default("{}")
@@ -96,11 +100,11 @@ model Lobby {
   id          String   @id @default(cuid())
   name        String
   password    String?
-  status      String   @default("waiting") // "waiting", "picking", "finished"
+  status      String   @default("waiting")
   creatorId   String
   leaderAId   String?
   leaderBId   String?
-  turn        String   @default("A") // "A" or "B"
+  turn        String   @default("A")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -112,7 +116,7 @@ model LobbyPlayer {
   id        String   @id @default(cuid())
   lobbyId   String
   userId    String
-  team      String   @default("none") // "none", "A", "B"
+  team      String   @default("none")
   isLeader  Boolean  @default(false)
   joinedAt  DateTime @default(now())
 
@@ -120,4 +124,59 @@ model LobbyPlayer {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([lobbyId, userId])
+}
+
+// --- Tabelas do Bot (Existentes no Neon) ---
+
+model GuildConfig {
+  id               String        @id
+  logChannelId     String?
+  auditChannelId   String?
+  enableAudit      Boolean       @default(true)
+  enableVoice      Boolean       @default(true)
+  updatedAt        DateTime      @updatedAt
+  enableInvites    Boolean       @default(true)
+  invitesChannelId String?
+  rankingChannelId String?
+  rankingMessageId String?
+  enableRoleSync   Boolean       @default(false)
+  RoleMapping      RoleMapping[]
+}
+
+model Player {
+  id           Int      @id @default(autoincrement())
+  discordId    String   @unique
+  steamId      String   @unique
+  steamUrl     String
+  faceitId     String?  @unique
+  faceitName   String?
+  leetifyId    String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  invitesCount Int      @default(0)
+  referredById String?
+  Stats        Stats?
+}
+
+model RoleMapping {
+  id          Int         @id @default(autoincrement())
+  guildId     String
+  minRating   Int
+  roleId      String
+  createdAt   DateTime    @default(now())
+  GuildConfig GuildConfig @relation(fields: [guildId], references: [id])
+
+  @@unique([guildId, minRating])
+}
+
+model Stats {
+  id            Int      @id @default(autoincrement())
+  playerId      Int      @unique
+  leetifyRating Float?
+  faceitElo     Int?
+  faceitLevel   Int?
+  updatedAt     DateTime @updatedAt
+  gcLevel       Int?
+  premierRating Int?
+  Player        Player   @relation(fields: [playerId], references: [id])
 }

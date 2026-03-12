@@ -54,11 +54,17 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
             },
             async signIn({ user, account, profile }) {
                 if (account?.provider === "steam") {
+                    // Garante que o steamId do perfil da Steam seja salvo no model User
                     (user as any).steamId = account.providerAccountId;
                 }
                 return true;
             },
         },
         secret: process.env.NEXTAUTH_SECRET,
+        debug: process.env.NODE_ENV === 'development' || true, // Ativado temporariamente para debug em prod
+        pages: {
+            signIn: '/auth/signin',
+            error: '/auth/error', // Se você tiver uma página de erro
+        }
     };
 }
