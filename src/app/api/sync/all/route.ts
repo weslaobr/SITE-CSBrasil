@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
                             score: scoreStr,
                             mvps: m.mvps || 0,
                             duration: m.match_duration ? `${Math.round(m.match_duration / 60)} min` : '45 min',
-                            adr: m.adr || (m.leetify_rating ? Math.abs(m.leetify_rating) * 100 : null),
+                            adr: m.adr || null,
                             hsPercentage: m.hs_percentage || null,
                             result,
                             matchDate,

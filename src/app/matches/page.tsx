@@ -69,6 +69,7 @@ export default function MatchesPage() {
                 onSync={handleSync}
                 onUpdateFaceit={handleUpdateFaceit}
                 currentFaceit={(session.user as any)?.faceitNickname || ''}
+                currentUserSteamId={(session.user as any)?.steamId || ''}
             />
         </div>
     );

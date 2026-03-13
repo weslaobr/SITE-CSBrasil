@@ -58,9 +58,19 @@ interface MatchReportModalProps {
     matchId?: string | null;
     isOpen: boolean;
     onClose: () => void;
+    // Explicit user identifiers for accurate identification
+    userSteamId?: string;
+    userNickname?: string;
 }
 
-const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch, matchId, isOpen, onClose }) => {
+const MatchReportModal: React.FC<MatchReportModalProps> = ({ 
+    match: initialMatch, 
+    matchId, 
+    isOpen, 
+    onClose,
+    userSteamId,
+    userNickname
+}) => {
     const [mainTab, setMainTab] = useState('seu-jogo');
     const [subTab, setSubTab] = useState('geral');
     const [internalMatch, setInternalMatch] = useState<Match | null>(null);
@@ -188,6 +198,23 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
 
         const avatar = p.avatar_url || p.avatarUrl || p.avatar || (p.player_stats?.avatar) || (isUser ? "https://avatars.steamstatic.com/2cf8997181cfcbceeacd49034d12aaf4c378d15e.jpg" : `https://i.pravatar.cc/150?u=${p.player_id || p.name || p.nickname || 'default'}`);
 
+        const util_damage = p.util_damage !== undefined ? p.util_damage : 
+                           (p.utility_damage !== undefined ? p.utility_damage : 
+                           (p.utilityDamage !== undefined ? p.utilityDamage : 
+                           (p.player_stats?.["Utility Damage"] ? parseInt(p.player_stats["Utility Damage"]) : 0)));
+
+        const flash_assists = p.flash_assists !== undefined ? p.flash_assists : 
+                             (p.flashbang_assists !== undefined ? p.flashbang_assists : 
+                             (p.flashbangAssists !== undefined ? p.flashbangAssists : 
+                             (p.player_stats?.["Flashbang Assists"] ? parseInt(p.player_stats["Flashbang Assists"]) : 0)));
+
+        const blind_time = p.blind_time !== undefined ? p.blind_time : 
+                          (p.blindTime !== undefined ? p.blindTime : 
+                          (p.flash_blind_time || 0));
+
+        const util_thrown = p.util_thrown || p.utilThrown || 
+                           (p.he_thrown || 0) + (p.flash_thrown || 0) + (p.smokes_thrown || 0) + (p.molotovs_thrown || 0);
+
         return {
             nickname: p.name || p.nickname || (isUser ? "[Sua Conta]" : "Jogador"),
             avatar,
@@ -207,13 +234,28 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
             onevx: p.clutch_count || p.onevx || fallbackClutches,
             onevx_attempts: p.onevx_attempts || (fallbackClutches > 0 ? fallbackClutches + 1 : 0),
             multikills: p.multikills || (p.triple_kills !== undefined ? `0/${p.triple_kills}/${p.quadro_kills}/${p.penta_kills}` : "0/0/0/0"),
-            util_damage: p.util_damage || p.utility_damage || 0,
-            flash_assists: p.flash_assists || p.flashbang_assists || 0,
-            util_thrown: p.util_thrown || (p.he_thrown || 0) + (p.flash_thrown || 0) + (p.smokes_thrown || 0) + (p.molotovs_thrown || 0),
-            blind_time: p.blind_time || p.flash_blind_time || 0,
-            isUser: isUser || p.nickname === currentMatch.metadata?.playerNickname,
+            util_damage,
+            flash_assists,
+            util_thrown,
+            blind_time,
+            isUser: isUser,
             steamId: p.player_id || p.steamId || p.steam64Id || p.player_stats?.steam_id
         };
+    };
+
+    // ROBUST USER DETECTION
+    const isUserPlayer = (p: any) => {
+        if (!p) return false;
+        const metadataNickname = currentMatch.metadata?.playerNickname || currentMatch.metadata?.metadata?.playerNickname;
+        const metadataSteamId = currentMatch.metadata?.metadata?.steamId || currentMatch.metadata?.steam64Id;
+        const pSteamId = p.player_id || p.steam64_id || p.steamId || p.steam_id || p.player_stats?.steam_id;
+        const pNickname = p.nickname || p.name;
+        if (userSteamId && pSteamId === userSteamId) return true;
+        if (userNickname && (pNickname === userNickname)) return true;
+        if (p.is_user === true || p.isUser === true) return true;
+        if (metadataNickname && pNickname === metadataNickname) return true;
+        if (metadataSteamId && pSteamId === metadataSteamId) return true;
+        return false;
     };
 
     const getScoreboardData = (): { team1: PlayerStats[]; team2: PlayerStats[] } => {
@@ -223,8 +265,8 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
         if (meta.fullStats?.rounds?.[0]?.teams) {
             const teams = meta.fullStats.rounds[0].teams;
             return {
-                team1: (teams[0].players || []).map((p: any) => normalizePlayerData(p, p.nickname === currentMatch?.metadata?.playerNickname)),
-                team2: (teams[1].players || []).map((p: any) => normalizePlayerData(p, p.nickname === currentMatch?.metadata?.playerNickname))
+                team1: (teams[0].players || []).map((p: any) => normalizePlayerData(p, isUserPlayer(p))),
+                team2: (teams[1].players || []).map((p: any) => normalizePlayerData(p, isUserPlayer(p)))
             };
         }
 
@@ -232,8 +274,6 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
         if (meta.stats && Array.isArray(meta.stats)) {
             const stats = meta.stats;
             
-            // Group by initial_team_number (most accurate for Leetify)
-            // Fallback to team_id or teamId
             const teamsMap: Record<string, any[]> = {};
             stats.forEach((s: any) => {
                 const tid = s.initial_team_number || s.team_id || s.teamId || "unknown";
@@ -243,33 +283,16 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
 
             let t1: any[] = [];
             let t2: any[] = [];
-            
             const teamIds = Object.keys(teamsMap).filter(id => id !== "unknown");
             
             if (teamIds.length >= 2) {
-                // Sort by ID to have deterministic initial split
                 teamIds.sort();
                 t1 = teamsMap[teamIds[0]];
                 t2 = teamsMap[teamIds[1]];
             } else if (teamsMap["unknown"]?.length >= 10 || teamIds.length === 1) {
-                // FALLBACK: If everyone is in one bucket, use index-based split
                 t1 = stats.slice(0, 5);
                 t2 = stats.slice(5, 10);
             }
-
-            // ROBUST USER DETECTION
-            // Check nickname, name, is_user, isUser, and steamId
-            const isUserPlayer = (p: any) => {
-                const userNickname = currentMatch.metadata?.playerNickname || currentMatch.metadata?.metadata?.playerNickname;
-                const userSteamId = currentMatch.metadata?.metadata?.steamId || currentMatch.metadata?.steam64Id;
-                
-                return (
-                    p.is_user === true || 
-                    p.isUser === true ||
-                    (userNickname && (p.nickname === userNickname || p.name === userNickname)) ||
-                    (userSteamId && (p.player_id === userSteamId || p.steam64_id === userSteamId || p.steamId === userSteamId))
-                );
-            };
 
             const userInT2 = t2.some(isUserPlayer);
             if (userInT2) {
@@ -278,19 +301,17 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                 t2 = temp;
             }
 
-            const normalize = (p: any) => normalizePlayerData(p, isUserPlayer(p));
-
             return {
-                team1: t1.map(normalize),
-                team2: t2.map(normalize)
+                team1: t1.map((p: any) => normalizePlayerData(p, isUserPlayer(p))),
+                team2: t2.map((p: any) => normalizePlayerData(p, isUserPlayer(p)))
             };
         }
 
-        // 2. Metadata players (Legacy/Steam)
+        // 3. Metadata players (Legacy/Steam)
         if (meta.players && Array.isArray(meta.players)) {
             return {
-                team1: meta.players.slice(0, 5).map((p: any) => normalizePlayerData(p)),
-                team2: meta.players.slice(5, 10).map((p: any) => normalizePlayerData(p))
+                team1: meta.players.slice(0, 5).map((p: any) => normalizePlayerData(p, isUserPlayer(p))),
+                team2: meta.players.slice(5, 10).map((p: any) => normalizePlayerData(p, isUserPlayer(p)))
             };
         }
 
@@ -721,32 +742,47 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                     </div>
                                 </div>
                             ) : mainTab === 'visao-geral' ? (
-                                <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-                                    {/* High-Level Performance Ratings Grid */}
-                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                        {[
-                                            { label: 'Mira', value: currentMatch.metadata?.leetify_ratings?.aim || Math.min(99, Math.floor(parseInt(userData.hs) * 1.5 + (userData.kills / (userData.deaths || 1)) * 10)), icon: <Target className="text-rose-500" /> },
-                                            { label: 'Utilitários', value: currentMatch.metadata?.leetify_ratings?.utility || Math.min(99, Math.floor((userData.util_damage / 4) + (userData.flash_assists * 10))), icon: <Zap className="text-sky-500" /> },
-                                            { label: 'Posicionam.', value: currentMatch.metadata?.leetify_ratings?.positioning || Math.min(99, Math.floor(userData.rating * 50 + (20 - userData.deaths))), icon: <Shield size={18} className="text-emerald-500" /> },
-                                            { label: 'Clutch', value: currentMatch.metadata?.leetify_ratings?.clutching || Math.min(99, userData.onevx * 40 + (isWin ? 20 : 0)), icon: <Trophy size={18} className="text-amber-500" /> },
-                                            { label: 'Abertura', value: currentMatch.metadata?.leetify_ratings?.opening || Math.min(99, userData.fkd * 25), icon: <Sword size={18} className="text-purple-500" /> },
-                                        ].map((stat, i) => (
-                                            <div key={i} className="bg-[#12161d] border border-white/[0.08] p-5 rounded-[28px] flex flex-col items-center gap-3 shadow-lg group hover:border-emerald-500/30 transition-all">
-                                                <div className="p-2.5 bg-white/5 rounded-xl group-hover:bg-emerald-500/10 transition-colors">
-                                                    {stat.icon}
-                                                </div>
-                                                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.15em] text-center">{stat.label}</span>
-                                                <div className="text-2xl font-black italic text-white tracking-tighter">{stat.value}</div>
-                                                <div className="w-full h-1.5 bg-white/5 rounded-full mt-1 overflow-hidden">
-                                                    <motion.div 
-                                                        initial={{ width: 0 }}
-                                                        animate={{ width: `${stat.value}%` }}
-                                                        className={`h-full ${stat.value > 80 ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : stat.value > 50 ? 'bg-zinc-600' : 'bg-rose-500'}`}
-                                                    />
-                                                </div>
-                                                {!(currentMatch?.metadata?.leetify_ratings) && <span className="text-[7px] text-zinc-700 font-black uppercase tracking-widest">Calculado</span>}
+                                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                                    {/* High-Level Performance Ratings Grid (Slimmer & Clearer) */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between px-6">
+                                            <div className="flex items-center gap-2">
+                                                <Activity size={12} className="text-emerald-500" />
+                                                <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500">A Sua Performance Individual</h3>
                                             </div>
-                                        ))}
+                                            <div className="px-3 py-1 bg-white/5 rounded-full border border-white/5 text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
+                                                Versus Match Average
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                                            {[
+                                                { label: 'Mira', value: currentMatch.metadata?.leetify_ratings?.aim || Math.min(99, Math.floor(parseInt(userData.hs) * 1.5 + (userData.kills / (userData.deaths || 1)) * 10)), icon: <Target size={14} className="text-rose-500" /> },
+                                                { label: 'Utilitários', value: currentMatch.metadata?.leetify_ratings?.utility || Math.min(99, Math.floor((userData.util_damage / 4) + (userData.flash_assists * 10))), icon: <Zap size={14} className="text-sky-500" /> },
+                                                { label: 'Posicionam.', value: currentMatch.metadata?.leetify_ratings?.positioning || Math.min(99, Math.floor(userData.rating * 50 + (20 - userData.deaths))), icon: <Shield size={14} className="text-emerald-500" /> },
+                                                { label: 'Clutch', value: currentMatch.metadata?.leetify_ratings?.clutching || Math.min(99, userData.onevx * 40 + (isWin ? 20 : 0)), icon: <Trophy size={14} className="text-amber-500" /> },
+                                                { label: 'Abertura', value: currentMatch.metadata?.leetify_ratings?.opening || Math.min(99, userData.fkd * 25), icon: <Sword size={14} className="text-purple-500" /> },
+                                            ].map((stat, i) => (
+                                                <div key={i} className="bg-[#12161d] border border-white/[0.06] p-4 rounded-[24px] flex flex-col items-center gap-2 shadow-sm group hover:border-emerald-500/20 transition-all">
+                                                    <div className="flex items-center gap-3 w-full px-1">
+                                                        <div className="p-1.5 bg-white/5 rounded-lg group-hover:bg-emerald-500/10 transition-colors shrink-0">
+                                                            {stat.icon}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-[8px] font-black uppercase text-zinc-600 tracking-wider truncate">{stat.label}</div>
+                                                            <div className="text-lg font-black italic text-white tracking-tighter -mt-0.5">{stat.value}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                                        <motion.div 
+                                                            initial={{ width: 0 }}
+                                                            animate={{ width: `${stat.value}%` }}
+                                                            className={`h-full ${stat.value > 80 ? 'bg-emerald-500' : stat.value > 50 ? 'bg-zinc-700' : 'bg-rose-500'}`}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
 
                                     {[team1, team2].map((team, tIdx) => (

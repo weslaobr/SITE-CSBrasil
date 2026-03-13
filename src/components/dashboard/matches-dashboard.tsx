@@ -50,6 +50,7 @@ interface MatchesDashboardProps {
     matches: Match[];
     onUpdateFaceit: (nickname: string) => void;
     currentFaceit: string;
+    currentUserSteamId?: string; // New prop for user identification
     onSync?: () => void;
     loading?: boolean;
     hasSteamCode?: boolean;
@@ -60,6 +61,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     matches, 
     onUpdateFaceit, 
     currentFaceit, 
+    currentUserSteamId,
     onSync, 
     loading, 
     hasSteamCode, 
@@ -508,27 +510,24 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                 </div>
                                             </td>
                                             <td className="px-1 py-6 text-center">
-                                                {match.source === 'Steam' ? (
-                                                    match.externalId ? (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                 e.stopPropagation();
-                                                                navigator.clipboard.writeText(match.externalId!);
-                                                            }}
-                                                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.03] hover:bg-emerald-500 text-zinc-600 hover:text-black transition-all active:scale-90 border border-white/5"
-                                                            title="Copiar Código"
-                                                        >
-                                                            <Copy size={12} />
-                                                        </button>
-                                                    ) : (
-                                                        <span className="text-zinc-800 font-black italic text-[8px]">—</span>
-                                                    )
-                                                ) : (
-                                                    <div className="w-10 h-10 flex items-center justify-center text-zinc-800 opacity-20" title="Link Protegido">
-                                                        <Lock size={12} />
-                                                    </div>
-                                                )}
-                                            </td>
+                                                 {match.externalId ? (
+                                                     <button
+                                                         onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              const cleanId = match.externalId?.replace('leetify-', '') || '';
+                                                             navigator.clipboard.writeText(cleanId);
+                                                         }}
+                                                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.03] hover:bg-emerald-500 text-zinc-600 hover:text-black transition-all active:scale-90 border border-white/5"
+                                                         title={`Copiar ID (${match.source})`}
+                                                     >
+                                                         <Copy size={12} />
+                                                     </button>
+                                                 ) : (
+                                                     <div className="w-10 h-10 flex items-center justify-center text-zinc-800 opacity-20" title="Link Protegido/Indisponível">
+                                                         <Lock size={12} />
+                                                     </div>
+                                                 )}
+                                             </td>
                                             <td className="px-2 py-6 text-center">
                                                 <div className="flex flex-col">
                                                     <span className="font-black text-xl italic text-white leading-none tracking-tighter">
@@ -573,14 +572,21 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             <td className="px-4 py-6 text-center">
                                                 <div className="flex flex-col">
                                                     <span className="font-black text-base italic text-zinc-500 leading-none tracking-tighter">
-                                                        {match.hsPercentage || match.metadata?.headshot_pct ? `${Math.round(match.hsPercentage || match.metadata?.headshot_pct)}%` : '—'}
+                                                        {match.hsPercentage !== null && match.hsPercentage !== undefined ? `${Math.round(match.hsPercentage)}%` : 
+                                                         (match.metadata?.headshot_pct ? `${Math.round(Number(match.metadata.headshot_pct))}%` : 
+                                                          (match.metadata?.hs_percentage ? `${Math.round(Number(match.metadata.hs_percentage))}%` : '—'))}
                                                     </span>
                                                     <span className="text-[7px] font-black text-zinc-700 uppercase mt-1">HS%</span>
                                                 </div>
                                             </td>
                                              <td className="px-4 py-6 text-center">
                                                 {(() => {
-                                                    const rating = match.metadata?.leetify_rating || (match.source === 'Faceit' ? parseFloat(match.metadata?.kdRatio || '0') : 1.0);
+                                                    const rating = match.metadata?.leetify_rating || 
+                                                                   match.metadata?.rating || 
+                                                                   (match.source === 'Faceit' ? parseFloat(match.metadata?.kdRatio || '1.0') : 
+                                                                    (match.kills / (match.deaths || 1)) || 1.0);
+                                                    
+                                                    const isLeetify = !!match.metadata?.leetify_rating;
                                                     
                                                     return (
                                                         <div className="flex flex-col items-center gap-1 group/rating">
@@ -589,12 +595,12 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                                 rating >= 1 ? 'bg-emerald-500/10 text-emerald-400' : 
                                                                 'bg-red-500/10 text-red-500'
                                                             }`}>
-                                                                {rating.toFixed(2)}
+                                                                {typeof rating === 'number' ? rating.toFixed(2) : parseFloat(String(rating)).toFixed(2)}
                                                             </div>
                                                             <div className="flex items-center gap-1">
                                                                 <Activity size={8} className="text-zinc-600" />
                                                                 <span className="text-[7px] text-zinc-600 font-black uppercase tracking-widest">
-                                                                    {match.metadata?.leetify_rating ? 'Leetify' : 'Impact'}
+                                                                    {isLeetify ? 'Leetify' : 'Impact'}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -741,6 +747,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                          (selectedMatch.externalId?.replace('leetify-', '') || selectedMatch.id) : null}
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
+                userSteamId={currentUserSteamId}
+                userNickname={currentFaceit}
             />
         </div>
     );

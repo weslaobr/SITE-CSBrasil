@@ -49,6 +49,7 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
                 if (session.user) {
                     (session.user as any).id = user.id;
                     (session.user as any).steamId = (user as any).steamId;
+                    (session.user as any).faceitNickname = (user as any).faceitNickname;
                 }
                 return session;
             },
