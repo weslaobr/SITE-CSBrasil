@@ -7,8 +7,24 @@ const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 dias em ms
  * Busca preços em massa da market.csgo.com (fonte pública confiável).
  * Retorna preços em USD. ~24k itens.
  */
-export const updatePricesFromMarketCSGO = async (): Promise<{ success: boolean; count: number }> => {
+export const updatePricesFromMarketCSGO = async (force = false): Promise<{ success: boolean; count: number }> => {
     try {
+        if (!force) {
+            // Verificar se houve atualização recente (últimas 24h)
+            const recentUpdate = await prisma.itemPriceBase.findFirst({
+                where: {
+                    lastUpdate: {
+                        gt: new Date(Date.now() - 24 * 60 * 60 * 1000)
+                    }
+                }
+            });
+
+            if (recentUpdate) {
+                console.log("[PriceService] Preços já atualizados nas últimas 24h. Pulando atualização automática.");
+                return { success: true, count: 0 };
+            }
+        }
+
         console.log("[PriceService] Iniciando atualização via market.csgo.com...");
         const url = 'https://market.csgo.com/api/v2/prices/USD.json';
 
@@ -50,8 +66,8 @@ export const updatePricesFromMarketCSGO = async (): Promise<{ success: boolean; 
 };
 
 // Aliases para compatibilidade
-export const updatePricesFromSkinport = updatePricesFromMarketCSGO;
-export const updatePricesFromCSGOTrader = updatePricesFromMarketCSGO;
+export const updatePricesFromSkinport = (force = false) => updatePricesFromMarketCSGO(force);
+export const updatePricesFromCSGOTrader = (force = false) => updatePricesFromMarketCSGO(force);
 
 /**
  * Busca o preço de um item individual

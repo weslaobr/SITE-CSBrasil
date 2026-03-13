@@ -5,7 +5,8 @@ async function main() {
     console.log("Objetivo: Buscar preços de referência na Skinport e salvar no Banco.");
     console.log("Isso resolve o problema de inventários sem valores.\n");
 
-    const result = await updatePricesFromSkinport();
+    const force = process.argv.includes('--force');
+    const result = await updatePricesFromSkinport(force);
 
     if (result.success) {
         console.log("\n[SUCESSO] Preços atualizados!");
