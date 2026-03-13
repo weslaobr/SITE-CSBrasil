@@ -192,71 +192,73 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                     </p>
                 </div>
 
-                {/* Controles */}
-                <div className="flex flex-wrap items-center gap-3">
-                    {/* Busca */}
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                {/* Barra de Ferramentas Unificada (Toolbar) */}
+                <div className="flex flex-col md:flex-row items-stretch gap-0 bg-zinc-950/80 border border-white/10 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-2xl">
+                    
+                    {/* Barra de Busca Integradada */}
+                    <div className="relative flex-grow flex items-center border-b md:border-b-0 md:border-r border-white/5">
+                        <Search className="absolute left-5 w-4 h-4 text-zinc-500" />
                         <input
                             type="text"
                             placeholder={language === 'pt' ? "Buscar skin..." : "Search skin..."}
-                            className="bg-zinc-900/70 border border-white/10 rounded-2xl py-3 pl-11 pr-5 focus:outline-none focus:border-green-500/50 transition-all backdrop-blur-md text-sm w-56 placeholder:text-zinc-600"
+                            className="bg-transparent py-4 pl-14 pr-5 focus:outline-none text-sm w-full placeholder:text-zinc-600 transition-all focus:bg-white/[0.02]"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
 
-                    {/* Toggle unificado: Idioma + Moeda */}
-                    <div className="flex flex-col items-end gap-1.5">
-                        <div className="flex bg-zinc-950 border border-white/10 rounded-2xl p-1 gap-0.5 shadow-xl shadow-black/50 backdrop-blur-xl">
+                    {/* Grupo de Toggles e Cotação */}
+                    <div className="flex flex-wrap items-center bg-white/[0.01] p-1.5 gap-1">
+                        
+                        {/* Seletor PT/EN */}
+                        <div className="flex gap-0.5 bg-black/40 rounded-2xl p-0.5 border border-white/5">
                             <button
                                 onClick={() => handleLanguageChange('pt')}
-                                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase transition-all duration-300 ${
+                                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all duration-300 ${
                                     language === 'pt'
-                                        ? 'bg-gradient-to-br from-green-500/20 to-green-600/10 text-white border border-green-500/30 shadow-lg shadow-green-500/10'
-                                        : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
+                                        ? 'bg-zinc-100 text-black shadow-lg shadow-white/5'
+                                        : 'text-zinc-500 hover:text-zinc-300'
                                 }`}
                             >
-                                <span className="text-base leading-none">🇧🇷</span>
+                                <span className="text-sm">🇧🇷</span>
                                 <span>PT</span>
-                                {language === 'pt' && (
-                                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${currency === 'BRL' ? 'bg-green-500 text-black' : 'bg-white/10 text-zinc-400'}`}>
-                                        {currency === 'BRL' ? 'R$' : '$'}
-                                    </span>
-                                )}
                             </button>
-                            <div className="w-px bg-white/5 self-stretch mx-0.5" />
                             <button
                                 onClick={() => handleLanguageChange('en')}
-                                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase transition-all duration-300 ${
+                                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all duration-300 ${
                                     language === 'en'
-                                        ? 'bg-gradient-to-br from-blue-500/20 to-blue-600/10 text-white border border-blue-500/30 shadow-lg shadow-blue-500/10'
-                                        : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
+                                        ? 'bg-zinc-100 text-black shadow-lg shadow-white/5'
+                                        : 'text-zinc-500 hover:text-zinc-300'
                                 }`}
                             >
-                                <span className="text-base leading-none">🇺🇸</span>
+                                <span className="text-sm">🇺🇸</span>
                                 <span>EN</span>
-                                {language === 'en' && (
-                                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${currency === 'USD' ? 'bg-blue-500 text-white' : 'bg-white/10 text-zinc-400'}`}>
-                                        {currency === 'USD' ? '$' : 'R$'}
-                                    </span>
-                                )}
-                            </button>
-                            <div className="w-px bg-white/5 self-stretch mx-0.5" />
-                            <button
-                                onClick={() => setCurrency(c => c === 'BRL' ? 'USD' : 'BRL')}
-                                title={currency === 'BRL' ? 'Trocar para USD' : 'Switch to BRL'}
-                                className="flex items-center px-3 py-2.5 rounded-xl text-xs font-black transition-all text-zinc-500 hover:text-white hover:bg-white/5"
-                            >
-                                {currency === 'BRL' ? 'R$↔$' : '$↔R$'}
                             </button>
                         </div>
+
+                        {/* Switch de Moeda */}
+                        <button
+                            onClick={() => setCurrency(c => c === 'BRL' ? 'USD' : 'BRL')}
+                            className="group flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-black/40 border border-white/5 hover:border-white/20 transition-all"
+                        >
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-md transition-all ${
+                                currency === 'BRL' ? 'bg-green-500 text-black shadow-[0_0_10px_rgba(34,197,94,0.3)]' : 'bg-white/10 text-zinc-400 group-hover:text-white'
+                            }`}>R$</span>
+                            <RefreshCw className="w-3 h-3 text-zinc-600 group-hover:rotate-180 transition-transform duration-500" />
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-md transition-all ${
+                                currency === 'USD' ? 'bg-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.3)]' : 'bg-white/10 text-zinc-400 group-hover:text-white'
+                            }`}>USD</span>
+                        </button>
+
+                        {/* Cotação Estilo "Status Pill" */}
                         {exchangeRate && (
-                            <div className="flex items-center gap-1.5 text-[11px] text-zinc-600 font-mono pr-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-                                <span>1 USD = <span className="text-zinc-400 font-bold">R$ {exchangeRate.rate.toFixed(2)}</span></span>
-                                <span className="text-zinc-700">·</span>
-                                <span>PTAX {exchangeRate.bcbRate.toFixed(2)}</span>
+                            <div className="hidden lg:flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-black/20 border border-white/5 font-mono">
+                                <span className="flex items-center gap-1.5">
+                                    <span className="text-[9px] text-zinc-600 font-black uppercase tracking-tighter">Live</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]" />
+                                </span>
+                                <div className="h-3 w-px bg-white/10" />
+                                <span className="text-[11px] text-zinc-400 font-bold">1 $ = R$ {exchangeRate.rate.toFixed(2)}</span>
                             </div>
                         )}
                     </div>
