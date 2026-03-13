@@ -210,45 +210,78 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                         />
                     </div>
 
-                    {/* Botão de Idioma + Moeda */}
-                    <div className="flex flex-col gap-2 self-start">
-                        <div className="flex bg-zinc-900/50 p-1 border border-white/10 rounded-xl backdrop-blur-md shadow-inner">
+                    {/* Toggle unificado: Idioma + Moeda */}
+                    <div className="flex flex-col items-end gap-1.5 self-start">
+                        <div className="flex bg-zinc-950 border border-white/10 rounded-2xl p-1 gap-0.5 shadow-xl shadow-black/50 backdrop-blur-xl">
+                            {/* 🇧🇷 PT + BRL */}
                             <button
                                 onClick={() => handleLanguageChange('pt')}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${
-                                    language === 'pt' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
+                                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all duration-300 ${
+                                    language === 'pt'
+                                        ? 'bg-gradient-to-br from-green-500/20 to-green-600/10 text-white border border-green-500/30 shadow-lg shadow-green-500/10'
+                                        : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
                                 }`}
                             >
-                                <span className="text-sm">🇧🇷</span> PT
+                                <span className="text-base leading-none">🇧🇷</span>
+                                <span className={`tracking-widest transition-colors ${language === 'pt' ? 'text-white' : 'text-zinc-600'}`}>PT</span>
+                                {language === 'pt' && (
+                                    <span className={`ml-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md tracking-wide transition-all ${
+                                        currency === 'BRL'
+                                            ? 'bg-green-500 text-black'
+                                            : 'bg-white/10 text-zinc-400'
+                                    }`}>
+                                        {currency === 'BRL' ? 'R$' : '$'}
+                                    </span>
+                                )}
                             </button>
+
+                            {/* Divider */}
+                            <div className="w-px bg-white/5 mx-0.5 self-stretch" />
+
+                            {/* 🇺🇸 EN + USD */}
                             <button
                                 onClick={() => handleLanguageChange('en')}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${
-                                    language === 'en' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
+                                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all duration-300 ${
+                                    language === 'en'
+                                        ? 'bg-gradient-to-br from-blue-500/20 to-blue-600/10 text-white border border-blue-500/30 shadow-lg shadow-blue-500/10'
+                                        : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
                                 }`}
                             >
-                                <span className="text-sm">🇺🇸</span> EN
+                                <span className="text-base leading-none">🇺🇸</span>
+                                <span className={`tracking-widest transition-colors ${language === 'en' ? 'text-white' : 'text-zinc-600'}`}>EN</span>
+                                {language === 'en' && (
+                                    <span className={`ml-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md tracking-wide transition-all ${
+                                        currency === 'USD'
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-white/10 text-zinc-400'
+                                    }`}>
+                                        {currency === 'USD' ? '$' : 'R$'}
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* Divider */}
+                            <div className="w-px bg-white/5 mx-0.5 self-stretch" />
+
+                            {/* Mini currency switch */}
+                            <button
+                                onClick={() => setCurrency(c => c === 'BRL' ? 'USD' : 'BRL')}
+                                title={currency === 'BRL' ? 'Trocar para USD' : 'Switch to BRL'}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[9px] font-black uppercase transition-all duration-200 text-zinc-500 hover:text-white hover:bg-white/5 border border-transparent"
+                            >
+                                <span className="font-mono text-[10px]">{currency === 'BRL' ? 'R$↔$' : '$↔R$'}</span>
                             </button>
                         </div>
-                        {/* Toggle USD/BRL */}
-                        <div className="flex bg-zinc-900/50 p-1 border border-white/10 rounded-xl backdrop-blur-md shadow-inner">
-                            <button
-                                onClick={() => setCurrency('BRL')}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
-                                    currency === 'BRL' ? 'bg-green-600 text-white shadow-lg shadow-green-500/20' : 'text-zinc-500 hover:text-zinc-300'
-                                }`}
-                            >
-                                R$ BRL
-                            </button>
-                            <button
-                                onClick={() => setCurrency('USD')}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
-                                    currency === 'USD' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-zinc-500 hover:text-zinc-300'
-                                }`}
-                            >
-                                $ USD
-                            </button>
-                        </div>
+
+                        {/* Live rate badge */}
+                        {exchangeRate && (
+                            <div className="flex items-center gap-1.5 text-[9px] text-zinc-600 font-mono pr-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+                                <span>1 USD = <span className="text-zinc-400 font-black">R$ {exchangeRate.rate.toFixed(2)}</span></span>
+                                <span className="text-zinc-700">·</span>
+                                <span>PTAX {exchangeRate.bcbRate.toFixed(2)}</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Filtro de Raridade */}
