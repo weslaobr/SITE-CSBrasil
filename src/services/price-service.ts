@@ -82,3 +82,34 @@ export const getItemPrice = async (marketHashName: string): Promise<number | nul
 
     return null;
 };
+
+/**
+ * Busca múltiplos preços em lote na tabela ItemPriceBase.
+ * Ajuda a reduzir o número de conexões ao banco e acelera o carregamento do inventário.
+ */
+export const getMultiplePrices = async (marketHashNames: string[]): Promise<Map<string, number | null>> => {
+    const priceMap = new Map<string, number | null>();
+    
+    try {
+        const uniqueNames = [...new Set(marketHashNames)];
+        
+        // Busca do banco todos os que já temos e não estão expirados
+        const dbPrices = await prisma.itemPriceBase.findMany({
+            where: {
+                marketHashName: { in: uniqueNames }
+            }
+        });
+
+        for (const item of dbPrices) {
+            // Só reutilizamos se estiver dentro do TTL
+            if (Date.now() - item.lastUpdate.getTime() < CACHE_TTL) {
+                priceMap.set(item.marketHashName, item.price);
+            }
+        }
+
+        return priceMap;
+    } catch (error) {
+        console.error("[PriceService] Erro na busca em lote:", error);
+        return priceMap;
+    }
+};

@@ -113,13 +113,18 @@ export const getPlayerInventory = async (steamId: string) => {
         const assets = response.data.assets || [];
 
         // Import do serviço de preço
-        const { getItemPrice } = await import('./price-service');
+        const { getItemPrice, getMultiplePrices } = await import('./price-service');
 
-        // Mapear itens de forma assíncrona e sequencial para evitar Rate Limit na Steam
+        // 1. Extrair todos os market_hash_names únicos do inventário
+        const uniqueMarketNames = Array.from(new Set(descriptions.map((d: any) => d.market_hash_name || d.market_name))) as string[];
+        
+        // 2. Buscar em lote todos os preços que já existem no Banco de Dados
+        const priceMap = await getMultiplePrices(uniqueMarketNames);
+        
+        let steamRequestCount = 0;
+        const MAX_STEAM_REQUESTS_PER_LOAD = 15; // Limite de 15 novas skins por carregamento para não travar o server nem levar ban
+
         const items = [];
-        // Usamos um Set para não buscar o preço do mesmo item várias vezes (ex: caixas repetidas)
-        const priceMap = new Map<string, number | null>();
-
         for (const asset of assets) {
             const description = descriptions.find((d: any) => d.classid === asset.classid && d.instanceid === asset.instanceid);
             if (!description) continue;
@@ -127,11 +132,16 @@ export const getPlayerInventory = async (steamId: string) => {
             const name_pt = description.market_name;
             const name_en = description.market_hash_name || description.market_name;
 
-            // Se já buscamos o preço desse item nesta requisição, reutilizamos
-            // IMPORTANTE: Preços devem ser buscados pelo market_hash_name (Inglês)
+            // 3. Se não encontramos no banco (ou estava expirado), buscamos da Steam (com limite)
             if (!priceMap.has(name_en)) {
-                const price = await getItemPrice(name_en);
-                priceMap.set(name_en, price);
+                if (steamRequestCount < MAX_STEAM_REQUESTS_PER_LOAD) {
+                    const price = await getItemPrice(name_en);
+                    priceMap.set(name_en, price);
+                    steamRequestCount++;
+                } else {
+                    // Se atingiu o limite, deixamos como null para tentar no próximo F5 ou carregar em background
+                    priceMap.set(name_en, null);
+                }
             }
 
             // Extrair URL de inspeção (in-game)
