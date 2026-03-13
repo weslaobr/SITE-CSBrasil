@@ -133,18 +133,31 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
 
     const stats = useMemo(() => {
         const total = filteredMatches.length;
-        if (total === 0) return { wr: 0, kills: 0, adr: 0, kd: 0 };
+        if (total === 0) return { wr: 0, kills: 0, adr: '0.0', kd: '0.00', hs: '0', rating: '0.00' };
         
         const wins = filteredMatches.filter(m => m.result === 'Win').length;
         const totalKills = filteredMatches.reduce((acc, m) => acc + (m.kills || 0), 0);
         const totalDeaths = filteredMatches.reduce((acc, m) => acc + (m.deaths || 0), 0);
-        const totalAdr = filteredMatches.reduce((acc, m) => acc + (m.adr || 0), 0);
-        
+
+        // Only average matches with real ADR data
+        const adrMatches = filteredMatches.filter(m => m.adr != null && m.adr > 0);
+        const totalAdr = adrMatches.reduce((acc, m) => acc + (m.adr ?? 0), 0);
+
+        // Average HS% from matches that have it
+        const hsMatches = filteredMatches.filter(m => m.hsPercentage != null && m.hsPercentage > 0);
+        const totalHs = hsMatches.reduce((acc, m) => acc + (m.hsPercentage ?? 0), 0);
+
+        // Average rating from metadata where leetify_rating exists
+        const ratingMatches = filteredMatches.filter(m => m.metadata?.leetify_rating);
+        const totalRating = ratingMatches.reduce((acc, m) => acc + (m.metadata.leetify_rating || 0), 0);
+
         return {
             wr: Math.round((wins / total) * 100),
             kills: totalKills,
-            adr: (totalAdr / total).toFixed(1),
-            kd: (totalKills / (totalDeaths || 1)).toFixed(2)
+            adr: adrMatches.length > 0 ? (totalAdr / adrMatches.length).toFixed(1) : '—',
+            kd: (totalKills / (totalDeaths || 1)).toFixed(2),
+            hs: hsMatches.length > 0 ? Math.round(totalHs / hsMatches.length).toString() : '—',
+            rating: ratingMatches.length > 0 ? (totalRating / ratingMatches.length).toFixed(2) : '—'
         };
     }, [filteredMatches]);
 
@@ -291,12 +304,14 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             </AnimatePresence>
 
             {/* Summary Stat Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
                     { label: 'Win Rate', value: `${stats.wr}%`, icon: <Trophy className="text-emerald-500" />, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
                     { label: 'Avg ADR', value: stats.adr, icon: <Zap className="text-green-500" />, color: 'text-green-500', bg: 'bg-green-500/10' },
                     { label: 'K/D Ratio', value: stats.kd, icon: <TrendingUp className="text-amber-500" />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
                     { label: 'Total Kills', value: stats.kills, icon: <Target className="text-red-500" />, color: 'text-red-500', bg: 'bg-red-500/10' },
+                    { label: 'Avg HS%', value: stats.hs !== '—' ? `${stats.hs}%` : '—', icon: <Activity className="text-rose-500" />, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+                    { label: 'Avg Rating', value: stats.rating, icon: <Zap className="text-purple-500" />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
                 ].map((stat, i) => (
                     <motion.div
                         key={i}

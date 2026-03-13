@@ -211,7 +211,7 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                                 <table className="w-full text-left">
                                                     <thead>
                                                         <tr className="border-b border-white/5 text-[9px] text-zinc-600 font-black uppercase tracking-widest bg-white/[0.01]">
-                                                            <th className="pl-6 py-4">Jogador</th>
+                                                            <th className="pl-6 py-4" colSpan={2}>Jogador</th>
                                                             {activeTab === 'geral' ? (
                                                                 <>
                                                                     <th className="py-4 text-center">K / D / A</th>
@@ -256,19 +256,30 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
 
                                                             return (
                                                                 <tr key={player.steam64_id} className="group hover:bg-white/[0.03] transition-colors">
-                                                                    <td className="pl-6 py-4 flex items-center gap-3">
-                                                                        <div className={`w-1.5 h-1.5 rounded-full ${isTeamA ? 'bg-emerald-500' : 'bg-red-500'} opacity-40`} />
-                                                                        <span className="text-white font-black italic uppercase text-sm group-hover:text-cyan-400 transition-colors">
-                                                                            {cleanName}
-                                                                        </span>
-                                                                        <a 
-                                                                            href={`https://steamcommunity.com/profiles/${player.steam64_id}`}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                        >
-                                                                            <ExternalLink size={10} className="text-zinc-600" />
-                                                                        </a>
+                                                                    <td className="pl-6 py-4">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <div className={`w-1.5 h-1.5 rounded-full ${isTeamA ? 'bg-emerald-500' : 'bg-red-500'} opacity-40`} />
+                                                                            <img 
+                                                                                src={player.avatar_url || `https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg`} 
+                                                                                className="w-10 h-10 rounded-xl border border-white/10 object-cover" 
+                                                                                alt="" 
+                                                                            />
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="py-4 pr-4">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-white font-black italic uppercase text-sm group-hover:text-cyan-400 transition-colors">
+                                                                                {cleanName}
+                                                                            </span>
+                                                                            <a 
+                                                                                href={`https://steamcommunity.com/profiles/${player.steam64_id}`}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                            >
+                                                                                <ExternalLink size={10} className="text-zinc-600" />
+                                                                            </a>
+                                                                        </div>
                                                                     </td>
                                                                     
                                                                     {activeTab === 'geral' ? (

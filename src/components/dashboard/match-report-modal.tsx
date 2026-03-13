@@ -196,7 +196,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
         const fallbackClutches = kills > 25 ? 1 : 0;
         const fallbackKast = isWinResult ? 75 : 62;
 
-        const avatar = p.avatar_url || p.avatarUrl || p.avatar || (p.player_stats?.avatar) || (isUser ? "https://avatars.steamstatic.com/2cf8997181cfcbceeacd49034d12aaf4c378d15e.jpg" : `https://i.pravatar.cc/150?u=${p.player_id || p.name || p.nickname || 'default'}`);
+        const avatar = p.avatar_url || p.avatarUrl || p.avatar || (p.player_stats?.avatar) || (isUser ? "https://avatars.steamstatic.com/2cf8997181cfcbceeacd49034d12aaf4c378d15e.jpg" : `https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg`);
 
         const util_damage = p.util_damage !== undefined ? p.util_damage : 
                            (p.utility_damage !== undefined ? p.utility_damage : 
