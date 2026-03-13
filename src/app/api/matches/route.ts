@@ -26,12 +26,47 @@ export async function GET(req: NextRequest) {
         });
 
         // Fetch matches from DB — always read from DB, sync is done separately via POST /api/sync/all
-        const matches = await prisma.match.findMany({
+        const rawMatches = await prisma.match.findMany({
             where: { userId },
             orderBy: { matchDate: 'desc' }
         });
 
-        console.log(`[Matches GET] userId=${userId} — Found ${matches.length} matches in DB`);
+        console.log(`[Matches GET] userId=${userId} — Found ${rawMatches.length} matches in DB`);
+
+        // Enrich matches: if DB columns are 0/null, recover from raw Leetify metadata
+        const matches = rawMatches.map((m) => {
+            const meta: any = m.metadata || {};
+
+            // Extract kills from multiple possible field names
+            const kills = (m.kills && m.kills > 0)
+                ? m.kills
+                : (meta.kills ?? meta.num_kills ?? meta.totalKills ?? meta.total_kills ?? 0);
+
+            const deaths = (m.deaths && m.deaths > 0)
+                ? m.deaths
+                : (meta.deaths ?? meta.num_deaths ?? meta.totalDeaths ?? meta.total_deaths ?? 0);
+
+            const assists = (m.assists && m.assists > 0)
+                ? m.assists
+                : (meta.assists ?? meta.num_assists ?? meta.totalAssists ?? meta.total_assists ?? 0);
+
+            // ADR
+            const adr = (m.adr != null && m.adr > 0)
+                ? m.adr
+                : (meta.adr ?? meta.average_damage_per_round ?? meta.avgDamagePerRound ?? null);
+
+            // HS%: handle both ratio (0.2979) and full percent (29.79)
+            let hsPercentage = m.hsPercentage;
+            if ((hsPercentage == null || hsPercentage <= 0) && meta.accuracy_head != null) {
+                const raw = Number(meta.accuracy_head);
+                hsPercentage = raw > 1 ? Math.round(raw) : Math.round(raw * 100);
+            }
+            if (hsPercentage == null && meta.hs_percentage != null) {
+                hsPercentage = Number(meta.hs_percentage);
+            }
+
+            return { ...m, kills, deaths, assists, adr, hsPercentage };
+        });
 
         return NextResponse.json({
             matches: matches || [],

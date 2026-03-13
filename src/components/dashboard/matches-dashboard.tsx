@@ -545,23 +545,23 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                              </td>
                                             <td className="px-2 py-6 text-center">
                                                 <div className="flex flex-col">
-                                                    <span className="font-black text-xl italic text-white leading-none tracking-tighter">
-                                                        {match.kills}
+                                                    <span className={`font-black text-xl italic leading-none tracking-tighter ${match.kills > 0 ? 'text-white' : 'text-zinc-700'}`}>
+                                                        {match.kills > 0 ? match.kills : '—'}
                                                     </span>
                                                     <span className="text-[7px] font-black text-zinc-600 uppercase mt-1">Kills</span>
                                                 </div>
                                             </td>
                                             <td className="px-2 py-6 text-center">
                                                 <div className="flex flex-col">
-                                                    <span className="font-black text-xl italic text-zinc-500 leading-none tracking-tighter">
-                                                        {match.deaths}
+                                                    <span className={`font-black text-xl italic leading-none tracking-tighter ${match.deaths > 0 ? 'text-zinc-500' : 'text-zinc-700'}`}>
+                                                        {match.deaths > 0 ? match.deaths : '—'}
                                                     </span>
                                                     <span className="text-[7px] font-black text-zinc-700 uppercase mt-1">Deaths</span>
                                                 </div>
                                             </td>
                                             <td className="px-2 py-6 text-center">
                                                 <div className="flex flex-col items-center">
-                                                    <span className="font-black text-xl italic text-zinc-600 leading-none tracking-tighter">{match.assists}</span>
+                                                    <span className={`font-black text-xl italic leading-none tracking-tighter ${match.assists > 0 ? 'text-zinc-600' : 'text-zinc-700'}`}>{match.assists > 0 ? match.assists : '—'}</span>
                                                     <div className="flex gap-1 mt-1.5">
                                                         {(match.metadata?.quadroKills || 0) > 0 && (
                                                             <div className="px-1 rounded bg-orange-500/20 border border-orange-500/30" title="Quadra Kill">
@@ -579,7 +579,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             <td className="px-4 py-6 text-center">
                                                 <div className="flex flex-col">
                                                     <span className="font-black text-xl italic text-green-500/80 leading-none tracking-tighter">
-                                                        {Math.round(match.adr || match.metadata?.adr || 0)}
+                                                        {(match.adr || match.metadata?.adr) ? Math.round(match.adr || match.metadata?.adr) : '—'}
                                                     </span>
                                                     <span className="text-[7px] font-black text-zinc-700 uppercase mt-1">ADR</span>
                                                 </div>

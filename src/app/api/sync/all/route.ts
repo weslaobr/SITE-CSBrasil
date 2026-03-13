@@ -3,6 +3,10 @@ import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLeetifyPlayerData } from "@/services/leetify-csbrasil";
+import axios from "axios";
+
+const LEETIFY_API_KEY = process.env.LEETIFY_API_KEY || '4549d73d-8a0d-40ff-9051-a3166c518dae';
+const LEETIFY_BASE_URL = 'https://api-public.cs-prod.leetify.com';
 
 export async function POST(req: NextRequest) {
     try {
@@ -37,11 +41,6 @@ export async function POST(req: NextRequest) {
                 console.log(`[QuickSync] Found ${recentMatches.length} Leetify recent matches`);
 
                 for (const m of recentMatches) {
-                    // Debug: log first match to reveal actual field names
-                    if (recentMatches.indexOf(m) === 0) {
-                        console.log('[QuickSync] First Leetify match fields:', JSON.stringify(m, null, 2));
-                    }
-
                     const externalId = `leetify-${m.id}`;
                     const mapName = (m.map_name || 'Unknown').replace('de_', '');
                     const scoreArr = Array.isArray(m.score) ? m.score : [0, 0];
@@ -49,27 +48,55 @@ export async function POST(req: NextRequest) {
                     const result = m.outcome === 'win' ? 'Win' : m.outcome === 'tie' ? 'Draw' : 'Loss';
                     const matchDate = m.finished_at ? new Date(m.finished_at) : new Date();
 
-                    // Multiple field fallbacks for kills/deaths/assists
-                    const kills = m.kills ?? m.num_kills ?? m.totalKills ?? m.total_kills ?? 0;
-                    const deaths = m.deaths ?? m.num_deaths ?? m.totalDeaths ?? m.total_deaths ?? 0;
-                    const assists = m.assists ?? m.num_assists ?? m.totalAssists ?? m.total_assists ?? 0;
-
-                    // ADR fallbacks
-                    const adr: number | null = m.adr ?? m.average_damage_per_round ?? m.avgDamagePerRound ?? null;
-
-                    // HS%: accuracy_head can be a ratio (0.2979) or percentage (29.79)
+                    // HS%: accuracy_head is already a percentage value (e.g. 29.79 = 29.79%)
                     let hsPercentage: number | null = null;
                     if (m.accuracy_head != null) {
-                        // If value > 1, it's already expressed as a percentage (e.g. 29.79)
-                        // If value <= 1, it's a decimal ratio (e.g. 0.2979) — multiply by 100
-                        hsPercentage = m.accuracy_head > 1
-                            ? Math.round(m.accuracy_head)
-                            : Math.round(m.accuracy_head * 100);
-                    } else if (m.hs_percentage != null) {
-                        hsPercentage = Number(m.hs_percentage);
-                    } else if (m.headshot_percentage != null) {
-                        const raw = Number(m.headshot_percentage);
-                        hsPercentage = Math.round(raw > 1 ? raw : raw * 100);
+                        const raw = Number(m.accuracy_head);
+                        // If > 1 it's already a full % (29.79), if <= 1 it's a ratio (0.2979)
+                        hsPercentage = raw > 1 ? Math.round(raw) : Math.round(raw * 100);
+                    }
+
+                    // Fetch full match details to get kills/deaths/assists/adr for the user
+                    let kills = 0, deaths = 0, assists = 0, adr: number | null = null;
+                    let matchMetaExtra: any = {};
+                    try {
+                        const detailRes = await axios.get(`${LEETIFY_BASE_URL}/v2/matches/${m.id}`, {
+                            headers: { '_leetify_key': LEETIFY_API_KEY },
+                            timeout: 5000
+                        });
+                        const detail = detailRes.data;
+
+                        // Find the current user's row in the stats array
+                        const playerStat = detail.stats?.find((p: any) =>
+                            p.steam64_id === user.steamId ||
+                            p.steamId === user.steamId ||
+                            p.player_id === user.steamId
+                        );
+
+                        if (playerStat) {
+                            // Leetify v2 match detail uses: total_kills, total_deaths, total_assists, dpr (not kills/deaths/assists/adr)
+                            kills = playerStat.total_kills ?? playerStat.kills ?? 0;
+                            deaths = playerStat.total_deaths ?? playerStat.deaths ?? 0;
+                            assists = playerStat.total_assists ?? playerStat.assists ?? 0;
+                            adr = playerStat.dpr ?? playerStat.adr ?? playerStat.average_damage_per_round ?? null;
+
+                            // accuracy_head in match detail is a 0-1 ratio (e.g. 0.2979 = 29.79%)
+                            if (hsPercentage == null && playerStat.accuracy_head != null) {
+                                const raw = Number(playerStat.accuracy_head);
+                                hsPercentage = raw > 1 ? Math.round(raw) : Math.round(raw * 100);
+                            }
+                            if (hsPercentage == null && playerStat.hs_percentage != null) {
+                                hsPercentage = Number(playerStat.hs_percentage);
+                            }
+                        }
+
+                        matchMetaExtra = {
+                            leetify_ratings: detail.ratings,
+                            teamA: detail.teamA,
+                            teamB: detail.teamB
+                        };
+                    } catch (detailErr: any) {
+                        console.warn(`[QuickSync] Could not fetch match details for ${m.id}: ${detailErr.message}`);
                     }
 
                     const sharedData = {
@@ -81,7 +108,7 @@ export async function POST(req: NextRequest) {
                         hsPercentage,
                         result,
                         matchDate,
-                        metadata: { ...m, source_detail: 'leetify' }
+                        metadata: { ...m, ...matchMetaExtra, source_detail: 'leetify' }
                     };
 
                     await prisma.match.upsert({
