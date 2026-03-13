@@ -18,7 +18,7 @@ interface InventoryItem {
     category_name?: string;
     exterior_label?: string;
     price?: number | null;
-    paidPrice?: number | null; // Adicionado: Preço que o usuário pagou
+    paidPrice?: number | null;
     inspect_url?: string | null;
     market_url?: string | null;
 }
@@ -33,12 +33,8 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
     const [localItems, setLocalItems] = useState<InventoryItem[]>(items);
     const [exchangeRate, setExchangeRate] = useState<{ rate: number; bcbRate: number; updatedAt: string } | null>(null);
 
-    // Sincronizar localItems quando a prop items mudar
-    useEffect(() => {
-        setLocalItems(items);
-    }, [items]);
+    useEffect(() => { setLocalItems(items); }, [items]);
 
-    // Buscar taxa de câmbio
     useEffect(() => {
         fetch('/api/exchange-rate')
             .then(r => r.json())
@@ -46,27 +42,23 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
             .catch(() => {});
     }, []);
 
-    // Quando muda idioma, muda moeda padrão automaticamente
     const handleLanguageChange = (lang: 'pt' | 'en') => {
         setLanguage(lang);
         setCurrency(lang === 'pt' ? 'BRL' : 'USD');
     };
 
-    // Mapas de raridade: chave canônica → { cor hex, pt, en }
+    // ── Raridades ──
     const RARITY_MAP: Record<string, { color: string; pt: string; en: string }> = {
-        'Common':      { color: 'b0c3d9', pt: 'Comum',          en: 'Common' },
-        'Uncommon':    { color: '5e98d9', pt: 'Incomum',        en: 'Uncommon' },
-        'Rare':        { color: '4b69ff', pt: 'Raro',           en: 'Rare' },
-        'Mythical':    { color: '8847ff', pt: 'Mítico',         en: 'Mythical' },
-        'Legendary':   { color: 'd32ce6', pt: 'Lendário',       en: 'Legendary' },
-        'Ancient':     { color: 'eb4b4b', pt: 'Antigo',         en: 'Ancient' },
-        'Contraband':  { color: 'e4ae39', pt: 'Contrabandeado', en: 'Contraband' },
+        'Common':     { color: 'b0c3d9', pt: 'Comum',          en: 'Common' },
+        'Uncommon':   { color: '5e98d9', pt: 'Incomum',        en: 'Uncommon' },
+        'Rare':       { color: '4b69ff', pt: 'Raro',           en: 'Rare' },
+        'Mythical':   { color: '8847ff', pt: 'Mítico',         en: 'Mythical' },
+        'Legendary':  { color: 'd32ce6', pt: 'Lendário',       en: 'Legendary' },
+        'Ancient':    { color: 'eb4b4b', pt: 'Antigo',         en: 'Ancient' },
+        'Contraband': { color: 'e4ae39', pt: 'Contrabandeado', en: 'Contraband' },
     };
-
-    // Ordem de exibição por tier
     const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Mythical', 'Legendary', 'Ancient', 'Contraband'];
 
-    // Normaliza string de raridade para chave canônica
     const normalizeRarity = (rarity: string): string =>
         rarity.replace('Rarity_', '').replace('_Weapon', '').replace('_Character', '').replace('_Default', '');
 
@@ -76,292 +68,258 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
         return RARITY_MAP[key]?.[language] || key;
     };
 
-    const getRarityColor = (rarity: string): string => {
-        const key = normalizeRarity(rarity);
-        return RARITY_MAP[key]?.color || 'ffffff';
-    };
-
-    // Unique canonical rarities present in inventory, in tier order
     const canonicalRaritiesInInventory = RARITY_ORDER.filter(key =>
         localItems.some(i => normalizeRarity(i.rarity || '') === key)
     );
 
-    // Contagem por raridade canônica
     const rarityCounts = canonicalRaritiesInInventory.reduce((acc, key) => {
         acc[key] = localItems.filter(i => normalizeRarity(i.rarity || '') === key).length;
         return acc;
     }, {} as Record<string, number>);
 
+    // ── Categorias ──
     const categories = [
-        { id: 'all', label: language === 'pt' ? 'Todos' : 'All' },
-        { id: 'knife', label: language === 'pt' ? 'Facas' : 'Knives' },
-        { id: 'gloves', label: language === 'pt' ? 'Luvas' : 'Gloves' },
-        { id: 'rifle', label: language === 'pt' ? 'Rifles' : 'Rifles' },
-        { id: 'pistol', label: language === 'pt' ? 'Pistolas' : 'Pistols' },
-        { id: 'smg', label: language === 'pt' ? 'SMGs' : 'SMGs' },
-        { id: 'sniper', label: language === 'pt' ? 'Snipers' : 'Snipers' },
-        { id: 'shotgun', label: language === 'pt' ? 'Escopetas' : 'Shotguns' },
+        { id: 'all',        label: language === 'pt' ? 'Todos'         : 'All' },
+        { id: 'knife',      label: language === 'pt' ? 'Facas'         : 'Knives' },
+        { id: 'gloves',     label: language === 'pt' ? 'Luvas'         : 'Gloves' },
+        { id: 'rifle',      label: language === 'pt' ? 'Rifles'        : 'Rifles' },
+        { id: 'pistol',     label: language === 'pt' ? 'Pistolas'      : 'Pistols' },
+        { id: 'smg',        label: 'SMGs' },
+        { id: 'sniper',     label: 'Snipers' },
+        { id: 'shotgun',    label: language === 'pt' ? 'Escopetas'     : 'Shotguns' },
         { id: 'machinegun', label: language === 'pt' ? 'Metralhadoras' : 'Machineguns' },
-        { id: 'agent', label: language === 'pt' ? 'Agentes' : 'Agents' },
-        { id: 'container', label: language === 'pt' ? 'Caixas' : 'Cases' },
-        { id: 'sticker', label: language === 'pt' ? 'Adesivos' : 'Stickers' },
-        { id: 'collectible', label: language === 'pt' ? 'Colecionáveis' : 'Collectibles' }
+        { id: 'agent',      label: language === 'pt' ? 'Agentes'       : 'Agents' },
+        { id: 'container',  label: language === 'pt' ? 'Caixas'        : 'Cases' },
+        { id: 'sticker',    label: language === 'pt' ? 'Adesivos'      : 'Stickers' },
+        { id: 'collectible',label: language === 'pt' ? 'Colecionáveis' : 'Collectibles' },
     ];
 
+    // ── Filtro ──
     const filteredItems = localItems.filter(item => {
-        // 1. Busca
         const searchLower = searchTerm.toLowerCase();
         const matchesSearch =
             item.name_pt?.toLowerCase().includes(searchLower) ||
             item.name_en?.toLowerCase().includes(searchLower) ||
             item.name.toLowerCase().includes(searchLower);
 
-        // 2. Raridade — compara pela chave canônica
         const matchesRarity = filterRarity === 'all' || normalizeRarity(item.rarity || '') === filterRarity;
-        
-        // 3. Tipo (Lógica Robusta usando Internal Name)
+
         let matchesType = true;
         if (filterType !== 'all') {
             const typeLower = item.type?.toLowerCase() || '';
             const catInternal = item.category_internal?.toLowerCase() || '';
             const nameLower = item.name_en?.toLowerCase() || '';
-
             switch (filterType) {
-                case 'knife': matchesType = typeLower.includes('knife') || catInternal.includes('knife'); break;
-                case 'gloves': matchesType = typeLower.includes('gloves') || catInternal.includes('gloves') || typeLower.includes('hands') || catInternal.includes('hands') || nameLower.includes('gloves'); break;
-                case 'rifle': matchesType = typeLower.includes('rifle') || (catInternal.includes('rifle') && !nameLower.includes('awp') && !nameLower.includes('scar-20') && !nameLower.includes('g3sg1') && !nameLower.includes('ssg 08')); break;
-                case 'pistol': matchesType = typeLower.includes('pistol') || catInternal.includes('pistol'); break;
-                case 'smg': matchesType = typeLower.includes('smg') || catInternal.includes('smg'); break;
-                case 'sniper': matchesType = nameLower.includes('awp') || nameLower.includes('scar-20') || nameLower.includes('g3sg1') || nameLower.includes('ssg 08') || typeLower.includes('sniper'); break;
-                case 'shotgun': matchesType = typeLower.includes('shotgun') || catInternal.includes('shotgun'); break;
+                case 'knife':      matchesType = typeLower.includes('knife') || catInternal.includes('knife'); break;
+                case 'gloves':     matchesType = typeLower.includes('gloves') || catInternal.includes('gloves') || typeLower.includes('hands') || nameLower.includes('gloves'); break;
+                case 'rifle':      matchesType = typeLower.includes('rifle') && !nameLower.includes('awp') && !nameLower.includes('scar-20') && !nameLower.includes('g3sg1') && !nameLower.includes('ssg 08'); break;
+                case 'pistol':     matchesType = typeLower.includes('pistol') || catInternal.includes('pistol'); break;
+                case 'smg':        matchesType = typeLower.includes('smg') || catInternal.includes('smg'); break;
+                case 'sniper':     matchesType = nameLower.includes('awp') || nameLower.includes('scar-20') || nameLower.includes('g3sg1') || nameLower.includes('ssg 08') || typeLower.includes('sniper'); break;
+                case 'shotgun':    matchesType = typeLower.includes('shotgun') || catInternal.includes('shotgun'); break;
                 case 'machinegun': matchesType = typeLower.includes('machinegun') || catInternal.includes('machinegun'); break;
-                case 'agent': matchesType = typeLower.includes('agent') || catInternal.includes('agent') || typeLower.includes('character') || catInternal.includes('character'); break;
-                case 'container': matchesType = typeLower.includes('container') || catInternal.includes('container') || typeLower.includes('case'); break;
-                case 'sticker': matchesType = typeLower.includes('sticker') || catInternal.includes('sticker'); break;
-                case 'collectible': matchesType = typeLower.includes('collectible') || catInternal.includes('collectible') || typeLower.includes('pin'); break;
+                case 'agent':      matchesType = typeLower.includes('agent') || catInternal.includes('agent') || typeLower.includes('character'); break;
+                case 'container':  matchesType = typeLower.includes('container') || catInternal.includes('container') || typeLower.includes('case'); break;
+                case 'sticker':    matchesType = typeLower.includes('sticker') || catInternal.includes('sticker'); break;
+                case 'collectible':matchesType = typeLower.includes('collectible') || catInternal.includes('collectible') || typeLower.includes('pin'); break;
             }
         }
-
         return matchesSearch && matchesRarity && matchesType;
     });
 
+    // ── Valores ──
     const totalValueUSD = localItems.reduce((acc, item) => acc + (item.price || 0), 0);
     const totalValueBRL = exchangeRate ? totalValueUSD * exchangeRate.rate : 0;
-    const totalValue = currency === 'BRL' ? totalValueBRL : totalValueUSD;
+    const totalValue    = currency === 'BRL' ? totalValueBRL : totalValueUSD;
 
     const formatCurrency = (usdValue: number) => {
         if (currency === 'BRL' && exchangeRate) {
-            const brl = usdValue * exchangeRate.rate;
-            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(brl);
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(usdValue * exchangeRate.rate);
         }
         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(usdValue);
     };
 
     const handleSavePaidPrice = async (assetId: string, marketHashName: string, price: string) => {
         try {
+            // Remove símbolos R$, $, espaços e troca vírgula por ponto
             const cleanPrice = price.replace(/[R$\s]/g, '').replace(',', '.');
             const numericPrice = parseFloat(cleanPrice);
-            
-            // Se string for vazia, significa que o usuário quer DELETAR o preço
             const finalPrice = price.trim() === '' ? null : numericPrice;
-
             if (finalPrice !== null && isNaN(finalPrice)) return;
 
-            // Atualiza o estado localmente para feedback instantâneo (Optimistic Update)
-            setLocalItems(prev => prev.map(item => 
-                item.assetid === assetId ? { ...item, paidPrice: finalPrice } : item
+            // paidPrice é SEMPRE armazenado em USD internamente
+            // Se o usuário está em modo BRL, precisa converter o valor digitado para USD
+            let priceInUSD: number | null = finalPrice;
+            if (finalPrice !== null && currency === 'BRL' && exchangeRate) {
+                priceInUSD = finalPrice / exchangeRate.rate;
+            }
+
+            setLocalItems(prev => prev.map(item =>
+                item.assetid === assetId ? { ...item, paidPrice: priceInUSD } : item
             ));
 
             const response = await fetch('/api/inventory/save-price', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    assetId,
-                    marketHashName,
-                    paidPrice: finalPrice
-                })
+                body: JSON.stringify({ assetId, marketHashName, paidPrice: priceInUSD })
             });
-            
+
             if (!response.ok) {
-                // Se falhar na API, reverte
-                console.error("Erro ao salvar preço na API.");
-                setLocalItems(prev => prev.map(item => 
+                setLocalItems(prev => prev.map(item =>
                     item.assetid === assetId ? { ...item, paidPrice: items.find(i => i.assetid === assetId)?.paidPrice || null } : item
                 ));
             }
-        } catch (error) {
-            console.error("Erro ao salvar preço:", error);
-            // Se der erro na rede, reverte
-            setLocalItems(prev => prev.map(item => 
+        } catch {
+            setLocalItems(prev => prev.map(item =>
                 item.assetid === assetId ? { ...item, paidPrice: items.find(i => i.assetid === assetId)?.paidPrice || null } : item
             ));
         }
     };
 
     return (
-        <div className="p-6 text-white min-h-screen">
-            {/* Header section com Filtros */}
-            <div className="mb-8 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+        <div className="p-4 md:p-8 text-white min-h-screen space-y-6">
+
+            {/* ── ROW 1: Título + Controls ── */}
+            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
+                {/* Título */}
                 <div className="flex-shrink-0">
-                    <h1 className="text-3xl font-black tracking-tighter flex items-center gap-3">
-                        <Box className="text-green-500 w-8 h-8" />
+                    <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
+                        <Box className="text-green-500 w-9 h-9 flex-shrink-0" />
                         {language === 'pt' ? 'SEU INVENTÁRIO' : 'YOUR INVENTORY'}
                     </h1>
-                    <div className="flex items-center gap-2 mt-1">
-                        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">
-                            {filteredItems.length} {language === 'pt' ? 'de' : 'of'} {localItems.length} {language === 'pt' ? 'itens encontrados' : 'items found'}
-                        </p>
-                    </div>
+                    <p className="text-zinc-500 text-sm font-semibold mt-1 ml-12">
+                        {filteredItems.length} {language === 'pt' ? 'de' : 'of'} <span className="text-zinc-300">{localItems.length}</span> {language === 'pt' ? 'itens' : 'items'}
+                    </p>
                 </div>
 
-                <div className="flex flex-col md:flex-row gap-4 flex-grow max-w-5xl lg:justify-end">
-                    {/* Barra de Busca */}
-                    <div className="relative flex-grow md:max-w-xs">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                {/* Controles */}
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* Busca */}
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <input
                             type="text"
                             placeholder={language === 'pt' ? "Buscar skin..." : "Search skin..."}
-                            className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:border-green-500/50 transition-all backdrop-blur-md text-sm"
+                            className="bg-zinc-900/70 border border-white/10 rounded-2xl py-3 pl-11 pr-5 focus:outline-none focus:border-green-500/50 transition-all backdrop-blur-md text-sm w-56 placeholder:text-zinc-600"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
 
                     {/* Toggle unificado: Idioma + Moeda */}
-                    <div className="flex flex-col items-end gap-1.5 self-start">
+                    <div className="flex flex-col items-end gap-1.5">
                         <div className="flex bg-zinc-950 border border-white/10 rounded-2xl p-1 gap-0.5 shadow-xl shadow-black/50 backdrop-blur-xl">
-                            {/* 🇧🇷 PT + BRL */}
                             <button
                                 onClick={() => handleLanguageChange('pt')}
-                                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all duration-300 ${
+                                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase transition-all duration-300 ${
                                     language === 'pt'
                                         ? 'bg-gradient-to-br from-green-500/20 to-green-600/10 text-white border border-green-500/30 shadow-lg shadow-green-500/10'
                                         : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
                                 }`}
                             >
                                 <span className="text-base leading-none">🇧🇷</span>
-                                <span className={`tracking-widest transition-colors ${language === 'pt' ? 'text-white' : 'text-zinc-600'}`}>PT</span>
+                                <span>PT</span>
                                 {language === 'pt' && (
-                                    <span className={`ml-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md tracking-wide transition-all ${
-                                        currency === 'BRL'
-                                            ? 'bg-green-500 text-black'
-                                            : 'bg-white/10 text-zinc-400'
-                                    }`}>
+                                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${currency === 'BRL' ? 'bg-green-500 text-black' : 'bg-white/10 text-zinc-400'}`}>
                                         {currency === 'BRL' ? 'R$' : '$'}
                                     </span>
                                 )}
                             </button>
-
-                            {/* Divider */}
-                            <div className="w-px bg-white/5 mx-0.5 self-stretch" />
-
-                            {/* 🇺🇸 EN + USD */}
+                            <div className="w-px bg-white/5 self-stretch mx-0.5" />
                             <button
                                 onClick={() => handleLanguageChange('en')}
-                                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all duration-300 ${
+                                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase transition-all duration-300 ${
                                     language === 'en'
                                         ? 'bg-gradient-to-br from-blue-500/20 to-blue-600/10 text-white border border-blue-500/30 shadow-lg shadow-blue-500/10'
                                         : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
                                 }`}
                             >
                                 <span className="text-base leading-none">🇺🇸</span>
-                                <span className={`tracking-widest transition-colors ${language === 'en' ? 'text-white' : 'text-zinc-600'}`}>EN</span>
+                                <span>EN</span>
                                 {language === 'en' && (
-                                    <span className={`ml-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md tracking-wide transition-all ${
-                                        currency === 'USD'
-                                            ? 'bg-blue-500 text-white'
-                                            : 'bg-white/10 text-zinc-400'
-                                    }`}>
+                                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${currency === 'USD' ? 'bg-blue-500 text-white' : 'bg-white/10 text-zinc-400'}`}>
                                         {currency === 'USD' ? '$' : 'R$'}
                                     </span>
                                 )}
                             </button>
-
-                            {/* Divider */}
-                            <div className="w-px bg-white/5 mx-0.5 self-stretch" />
-
-                            {/* Mini currency switch */}
+                            <div className="w-px bg-white/5 self-stretch mx-0.5" />
                             <button
                                 onClick={() => setCurrency(c => c === 'BRL' ? 'USD' : 'BRL')}
                                 title={currency === 'BRL' ? 'Trocar para USD' : 'Switch to BRL'}
-                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[9px] font-black uppercase transition-all duration-200 text-zinc-500 hover:text-white hover:bg-white/5 border border-transparent"
+                                className="flex items-center px-3 py-2.5 rounded-xl text-xs font-black transition-all text-zinc-500 hover:text-white hover:bg-white/5"
                             >
-                                <span className="font-mono text-[10px]">{currency === 'BRL' ? 'R$↔$' : '$↔R$'}</span>
+                                {currency === 'BRL' ? 'R$↔$' : '$↔R$'}
                             </button>
                         </div>
-
-                        {/* Live rate badge */}
                         {exchangeRate && (
-                            <div className="flex items-center gap-1.5 text-[9px] text-zinc-600 font-mono pr-1">
+                            <div className="flex items-center gap-1.5 text-[11px] text-zinc-600 font-mono pr-1">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-                                <span>1 USD = <span className="text-zinc-400 font-black">R$ {exchangeRate.rate.toFixed(2)}</span></span>
+                                <span>1 USD = <span className="text-zinc-400 font-bold">R$ {exchangeRate.rate.toFixed(2)}</span></span>
                                 <span className="text-zinc-700">·</span>
                                 <span>PTAX {exchangeRate.bcbRate.toFixed(2)}</span>
                             </div>
                         )}
                     </div>
-
-                    {/* Filtro de Raridade — pills coloridas */}
-                    <div className="flex flex-col gap-1 self-start min-w-0">
-                        <div className="flex flex-wrap gap-1.5">
-                            {/* Pill: Todas */}
-                            <button
-                                onClick={() => setFilterRarity('all')}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
-                                    filterRarity === 'all'
-                                        ? 'bg-white/10 text-white border-white/20 shadow-md'
-                                        : 'bg-zinc-900/60 text-zinc-500 border-white/5 hover:text-white hover:border-white/10'
-                                }`}
-                            >
-                                <span className="w-2 h-2 rounded-full bg-white/40" />
-                                {language === 'pt' ? 'Todas' : 'All'}
-                                <span className="ml-0.5 opacity-50 font-mono text-[8px]">{localItems.length}</span>
-                            </button>
-
-                            {/* Pills por raridade */}
-                            {canonicalRaritiesInInventory.map(key => {
-                                const def = RARITY_MAP[key];
-                                const isActive = filterRarity === key;
-                                return (
-                                    <button
-                                        key={key}
-                                        onClick={() => setFilterRarity(isActive ? 'all' : key)}
-                                        style={{
-                                            borderColor: isActive ? `#${def.color}60` : undefined,
-                                            boxShadow: isActive ? `0 0 12px #${def.color}25` : undefined,
-                                        }}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
-                                            isActive
-                                                ? 'text-white bg-zinc-900/80'
-                                                : 'bg-zinc-900/60 text-zinc-500 border-white/5 hover:text-white hover:border-white/10'
-                                        }`}
-                                    >
-                                        <span
-                                            className="w-2 h-2 rounded-full flex-shrink-0"
-                                            style={{ backgroundColor: `#${def.color}`, boxShadow: isActive ? `0 0 6px #${def.color}` : undefined }}
-                                        />
-                                        {def[language]}
-                                        <span className="ml-0.5 font-mono text-[8px]" style={{ color: isActive ? `#${def.color}` : undefined, opacity: isActive ? 1 : 0.4 }}>
-                                            {rarityCounts[key]}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            {/* Sub-Header: Categorias (Scroll Horizontal) */}
-            <div className="mb-10 flex gap-2 overflow-x-auto no-scrollbar pb-2 bg-zinc-900/20 p-2 rounded-2xl border border-white/5 shadow-inner">
+            {/* ── ROW 2: Filtro de Raridade ── */}
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-zinc-600 font-bold uppercase tracking-widest mr-1 hidden sm:block">
+                    {language === 'pt' ? 'Raridade' : 'Rarity'}
+                </span>
+                <button
+                    onClick={() => setFilterRarity('all')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-all border ${
+                        filterRarity === 'all'
+                            ? 'bg-white/10 text-white border-white/20 shadow-md'
+                            : 'bg-zinc-900/60 text-zinc-500 border-white/5 hover:text-white hover:border-white/10'
+                    }`}
+                >
+                    <span className="w-2.5 h-2.5 rounded-full bg-white/60" />
+                    {language === 'pt' ? 'Todas' : 'All'}
+                    <span className="font-mono text-zinc-500">{localItems.length}</span>
+                </button>
+                {canonicalRaritiesInInventory.map(key => {
+                    const def = RARITY_MAP[key];
+                    const isActive = filterRarity === key;
+                    return (
+                        <button
+                            key={key}
+                            onClick={() => setFilterRarity(isActive ? 'all' : key)}
+                            style={{
+                                borderColor: isActive ? `#${def.color}60` : undefined,
+                                boxShadow: isActive ? `0 0 14px #${def.color}20` : undefined,
+                            }}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-all border ${
+                                isActive
+                                    ? 'text-white bg-zinc-900/80'
+                                    : 'bg-zinc-900/60 text-zinc-500 border-white/5 hover:text-white hover:border-white/10'
+                            }`}
+                        >
+                            <span
+                                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: `#${def.color}`, boxShadow: isActive ? `0 0 8px #${def.color}` : undefined }}
+                            />
+                            {def[language]}
+                            <span className="font-mono" style={{ color: isActive ? `#${def.color}` : '#52525b' }}>
+                                {rarityCounts[key]}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* ── ROW 3: Categorias ── */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 bg-zinc-900/30 p-2 rounded-2xl border border-white/5">
                 {categories.map(cat => (
                     <button
                         key={cat.id}
                         onClick={() => setFilterType(cat.id)}
-                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap flex-shrink-0 border ${
-                            filterType === cat.id 
-                            ? 'bg-green-500 text-black border-green-400 shadow-lg shadow-green-500/20 scale-105' 
-                            : 'bg-zinc-900/50 text-zinc-500 border-white/5 hover:text-white hover:bg-white/5'
+                        className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap flex-shrink-0 border ${
+                            filterType === cat.id
+                                ? 'bg-green-500 text-black border-green-400 shadow-lg shadow-green-500/20 scale-105'
+                                : 'bg-transparent text-zinc-500 border-transparent hover:text-white hover:bg-white/5'
                         }`}
                     >
                         {cat.label}
@@ -369,51 +327,74 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                 ))}
             </div>
 
-            {/* Cards de Resumo */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                <div className="bg-gradient-to-br from-green-500/10 to-blue-500/5 border border-green-500/20 p-6 rounded-2xl backdrop-blur-md relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <ShoppingCart className="w-12 h-12" />
-                    </div>
-                    <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-2">{language === 'pt' ? 'Valor Estimado' : 'Estimated Value'}</p>
-                    <h2 className="text-2xl font-black text-white">
-                        {totalValue > 0 ? formatCurrency(totalValueUSD) : (exchangeRate ? formatCurrency(0) : '...')}
+            {/* ── ROW 4: Cards de Resumo ── */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {/* Valor Estimado */}
+                <div className="relative bg-zinc-900/50 border border-green-500/20 p-6 rounded-2xl overflow-hidden group backdrop-blur-md">
+                    <div className="absolute inset-0 bg-gradient-to-br from-green-500/8 to-transparent pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 blur-3xl rounded-full translate-x-8 -translate-y-8 group-hover:bg-green-500/10 transition-all duration-700" />
+                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <ShoppingCart className="w-3.5 h-3.5" />
+                        {language === 'pt' ? 'Valor Estimado' : 'Estimated Value'}
+                    </p>
+                    <h2 className="text-3xl font-black text-white mb-1">
+                        {totalValue > 0 ? formatCurrency(totalValueUSD) : (exchangeRate ? formatCurrency(0) : <span className="text-zinc-600 text-xl animate-pulse">Carregando...</span>)}
                     </h2>
                     {exchangeRate && (
-                        <div className="mt-2 space-y-0.5">
-                            <p className="text-[9px] text-zinc-500 flex items-center gap-1">
-                                <Info className="w-3 h-3" /> market.csgo.com
-                            </p>
-                            <p className="text-[9px] text-zinc-400 flex items-center gap-1 font-mono">
-                                <RefreshCw className="w-2.5 h-2.5" />
-                                1 USD = R$ {exchangeRate.rate.toFixed(4)}
-                                <span className="text-zinc-600 ml-1">
-                                    · {new Date(exchangeRate.updatedAt).toLocaleTimeString(language === 'pt' ? 'pt-BR' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </p>
-                            {currency === 'BRL' && (
-                                <p className="text-[9px] text-zinc-600">
-                                    PTAX: R$ {exchangeRate.bcbRate.toFixed(4)}
+                        <div className="mt-3 space-y-1 border-t border-white/5 pt-3">
+                            {currency === 'BRL' && totalValueUSD > 0 && (
+                                <p className="text-sm text-zinc-400">
+                                    ≈ <span className="font-bold text-zinc-300">${totalValueUSD.toFixed(2)} USD</span>
                                 </p>
                             )}
+                            {currency === 'USD' && totalValueBRL > 0 && (
+                                <p className="text-sm text-zinc-400">
+                                    ≈ <span className="font-bold text-zinc-300">R$ {totalValueBRL.toFixed(2)}</span>
+                                </p>
+                            )}
+                            <div className="flex items-center gap-1.5 text-zinc-600 text-xs font-mono">
+                                <Info className="w-3 h-3" />
+                                market.csgo.com · 1 USD = R$ {exchangeRate.rate.toFixed(2)}
+                            </div>
                         </div>
                     )}
                 </div>
-                <div className="bg-zinc-900/40 border border-white/5 p-6 rounded-2xl backdrop-blur-sm">
-                    <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-2">{language === 'pt' ? 'Resultados' : 'Results'}</p>
-                    <h2 className="text-2xl font-black text-white">{filteredItems.length} {language === 'pt' ? 'Itens' : 'Items'}</h2>
-                    <p className="text-[10px] text-zinc-600 mt-1">{language === 'pt' ? `Filtrados de ${localItems.length}` : `Filtered from ${localItems.length}`}</p>
-                </div>
-                <div className="bg-zinc-900/40 border border-white/5 p-6 rounded-2xl backdrop-blur-sm">
-                    <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-2">High Tier</p>
-                    <h2 className="text-2xl font-black text-white">
-                        {localItems.filter(i => i.rarity === 'Rarity_Ancient' || i.rarity === 'Rarity_Legendary').length}
+
+                {/* Resultados */}
+                <div className="relative bg-zinc-900/50 border border-white/5 p-6 rounded-2xl overflow-hidden backdrop-blur-md">
+                    <div className="absolute top-0 right-0 w-28 h-28 bg-blue-500/5 blur-3xl rounded-full translate-x-8 -translate-y-8" />
+                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3">
+                        {language === 'pt' ? 'Resultados' : 'Results'}
+                    </p>
+                    <h2 className="text-3xl font-black text-white">
+                        {filteredItems.length}
+                        <span className="text-lg text-zinc-600 font-bold ml-2">{language === 'pt' ? 'itens' : 'items'}</span>
                     </h2>
-                    <p className="text-[10px] text-zinc-600 mt-1">{language === 'pt' ? 'Skins Raras' : 'Rare Skins'}</p>
+                    <p className="text-sm text-zinc-600 mt-3 border-t border-white/5 pt-3">
+                        {language === 'pt' ? `de ${localItems.length} total` : `of ${localItems.length} total`}
+                        {filterRarity !== 'all' && (
+                            <span className="ml-2 text-xs">· <button onClick={() => setFilterRarity('all')} className="text-green-400 hover:underline">
+                                {language === 'pt' ? 'limpar' : 'clear'}
+                            </button></span>
+                        )}
+                    </p>
+                </div>
+
+                {/* High Tier */}
+                <div className="relative bg-zinc-900/50 border border-white/5 p-6 rounded-2xl overflow-hidden backdrop-blur-md">
+                    <div className="absolute top-0 right-0 w-28 h-28 bg-red-500/5 blur-3xl rounded-full translate-x-8 -translate-y-8" />
+                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3">High Tier</p>
+                    <h2 className="text-3xl font-black text-white">
+                        {localItems.filter(i => ['Ancient', 'Legendary', 'Contraband'].includes(normalizeRarity(i.rarity || ''))).length}
+                        <span className="text-lg text-zinc-600 font-bold ml-2">skins</span>
+                    </h2>
+                    <p className="text-sm text-zinc-600 mt-3 border-t border-white/5 pt-3">
+                        {language === 'pt' ? 'Antigas, Lendárias e Contrabandeadas' : 'Ancient, Legendary & Contraband'}
+                    </p>
                 </div>
             </div>
 
-            {/* Grid de Itens */}
+            {/* ── Grid de Itens ── */}
             {filteredItems.length > 0 ? (
                 <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                     <AnimatePresence mode="popLayout">
@@ -432,8 +413,8 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                 {/* Ações */}
                                 <div className="absolute top-3 right-3 flex flex-col gap-2.5 z-20 opacity-40 group-hover:opacity-100 transition-all duration-300">
                                     {item.inspect_url && (
-                                        <a 
-                                            href={item.inspect_url} 
+                                        <a
+                                            href={item.inspect_url}
                                             className="p-2.5 bg-black/90 hover:bg-green-600 text-white rounded-xl border border-white/10 hover:border-green-400/50 shadow-xl transition-all hover:scale-110 active:scale-95"
                                             title={language === 'pt' ? "Inspecionar no Jogo" : "Inspect in Game"}
                                         >
@@ -441,22 +422,22 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                         </a>
                                     )}
                                     {item.market_url && (
-                                        <a 
-                                            href={item.market_url} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer" 
+                                        <a
+                                            href={item.market_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
                                             className="p-2.5 bg-black/90 hover:bg-blue-600 text-white rounded-xl border border-white/10 hover:border-blue-400/50 shadow-xl transition-all hover:scale-110 active:scale-95"
                                             title={language === 'pt' ? "Ver no Mercado Steam" : "View on Steam Market"}
                                         >
                                             <ShoppingCart className="w-4 h-4" />
                                         </a>
                                     )}
-                                    <button 
+                                    <button
                                         onClick={() => setShowRoiAssetId(showRoiAssetId === item.assetid ? null : item.assetid)}
                                         className={`p-2.5 rounded-xl border shadow-xl transition-all hover:scale-110 active:scale-95 ${
-                                            item.paidPrice 
-                                            ? 'bg-green-600/20 text-green-400 border-green-500/30 hover:bg-green-600/40' 
-                                            : 'bg-black/90 text-white border-white/10 hover:bg-yellow-600'
+                                            item.paidPrice
+                                                ? 'bg-green-600/20 text-green-400 border-green-500/30 hover:bg-green-600/40'
+                                                : 'bg-black/90 text-white border-white/10 hover:bg-yellow-600'
                                         }`}
                                         title={language === 'pt' ? "Gerenciar Preço Pago" : "Manage Purchase Price"}
                                     >
@@ -471,94 +452,102 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
 
                                 <div className="space-y-2 relative">
                                     <div className="flex justify-between items-start gap-1">
-                                        <p className="text-[9px] font-black uppercase truncate flex-grow" style={{ color: `#${item.rarity_color}` }}>
+                                        <p className="text-[10px] font-bold uppercase truncate flex-grow" style={{ color: `#${item.rarity_color}` }}>
                                             {translateRarity(item.rarity)}
                                         </p>
                                         {item.price ? (
-                                            <span className="text-[9px] font-black text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20 cursor-default" title={`USD $${item.price.toFixed(2)}${exchangeRate ? ` · R$ ${(item.price * exchangeRate.rate).toFixed(2)}` : ''}`}>
+                                            <span
+                                                className="text-[10px] font-black text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20 cursor-default whitespace-nowrap"
+                                                title={`USD $${item.price.toFixed(2)}${exchangeRate ? ` · R$ ${(item.price * exchangeRate.rate).toFixed(2)}` : ''}`}
+                                            >
                                                 {formatCurrency(item.price)}
                                             </span>
                                         ) : (
-                                            <span className="text-[9px] font-black text-zinc-500 bg-zinc-800/50 px-1.5 py-0.5 rounded border border-white/5" title="Preço indisponível no momento">
-                                                N/A
-                                            </span>
+                                            <span className="text-[10px] font-bold text-zinc-600 bg-zinc-800/50 px-1.5 py-0.5 rounded border border-white/5">N/A</span>
                                         )}
                                     </div>
-                                    <div className="pt-2 border-t border-white/5 mt-1 flex flex-col gap-1">
-                                        <h3 className="text-[11px] font-black text-white leading-tight line-clamp-2 min-h-[2.4em] group-hover:text-green-400 transition-colors">
+                                    <div className="pt-2 border-t border-white/5">
+                                        <h3 className="text-xs font-black text-white leading-tight line-clamp-2 min-h-[2.4em] group-hover:text-green-400 transition-colors">
                                             {language === 'pt' ? (item.name_pt || item.name) : (item.name_en || item.name)}
                                         </h3>
-
-                                        <div className="flex justify-between gap-1 items-center mt-1">
-                                            <p className="text-[8px] text-zinc-500 font-bold truncate uppercase tracking-tighter">
+                                        <div className="flex justify-between gap-1 items-center mt-1.5">
+                                            <p className="text-[10px] text-zinc-500 font-semibold truncate uppercase">
                                                 {(item.type_label && !item.type_label.includes('WEARCATEGORY')) ? item.type_label : (item.category_name && !item.category_name.includes('WEARCATEGORY') ? item.category_name : '')}
                                             </p>
-                                            <p className="text-[8px] text-zinc-400 font-bold truncate uppercase tracking-tighter">
+                                            <p className="text-[10px] text-zinc-400 font-semibold truncate uppercase">
                                                 {(item.exterior_label && !item.exterior_label.includes('WEARCATEGORY')) ? item.exterior_label : ''}
                                             </p>
                                         </div>
 
-                                        {/* Seção de Preço Pago / ROI (Expansível) */}
+                                        {/* ROI */}
                                         <AnimatePresence>
                                             {showRoiAssetId === item.assetid && (
-                                                <motion.div 
+                                                <motion.div
                                                     initial={{ height: 0, opacity: 0 }}
                                                     animate={{ height: 'auto', opacity: 1 }}
                                                     exit={{ height: 0, opacity: 0 }}
                                                     className="overflow-hidden"
                                                 >
-                                                    <div className="bg-black/60 p-2 rounded-lg border border-yellow-500/20 mt-1 space-y-2 shadow-inner">
-                                                        <div className="flex justify-between items-center gap-2">
-                                                            <span className="text-[10px] text-zinc-400 font-black uppercase tracking-tighter">Preço Pago</span>
+                                                    <div className="bg-black/60 p-2 rounded-lg border border-yellow-500/20 mt-2 space-y-2 shadow-inner">
+                                                         <div className="flex justify-between items-center gap-2">
+                                                             <span className="text-xs text-zinc-400 font-bold uppercase flex items-center gap-1.5">
+                                                                 {language === 'pt' ? 'Preço Pago' : 'Paid Price'}
+                                                                 <span className={`text-[9px] px-1 py-0.5 rounded font-black ${
+                                                                     currency === 'BRL' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
+                                                                 }`}>{currency}</span>
+                                                             </span>
                                                             <div className="flex items-center gap-1 bg-zinc-800/50 border border-white/5 rounded px-2 py-1">
-                                                                <input 
+                                                                <input
                                                                     id={`price-input-${item.assetid}`}
                                                                     type="text"
-                                                                    defaultValue={item.paidPrice ? item.paidPrice.toFixed(2) : ''}
+                                                                    defaultValue={item.paidPrice
+                                                                        ? (currency === 'BRL' && exchangeRate
+                                                                            ? (item.paidPrice * exchangeRate.rate).toFixed(2)
+                                                                            : item.paidPrice.toFixed(2))
+                                                                        : ''}
                                                                     onKeyDown={(e) => {
                                                                         if (e.key === 'Enter') {
                                                                             handleSavePaidPrice(item.assetid, item.name_en || item.name, (e.target as HTMLInputElement).value);
                                                                         }
                                                                     }}
                                                                     autoFocus
-                                                                    placeholder="0,00"
-                                                                    className="w-16 bg-transparent text-[11px] font-black text-right text-white focus:outline-none transition-colors"
+                                                                    placeholder={currency === 'BRL' ? 'R$ 0,00' : '$ 0.00'}
+                                                                    className="w-20 bg-transparent text-xs font-black text-right text-white focus:outline-none"
                                                                 />
-                                                                <button 
+                                                                <button
                                                                     onClick={() => {
                                                                         const input = document.getElementById(`price-input-${item.assetid}`) as HTMLInputElement;
                                                                         if (input) handleSavePaidPrice(item.assetid, item.name_en || item.name, input.value);
                                                                     }}
                                                                     className="p-1 hover:text-green-400 text-zinc-400 transition-colors"
-                                                                    title={language === 'pt' ? 'Confirmar' : 'Confirm'}
                                                                 >
                                                                     <Check className="w-3.5 h-3.5" />
                                                                 </button>
                                                                 {item.paidPrice && (
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => {
                                                                             const input = document.getElementById(`price-input-${item.assetid}`) as HTMLInputElement;
                                                                             if (input) input.value = '';
                                                                             handleSavePaidPrice(item.assetid, item.name_en || item.name, '');
                                                                         }}
                                                                         className="p-1 hover:text-red-400 text-zinc-500 transition-colors ml-1 border-l border-white/10"
-                                                                        title={language === 'pt' ? 'Remover Preço' : 'Remove Price'}
                                                                     >
                                                                         <X className="w-3.5 h-3.5" />
                                                                     </button>
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        
                                                         {item.paidPrice && item.price ? (
-                                                            <div className="flex justify-between items-center border-t border-white/5 pt-2 mt-1">
-                                                                <span className={`text-[10px] font-black uppercase tracking-tighter ${item.price > item.paidPrice ? 'text-green-500' : item.price < item.paidPrice ? 'text-red-500' : 'text-zinc-400'}`}>Resultado</span>
-                                                                <span className={`text-[11px] font-black ${item.price > item.paidPrice ? 'text-green-500' : item.price < item.paidPrice ? 'text-red-500' : 'text-zinc-400'}`}>
+                                                            <div className="flex justify-between items-center border-t border-white/5 pt-2">
+                                                                <span className={`text-xs font-bold uppercase ${item.price > item.paidPrice ? 'text-green-500' : item.price < item.paidPrice ? 'text-red-500' : 'text-zinc-400'}`}>
+                                                                    Resultado
+                                                                </span>
+                                                                <span className={`text-sm font-black ${item.price > item.paidPrice ? 'text-green-500' : item.price < item.paidPrice ? 'text-red-500' : 'text-zinc-400'}`}>
                                                                     {item.price > item.paidPrice ? '+' : ''}{formatCurrency(item.price - item.paidPrice)}
                                                                 </span>
                                                             </div>
                                                         ) : (
-                                                            <p className="text-[9px] text-zinc-500 text-center italic mt-2">Informe o valor para calcular ROI</p>
+                                                            <p className="text-xs text-zinc-500 text-center italic">Informe o valor para calcular ROI</p>
                                                         )}
                                                     </div>
                                                 </motion.div>
@@ -574,7 +563,10 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                 <div className="bg-zinc-900/20 border border-white/5 rounded-3xl p-20 text-center backdrop-blur-sm">
                     <Box className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
                     <p className="text-zinc-500 font-bold uppercase tracking-widest text-sm">{language === 'pt' ? 'Nenhum item encontrado' : 'No items found'}</p>
-                    <button onClick={() => { setSearchTerm(''); setFilterType('all'); setFilterRarity('all'); }} className="mt-6 px-6 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase border border-white/10">
+                    <button
+                        onClick={() => { setSearchTerm(''); setFilterType('all'); setFilterRarity('all'); }}
+                        className="mt-6 px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold uppercase border border-white/10 transition-all"
+                    >
                         {language === 'pt' ? 'Resetar Filtros' : 'Reset Filters'}
                     </button>
                 </div>
