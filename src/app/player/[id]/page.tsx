@@ -8,7 +8,7 @@ import OverviewCard from "@/components/csbrasil/overview-card";
 import AttributesRadarChart from "@/components/csbrasil/radar-chart";
 import MatchHistory from "@/components/csbrasil/match-history";
 import InventoryDashboard from "@/components/dashboard/inventory-dashboard";
-import MatchReviewModal from '@/components/csbrasil/match-review-modal';
+import MatchReportModal from '@/components/dashboard/match-report-modal';
 import { Package, ShieldCheck, Trophy, Target, Zap } from 'lucide-react';
 
 export default function PlayerProfilePage() {
@@ -176,8 +176,10 @@ export default function PlayerProfilePage() {
             <footer className="p-20 text-center border-t border-white/5 bg-zinc-900/10">
                 <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.5em]">CSBRASIL 2026 • Powered by Leetify & Steam</p>
             </footer>
-            <MatchReviewModal
+            <MatchReportModal
+                match={null}
                 matchId={selectedMatchId}
+                isOpen={!!selectedMatchId}
                 onClose={() => setSelectedMatchId(null)}
             />
         </div>

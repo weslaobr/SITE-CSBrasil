@@ -8,7 +8,7 @@ import {
     ChevronRight, X, Target, Crosshair, Trophy, Clock,
     Calendar, Activity, Zap, Shield, TrendingUp, BarChart3
 } from "lucide-react";
-import MatchReviewModal from "@/components/csbrasil/match-review-modal";
+// Removed MatchReviewModal
 import MatchesDashboard from "@/components/dashboard/matches-dashboard";
 
 // ────────────────────────────────────────────
@@ -68,14 +68,7 @@ export default function MatchesPage() {
                 loading={loading}
                 onSync={handleSync}
                 onUpdateFaceit={handleUpdateFaceit}
-                onSelectMatch={(id) => setSelectedId(id)}
                 currentFaceit={(session.user as any)?.faceitNickname || ''}
-            />
-
-            {/* Full Match Review Modal for detailed analytics */}
-            <MatchReviewModal 
-                matchId={selectedId} 
-                onClose={() => setSelectedId(null)} 
             />
         </div>
     );

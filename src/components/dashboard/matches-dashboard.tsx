@@ -9,16 +9,19 @@ import {
     Trophy, 
     Info, 
     ChevronDown, 
+    ChevronUp,
     Filter, 
     ExternalLink, 
     Search, 
     RefreshCw, 
     ChevronRight,
+    Copy,
     Lock,
     Users,
     Activity,
     Zap,
-    TrendingUp
+    TrendingUp,
+    Check
 } from 'lucide-react';
 import MatchReportModal from './match-report-modal';
 
@@ -48,7 +51,6 @@ interface MatchesDashboardProps {
     onUpdateFaceit: (nickname: string) => void;
     currentFaceit: string;
     onSync?: () => void;
-    onSelectMatch?: (id: string) => void; // New callback
     loading?: boolean;
     hasSteamCode?: boolean;
     syncError?: string | null;
@@ -59,7 +61,6 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     onUpdateFaceit, 
     currentFaceit, 
     onSync, 
-    onSelectMatch,
     loading, 
     hasSteamCode, 
     syncError 
@@ -124,13 +125,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     }, [matches, mapFilter, modeFilter, searchTerm]);
 
     const handleViewMatch = (match: Match) => {
-        if (onSelectMatch && (match.source === 'Leetify' || match.externalId?.includes('leetify'))) {
-            const cleanId = match.externalId?.replace('leetify-', '') || match.id;
-            onSelectMatch(cleanId);
-        } else {
-            setSelectedMatch(match);
-            setIsModalOpen(true);
-        }
+        setSelectedMatch(match);
+        setIsModalOpen(true);
     };
 
     const stats = useMemo(() => {
@@ -382,6 +378,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     <th className="px-4 py-5 text-center">Score</th>
                                     <th className="px-4 py-5 text-center">Rank</th>
                                     <th className="px-4 py-5 text-center">Type</th>
+                                    <th className="px-1 py-5 text-center">Code</th>
                                     <th className="px-2 py-5 text-center">K</th>
                                     <th className="px-2 py-5 text-center">D</th>
                                     <th className="px-2 py-5 text-center">A</th>
@@ -411,108 +408,209 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             return (
                                                 <motion.tr 
                                                     key={match.id || match.externalId || Math.random().toString()}
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
-                                                    className="group border-b border-white/5 transition-colors cursor-pointer"
+                                                    initial={{ opacity: 0, scale: 0.98 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    whileHover={{ 
+                                                        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                                                        scale: 1.005,
+                                                        transition: { duration: 0.2 }
+                                                    }}
+                                                    className={`group relative border-b border-white/5 transition-all cursor-pointer ${
+                                                        isWin ? 'hover:shadow-[inset_4px_0_0_0_#10b981]' : 
+                                                        isLoss ? 'hover:shadow-[inset_4px_0_0_0_#ef4444]' : 
+                                                        'hover:shadow-[inset_4px_0_0_0_#71717a]'
+                                                    }`}
                                                     onClick={() => handleViewMatch(match)}
                                                 >
-                                            <td className="px-8 py-4 first:rounded-l-2xl">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="relative w-12 h-12 overflow-hidden rounded-xl border border-white/10 shrink-0">
+                                            <td className="px-8 py-6 first:rounded-l-3xl">
+                                                <div className="flex items-center gap-6">
+                                                    <div className="relative w-16 h-10 overflow-hidden rounded-xl border border-white/10 shrink-0 group-hover:border-white/20 transition-colors">
                                                         <img
                                                             src={getMapImage(match.mapName)}
-                                                            className="w-full h-full object-cover filter brightness-75 group-hover:brightness-100 transition-all duration-500"
+                                                            className="w-full h-full object-cover filter brightness-50 group-hover:brightness-90 transition-all duration-700 group-hover:scale-125"
                                                             alt={match.mapName}
                                                         />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                                                     </div>
-                                                    <span className="font-black text-sm text-white uppercase tracking-tighter">
-                                                        {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' : 
-                                                         match.mapName.replace('de_', '').replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                                    <div className="flex flex-col">
+                                                        <span className="font-black text-sm text-white uppercase italic tracking-tighter group-hover:text-emerald-400 transition-colors">
+                                                            {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' : 
+                                                             match.mapName.replace('de_', '').replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                                        </span>
+                                                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">{match.duration || 'MR12'} Match</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-6 text-center">
+                                                <div className={`inline-flex flex-col items-center px-6 py-2 rounded-2xl border transition-all ${
+                                                    isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 
+                                                    isLoss ? 'bg-red-500/10 border-red-500/20 text-red-500' : 
+                                                    'bg-zinc-800/50 border-white/5 text-zinc-500'
+                                                }`}>
+                                                    <span className="text-xl font-black italic tracking-tighter leading-none mb-1">
+                                                        {match.score || '0-0'}
+                                                    </span>
+                                                    <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-60">
+                                                        {isWin ? 'Victory' : isLoss ? 'Defeat' : 'Draw'}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <span className={`text-base font-black italic tracking-tighter ${
-                                                    isWin ? 'text-emerald-500' : 
-                                                    isLoss ? 'text-red-500' : 
-                                                    isDraw ? 'text-yellow-500' : 'text-zinc-500'
-                                                }`}>
-                                                    {match.score || '0-0'}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="flex justify-center flex-col items-center gap-1">
+                                            <td className="px-4 py-6 text-center">
+                                                <div className="flex justify-center flex-col items-center gap-1 group/rank">
                                                     {getRankIcon(match.rank || '', match.source, match.gameMode) ? (
                                                         <img 
                                                             src={getRankIcon(match.rank || '', match.source, match.gameMode)!} 
-                                                            className="w-10 h-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.1)] group-hover:scale-110 transition-all" 
+                                                            className="w-12 h-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.15)] group-hover/rank:scale-125 transition-all duration-500" 
                                                             alt="rank" 
                                                         />
                                                     ) : (
                                                         <div className="h-10 flex items-center justify-center">
-                                                            <span className="text-zinc-700 font-black italic text-[10px]">N/A</span>
+                                                            {match.source === 'Faceit' ? (
+                                                                <Trophy className="text-orange-500/40 w-6 h-6 group-hover:rotate-12 transition-transform" />
+                                                            ) : isGamersClub ? (
+                                                                <Zap className="text-cyan-500/40 w-6 h-6 group-hover:scale-110 transition-transform" />
+                                                            ) : (
+                                                                <span className="text-zinc-800 font-black italic text-[10px]">N/A</span>
+                                                            )}
                                                         </div>
                                                     )}
                                                     <span className="text-[8px] text-zinc-600 font-black uppercase tracking-tighter">
-                                                        {isGamersClub ? 'Unranked' : (match.rank || 'Unranked')}
+                                                        {(match.rank && match.rank !== 'unranked') ? match.rank : (isGamersClub ? 'Level GC' : 'Unranked')}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4 text-center">
+                                            <td className="px-4 py-6 text-center">
                                                 <div className="flex flex-col items-center gap-1.5">
-                                                    <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-lg border tracking-widest transition-all ${
+                                                    <div className={`relative px-4 py-1.5 rounded-xl border transition-all overflow-hidden group/source ${
                                                         isGamersClub ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
                                                         match.source === 'Faceit' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                                                        isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[0_0_10px_rgba(168,85,247,0.1)]' :
-                                                        'bg-green-500/10 text-green-500 border-green-500/20'
+                                                        isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.15)]' :
+                                                        'bg-emerald-500/5 text-emerald-500 border-emerald-500/20'
                                                     }`}>
-                                                        {isGamersClub ? 'GamersClub' : 
-                                                        match.source === 'Faceit' ? 'Faceit' :
-                                                        isPremier ? 'Premier' :
-                                                        'Competitive'}
-                                                    </span>
-                                                    {match.metadata?.isMocked && (
-                                                        <span className="text-[7px] text-zinc-600 font-bold uppercase tracking-widest flex items-center gap-1">
-                                                            <div className="w-1 h-1 rounded-full bg-yellow-500 animate-pulse" />
-                                                            Sync Pendente
+                                                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover/source:opacity-100 transition-opacity" />
+                                                        <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.15em]">
+                                                            {isGamersClub ? 'GamersClub' : 
+                                                            match.source === 'Faceit' ? 'Faceit' :
+                                                            isPremier ? 'Premier' :
+                                                            'Competitive'}
                                                         </span>
+                                                    </div>
+                                                    {isPremier && match.metadata?.rank_delta && (
+                                                        <div className={`flex items-center gap-1 text-[9px] font-black italic ${match.metadata.rank_delta > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                            {match.metadata.rank_delta > 0 ? (
+                                                                <ChevronUp size={10} className="fill-current" />
+                                                            ) : (
+                                                                <ChevronDown size={10} className="fill-current" />
+                                                            )}
+                                                            {Math.abs(match.metadata.rank_delta)}
+                                                        </div>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-2 py-4 text-center font-bold text-xs text-white">
-                                                {match.kills}
+                                            <td className="px-1 py-6 text-center">
+                                                {match.source === 'Steam' ? (
+                                                    match.externalId ? (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                 e.stopPropagation();
+                                                                navigator.clipboard.writeText(match.externalId!);
+                                                            }}
+                                                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.03] hover:bg-emerald-500 text-zinc-600 hover:text-black transition-all active:scale-90 border border-white/5"
+                                                            title="Copiar Código"
+                                                        >
+                                                            <Copy size={12} />
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-zinc-800 font-black italic text-[8px]">—</span>
+                                                    )
+                                                ) : (
+                                                    <div className="w-10 h-10 flex items-center justify-center text-zinc-800 opacity-20" title="Link Protegido">
+                                                        <Lock size={12} />
+                                                    </div>
+                                                )}
                                             </td>
-                                            <td className="px-2 py-4 text-center font-bold text-xs text-zinc-400">
-                                                {match.deaths}
+                                            <td className="px-2 py-6 text-center">
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-xl italic text-white leading-none tracking-tighter">
+                                                        {match.kills}
+                                                    </span>
+                                                    <span className="text-[7px] font-black text-zinc-600 uppercase mt-1">Kills</span>
+                                                </div>
                                             </td>
-                                            <td className="px-2 py-4 text-center font-bold text-xs text-zinc-500">
-                                                {match.assists}
+                                            <td className="px-2 py-6 text-center">
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-xl italic text-zinc-500 leading-none tracking-tighter">
+                                                        {match.deaths}
+                                                    </span>
+                                                    <span className="text-[7px] font-black text-zinc-700 uppercase mt-1">Deaths</span>
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <span className="font-black text-xs text-zinc-300">
-                                                    {(match.adr || match.metadata?.adr || 0).toFixed(0)}
-                                                </span>
+                                            <td className="px-2 py-6 text-center">
+                                                <div className="flex flex-col items-center">
+                                                    <span className="font-black text-xl italic text-zinc-600 leading-none tracking-tighter">{match.assists}</span>
+                                                    <div className="flex gap-1 mt-1.5">
+                                                        {(match.metadata?.quadroKills || 0) > 0 && (
+                                                            <div className="px-1 rounded bg-orange-500/20 border border-orange-500/30" title="Quadra Kill">
+                                                                <span className="text-[7px] font-black text-orange-500 italic">4k</span>
+                                                            </div>
+                                                        )}
+                                                        {(match.metadata?.pentaKills || 0) > 0 && (
+                                                            <div className="px-1 rounded bg-purple-500/20 border border-purple-500/30 animate-pulse shadow-[0_0_10px_rgba(168,85,247,0.3)]" title="ACE">
+                                                                <span className="text-[7px] font-black text-purple-400 italic">ACE</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <span className="font-black text-xs text-zinc-400 font-mono">
-                                                    {match.hsPercentage || match.metadata?.headshot_pct ? `${(match.hsPercentage || match.metadata?.headshot_pct).toFixed(1)}%` : '—'}
-                                                </span>
+                                            <td className="px-4 py-6 text-center">
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-xl italic text-green-500/80 leading-none tracking-tighter">
+                                                        {Math.round(match.adr || match.metadata?.adr || 0)}
+                                                    </span>
+                                                    <span className="text-[7px] font-black text-zinc-700 uppercase mt-1">ADR</span>
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <span className={`px-2 py-1 rounded-lg font-black text-xs ${
-                                                    (match.metadata?.leetify_rating || 0) >= 1 ? 'bg-emerald-500/10 text-emerald-500' : 
-                                                    (match.metadata?.leetify_rating || 0) < 0.8 ? 'bg-red-500/10 text-red-500' : 'bg-zinc-500/10 text-zinc-500'
-                                                }`}>
-                                                    {match.metadata?.leetify_rating ? match.metadata.leetify_rating.toFixed(2) : '-'}
-                                                </span>
+                                            <td className="px-4 py-6 text-center">
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-base italic text-zinc-500 leading-none tracking-tighter">
+                                                        {match.hsPercentage || match.metadata?.headshot_pct ? `${Math.round(match.hsPercentage || match.metadata?.headshot_pct)}%` : '—'}
+                                                    </span>
+                                                    <span className="text-[7px] font-black text-zinc-700 uppercase mt-1">HS%</span>
+                                                </div>
                                             </td>
-                                            <td className="px-8 py-4 text-right last:rounded-r-2xl">
-                                                <span className={`text-[10px] font-black uppercase tracking-widest ${
-                                                    isWin ? 'text-emerald-500/60' : isLoss ? 'text-red-500/60' : 'text-zinc-500'
-                                                }`}>
-                                                    {formatTimeAgo(match.matchDate)}
-                                                </span>
+                                             <td className="px-4 py-6 text-center">
+                                                {(() => {
+                                                    const rating = match.metadata?.leetify_rating || (match.source === 'Faceit' ? parseFloat(match.metadata?.kdRatio || '0') : 1.0);
+                                                    
+                                                    return (
+                                                        <div className="flex flex-col items-center gap-1 group/rating">
+                                                            <div className={`px-4 py-1.5 rounded-2xl font-black italic text-lg tracking-tighter transition-all group-hover:scale-110 ${
+                                                                rating >= 1.2 ? 'bg-orange-500/20 text-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.1)]' :
+                                                                rating >= 1 ? 'bg-emerald-500/10 text-emerald-400' : 
+                                                                'bg-red-500/10 text-red-500'
+                                                            }`}>
+                                                                {rating.toFixed(2)}
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <Activity size={8} className="text-zinc-600" />
+                                                                <span className="text-[7px] text-zinc-600 font-black uppercase tracking-widest">
+                                                                    {match.metadata?.leetify_rating ? 'Leetify' : 'Impact'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </td>
+                                            <td className="px-8 py-6 text-right last:rounded-r-3xl">
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-[10px] font-black text-white hover:text-emerald-400 transition-colors uppercase tracking-widest whitespace-nowrap">
+                                                        {formatTimeAgo(match.matchDate)}
+                                                    </span>
+                                                    <div className="flex items-center gap-1.5 mt-1">
+                                                        <div className={`w-1 h-1 rounded-full ${isWin ? 'bg-emerald-500' : isLoss ? 'bg-red-500' : 'bg-zinc-500'}`} />
+                                                        <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">Analítico ✓</span>
+                                                    </div>
+                                                </div>
                                             </td>
                                         </motion.tr>
                                     );
@@ -639,6 +737,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
 
             <MatchReportModal
                 match={selectedMatch}
+                matchId={selectedMatch?.source === 'Leetify' || selectedMatch?.externalId?.includes('leetify') ? 
+                         (selectedMatch.externalId?.replace('leetify-', '') || selectedMatch.id) : null}
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
             />

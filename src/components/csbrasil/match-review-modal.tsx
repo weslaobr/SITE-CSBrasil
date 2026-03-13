@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trophy, Target, Zap, Shield, Sword, BarChart3, TrendingUp, ExternalLink } from 'lucide-react';
+import { X, Trophy, Target, Zap, Shield, Sword, BarChart3, TrendingUp, ExternalLink, Calendar, Download, Activity, BarChart2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -13,7 +13,7 @@ interface MatchReviewModalProps {
 export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalProps) {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>(null);
-    const [activeTab, setActiveTab] = useState<'geral' | 'analitico' | 'utilitarios'>('geral');
+    const [activeTab, setActiveTab] = useState<'geral' | 'analitico' | 'utilitarios' | 'duelos'>('geral');
 
     useEffect(() => {
         if (matchId) {
@@ -58,17 +58,17 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                     <div className="p-8 border-b border-white/5 bg-white/[0.01]">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                             <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 bg-green-500 rounded-[22px] flex items-center justify-center shadow-2xl shadow-green-500/20 rotate-3 group-hover:rotate-0 transition-transform">
+                                <div className={`w-14 h-14 ${(data?.data_source?.includes('premier')) ? 'bg-purple-500 shadow-purple-500/20' : 'bg-green-500 shadow-green-500/20'} rounded-[22px] flex items-center justify-center shadow-2xl rotate-3 group-hover:rotate-0 transition-transform`}>
                                     <BarChart3 className="text-black" size={28} />
                                 </div>
                                 <div>
-                                    <h2 className={`text-3xl font-black italic uppercase tracking-tighter leading-none ${(data?.data_source === 'matchmaking_premier' || data?.data_source?.includes('premier')) ? 'text-purple-400' : 'text-white'}`}>
+                                    <h2 className={`text-3xl font-black italic uppercase tracking-tighter leading-none ${(data?.data_source?.includes('premier')) ? 'text-purple-400' : 'text-white'}`}>
                                         Relatório de Partida
                                     </h2>
                                     <p className="text-[11px] text-zinc-500 font-black uppercase tracking-widest mt-1">
-                                        {data?.map_name?.replace('de_', '') || 'Carregando...'} &nbsp;·&nbsp; <span className={(data?.data_source === 'matchmaking_premier' || data?.data_source?.includes('premier')) ? 'text-purple-500/80' : ''}>{
-                                            (data?.data_source === 'matchmaking_premier' || data?.data_source?.includes('premier')) ? 'Premier' :
-                                            (data?.data_source === 'matchmaking_competitive' || data?.data_source?.includes('matchmaking')) ? 'Competitive' :
+                                        {data?.map_name?.replace('de_', '') || 'Carregando...'} &nbsp;·&nbsp; <span className={(data?.data_source?.includes('premier')) ? 'text-purple-500/80' : ''}>{
+                                            (data?.data_source?.includes('premier')) ? 'Premier' :
+                                            (data?.data_source?.includes('matchmaking')) ? 'Competitive' :
                                             data?.data_source === 'faceit' ? 'Faceit' :
                                             data?.data_source === 'gamersclub' ? 'GamersClub' :
                                             (data?.data_source || 'Competitive')
@@ -79,41 +79,32 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
 
                             {/* Centered Score */}
                             <div className="flex items-center gap-12 bg-white/[0.03] px-10 py-4 rounded-[32px] border border-white/10 shadow-2xl mx-auto md:mx-0 relative overflow-hidden group/score">
-                                <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 via-transparent to-red-500/5 opacity-0 group-hover/score:opacity-100 transition-opacity" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-red-500/5 opacity-0 group-hover/score:opacity-100 transition-opacity" />
                                 
-                                {(() => {
-                                    const team2 = data?.team_scores?.find((t: any) => t.team_number === 2);
-                                    const team3 = data?.team_scores?.find((t: any) => t.team_number === 3);
-                                    
-                                    return (
-                                        <>
-                                            <div className="text-center relative z-10">
-                                                <p className="text-[9px] font-black uppercase text-green-500/60 tracking-[0.2em] mb-1">Time A</p>
-                                                <p className="text-4xl font-black italic text-green-500 leading-none drop-shadow-[0_0_10px_rgba(34,197,94,0.3)]">
-                                                    {team2?.score ?? data?.team_2_score ?? data?.score?.[0] ?? '—'}
-                                                </p>
-                                            </div>
-                                            
-                                            <div className="flex flex-col items-center gap-0 relative z-10">
-                                                <div className="h-4 w-[1px] bg-white/10 mb-2" />
-                                                <div className="text-zinc-700 font-black italic text-xl tracking-tighter">VS</div>
-                                                <div className="h-4 w-[1px] bg-white/10 mt-2" />
-                                            </div>
-                                            
-                                            <div className="text-center relative z-10">
-                                                <p className="text-[9px] font-black uppercase text-red-500/60 tracking-[0.2em] mb-1">Time B</p>
-                                                <p className="text-4xl font-black italic text-red-500 leading-none drop-shadow-[0_0_10px_rgba(239,68,68,0.3)]">
-                                                    {team3?.score ?? data?.team_3_score ?? data?.score?.[1] ?? '—'}
-                                                </p>
-                                            </div>
-                                        </>
-                                    );
-                                })()}
+                                <div className="text-center relative z-10">
+                                    <p className="text-[9px] font-black uppercase text-emerald-500/60 tracking-[0.15em] mb-1">Time A</p>
+                                    <p className="text-4xl font-black italic text-emerald-500 leading-none drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                                        {data?.team_scores?.find((t: any) => t.team_number === 2)?.score ?? data?.team_2_score ?? '—'}
+                                    </p>
+                                </div>
+                                
+                                <div className="flex flex-col items-center gap-0 relative z-10">
+                                    <div className="h-4 w-[1px] bg-white/10 mb-2" />
+                                    <div className="text-zinc-700 font-black italic text-xl tracking-tighter">VS</div>
+                                    <div className="h-4 w-[1px] bg-white/10 mt-2" />
+                                </div>
+                                
+                                <div className="text-center relative z-10">
+                                    <p className="text-[9px] font-black uppercase text-red-500/60 tracking-[0.15em] mb-1">Time B</p>
+                                    <p className="text-4xl font-black italic text-red-500 leading-none drop-shadow-[0_0_10px_rgba(239,68,68,0.3)]">
+                                        {data?.team_scores?.find((t: any) => t.team_number === 3)?.score ?? data?.team_3_score ?? '—'}
+                                    </p>
+                                </div>
                             </div>
 
                             <button
                                 onClick={onClose}
-                                className="w-12 h-12 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/5 hover:border-white/10 shrink-0"
+                                className="w-12 h-12 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/5 hover:border-white/10 shadow-lg shrink-0"
                             >
                                 <X size={24} className="text-white" />
                             </button>
@@ -121,62 +112,92 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
 
                         {/* Tabs Navigation */}
                         <div className="flex items-center gap-1 p-1 bg-black/40 border border-white/5 rounded-2xl w-fit">
-                            <button
-                                onClick={() => setActiveTab('geral')}
-                                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                    activeTab === 'geral' 
-                                        ? ((data?.data_source === 'matchmaking_premier' || data?.data_source?.includes('premier')) ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-green-500 text-black shadow-lg shadow-green-500/20')
-                                        : 'text-zinc-500 hover:text-white hover:bg-white/5'
-                                }`}
-                            >
-                                Geral
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('analitico')}
-                                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                    activeTab === 'analitico' 
-                                        ? ((data?.data_source === 'matchmaking_premier' || data?.data_source?.includes('premier')) ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-green-500 text-black shadow-lg shadow-green-500/20')
-                                        : 'text-zinc-500 hover:text-white hover:bg-white/5'
-                                }`}
-                            >
-                                Analítico
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('utilitarios')}
-                                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                    activeTab === 'utilitarios' 
-                                        ? ((data?.data_source === 'matchmaking_premier' || data?.data_source?.includes('premier')) ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-green-500 text-black shadow-lg shadow-green-500/20')
-                                        : 'text-zinc-500 hover:text-white hover:bg-white/5'
-                                }`}
-                            >
-                                Utilitários
-                            </button>
+                            {[
+                                { id: 'geral', label: 'Geral' },
+                                { id: 'analitico', label: 'Analítico' },
+                                { id: 'utilitarios', label: 'Utilitários' },
+                                { id: 'duelos', label: 'Duelos' }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id as any)}
+                                    className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                        activeTab === tab.id 
+                                            ? (data?.data_source?.includes('premier') ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-green-500 text-black shadow-lg shadow-green-500/20')
+                                            : 'text-zinc-500 hover:text-white hover:bg-white/5'
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
                     {/* Body */}
-                    <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-8 bg-[#0b0e13] custom-scrollbar text-white">
                         {loading ? (
                             <div className="h-64 flex flex-col items-center justify-center gap-4">
-                                <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+                                <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                                 <p className="text-zinc-500 font-black italic uppercase text-xs">Processando dados do Leetify...</p>
                             </div>
                         ) : data ? (
                             <div className="space-y-12 pb-12">
+                                {/* Performance Cards in Analytical Tab */}
+                                {activeTab === 'analitico' && (
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                                        {[
+                                            { label: 'Mira', value: data?.leetify_ratings?.aim || 0, icon: <Target className="text-red-500" /> },
+                                            { label: 'Utilitários', value: data?.leetify_ratings?.utility || 0, icon: <Zap className="text-cyan-500" /> },
+                                            { label: 'Posicionam.', value: data?.leetify_ratings?.positioning || 0, icon: <Shield className="text-emerald-500" /> },
+                                            { label: 'Clutch', value: data?.leetify_ratings?.clutching || 0, icon: <Trophy className="text-amber-500" /> },
+                                            { label: 'Abertura', value: data?.leetify_ratings?.opening || 0, icon: <Sword className="text-purple-500" /> },
+                                        ].map((stat, i) => (
+                                            <div key={i} className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl flex flex-col items-center gap-2">
+                                                <div className="p-2 bg-white/5 rounded-lg mb-1">{stat.icon}</div>
+                                                <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider text-center">{stat.label}</span>
+                                                <div className={`text-xl font-black italic ${stat.value > 0 ? 'text-white' : 'text-zinc-800'}`}>
+                                                    {stat.value > 0 ? stat.value : '---'}
+                                                </div>
+                                                <div className="w-full h-1 bg-white/5 rounded-full mt-1 overflow-hidden">
+                                                    <motion.div 
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${stat.value}%` }}
+                                                        className="h-full bg-emerald-500"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Advanced Stats Header for Analytical Tab */}
+                                {activeTab === 'analitico' && (
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] px-2 flex items-center gap-2">
+                                            <Activity size={14} className="text-emerald-500" /> Estatísticas Avançadas
+                                        </h4>
+                                        {data?.data_source === 'gamersclub' && (
+                                            <span className="text-[8px] font-black uppercase text-zinc-700 bg-white/5 px-2 py-1 rounded">
+                                                Dados limitados pela fonte: GamersClub
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+
                                 {[2, 3].map((teamNum) => {
-                                    const teamPlayers = data.stats.filter((p: any) => p.initial_team_number === teamNum)
+                                    const teamPlayers = data?.stats?.filter((p: any) => p.initial_team_number === teamNum)
                                         .sort((a: any, b: any) => b.leetify_rating - a.leetify_rating);
                                     
-                                    if (teamPlayers.length === 0) return null;
+                                    if (!teamPlayers || teamPlayers.length === 0) return null;
 
                                     const isTeamA = teamNum === 2;
-                                    const teamColor = isTeamA ? 'text-green-500' : 'text-red-500';
+                                    const teamColor = isTeamA ? 'text-emerald-500' : 'text-red-500';
 
                                     return (
                                         <div key={teamNum} className="space-y-4">
                                             <div className="flex items-center justify-between px-2">
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`w-2 h-6 rounded-full ${isTeamA ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                    <div className={`w-2 h-6 rounded-full ${isTeamA ? 'bg-emerald-500' : 'bg-red-500'}`} />
                                                     <h3 className={`text-xl font-black italic uppercase tracking-tighter ${teamColor}`}>
                                                         {isTeamA ? 'Time A' : 'Time B'}
                                                     </h3>
@@ -187,7 +208,7 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                             </div>
 
                                             <div className="bg-white/[0.02] border border-white/5 rounded-[32px] overflow-hidden">
-                                                <table className="w-full text-left border-collapse">
+                                                <table className="w-full text-left">
                                                     <thead>
                                                         <tr className="border-b border-white/5 text-[9px] text-zinc-600 font-black uppercase tracking-widest bg-white/[0.01]">
                                                             <th className="pl-6 py-4">Jogador</th>
@@ -206,6 +227,14 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                                                     <th className="py-4 text-center">Opening (W/L)</th>
                                                                     <th className="py-4 text-center">Prec. (Spotted)</th>
                                                                     <th className="pr-6 py-4 text-right">HS Kills</th>
+                                                                </>
+                                                            ) : activeTab === 'duelos' ? (
+                                                                <>
+                                                                    <th className="py-4 text-center">Abertura (FK/FD)</th>
+                                                                    <th className="py-4 text-center">Trades (K/D)</th>
+                                                                    <th className="py-4 text-center">Clutches (1vX)</th>
+                                                                    <th className="py-4 text-center">KAST %</th>
+                                                                    <th className="pr-6 py-4 text-right">Impacto</th>
                                                                 </>
                                                             ) : (
                                                                 <>
@@ -227,18 +256,18 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
 
                                                             return (
                                                                 <tr key={player.steam64_id} className="group hover:bg-white/[0.03] transition-colors">
-                                                                    <td className="pl-6 py-4">
+                                                                    <td className="pl-6 py-4 flex items-center gap-3">
+                                                                        <div className={`w-1.5 h-1.5 rounded-full ${isTeamA ? 'bg-emerald-500' : 'bg-red-500'} opacity-40`} />
+                                                                        <span className="text-white font-black italic uppercase text-sm group-hover:text-cyan-400 transition-colors">
+                                                                            {cleanName}
+                                                                        </span>
                                                                         <a 
                                                                             href={`https://steamcommunity.com/profiles/${player.steam64_id}`}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
-                                                                            className="flex items-center gap-3 group/name inline-flex"
+                                                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
                                                                         >
-                                                                            <div className={`w-1.5 h-1.5 rounded-full ${isTeamA ? 'bg-green-500' : 'bg-red-500'} opacity-40`} />
-                                                                            <span className="text-white font-black italic uppercase text-sm group-hover/name:text-cyan-400 transition-colors">
-                                                                                {cleanName}
-                                                                            </span>
-                                                                            <ExternalLink size={10} className="text-zinc-700 opacity-0 group-hover/name:opacity-100 transition-all -translate-x-1 group-hover/name:translate-x-0" />
+                                                                            <ExternalLink size={10} className="text-zinc-600" />
                                                                         </a>
                                                                     </td>
                                                                     
@@ -260,7 +289,7 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                                                             <td className="py-4 text-center">
                                                                                 <span className={`px-3 py-1.5 rounded-xl font-black italic text-xs border ${
                                                                                     player.leetify_rating > 0 
-                                                                                        ? 'bg-green-500/10 text-green-500 border-green-500/20' 
+                                                                                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
                                                                                         : 'bg-red-500/10 text-red-500 border-red-500/20'
                                                                                 }`}>
                                                                                     {player.leetify_rating.toFixed(2)}
@@ -287,7 +316,7 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                                                                 </span>
                                                                             </td>
                                                                             <td className="py-4 text-center">
-                                                                                <span className="text-green-500 font-bold">{player.multi1k || 0}</span>
+                                                                                <span className="text-emerald-500 font-bold">{player.multi1k || 0}</span>
                                                                                 <span className="text-zinc-700 mx-1">/</span>
                                                                                 <span className="text-white text-[10px] bg-white/5 px-1.5 py-0.5 rounded">
                                                                                     {player.rounds_count}
@@ -298,6 +327,35 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                                                             </td>
                                                                             <td className="pr-6 py-4 text-right font-black italic text-zinc-500">
                                                                                 {player.total_hs_kills || 0}
+                                                                            </td>
+                                                                        </>
+                                                                    ) : activeTab === 'duelos' ? (
+                                                                        <>
+                                                                            <td className="py-4 text-center">
+                                                                                <span className="text-emerald-500 font-bold">{player.entry_kill_count || 0}</span>
+                                                                                <span className="text-zinc-700 mx-1">/</span>
+                                                                                <span className="text-red-500">{player.entry_death_count || 0}</span>
+                                                                                <span className="block text-[8px] text-zinc-600 uppercase font-black mt-0.5">Ratio: {((player.entry_kill_count || 0) / (player.entry_death_count || 1)).toFixed(1)}</span>
+                                                                            </td>
+                                                                            <td className="py-4 text-center">
+                                                                                <span className="text-white font-bold">{player.trade_kill_count || 0}</span>
+                                                                                <span className="text-zinc-700 mx-1">/</span>
+                                                                                <span className="text-zinc-400">{player.trade_death_count || 0}</span>
+                                                                            </td>
+                                                                            <td className="py-4 text-center">
+                                                                                <span className="text-amber-500 font-bold">{player.clutches_won || 0}</span>
+                                                                                <span className="text-zinc-700 mx-1">/</span>
+                                                                                <span className="text-zinc-500 text-[10px]">{player.clutch_attempts || 0}</span>
+                                                                            </td>
+                                                                            <td className="py-4 text-center">
+                                                                                <span className="text-white font-black italic">{(player.kast * 100 || 75).toFixed(0)}%</span>
+                                                                            </td>
+                                                                            <td className="pr-6 py-4 text-right">
+                                                                                <span className={`px-2 py-1 rounded text-[10px] font-black italic ${
+                                                                                    (player.impact_rating || 1.0) > 1.1 ? 'bg-purple-500/20 text-purple-400 border border-purple-500/20' : 'bg-white/5 text-zinc-500'
+                                                                                }`}>
+                                                                                    {(player.impact_rating || 1.0).toFixed(2)}
+                                                                                </span>
                                                                             </td>
                                                                         </>
                                                                     ) : (
@@ -341,13 +399,36 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                 })}
                             </div>
                         ) : (
-                            <div className="text-center py-20 bg-white/[0.02] rounded-[40px] border border-white/5">
+                            <div className="text-center py-20 bg-zinc-900/50 rounded-[40px] border border-white/5">
                                 <p className="text-zinc-600 font-black italic uppercase tracking-widest text-xs">Erro ao carregar dados detalhados desta partida.</p>
                             </div>
                         )}
                     </div>
 
-
+                    {/* Footer */}
+                    <div className="p-4 border-t border-white/5 bg-black/50 flex items-center justify-between px-8 text-white">
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                <Calendar size={12} className="text-emerald-500" />
+                                <span>Data: {new Date(data?.match_date || Date.now()).toLocaleDateString('pt-BR')}</span>
+                            </div>
+                            {data?.match_id && (
+                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">
+                                    <Shield size={12} />
+                                    <span>ID: {data.match_id}</span>
+                                </div>
+                            )}
+                        </div>
+                        {data?.demo_url && (
+                            <a
+                                href={data.demo_url}
+                                className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-black px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                            >
+                                <Download size={14} />
+                                Baixar Demo
+                            </a>
+                        )}
+                    </div>
                 </motion.div>
             </div>
         </AnimatePresence>
