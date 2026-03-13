@@ -66,7 +66,13 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                         Relatório de Partida
                                     </h2>
                                     <p className="text-[11px] text-zinc-500 font-black uppercase tracking-widest mt-1">
-                                        {data?.map_name?.replace('de_', '') || 'Carregando...'} &nbsp;·&nbsp; {data?.data_source || 'Competitive'}
+                                        {data?.map_name?.replace('de_', '') || 'Carregando...'} &nbsp;·&nbsp; {
+                                            data?.data_source === 'matchmaking_competitive' ? 'Competitive' :
+                                            data?.data_source === 'matchmaking_premier' ? 'Premier' :
+                                            data?.data_source === 'faceit' ? 'Faceit' :
+                                            data?.data_source === 'gamersclub' ? 'GamersClub' :
+                                            (data?.data_source || 'Competitive')
+                                        }
                                     </p>
                                 </div>
                             </div>

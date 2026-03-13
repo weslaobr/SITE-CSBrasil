@@ -24,7 +24,7 @@ export default function OverviewCard({ player }: OverviewCardProps) {
         if (val >= 25000) return 'text-orange-500'; // Gold
         if (val >= 20000) return 'text-purple-500'; // Purple
         if (val >= 15000) return 'text-blue-500';   // Blue
-        if (val >= 10000) return 'text-cyan-500';   // Cyan
+        if (val >= 10000) return 'text-blue-400';   // Blue
         if (val >= 5000) return 'text-green-500';   // Green
         return 'text-zinc-300';
     };
@@ -107,8 +107,8 @@ export default function OverviewCard({ player }: OverviewCardProps) {
                                 {player.rating.toFixed(2)}
                             </p>
                         </div>
-                        <div className="bg-white/5 rounded-2xl p-4 border border-white/5 group/stat hover:border-green-500/30 transition-all">
-                            <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1 flex items-center gap-1 group-hover/stat:text-green-500 transition-colors">
+                        <div className="bg-white/5 rounded-2xl p-4 border border-white/5 group/stat hover:border-emerald-500/30 transition-all">
+                            <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1 flex items-center gap-1 group-hover/stat:text-emerald-500 transition-colors">
                                 <Trophy size={10} /> Win Rate
                             </p>
                             <p className="text-2xl font-black text-white italic">
@@ -116,7 +116,7 @@ export default function OverviewCard({ player }: OverviewCardProps) {
                             </p>
                         </div>
                         <div className="bg-white/5 rounded-2xl p-4 border border-white/5 group/stat hover:border-green-500/30 transition-all">
-                            <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1 flex items-center gap-1 group-hover/stat:text-cyan-500 transition-colors">
+                            <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1 flex items-center gap-1 group-hover/stat:text-green-500 transition-colors">
                                 <TrendingUp size={10} /> Impacto
                             </p>
                             <p className="text-2xl font-black text-white italic">

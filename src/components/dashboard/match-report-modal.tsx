@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trophy, Target, TrendingUp, Calendar, ExternalLink, Download, BarChart2 } from 'lucide-react';
+import { X, Trophy, Target, TrendingUp, Calendar, ExternalLink, Download, BarChart2, BarChart3, Zap, Shield, Sword } from 'lucide-react';
 
 interface PlayerStats {
     nickname: string;
@@ -40,6 +40,8 @@ interface Match {
     url?: string;
     externalId?: string;
     metadata?: any;
+    adr?: number;
+    hsPercentage?: number;
 }
 
 interface MatchReportModalProps {
@@ -49,60 +51,20 @@ interface MatchReportModalProps {
 }
 
 const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onClose }) => {
-    const [activeTab, setActiveTab] = useState('SCOREBOARD');
+    const [activeTab, setActiveTab] = useState('geral');
 
     if (!match) return null;
 
     const getScoreboardData = () => {
-        if (match.source === 'Faceit' && match.metadata?.fullStats?.rounds?.[0]) {
-            const roundData = match.metadata.fullStats.rounds[0];
-
-            const mapStatsPlayers = (teamIndex: number) => {
-                const team = roundData.teams[teamIndex];
-                if (!team || !team.players) return [];
-
-                return team.players.map((p: any) => {
-                    const s = p.player_stats;
-                    const kills = parseInt(s.Kills || '0');
-                    const deaths = parseInt(s.Deaths || '0');
-                    return {
-                        nickname: p.nickname,
-                        avatar: `https://i.pravatar.cc/150?u=${p.nickname}`,
-                        rank: "Faceit",
-                        kills,
-                        deaths,
-                        assists: parseInt(s.Assists || '0'),
-                        diff: kills - deaths,
-                        kd: parseFloat(s["K/D Ratio"] || '0'),
-                        adr: parseFloat(s.ADR || '0'),
-                        hs: `${s["Headshots %"] || '0'}%`,
-                        kast: "N/A",
-                        rating: parseFloat(s.KR || '0') * 1.5,
-                        ef: 0,
-                        fkd: 0,
-                        trades: 0,
-                        onevx: 0,
-                        multikills: `${s["Triple Kills"] || '0'} / ${s["Quadro Kills"] || '0'} / ${s["Penta Kills"] || '0'}`,
-                        isUser: p.nickname === match.metadata?.userNickname
-                    } as PlayerStats;
-                });
-            };
-
-            return {
-                team1: mapStatsPlayers(0),
-                team2: mapStatsPlayers(1)
-            };
-        }
-
-        // Fallback to Mock Data
+        // Generate Mock Data in CSBrasil style
         const generateStats = (name: string, isUser = false): PlayerStats => {
             const meta = match.metadata || {};
-            const k = isUser ? match.kills : 15 + Math.floor(Math.random() * 15);
-            const d = isUser ? match.deaths : 15 + Math.floor(Math.random() * 10);
-            const a = isUser ? match.assists : 1 + Math.floor(Math.random() * 10);
+            const k = isUser ? (match.kills || 0) : 15 + Math.floor(Math.random() * 10);
+            const d = isUser ? (match.deaths || 0) : 15 + Math.floor(Math.random() * 10);
+            const a = isUser ? (match.assists || 0) : 1 + Math.floor(Math.random() * 5);
 
             return {
-                nickname: name,
+                nickname: isUser ? "[Sua Conta]" : name,
                 avatar: isUser ? "https://avatars.steamstatic.com/2cf8997181cfcbceeacd49034d12aaf4c378d15e.jpg" : `https://i.pravatar.cc/150?u=${name}`,
                 rank: "Global Elite",
                 kills: k,
@@ -110,22 +72,22 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
                 assists: a,
                 diff: k - d,
                 kd: Number((k / (d || 1)).toFixed(2)),
-                adr: isUser ? (match as any).adr || 70 : 70 + Math.floor(Math.random() * 50),
-                hs: isUser ? (meta.headshots ? `${meta.headshots}` : `${Math.floor(Math.random() * 20)}hs`) : `${20 + Math.floor(Math.random() * 40)}%`,
-                kast: `${60 + Math.floor(Math.random() * 30)}%`,
-                rating: 0.8 + Math.random() * 0.8,
-                ef: Math.floor(Math.random() * 12),
-                fkd: Math.floor(Math.random() * 5) - 2,
-                trades: Math.floor(Math.random() * 5),
-                onevx: Math.floor(Math.random() * 3),
-                multikills: isUser && meta.tripleKills ? `${meta.tripleKills} / ${meta.quadroKills} / ${meta.pentaKills}` : `${Math.floor(Math.random() * 5)}k+`,
+                adr: isUser ? (match.adr || 70) : 70 + Math.floor(Math.random() * 30),
+                hs: isUser ? (match.hsPercentage ? `${match.hsPercentage.toFixed(1)}%` : '20%') : `${20 + Math.floor(Math.random() * 40)}%`,
+                kast: `${70 + Math.floor(Math.random() * 20)}%`,
+                rating: isUser && meta.leetify_rating ? meta.leetify_rating : 0.9 + Math.random() * 0.4,
+                ef: Math.floor(Math.random() * 5),
+                fkd: 0,
+                trades: 0,
+                onevx: 0,
+                multikills: isUser && meta.tripleKills ? `${meta.tripleKills}/${meta.quadroKills}/${meta.pentaKills}` : "0/0/0",
                 isUser
             };
         };
 
         return {
             team1: [
-                generateStats("[Current User]", true),
+                generateStats("User", true),
                 generateStats("Teammate 1"),
                 generateStats("Teammate 2"),
                 generateStats("Teammate 3"),
@@ -141,259 +103,254 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
         };
     };
 
+    const getMapImage = (name: string) => {
+        if (!name) return 'https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/de_mirage.png';
+        const mapName = name.toLowerCase().replace('de_', '').trim();
+        const mapMapping: Record<string, string> = {
+            'dust 2': 'de_dust2', 'dust2': 'de_dust2', 'dust ii': 'de_dust2',
+            'mirage': 'de_mirage', 'inferno': 'de_inferno', 'nuke': 'de_nuke',
+            'overpass': 'de_overpass', 'vertigo': 'de_vertigo', 'ancient': 'de_ancient',
+            'anubis': 'de_anubis'
+        };
+        const officialName = mapMapping[mapName] || `de_${mapName}`;
+        return `https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/${officialName}.png`;
+    };
+
     const { team1, team2 } = getScoreboardData();
-    const tabs = ["SCOREBOARD", "ROUNDS", "WEAPONS", "DUELS", "HEATMAPS"];
+    const isWin = match.result === 'Win' || match.result === 'Victory';
 
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 bg-black/90 backdrop-blur-md overflow-hidden">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
+                    {/* Backdrop */}
                     <motion.div
-                        initial={{ opacity: 0, y: 100 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 100 }}
-                        className="relative w-full max-w-7xl h-full md:h-auto max-h-[95vh] flex flex-col bg-[#0b0e13] border border-white/5 md:rounded-xl shadow-2xl overflow-hidden"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                    />
+
+                    {/* Modal Content */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="relative w-full max-w-6xl max-h-[90vh] bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl overflow-hidden flex flex-col"
                     >
-                        {/* Top Navigation Bar */}
-                        <div className="flex flex-wrap items-center bg-[#151921] border-b border-white/5 px-6">
-                            {tabs.map((tab) => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab)}
-                                    className={`px-4 py-4 text-[11px] font-black tracking-widest transition-all border-b-2 uppercase ${activeTab === tab ? 'text-white border-cyan-500 bg-white/5' : 'text-zinc-500 border-transparent hover:text-white'
-                                        }`}
-                                >
-                                    {tab}
-                                </button>
-                            ))}
-                            <div className="ml-auto">
+                        {/* Header */}
+                        <div className="p-8 border-b border-white/5 bg-white/[0.01]">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative w-14 h-14 overflow-hidden rounded-[22px] border border-white/10 shrink-0">
+                                        <img 
+                                            src={getMapImage(match.mapName)} 
+                                            className="w-full h-full object-cover" 
+                                            alt={match.mapName} 
+                                        />
+                                        <div className="absolute inset-0 bg-green-500/10 mix-blend-overlay" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white leading-none">
+                                            Relatório de Partida
+                                        </h2>
+                                        <p className="text-[11px] text-zinc-500 font-black uppercase tracking-widest mt-1">
+                                            {match.mapName?.replace('de_', '')} &nbsp;·&nbsp; {match.gameMode || 'Competitive'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Dynamic Score Center */}
+                                <div className="flex items-center gap-12 bg-white/[0.03] px-10 py-4 rounded-[32px] border border-white/10 shadow-2xl mx-auto md:mx-0 relative overflow-hidden group/score">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-red-500/5 opacity-0 group-hover/score:opacity-100 transition-opacity" />
+                                    <div className="text-center relative z-10">
+                                        <p className="text-[9px] font-black uppercase text-emerald-500/60 tracking-[0.15em] mb-1">Time A</p>
+                                        <p className={`text-4xl font-black italic leading-none ${isWin ? 'text-emerald-500' : 'text-zinc-500'}`}>
+                                            {match.score.split('-')[0]}
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-0 relative z-10">
+                                        <div className="h-4 w-[1px] bg-white/10 mb-2" />
+                                        <div className="text-zinc-700 font-black italic text-xl tracking-tighter">VS</div>
+                                        <div className="h-4 w-[1px] bg-white/10 mt-2" />
+                                    </div>
+                                    <div className="text-center relative z-10">
+                                        <p className="text-[9px] font-black uppercase text-red-500/60 tracking-[0.15em] mb-1">Time B</p>
+                                        <p className={`text-4xl font-black italic leading-none ${!isWin ? 'text-red-500' : 'text-zinc-500'}`}>
+                                            {match.score.split('-')[1]}
+                                        </p>
+                                    </div>
+                                </div>
+
                                 <button
                                     onClick={onClose}
-                                    className="p-4 text-zinc-500 hover:text-white transition-colors"
+                                    className="w-12 h-12 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/5 hover:border-white/10 shadow-lg"
                                 >
-                                    <X size={20} />
+                                    <X size={24} className="text-white" />
                                 </button>
+                            </div>
+
+                            {/* Standardized Tabs */}
+                            <div className="flex items-center gap-1 p-1 bg-black/40 border border-white/5 rounded-2xl w-fit">
+                                {[
+                                    { id: 'geral', label: 'Geral' },
+                                    { id: 'analitico', label: 'Analítico' },
+                                    { id: 'utilitarios', label: 'Utilitários' }
+                                ].map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                            activeTab === tab.id 
+                                                ? 'bg-green-500 text-black shadow-lg shadow-green-500/20' 
+                                                : 'text-zinc-500 hover:text-white hover:bg-white/5'
+                                        }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
 
-                        {/* Content Area */}
-                        <div className="flex-1 overflow-y-auto bg-[#0b0e13] custom-scrollbar p-6">
-                            {activeTab === 'SCOREBOARD' ? (
-                                <div className="overflow-x-auto rounded-lg border border-white/5 bg-[#11161d]">
-                                    <table className="w-full text-left border-collapse min-w-[1000px]">
-                                        <thead>
-                                            <tr className="bg-[#1a2028] text-[9px] font-black text-zinc-500 uppercase tracking-widest border-b border-white/5">
-                                                <th className="px-4 py-3 min-w-[200px]">Player</th>
-                                                <th className="px-2 py-3 text-center">K</th>
-                                                <th className="px-2 py-3 text-center">D</th>
-                                                <th className="px-2 py-3 text-center">A</th>
-                                                <th className="px-2 py-3 text-center">+/-</th>
-                                                <th className="px-2 py-3 text-center">K/D</th>
-                                                <th className="px-2 py-3 text-center">ADR</th>
-                                                <th className="px-2 py-3 text-center">HS%</th>
-                                                <th className="px-2 py-3 text-center">KAST</th>
-                                                <th className="px-4 py-3 text-center bg-white/5">Rating</th>
-                                                <th className="px-2 py-3 text-center text-zinc-600">EF</th>
-                                                <th className="px-2 py-3 text-center text-zinc-600">FKD</th>
-                                                <th className="px-2 py-3 text-center text-zinc-600"> Trades</th>
-                                                <th className="px-2 py-3 text-center text-zinc-600">1vX</th>
-                                                <th className="px-2 py-3 text-center text-zinc-600">3k/4k/5k</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {/* TEAM 1 */}
-                                            <tr className="bg-green-500/5">
-                                                <td colSpan={15} className="px-4 py-1 text-[8px] font-black text-green-500/50 uppercase tracking-widest border-b border-green-500/10">Team 1</td>
-                                            </tr>
-                                            {team1.map((p: any, i: number) => (
-                                                <tr key={i} className={`border-b border-white/5 hover:bg-white/5 transition-colors ${p.isUser ? 'bg-cyan-500/5 shadow-[inset_4px_0_0_#06b6d4]' : ''}`}>
-                                                    <td className="px-4 py-3">
-                                                        <div className="flex items-center gap-3">
-                                                            <img src={p.avatar} className="w-8 h-8 rounded border border-white/10" alt="" />
-                                                            <div className="flex flex-col">
-                                                                <span className={`text-xs font-bold ${p.isUser ? 'text-cyan-400' : 'text-white'}`}>{p.nickname}</span>
-                                                                <span className="text-[8px] text-zinc-500 uppercase">{p.rank}</span>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-2 py-3 text-center text-xs font-bold text-white">{p.kills}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.deaths}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-500">{p.assists}</td>
-                                                    <td className={`px-2 py-3 text-center text-xs font-bold ${p.diff > 0 ? 'text-green-500' : p.diff < 0 ? 'text-red-500' : 'text-zinc-500'}`}>
-                                                        {p.diff > 0 ? `+${p.diff}` : p.diff}
-                                                    </td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-300 font-mono">{p.kd.toFixed(2)}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-300 font-mono">{p.adr.toFixed(1)}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.hs}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.kast}</td>
-                                                    <td className="px-4 py-3 text-center bg-white/5">
-                                                        <span className={`px-2 py-1 rounded text-xs font-black ${p.rating >= 1.2 ? 'bg-green-500 text-black' :
-                                                            p.rating >= 1.0 ? 'bg-lime-500 text-black' :
-                                                                p.rating >= 0.8 ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white'
-                                                            }`}>
-                                                            {p.rating.toFixed(2)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.ef}</td>
-                                                    <td className={`px-2 py-3 text-center text-xs ${p.fkd > 0 ? 'text-green-500' : p.fkd < 0 ? 'text-red-500' : 'text-zinc-600'}`}>{p.fkd}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.trades}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.onevx}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.multikills}</td>
-                                                </tr>
-                                            ))}
-                                            {/* TEAM 2 */}
-                                            <tr className="bg-red-500/5 mt-4">
-                                                <td colSpan={15} className="px-4 py-1 text-[8px] font-black text-red-500/50 uppercase tracking-widest border-b border-red-500/10">Team 2</td>
-                                            </tr>
-                                            {team2.map((p: any, i: number) => (
-                                                <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                                    <td className="px-4 py-3">
-                                                        <div className="flex items-center gap-3">
-                                                            <img src={p.avatar} className="w-8 h-8 rounded border border-white/10" alt="" />
-                                                            <div className="flex flex-col">
-                                                                <span className="text-xs font-bold text-white">{p.nickname}</span>
-                                                                <span className="text-[8px] text-zinc-500 uppercase">{p.rank}</span>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-2 py-3 text-center text-xs font-bold text-white">{p.kills}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.deaths}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-500">{p.assists}</td>
-                                                    <td className={`px-2 py-3 text-center text-xs font-bold ${p.diff > 0 ? 'text-green-500' : p.diff < 0 ? 'text-red-500' : 'text-zinc-500'}`}>
-                                                        {p.diff > 0 ? `+${p.diff}` : p.diff}
-                                                    </td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-300 font-mono">{p.kd.toFixed(2)}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-300 font-mono">{p.adr.toFixed(1)}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.hs}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.kast}</td>
-                                                    <td className="px-4 py-3 text-center bg-white/5">
-                                                        <span className={`px-2 py-1 rounded text-xs font-black ${p.rating >= 1.2 ? 'bg-green-500 text-black' :
-                                                            p.rating >= 1.0 ? 'bg-lime-500 text-black' :
-                                                                p.rating >= 0.8 ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white'
-                                                            }`}>
-                                                            {p.rating.toFixed(2)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.ef}</td>
-                                                    <td className={`px-2 py-3 text-center text-xs ${p.fkd > 0 ? 'text-green-500' : p.fkd < 0 ? 'text-red-500' : 'text-zinc-600'}`}>{p.fkd}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.trades}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.onevx}</td>
-                                                    <td className="px-2 py-3 text-center text-xs text-zinc-400">{p.multikills}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : activeTab === 'ROUNDS' ? (
-                                <div className="space-y-6">
-                                    {match.source === 'Steam' && (
-                                        <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="p-3 bg-cyan-500 rounded-lg">
-                                                    <BarChart2 className="text-black" />
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-black uppercase tracking-tight">Detailed Round Analysis</h3>
-                                                    <p className="text-xs text-zinc-500">Steam matches require external tools for round-by-round ADR and utility breakdown.</p>
-                                                </div>
-                                            </div>
-                                            <a
-                                                href={`https://csstats.gg/match/${match.externalId}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="px-6 py-2.5 bg-white text-black font-black uppercase text-[10px] rounded-lg hover:bg-zinc-200 transition-all shadow-lg"
-                                            >
-                                                View on CSStats.gg
-                                            </a>
+                        {/* Body Area */}
+                        <div className="flex-1 overflow-y-auto p-8 bg-[#0b0e13] custom-scrollbar text-white">
+                            {activeTab === 'geral' ? (
+                                <div className="space-y-8 pb-8">
+                                    {/* Team 1 (Emerald Side) */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3 px-2">
+                                            <div className="w-2 h-6 bg-emerald-500 rounded-full" />
+                                            <h3 className="text-xl font-black italic uppercase tracking-tighter text-emerald-500">Time A (Aliado)</h3>
                                         </div>
-                                    )}
+                                        <div className="bg-white/[0.02] border border-white/5 rounded-[32px] overflow-hidden">
+                                            <table className="w-full text-left">
+                                                <thead>
+                                                    <tr className="border-b border-white/5 text-[9px] text-zinc-600 font-black uppercase tracking-widest bg-white/[0.01]">
+                                                        <th className="pl-6 py-4">Jogador</th>
+                                                        <th className="py-4 text-center">K / D / A</th>
+                                                        <th className="py-4 text-center">ADR</th>
+                                                        <th className="py-4 text-center">HS%</th>
+                                                        <th className="py-4 text-center">Rating</th>
+                                                        <th className="pr-6 py-4 text-right">K/D</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-white/5">
+                                                    {team1.map((p, i) => (
+                                                        <tr key={i} className={`group hover:bg-white/[0.03] transition-colors ${p.isUser ? 'bg-green-500/5' : ''}`}>
+                                                            <td className="pl-6 py-4 flex items-center gap-3">
+                                                                <img src={p.avatar} className="w-8 h-8 rounded-xl border border-white/10 shadow-lg" alt="" />
+                                                                <span className={`font-black italic uppercase text-sm ${p.isUser ? 'text-green-500' : 'text-white'}`}>{p.nickname}</span>
+                                                            </td>
+                                                            <td className="py-4 text-center">
+                                                                <span className="text-white font-bold">{p.kills}</span>
+                                                                <span className="text-zinc-700 mx-1">/</span>
+                                                                <span className="text-zinc-400">{p.deaths}</span>
+                                                                <span className="text-zinc-700 mx-1">/</span>
+                                                                <span className="text-zinc-500">{p.assists}</span>
+                                                            </td>
+                                                            <td className="py-4 text-center font-black italic text-white">{p.adr.toFixed(0)}</td>
+                                                            <td className="py-4 text-center font-bold text-zinc-500 text-xs">{p.hs}</td>
+                                                            <td className="py-4 text-center">
+                                                                <span className={`px-3 py-1.5 rounded-xl font-black italic text-xs border ${
+                                                                    p.rating >= 1 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
+                                                                }`}>
+                                                                    {p.rating.toFixed(2)}
+                                                                </span>
+                                                            </td>
+                                                            <td className="pr-6 py-4 text-right font-black italic text-zinc-400">{p.kd.toFixed(2)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
 
-                                    <div className="bg-[#11161d] border border-white/5 rounded-2xl p-8">
-                                        <h3 className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-6 flex items-center gap-2">
-                                            <Trophy size={14} className="text-yellow-500" />
-                                            Histórico de Rodadas
-                                        </h3>
-                                        <div className="flex flex-wrap gap-2">
-                                            {Array.from({ length: 24 }).map((_, i) => (
-                                                <div
-                                                    key={i}
-                                                    className={`w-10 h-12 rounded-lg flex flex-col items-center justify-center border font-black text-xs ${i < 13 ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-red-500/10 border-red-500/20 text-red-500'
-                                                        }`}
-                                                >
-                                                    <span className="text-[8px] opacity-20 mb-1">{i + 1}</span>
-                                                    {i < 13 ? 'W' : 'L'}
-                                                </div>
-                                            ))}
+                                    {/* Team 2 (Red Side) */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3 px-2">
+                                            <div className="w-2 h-6 bg-red-500 rounded-full" />
+                                            <h3 className="text-xl font-black italic uppercase tracking-tighter text-red-500">Time B (Inimigo)</h3>
+                                        </div>
+                                        <div className="bg-white/[0.02] border border-white/5 rounded-[32px] overflow-hidden">
+                                            <table className="w-full text-left">
+                                                <tbody className="divide-y divide-white/5">
+                                                    {team2.map((p, i) => (
+                                                        <tr key={i} className="group hover:bg-white/[0.03] transition-colors">
+                                                            <td className="pl-6 py-4 flex items-center gap-3">
+                                                                <img src={p.avatar} className="w-8 h-8 rounded-xl border border-white/10" alt="" />
+                                                                <span className="text-white font-black italic uppercase text-sm">{p.nickname}</span>
+                                                            </td>
+                                                            <td className="py-4 text-center">
+                                                                <span className="text-white font-bold">{p.kills}</span>
+                                                                <span className="text-zinc-700 mx-1">/</span>
+                                                                <span className="text-zinc-400">{p.deaths}</span>
+                                                                <span className="text-zinc-700 mx-1">/</span>
+                                                                <span className="text-zinc-500">{p.assists}</span>
+                                                            </td>
+                                                            <td className="py-4 text-center font-black italic text-white">{p.adr.toFixed(0)}</td>
+                                                            <td className="py-4 text-center font-bold text-zinc-500 text-xs">{p.hs}</td>
+                                                            <td className="py-4 text-center">
+                                                                <span className={`px-3 py-1.5 rounded-xl font-black italic text-xs border ${
+                                                                    p.rating >= 1 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
+                                                                }`}>
+                                                                    {p.rating.toFixed(2)}
+                                                                </span>
+                                                            </td>
+                                                            <td className="pr-6 py-4 text-right font-black italic text-zinc-400">{p.kd.toFixed(2)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-[#11161d] border border-white/5 rounded-xl p-6">
-                                        <h3 className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                                            <Target size={14} className="text-cyan-500" />
-                                            Utility Effectiveness
-                                        </h3>
-                                        <div className="space-y-4">
-                                            <div className="flex justify-between items-end border-b border-white/5 pb-2">
-                                                <span className="text-zinc-500 text-xs font-bold">Utility Damage</span>
-                                                <span className="text-white text-lg font-black">240</span>
-                                            </div>
-                                            <div className="flex justify-between items-end border-b border-white/5 pb-2">
-                                                <span className="text-zinc-500 text-xs font-bold">Enemies Flashed</span>
-                                                <span className="text-white text-lg font-black">12</span>
-                                            </div>
+                                <div className="space-y-6">
+                                    <div className="bg-green-500/5 border border-green-500/10 rounded-[32px] p-10 text-center">
+                                        <div className="w-20 h-20 bg-green-500/20 rounded-[28px] flex items-center justify-center mx-auto mb-6">
+                                            <BarChart2 className="text-green-500" size={32} />
                                         </div>
+                                        <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-3">Dados Analíticos Externos</h3>
+                                        <p className="text-zinc-500 font-bold uppercase text-[10px] tracking-widest max-w-md mx-auto mb-8">
+                                            Essa partida foi importada do Steam. Para ver a análise granulada de utilitários e abertura de pixels, confira no CSStats.gg.
+                                        </p>
+                                        <a 
+                                            href={`https://csstats.gg/match/${match.externalId}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-3 bg-white text-black px-10 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-zinc-200 transition-all active:scale-95 shadow-2xl"
+                                        >
+                                            Ver Análise no CSStats.gg <ExternalLink size={14} />
+                                        </a>
                                     </div>
-                                    <div className="bg-[#11161d] border border-white/5 rounded-xl p-6">
-                                        <h3 className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                                            <TrendingUp size={14} className="text-green-500" />
-                                            Impact Metrics
-                                        </h3>
-                                        <div className="space-y-4">
-                                            <div className="flex justify-between items-end border-b border-white/5 pb-2">
-                                                <span className="text-zinc-500 text-xs font-bold">Entry Success</span>
-                                                <span className="text-white text-lg font-black">65%</span>
-                                            </div>
-                                            <div className="flex justify-between items-end border-b border-white/5 pb-2">
-                                                <span className="text-zinc-500 text-xs font-bold">Trade Kills</span>
-                                                <span className="text-white text-lg font-black">4</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-[#11161d] border border-white/5 rounded-xl p-6">
-                                        <h3 className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                                            <Trophy size={14} className="text-yellow-500" />
-                                            Multi-Kills
-                                        </h3>
-                                        <div className="flex gap-4 justify-around mt-4">
-                                            <div className="flex flex-col items-center">
-                                                <div className="text-2xl font-black text-white">{match.metadata?.tripleKills || '0'}</div>
-                                                <span className="text-[10px] text-zinc-500 font-bold uppercase">3k</span>
-                                            </div>
-                                            <div className="flex flex-col items-center">
-                                                <div className="text-2xl font-black text-white">{match.metadata?.quadroKills || '0'}</div>
-                                                <span className="text-[10px] text-zinc-500 font-bold uppercase">4k</span>
-                                            </div>
-                                            <div className="flex flex-col items-center">
-                                                <div className="text-2xl font-black text-cyan-400">{match.metadata?.pentaKills || '0'}</div>
-                                                <span className="text-[10px] text-cyan-500/50 font-bold uppercase">5k</span>
-                                            </div>
-                                        </div>
+
+                                    <div className="bg-white/5 border border-white/5 rounded-[32px] p-8">
+                                         <h4 className="text-[10px] font-black uppercase text-zinc-600 tracking-widest mb-6 flex items-center gap-2">
+                                            <Trophy size={14} className="text-yellow-500" /> Histórico de Rodadas
+                                         </h4>
+                                         <div className="flex flex-wrap gap-2">
+                                            {match.score.split('-').map((s, i) => (
+                                                <div key={i} className="px-6 py-3 bg-white/5 border border-white/5 rounded-2xl">
+                                                    <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Total {i === 0 ? 'Time A' : 'Time B'}</span>
+                                                    <span className="text-2xl font-black italic text-white">{s}</span>
+                                                </div>
+                                            ))}
+                                         </div>
                                     </div>
                                 </div>
                             )}
 
                             {/* Footer Actions */}
-                            <div className="flex items-center justify-between mt-8 border-t border-white/5 pt-6">
-                                <div className="flex gap-4">
-                                    <div className="flex items-center gap-2 text-zinc-600">
-                                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                                        <span className="text-[10px] uppercase font-bold tracking-widest">Entry Kill</span>
+                            <div className="flex items-center justify-between mt-12 pt-8 border-t border-white/5">
+                                <div className="flex gap-6">
+                                    <div className="flex items-center gap-2">
+                                        <Sword size={14} className="text-emerald-500" />
+                                        <span className="text-[9px] font-black uppercase text-zinc-500 tracking-widest">Data: {new Date(match.matchDate).toLocaleDateString()}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-zinc-600">
-                                        <div className="w-2 h-2 rounded-full bg-red-500" />
-                                        <span className="text-[10px] uppercase font-bold tracking-widest">Entry Death</span>
+                                    <div className="flex items-center gap-2">
+                                        <Shield size={14} className="text-green-500" />
+                                        <span className="text-[9px] font-black uppercase text-zinc-500 tracking-widest">ID: {match.externalId || 'Local'}</span>
                                     </div>
                                 </div>
 
@@ -402,10 +359,9 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
                                         href={match.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-black font-black uppercase text-[10px] rounded flex items-center gap-2 transition-all active:scale-95"
+                                        className="bg-green-600 hover:bg-green-500 text-black px-8 py-3 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 transition-all shadow-lg active:scale-95"
                                     >
-                                        {match.source === 'Steam' ? <Download size={14} /> : <ExternalLink size={14} />}
-                                        {match.source === 'Steam' ? 'Download Demo' : 'Match Room'}
+                                        <Download size={14} /> Baixar Demo
                                     </a>
                                 )}
                             </div>
