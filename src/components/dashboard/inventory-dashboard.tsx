@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Box, Eye, ShoppingCart, Info, ChevronDown, Loader2, DollarSign, Check, X, RefreshCw } from 'lucide-react';
+import { Search, Box, Eye, ShoppingCart, Info, Loader2, DollarSign, Check, X, RefreshCw } from 'lucide-react';
 
 interface InventoryItem {
     assetid: string;
@@ -52,9 +52,46 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
         setCurrency(lang === 'pt' ? 'BRL' : 'USD');
     };
 
-    // Extrair raridades únicas presentes no inventário
-    const rarities = Array.from(new Set(localItems.map(i => i.rarity).filter(Boolean)));
-    
+    // Mapas de raridade: chave canônica → { cor hex, pt, en }
+    const RARITY_MAP: Record<string, { color: string; pt: string; en: string }> = {
+        'Common':      { color: 'b0c3d9', pt: 'Comum',          en: 'Common' },
+        'Uncommon':    { color: '5e98d9', pt: 'Incomum',        en: 'Uncommon' },
+        'Rare':        { color: '4b69ff', pt: 'Raro',           en: 'Rare' },
+        'Mythical':    { color: '8847ff', pt: 'Mítico',         en: 'Mythical' },
+        'Legendary':   { color: 'd32ce6', pt: 'Lendário',       en: 'Legendary' },
+        'Ancient':     { color: 'eb4b4b', pt: 'Antigo',         en: 'Ancient' },
+        'Contraband':  { color: 'e4ae39', pt: 'Contrabandeado', en: 'Contraband' },
+    };
+
+    // Ordem de exibição por tier
+    const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Mythical', 'Legendary', 'Ancient', 'Contraband'];
+
+    // Normaliza string de raridade para chave canônica
+    const normalizeRarity = (rarity: string): string =>
+        rarity.replace('Rarity_', '').replace('_Weapon', '').replace('_Character', '').replace('_Default', '');
+
+    const translateRarity = (rarity: string) => {
+        if (!rarity) return '';
+        const key = normalizeRarity(rarity);
+        return RARITY_MAP[key]?.[language] || key;
+    };
+
+    const getRarityColor = (rarity: string): string => {
+        const key = normalizeRarity(rarity);
+        return RARITY_MAP[key]?.color || 'ffffff';
+    };
+
+    // Unique canonical rarities present in inventory, in tier order
+    const canonicalRaritiesInInventory = RARITY_ORDER.filter(key =>
+        localItems.some(i => normalizeRarity(i.rarity || '') === key)
+    );
+
+    // Contagem por raridade canônica
+    const rarityCounts = canonicalRaritiesInInventory.reduce((acc, key) => {
+        acc[key] = localItems.filter(i => normalizeRarity(i.rarity || '') === key).length;
+        return acc;
+    }, {} as Record<string, number>);
+
     const categories = [
         { id: 'all', label: language === 'pt' ? 'Todos' : 'All' },
         { id: 'knife', label: language === 'pt' ? 'Facas' : 'Knives' },
@@ -71,36 +108,16 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
         { id: 'collectible', label: language === 'pt' ? 'Colecionáveis' : 'Collectibles' }
     ];
 
-    const rarityTranslations: Record<string, { pt: string, en: string }> = {
-        'Common': { pt: 'Comum', en: 'Common' },
-        'Uncommon': { pt: 'Incomum', en: 'Uncommon' },
-        'Rare': { pt: 'Raro', en: 'Rare' },
-        'Mythical': { pt: 'Mítico', en: 'Mythical' },
-        'Legendary': { pt: 'Lendário', en: 'Legendary' },
-        'Ancient': { pt: 'Antigo', en: 'Ancient' },
-        'Contraband': { pt: 'Contrabandeado', en: 'Contraband' }
-    };
-
-    const translateRarity = (rarity: string) => {
-        if (!rarity) return '';
-        const clean = rarity
-            .replace('Rarity_', '')
-            .replace('_Weapon', '')
-            .replace('_Character', '')
-            .replace('Rarity_Custom_', '');
-        return rarityTranslations[clean]?.[language] || clean;
-    };
-
     const filteredItems = localItems.filter(item => {
         // 1. Busca
         const searchLower = searchTerm.toLowerCase();
-        const matchesSearch = 
-            item.name_pt?.toLowerCase().includes(searchLower) || 
+        const matchesSearch =
+            item.name_pt?.toLowerCase().includes(searchLower) ||
             item.name_en?.toLowerCase().includes(searchLower) ||
             item.name.toLowerCase().includes(searchLower);
 
-        // 2. Raridade
-        const matchesRarity = filterRarity === 'all' || item.rarity === filterRarity;
+        // 2. Raridade — compara pela chave canônica
+        const matchesRarity = filterRarity === 'all' || normalizeRarity(item.rarity || '') === filterRarity;
         
         // 3. Tipo (Lógica Robusta usando Internal Name)
         let matchesType = true;
@@ -284,20 +301,53 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                         )}
                     </div>
 
-                    {/* Filtro de Raridade */}
-                    <div className="relative min-w-[180px] self-start">
-                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
-                        <select
-                            value={filterRarity}
-                            onChange={(e) => setFilterRarity(e.target.value)}
-                            className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:border-green-500/50 transition-all backdrop-blur-md text-[10px] font-black appearance-none cursor-pointer uppercase text-zinc-300"
-                        >
-                            <option value="all">{language === 'pt' ? 'Todas Raridades' : 'All Rarities'}</option>
-                            {rarities.sort().map(r => (
-                                <option key={r} value={r}>{translateRarity(r)}</option>
-                            ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
+                    {/* Filtro de Raridade — pills coloridas */}
+                    <div className="flex flex-col gap-1 self-start min-w-0">
+                        <div className="flex flex-wrap gap-1.5">
+                            {/* Pill: Todas */}
+                            <button
+                                onClick={() => setFilterRarity('all')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                                    filterRarity === 'all'
+                                        ? 'bg-white/10 text-white border-white/20 shadow-md'
+                                        : 'bg-zinc-900/60 text-zinc-500 border-white/5 hover:text-white hover:border-white/10'
+                                }`}
+                            >
+                                <span className="w-2 h-2 rounded-full bg-white/40" />
+                                {language === 'pt' ? 'Todas' : 'All'}
+                                <span className="ml-0.5 opacity-50 font-mono text-[8px]">{localItems.length}</span>
+                            </button>
+
+                            {/* Pills por raridade */}
+                            {canonicalRaritiesInInventory.map(key => {
+                                const def = RARITY_MAP[key];
+                                const isActive = filterRarity === key;
+                                return (
+                                    <button
+                                        key={key}
+                                        onClick={() => setFilterRarity(isActive ? 'all' : key)}
+                                        style={{
+                                            borderColor: isActive ? `#${def.color}60` : undefined,
+                                            boxShadow: isActive ? `0 0 12px #${def.color}25` : undefined,
+                                        }}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                                            isActive
+                                                ? 'text-white bg-zinc-900/80'
+                                                : 'bg-zinc-900/60 text-zinc-500 border-white/5 hover:text-white hover:border-white/10'
+                                        }`}
+                                    >
+                                        <span
+                                            className="w-2 h-2 rounded-full flex-shrink-0"
+                                            style={{ backgroundColor: `#${def.color}`, boxShadow: isActive ? `0 0 6px #${def.color}` : undefined }}
+                                        />
+                                        {def[language]}
+                                        <span className="ml-0.5 font-mono text-[8px]" style={{ color: isActive ? `#${def.color}` : undefined, opacity: isActive ? 1 : 0.4 }}>
+                                            {rarityCounts[key]}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>
