@@ -121,9 +121,6 @@ export const getPlayerInventory = async (steamId: string) => {
         // 2. Buscar em lote todos os preços que já existem no Banco de Dados
         const priceMap = await getMultiplePrices(uniqueMarketNames);
         
-        let steamRequestCount = 0;
-        const MAX_STEAM_REQUESTS_PER_LOAD = 15; // Limite de 15 novas skins por carregamento para não travar o server nem levar ban
-
         const items = [];
         for (const asset of assets) {
             const description = descriptions.find((d: any) => d.classid === asset.classid && d.instanceid === asset.instanceid);
@@ -132,17 +129,9 @@ export const getPlayerInventory = async (steamId: string) => {
             const name_pt = description.market_name;
             const name_en = description.market_hash_name || description.market_name;
 
-            // 3. Se não encontramos no banco (ou estava expirado), buscamos da Steam (com limite)
-            if (!priceMap.has(name_en)) {
-                if (steamRequestCount < MAX_STEAM_REQUESTS_PER_LOAD) {
-                    const price = await getItemPrice(name_en);
-                    priceMap.set(name_en, price);
-                    steamRequestCount++;
-                } else {
-                    // Se atingiu o limite, deixamos como null para tentar no próximo F5 ou carregar em background
-                    priceMap.set(name_en, null);
-                }
-            }
+            // 3. Se não encontramos no banco, deixamos como null para não travar o carregamento do perfil.
+            // Os preços serão atualizados pelo worker em background ou no próximo f5 se o banco já tiver populado.
+            const price = priceMap.get(name_en) || null;
 
             // Extrair URL de inspeção (in-game)
             let inspect_url = null;

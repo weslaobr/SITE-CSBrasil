@@ -42,6 +42,16 @@ export const getLeetifyPlayerData = async (steamId64: string): Promise<LeetifyPl
 
         const data = response.data;
 
+        // Map ratings with fallbacks but keep null if nothing exists
+        const ratingsData = data.ratings ? {
+            leetifyRating: data.ratings?.leetify || 0,
+            aim: data.ratings?.aim || 0,
+            utility: data.ratings?.utility || 0,
+            positioning: data.ratings?.positioning || 0,
+            clutching: data.ratings?.clutching || data.ratings?.clutch || 0,
+            opening: data.ratings?.opening || 0,
+        } : null;
+
         return {
             meta: {
                 name: data.name,
@@ -55,14 +65,7 @@ export const getLeetifyPlayerData = async (steamId64: string): Promise<LeetifyPl
                 wingmanElo: data.ranks?.wingman,
                 gamersClubLevel: data.ranks?.gamers_club
             },
-            ratings: {
-                leetifyRating: data.ratings?.leetify || 0,
-                aim: data.ratings?.aim || 0,
-                utility: data.ratings?.utility || 0,
-                positioning: data.ratings?.positioning || 0,
-                clutching: data.ratings?.clutching || 0,
-                opening: data.ratings?.opening || 0,
-            },
+            ratings: ratingsData as any,
             recentMatches: data.recent_matches || []
         };
     } catch (error) {

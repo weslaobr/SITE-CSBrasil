@@ -32,138 +32,19 @@ export async function POST(req: NextRequest) {
 
         let syncedCount = 0;
 
-        // 1. Sync Steam Matches
+        /* 1. Sync Steam Matches - DEACTIVATED (Only Leetify allowed)
         if (user.steamId && user.steamMatchAuthCode) {
-            // Forward Sync: Check for new matches since the last one in our DB
-            const newestMatch = await prisma.match.findFirst({
-                where: { userId, source: 'Steam' },
-                orderBy: { matchDate: 'desc' }
-            });
-
-            let stopAtCode = '';
-            let startCode = '';
-
-            if (newestMatch && user.steamLatestMatchCode) {
-                stopAtCode = newestMatch.externalId || '';
-                startCode = user.steamLatestMatchCode || '';
-                console.log(`[QuickSync] Forward sync: starting from ${startCode}, stopping at known ${stopAtCode}`);
-            } else if (user.steamLatestMatchCode) {
-                startCode = user.steamLatestMatchCode || '';
-                console.log(`[QuickSync] Initial sync: starting from user's latest code ${startCode}`);
-            }
-
+            // Forward Sync logic...
             const steamMatches = await getSteamMatchHistory(user.steamId, user.steamMatchAuthCode, startCode, 10, '', stopAtCode);
-            console.log(`[QuickSync] Found ${steamMatches.length} new Steam matches`);
-
-            for (const match of steamMatches) {
-                if (match.id === 'sync-ready' || match.id === 'error-412') continue;
-
-                let realDetails = null;
-                const botUrl = process.env.BOT_API_URL;
-
-                if (botUrl) {
-                    try {
-                        // Call local Bot API for real details
-                        // @ts-ignore
-                        const axios = require('axios');
-                        const botRes = await axios.get(`${botUrl}/match/${match.externalId}`, { timeout: 2000 });
-                        if (botRes.status === 200) {
-                            realDetails = botRes.data;
-                        }
-                    } catch (e) {
-                        // Silently continue if bot is not available
-                    }
-                }
-
-                await prisma.match.upsert({
-                    where: { externalId: match.externalId },
-                    update: {},
-                    create: {
-                        userId,
-                        source: 'Steam',
-                        externalId: match.externalId,
-                        gameMode: match.gameMode,
-                        mapName: realDetails?.map_name || match.mapName,
-                        kills: realDetails?.kills !== undefined && realDetails.kills !== null ? realDetails.kills : match.kills,
-                        deaths: realDetails?.deaths !== undefined && realDetails.deaths !== null ? realDetails.deaths : match.deaths,
-                        assists: realDetails?.assists !== undefined && realDetails.assists !== null ? realDetails.assists : match.assists,
-                        score: realDetails?.score || match.score,
-                        mvps: match.mvps || 0,
-                        duration: match.duration,
-                        adr: realDetails?.adr || match.adr,
-                        hsPercentage: realDetails?.hsPercentage || match.hsPercentage,
-                        result: realDetails?.result || match.result,
-                        matchDate: realDetails?.raw_time ? new Date(realDetails.raw_time) : match.matchDate,
-                        url: match.url,
-                        metadata: { ... (realDetails ? { ...realDetails } : (match.metadata || {})), isMocked: !realDetails }
-                    }
-                });
-                syncedCount++;
-            }
-
-            // Sync Leetify Profile Ratings
-            if (steamMatches.length > 0) {
-                try {
-                    const ranks = await getLeetifyProfile(user.steamId);
-                    if (ranks && ranks.premier) {
-                        await prisma.user.update({
-                            where: { id: userId },
-                            data: { cs2Rank: ranks.premier.toString() }
-                        });
-                        console.log(`[QuickSync] Updated user Leetify Premier Rank to: ${ranks.premier}`);
-                    }
-                } catch (e: any) {
-                    console.error("[QuickSync] Failed to update Leetify rank:", e.message);
-                }
-            }
+            // ... (rest of steam sync)
         }
+        */
 
-        // 2. Sync Faceit Matches
+        /* 2. Sync Faceit Matches - DEACTIVATED (Only Leetify allowed)
         if (user.faceitNickname) {
-            const faceitPlayer = await getFaceitPlayer(user.faceitNickname);
-            if (faceitPlayer) {
-                const faceitMatches = await getFaceitMatches(faceitPlayer.player_id);
-                // For the most recent 5 matches, fetch full scoreboard stats
-                for (let i = 0; i < faceitMatches.length; i++) {
-                    const match = faceitMatches[i];
-
-                    // Fetch full stats for better reporting (only for the first few to avoid rate limits)
-                    if (i < 10) {
-                        const stats = await getFaceitMatchStats(match.externalId);
-                        if (stats && stats.rounds && stats.rounds.length > 0) {
-                            match.metadata.fullStats = stats;
-                        }
-                    }
-
-                    await prisma.match.upsert({
-                        where: { externalId: match.externalId },
-                        update: {
-                            metadata: match.metadata || {}
-                        },
-                        create: {
-                            userId,
-                            source: 'Faceit',
-                            externalId: match.externalId,
-                            gameMode: match.gameMode,
-                            mapName: match.mapName,
-                            kills: match.kills,
-                            deaths: match.deaths,
-                            assists: match.assists,
-                            score: match.score,
-                            mvps: match.mvps || 0,
-                            duration: match.duration,
-                            adr: match.adr,
-                            hsPercentage: match.hsPercentage,
-                            result: match.result,
-                            matchDate: match.matchDate,
-                            url: match.url,
-                            metadata: match.metadata || {}
-                        }
-                    });
-                    syncedCount++;
-                }
-            }
+            // faceit sync logic...
         }
+        */
 
         // 3. Sync Leetify Recent Matches (the "Combat History" shown on Profile page)
         if (user.steamId) {

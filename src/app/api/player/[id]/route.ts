@@ -10,19 +10,17 @@ export async function GET(
     try {
         const { id: steamId } = await params;
 
-        // 1. Check if we have this user in our database (for synced stats)
-        const dbUser = await prisma.user.findUnique({
-            where: { steamId: steamId },
-            include: {
-                matches: {
-                    orderBy: { matchDate: 'desc' },
-                    take: 20
+        // Fetch everything in parallel: Database, Steam Profile, Steam Stats, Leetify, and Inventory
+        const [dbUser, profile, steamStats, leetifyData, inventory] = await Promise.all([
+            prisma.user.findUnique({
+                where: { steamId: steamId },
+                include: {
+                    matches: {
+                        orderBy: { matchDate: 'desc' },
+                        take: 20
+                    }
                 }
-            }
-        });
-
-        // 2. Fetch fresh profile/stats from Steam and Leetify
-        const [profile, steamStats, leetifyData, inventory] = await Promise.all([
+            }),
             getPlayerProfile(steamId),
             getCS2Stats(steamId).catch(() => null),
             getLeetifyPlayerData(steamId).catch(() => null),
@@ -39,7 +37,7 @@ export async function GET(
             dbUser,
             leetifyData,
             inventory,
-            matches: dbUser?.matches || []
+            matches: (dbUser?.matches || []).filter((m: any) => m.source === 'Leetify')
         });
     } catch (error: any) {
         console.error("Error fetching dynamic player data:", error);

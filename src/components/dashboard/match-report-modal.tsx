@@ -30,6 +30,7 @@ interface PlayerStats {
     util_thrown: number;
     blind_time: number;
     isUser?: boolean;
+    steamId?: string;
 }
 
 interface Match {
@@ -68,10 +69,16 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
     const match = initialMatch || internalMatch;
 
     React.useEffect(() => {
-        if (isOpen && matchId && !initialMatch) {
-            fetchMatchData();
+        if (isOpen && matchId) {
+            // Se mudou o matchId ou se o match atual não tem os dados completos (metadata), busca
+            if (!match || !match.metadata || match.id !== matchId) {
+                setInternalMatch(null); // Limpa anterior
+                fetchMatchData();
+            }
+        } else if (!isOpen) {
+            setInternalMatch(null);
         }
-    }, [isOpen, matchId, initialMatch]);
+    }, [isOpen, matchId]);
 
     const fetchMatchData = async () => {
         setLoading(true);
@@ -79,23 +86,30 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
             const res = await axios.get(`/api/match/${matchId}`);
             const data = res.data;
             
-            // Map API data to Match interface
+            // Map API data to Match interface, preserving initial data where needed
+            const scoreFromAPI = (data.team_2_score !== undefined && data.team_3_score !== undefined) 
+                ? `${data.team_2_score}-${data.team_3_score}` 
+                : null;
+
             const fetchedMatch: Match = {
                 id: data.match_id || matchId!,
-                source: data.data_source || 'Leetify',
-                gameMode: data.game_mode || 'Competitive',
-                mapName: data.map_name || 'de_mirage',
-                kills: data.stats?.find((p: any) => p.is_user)?.total_kills || 0,
-                deaths: data.stats?.find((p: any) => p.is_user)?.total_deaths || 0,
-                assists: data.stats?.find((p: any) => p.is_user)?.total_assists || 0,
-                matchDate: data.match_date || new Date().toISOString(),
-                result: data.result || (data.team_2_score > data.team_3_score ? 'Win' : 'Loss'), // Simplified
-                score: `${data.team_2_score || 0}-${data.team_3_score || 0}`,
-                url: data.demo_url,
-                externalId: data.match_id,
-                metadata: data, // Store the full data in metadata for normalization
-                adr: data.stats?.find((p: any) => p.is_user)?.adr,
-                hsPercentage: data.stats?.find((p: any) => p.is_user)?.accuracy_head * 100
+                source: data.data_source || initialMatch?.source || 'Leetify',
+                gameMode: data.game_mode || initialMatch?.gameMode || 'Competitive',
+                mapName: data.map_name || initialMatch?.mapName || 'de_mirage',
+                kills: data.stats?.find((p: any) => p.is_user)?.total_kills || initialMatch?.kills || 0,
+                deaths: data.stats?.find((p: any) => p.is_user)?.total_deaths || initialMatch?.deaths || 0,
+                assists: data.stats?.find((p: any) => p.is_user)?.total_assists || initialMatch?.assists || 0,
+                matchDate: data.match_date || initialMatch?.matchDate || new Date().toISOString(),
+                result: data.result || initialMatch?.result || (data.team_2_score > data.team_3_score ? 'Win' : 'Loss'),
+                score: scoreFromAPI && scoreFromAPI !== "0-0" ? scoreFromAPI : (initialMatch?.score || "0-0"),
+                url: data.demo_url || initialMatch?.url,
+                externalId: data.match_id || initialMatch?.externalId,
+                metadata: {
+                    ...initialMatch?.metadata, // Preserve initial metadata (like playerNickname)
+                    ...data,
+                },
+                adr: data.stats?.find((p: any) => p.is_user)?.adr || initialMatch?.adr,
+                hsPercentage: (data.stats?.find((p: any) => p.is_user)?.accuracy_head * 100) || initialMatch?.hsPercentage
             };
             setInternalMatch(fetchedMatch);
         } catch (error) {
@@ -105,45 +119,45 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
         }
     };
 
-    if (!match) {
-        if (loading) {
-            return (
-                <AnimatePresence>
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-                        <motion.div 
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="relative bg-[#0b0e13] border border-white/10 rounded-[40px] p-20 flex flex-col items-center gap-8 shadow-2xl"
-                        >
-                            <div className="relative w-20 h-20">
-                                <div className="absolute inset-0 border-4 border-emerald-500/10 rounded-full" />
-                                <div className="absolute inset-0 border-4 border-t-emerald-500 rounded-full animate-spin" />
-                            </div>
-                            <div className="text-center">
-                                <h3 className="text-xl font-black uppercase italic tracking-tighter text-white mb-2">Analisando Partida</h3>
-                                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest animate-pulse">Cruzando dados do Leetify...</p>
-                            </div>
-                        </motion.div>
-                    </div>
-                </AnimatePresence>
-            );
-        }
-        return null;
+    if (!match && loading) {
+        return (
+            <AnimatePresence>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="relative bg-[#0b0e13] border border-white/10 rounded-[40px] p-20 flex flex-col items-center gap-8 shadow-2xl"
+                    >
+                        <div className="relative w-20 h-20">
+                            <div className="absolute inset-0 border-4 border-emerald-500/10 rounded-full" />
+                            <div className="absolute inset-0 border-4 border-t-emerald-500 rounded-full animate-spin" />
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-xl font-black uppercase italic tracking-tighter text-white mb-2">Analisando Partida</h3>
+                            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest animate-pulse">Cruzando dados do Leetify...</p>
+                        </div>
+                    </motion.div>
+                </div>
+            </AnimatePresence>
+        );
     }
 
-    // Since we returned earlier if match is null, TS now knows match is non-null here
-    const currentMatch = match;
+    // Determine the most complete version of the match data
+    const currentMatch = internalMatch?.metadata ? internalMatch : (initialMatch || internalMatch);
+    
+    // Final safety check
+    if (!currentMatch) return null;
 
     // Helper to normalize any player object to our standard PlayerStats
     const normalizePlayerData = (p: any, isUser: boolean = false): PlayerStats => {
-        const kills = p.kills !== undefined ? p.kills : parseInt(p.player_stats?.Kills || p.Kills || '0');
-        const deaths = p.deaths !== undefined ? p.deaths : parseInt(p.player_stats?.Deaths || p.Deaths || '0');
-        const assists = p.assists !== undefined ? p.assists : parseInt(p.player_stats?.Assists || p.Assists || '0');
-        const adr = p.adr !== undefined ? p.adr : parseFloat(p.player_stats?.ADR || p.ADR || '0');
-        const hs = p.hs !== undefined ? p.hs : 
-                   (p.hs_percent !== undefined ? `${p.hs_percent}%` : 
-                   (p.player_stats?.["Headshots %"] ? `${p.player_stats["Headshots %"]}%` : '0%'));
+        const kills = p.kills !== undefined ? p.kills : parseInt(p.total_kills || p.player_stats?.Kills || p.Kills || '0');
+        const deaths = p.deaths !== undefined ? p.deaths : parseInt(p.total_deaths || p.player_stats?.Deaths || p.Deaths || '0');
+        const assists = p.assists !== undefined ? p.assists : parseInt(p.total_assists || p.player_stats?.Assists || p.Assists || '0');
+        const adr = p.adr !== undefined ? p.adr : parseFloat(p.adr || p.player_stats?.ADR || p.ADR || '0');
+        const hsValue = p.accuracy_head !== undefined ? `${(p.accuracy_head * 100).toFixed(0)}%` : 
+                        (p.hs_percent !== undefined ? `${p.hs_percent}%` : 
+                        (p.player_stats?.["Headshots %"] ? `${p.player_stats["Headshots %"]}%` : '0%'));
         
         const isWinResult = currentMatch.result === 'Win' || currentMatch.result === 'Victory';
         
@@ -154,9 +168,11 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
         const fallbackClutches = kills > 20 ? Math.floor(Math.random() * 2) : 0;
         const fallbackKast = isWinResult ? 75 + Math.floor(Math.random() * 15) : 60 + Math.floor(Math.random() * 20);
 
+        const avatar = p.avatar_url || p.avatarUrl || p.avatar || (p.player_stats?.avatar) || (isUser ? "https://avatars.steamstatic.com/2cf8997181cfcbceeacd49034d12aaf4c378d15e.jpg" : `https://i.pravatar.cc/150?u=${p.player_id || p.name || Math.random()}`);
+
         return {
             nickname: p.name || p.nickname || (isUser ? "[Sua Conta]" : "Jogador"),
-            avatar: p.avatar || (isUser ? "https://avatars.steamstatic.com/2cf8997181cfcbceeacd49034d12aaf4c378d15e.jpg" : `https://i.pravatar.cc/150?u=${p.player_id || p.name || Math.random()}`),
+            avatar,
             rank: p.rank || "Competitive",
             kills,
             deaths,
@@ -164,7 +180,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
             diff: kills - deaths,
             kd: Number((kills / (deaths || 1)).toFixed(2)),
             adr: adr || (isUser ? (currentMatch.adr || 70) : 70 + Math.floor(Math.random() * 20)),
-            hs,
+            hs: hsValue,
             kast: p.kast || `${fallbackKast}%`,
             rating: p.rating || p.leetify_rating || (p.player_stats?.["K/D Ratio"] ? parseFloat(p.player_stats["K/D Ratio"]) : 1.0),
             fkd: p.fk_count || p.fkd || fallbackFk,
@@ -177,7 +193,8 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
             flash_assists: p.flash_assists || p.flashbang_assists || 0,
             util_thrown: p.util_thrown || (p.he_thrown || 0) + (p.flash_thrown || 0) + (p.smokes_thrown || 0) + (p.molotovs_thrown || 0),
             blind_time: p.blind_time || p.flash_blind_time || 0,
-            isUser: isUser || p.nickname === currentMatch.metadata?.playerNickname
+            isUser: isUser || p.nickname === currentMatch.metadata?.playerNickname,
+            steamId: p.player_id || p.steamId || p.steam64Id || p.player_stats?.steam_id
         };
     };
 
@@ -193,7 +210,65 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
             };
         }
 
-        // 2. Metadata players (Leetify/Steam)
+        // 2. Leetify stats
+        if (meta.stats && Array.isArray(meta.stats)) {
+            const stats = meta.stats;
+            
+            // Group by initial_team_number (most accurate for Leetify)
+            // Fallback to team_id or teamId
+            const teamsMap: Record<string, any[]> = {};
+            stats.forEach((s: any) => {
+                const tid = s.initial_team_number || s.team_id || s.teamId || "unknown";
+                if (!teamsMap[tid]) teamsMap[tid] = [];
+                teamsMap[tid].push(s);
+            });
+
+            let t1: any[] = [];
+            let t2: any[] = [];
+            
+            const teamIds = Object.keys(teamsMap).filter(id => id !== "unknown");
+            
+            if (teamIds.length >= 2) {
+                // Sort by ID to have deterministic initial split
+                teamIds.sort();
+                t1 = teamsMap[teamIds[0]];
+                t2 = teamsMap[teamIds[1]];
+            } else if (teamsMap["unknown"]?.length >= 10 || teamIds.length === 1) {
+                // FALLBACK: If everyone is in one bucket, use index-based split
+                t1 = stats.slice(0, 5);
+                t2 = stats.slice(5, 10);
+            }
+
+            // ROBUST USER DETECTION
+            // Check nickname, name, is_user, isUser, and steamId
+            const isUserPlayer = (p: any) => {
+                const userNickname = currentMatch.metadata?.playerNickname || currentMatch.metadata?.metadata?.playerNickname;
+                const userSteamId = currentMatch.metadata?.metadata?.steamId || currentMatch.metadata?.steam64Id;
+                
+                return (
+                    p.is_user === true || 
+                    p.isUser === true ||
+                    (userNickname && (p.nickname === userNickname || p.name === userNickname)) ||
+                    (userSteamId && (p.player_id === userSteamId || p.steam64_id === userSteamId || p.steamId === userSteamId))
+                );
+            };
+
+            const userInT2 = t2.some(isUserPlayer);
+            if (userInT2) {
+                const temp = t1;
+                t1 = t2;
+                t2 = temp;
+            }
+
+            const normalize = (p: any) => normalizePlayerData(p, isUserPlayer(p));
+
+            return {
+                team1: t1.map(normalize),
+                team2: t2.map(normalize)
+            };
+        }
+
+        // 2. Metadata players (Legacy/Steam)
         if (meta.players && Array.isArray(meta.players)) {
             return {
                 team1: meta.players.slice(0, 5).map((p: any) => normalizePlayerData(p)),
@@ -221,6 +296,39 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
 
     };
 
+    const getMatchAnalysis = (user: PlayerStats) => {
+        const stats = [];
+        
+        // Aim Stats
+        if (user.hs) stats.push({ label: 'Headshot Accuracy', value: user.hs, color: 'bg-rose-500', tag: 'AIM', raw: parseInt(user.hs) });
+        stats.push({ label: 'ADR', value: user.adr.toFixed(1), color: 'bg-emerald-500', tag: 'IMPACT', raw: user.adr });
+        
+        // Multi-kills
+        const [k2, k3, k4, k5] = (user.multikills || "0/0/0/0").split('/').map(Number);
+        if (k5 > 0) stats.push({ label: 'Ace Rounds', value: k5.toString(), color: 'bg-amber-500', tag: 'IMPACT', badge: 'LEGENDARY', raw: 100 });
+        else if (k4 > 0) stats.push({ label: '4K Rounds', value: k4.toString(), color: 'bg-rose-500', tag: 'IMPACT', raw: 80 });
+        
+        // Utility
+        if (user.util_damage > 0) stats.push({ label: 'Dano de Utilitário', value: user.util_damage.toString(), color: 'bg-cyan-500', tag: 'UTIL', raw: Math.min(100, (user.util_damage / 300) * 100) });
+        if (user.flash_assists > 0) stats.push({ label: 'Assist. de Flash', value: user.flash_assists.toString(), color: 'bg-cyan-400', tag: 'UTIL', raw: Math.min(100, user.flash_assists * 20) });
+
+        // Entry
+        if (user.fkd > 0) stats.push({ label: 'Duelos de Abertura Vencidos', value: user.fkd.toString(), color: 'bg-purple-500', tag: 'OPENING', raw: (user.fkd / (user.fkd + user.fkd_deaths || 1)) * 100 });
+
+        // Sort by 'raw' importance and take top 5
+        const top5 = stats.sort((a, b) => (b.raw || 0) - (a.raw || 0)).slice(0, 5);
+        
+        // Identity logic
+        let identity = "O Consistente";
+        if (top5.some(s => s.tag === 'AIM' && s.raw > 50)) identity = "O Especialista em Mira";
+        if (top5.some(s => s.tag === 'UTIL' && s.raw > 40)) identity = "O Rei dos Utilitários";
+        if (top5.some(s => s.tag === 'OPENING' && s.raw > 60)) identity = "O Entry Fragger";
+        if (user.rating > 1.3) identity = "O Carregador";
+        if (user.onevx > 0) identity = "O Clutch Master";
+
+        return { top5, identity };
+    };
+
     const getMapImage = (name: string) => {
         if (!name) return 'https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/de_mirage.png';
         const mapName = name.toLowerCase().replace('de_', '').trim();
@@ -240,12 +348,83 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                       currentMatch.metadata?.source?.toLowerCase().includes('premier');
 
     const displayMode = isPremier ? 'Premier' : 
-                        currentMatch.gameMode?.toLowerCase().includes('matchmaking') ? 'Competitive' : 
-                        currentMatch.gameMode || 'Competitive';
+                        currentMatch.gameMode?.toLowerCase().includes('matchmaking') ? 'Competitivo' : 
+                        currentMatch.gameMode || 'Competitivo';
 
     const { team1, team2 } = getScoreboardData();
 
-    const isWin = currentMatch.result === 'Win' || currentMatch.result === 'Victory';
+    // DYNAMIC SCORE AND RESULT
+    // Find team numbers/scores from metadata to get the REAL score
+    const getMatchResult = () => {
+        const meta = currentMatch.metadata || {};
+        const stats = meta.stats || [];
+        
+        // 1. Identify all team numbers present in the match
+        const teamNumbers = Array.from(new Set(stats.map((s: any) => s.initial_team_number).filter(Boolean))) as number[];
+        
+        // 2. Identify the user's team number
+        const userPlayer = stats.find((p: any) => {
+            const userNickname = meta.playerNickname || meta.metadata?.playerNickname;
+            const userSteamId = meta.metadata?.steamId || meta.steam64Id;
+            return (
+                p.is_user === true || 
+                p.isUser === true ||
+                (userNickname && (p.nickname === userNickname || p.name === userNickname)) ||
+                (userSteamId && (p.player_id === userSteamId || p.steam64_id === userSteamId || p.steamId === userSteamId))
+            );
+        });
+
+        const userTeamNum = userPlayer?.initial_team_number;
+        const enemyTeamNum = teamNumbers.find(n => n !== userTeamNum);
+
+        // Exhaustive search for scores
+        const findScore = (teamNum: number | undefined) => {
+            if (teamNum === undefined) return 0;
+            // Try team_X_score
+            if (meta[`team_${teamNum}_score`] !== undefined) return meta[`team_${teamNum}_score`];
+            // Try teamXScore
+            if (meta[`team${teamNum}Score`] !== undefined) return meta[`team${teamNum}Score`];
+            // Try teamScores array
+            if (Array.isArray(meta.team_scores)) {
+                const found = meta.team_scores.find((t: any) => t.team_number === teamNum || t.teamNumber === teamNum);
+                if (found && found.score !== undefined) return found.score;
+            }
+            return 0;
+        };
+
+        let s1 = findScore(userTeamNum);
+        let s2 = findScore(enemyTeamNum);
+
+        // FALLBACK: If scores are identical and NOT a 13-13 tie, or both 0, or team numbers are missing
+        const isSuspicious = (s1 === s2 && s1 !== 13) || (s1 === 0 && s2 === 0) || !userTeamNum;
+        
+        if (isSuspicious && currentMatch.score) {
+            const parts = currentMatch.score.split(/[^\d]+/);
+            if (parts.length >= 2) {
+                const scoreA = parseInt(parts[0]);
+                const scoreB = parseInt(parts[1]);
+                
+                // If it's a win, the higher score is for allies
+                const isActualWin = currentMatch.result === 'Win' || currentMatch.result === 'Victory';
+                if (isActualWin) {
+                    s1 = Math.max(scoreA, scoreB);
+                    s2 = Math.min(scoreA, scoreB);
+                } else {
+                    // For losses, the lower score is for allies
+                    s1 = Math.min(scoreA, scoreB);
+                    s2 = Math.max(scoreA, scoreB);
+                }
+            }
+        }
+
+        return {
+            alliesScore: s1,
+            enemiesScore: s2,
+            win: s1 > s2 || (s1 === s2 && (currentMatch.result === 'Win' || currentMatch.result === 'Victory'))
+        };
+    };
+
+    const { alliesScore, enemiesScore, win: isWin } = getMatchResult();
 
     return (
         <AnimatePresence>
@@ -301,15 +480,15 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                     <div className="flex items-center gap-8">
                                         <div className="text-center">
                                             <h1 className={`text-6xl font-black italic uppercase tracking-tighter ${isWin ? 'text-white' : 'text-white/90'}`}>
-                                                {isWin ? 'Victory' : 'Defeat'}
+                                                {isWin ? 'Vitória' : 'Derrota'}
                                             </h1>
                                             <div className="flex items-center justify-center gap-4 mt-2">
                                                 <span className={`text-4xl font-black italic ${isWin ? 'text-emerald-500' : 'text-red-500'}`}>
-                                                    {currentMatch.score.split('-')[0]}
+                                                    {alliesScore}
                                                 </span>
                                                 <span className="text-2xl font-black text-zinc-700 italic">:</span>
                                                 <span className={`text-4xl font-black italic ${!isWin ? 'text-red-500' : 'text-emerald-500'}`}>
-                                                    {currentMatch.score.split('-')[1]}
+                                                    {enemiesScore}
                                                 </span>
                                             </div>
                                         </div>
@@ -331,10 +510,10 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                             <div className="absolute bottom-0 left-0 right-0 flex justify-center px-8 border-b border-white/5">
                                 <div className="flex gap-8">
                                     {[
-                                        { id: 'seu-jogo', label: 'Your Match' },
-                                        { id: 'visao-geral', label: 'Overview' },
-                                        { id: 'detalhes', label: 'Match Details' },
-                                        { id: 'duelos', label: 'Duelos' }
+                                        { id: 'seu-jogo', label: 'SEU JOGO' },
+                                        { id: 'visao-geral', label: 'VISÃO GERAL' },
+                                        { id: 'detalhes', label: 'DETALHES' },
+                                        { id: 'duelos', label: 'DUELOS' }
                                     ].map((tab) => (
                                         <button
                                             key={tab.id}
@@ -366,12 +545,12 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                             <div className="bg-black/20 border-b border-white/5 px-8 pt-4 overflow-x-auto no-scrollbar">
                                 <div className="flex gap-6 pb-4">
                                     {[
-                                        { id: 'geral', label: 'General' },
-                                        { id: 'timeline', label: 'Timeline' },
-                                        { id: 'mira', label: 'Aim' },
-                                        { id: 'utilitarios', label: 'Utility' },
-                                        { id: 'atividade', label: 'Activity' },
-                                        { id: 'trocas', label: 'Trades' }
+                                        { id: 'geral', label: 'Geral' },
+                                        { id: 'timeline', label: 'Linha do Tempo' },
+                                        { id: 'mira', label: 'Mira' },
+                                        { id: 'utilitarios', label: 'Utilitários' },
+                                        { id: 'atividade', label: 'Atividade' },
+                                        { id: 'trocas', label: 'Trocas' }
                                     ].map((tab) => (
                                         <button
                                             key={tab.id}
@@ -388,7 +567,11 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                         )}
                         {/* Body Area */}
                         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar text-white">
-                            {mainTab === 'seu-jogo' ? (
+                        {mainTab === 'seu-jogo' ? (() => {
+                            const userData = team1.find(p => p.isUser) || team2.find(p => p.isUser) || team1[0];
+                            const { top5, identity } = getMatchAnalysis(userData);
+                            
+                            return (
                                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                                         {/* Left Column: Identity & Highlights */}
@@ -401,7 +584,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                                     <div className="relative">
                                                         <div className="w-24 h-24 rounded-[32px] overflow-hidden border-2 border-emerald-500/20 p-1 bg-zinc-800">
                                                             <img 
-                                                                src={normalizePlayerData(currentMatch.metadata?.players?.[0] || {}, true).avatar} 
+                                                                src={userData.avatar} 
                                                                 className="w-full h-full object-cover rounded-[28px]" 
                                                                 alt="" 
                                                             />
@@ -412,39 +595,40 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                                     </div>
                                                     <div>
                                                         <div className="flex items-center gap-2 mb-1">
-                                                            <span className="px-2 py-0.5 bg-rose-500/10 text-rose-500 text-[8px] font-black uppercase tracking-widest rounded-md border border-rose-500/10">Match Identity</span>
-                                                            <span className="px-2 py-0.5 bg-zinc-800 text-zinc-400 text-[8px] font-black uppercase tracking-widest rounded-md">Your Top 5 Stats</span>
+                                                            <span className="px-2 py-0.5 bg-rose-500/10 text-rose-500 text-[8px] font-black uppercase tracking-widest rounded-md border border-rose-500/10">Identidade na Partida</span>
+                                                            <span className="px-2 py-0.5 bg-zinc-800 text-zinc-400 text-[8px] font-black uppercase tracking-widest rounded-md">Seus Destaques</span>
                                                         </div>
-                                                        <h2 className="text-4xl font-black italic uppercase tracking-tighter italic">The Aimer</h2>
+                                                        <h2 className="text-4xl font-black italic uppercase tracking-tighter italic text-white group-hover:text-emerald-400 transition-colors">
+                                                            {identity}
+                                                        </h2>
                                                     </div>
                                                 </div>
 
                                                 {/* Top 5 Stats Highlight */}
                                                 <div className="space-y-4 relative z-10">
-                                                    {[
-                                                        { label: 'Time to Damage', value: '500ms', color: 'bg-rose-500', tag: 'AIM', badge: 'MATCH BEST' },
-                                                        { label: 'Spray Accuracy', value: '46%', color: 'bg-rose-500', tag: 'AIM' },
-                                                        { label: 'Accuracy (Enemy Spotted)', value: '38%', color: 'bg-rose-500', tag: 'AIM', badge: 'TEAM BEST' },
-                                                        { label: 'Teammates Flashed per Flash', value: '0.00', color: 'bg-cyan-500', tag: 'UTILITY', badge: 'MATCH BEST' },
-                                                        { label: 'Leetify Rating (CT Side)', value: '+2.75', color: 'bg-emerald-500', tag: 'IMPACT' }
-                                                    ].map((stat, i) => (
+                                                    {top5.map((stat, i) => (
                                                         <div key={i} className="flex items-center gap-4 group/stat">
                                                             <span className="text-zinc-600 font-black italic text-xs w-4">#{i+1}</span>
                                                             <div className="flex-1">
-                                                                <div className="flex justify-between items-end mb-1">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-black uppercase tracking-wider text-white/80">{stat.label}</span>
-                                                                        {stat.badge && <span className="text-[7px] font-black bg-amber-500 text-black px-1.5 py-0.5 rounded-sm">{stat.badge}</span>}
-                                                                    </div>
-                                                                    <span className="text-[10px] font-black text-rose-500/60">{stat.tag}</span>
-                                                                </div>
-                                                                <div className="relative h-1 bg-white/5 rounded-full overflow-hidden">
-                                                                    <div className={`absolute inset-y-0 left-0 ${stat.color} opacity-80`} style={{ width: Math.random() * 40 + 30 + '%' }} />
-                                                                    <div className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] font-black italic pr-1">{stat.value}</div>
-                                                                </div>
+                                                                 <div className="flex justify-between items-end mb-1">
+                                                                     <div className="flex items-center gap-2">
+                                                                         <span className="text-[10px] font-black uppercase tracking-wider text-white/80">{stat.label}</span>
+                                                                         {stat.badge && <span className="text-[7px] font-black bg-amber-500 text-black px-1.5 py-0.5 rounded-sm">{stat.badge}</span>}
+                                                                     </div>
+                                                                     <span className="text-[10px] font-black text-rose-500/60">{stat.tag}</span>
+                                                                 </div>
+                                                                 <div className="relative h-1 bg-white/5 rounded-full overflow-hidden">
+                                                                     <div className={`absolute inset-y-0 left-0 ${stat.color} opacity-80`} style={{ width: Math.min(100, Math.max(10, stat.raw || 50)) + '%' }} />
+                                                                     <div className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] font-black italic pr-1">{stat.value}</div>
+                                                                 </div>
                                                             </div>
                                                         </div>
                                                     ))}
+                                                    {top5.length === 0 && (
+                                                        <div className="text-zinc-500 text-[10px] uppercase font-black tracking-widest text-center py-8">
+                                                            Dados insuficientes para destaques detalhados
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -453,25 +637,25 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                         <div className="lg:col-span-6">
                                             <div className="bg-zinc-900 border border-white/5 rounded-[32px] p-6 space-y-6">
                                                 <div className="flex items-center justify-between px-2">
-                                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">This Match</h3>
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-700">Last 30 Matches</span>
+                                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Esta Partida</h3>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-700">Performance vs Média</span>
                                                 </div>
 
                                                 <div className="space-y-1">
                                                     {[
-                                                        { label: 'Leetify Rating', value: '-0.52', avg: '+1.03', trend: 'down' },
-                                                        { label: 'Aim Rating', value: '67', avg: '68', trend: 'down' },
-                                                        { label: 'Utility Rating', value: '19', avg: '67', trend: 'down' },
-                                                        { label: 'Trade Kill Opportunities', value: '4', avg: '5.93', trend: 'down' },
-                                                        { label: 'Kills', value: '9', avg: '16.4', trend: 'down' },
-                                                        { label: 'ADR', value: '55', avg: '91', trend: 'down' },
-                                                        { label: 'Opening Duel Attempts', value: '6%', avg: '21%', trend: 'down' },
-                                                        { label: 'Clutch Kills', value: '1', avg: '1.81', trend: 'down' }
+                                                        { label: 'Rating Leetify', value: userData.rating.toFixed(2), avg: '1.00', trend: userData.rating >= 1 ? 'up' : 'down' },
+                                                        { label: 'Kills', value: userData.kills.toString(), avg: '16.5', trend: userData.kills >= 16 ? 'up' : 'down' },
+                                                        { label: 'Deaths', value: userData.deaths.toString(), avg: '17.2', trend: userData.deaths <= 17 ? 'up' : 'down' },
+                                                        { label: 'ADR', value: userData.adr.toFixed(1), avg: '80.0', trend: userData.adr >= 80 ? 'up' : 'down' },
+                                                        { label: 'Opening Frags', value: userData.fkd.toString(), avg: '2.1', trend: userData.fkd >= 2 ? 'up' : 'down' },
+                                                        { label: 'Dano de Util.', value: userData.util_damage.toString(), avg: '45', trend: userData.util_damage >= 45 ? 'up' : 'down' },
+                                                        { label: 'HS Percentage', value: userData.hs, avg: '35%', trend: parseInt(userData.hs) >= 35 ? 'up' : 'down' },
+                                                        { label: 'KAST', value: userData.kast, avg: '72%', trend: parseInt(userData.kast) >= 72 ? 'up' : 'down' }
                                                     ].map((stat, i) => (
                                                         <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-white/[0.02] transition-colors group">
                                                             <span className="text-[11px] font-black text-white/70 tracking-wide uppercase">{stat.label}</span>
                                                             <div className="flex items-center gap-8">
-                                                                <span className={`text-[11px] font-black italic ${parseFloat(stat.value) > 0 ? 'text-emerald-500' : 'text-zinc-300'}`}>{stat.value}</span>
+                                                                <span className={`text-[11px] font-black italic ${stat.trend === 'up' ? 'text-emerald-500' : 'text-rose-500'}`}>{stat.value}</span>
                                                                 <div className="flex items-center gap-3 w-16 justify-end">
                                                                     <span className="text-[10px] font-bold text-zinc-600 italic bg-white/5 px-1.5 py-0.5 rounded-md">{stat.avg}</span>
                                                                     {stat.trend === 'up' ? (
@@ -488,7 +672,8 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                         </div>
                                     </div>
                                 </div>
-                            ) : mainTab === 'visao-geral' ? (
+                            );
+                         })() : mainTab === 'visao-geral' ? (
                                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     {/* Detailed Ratings Row */}
                                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -529,7 +714,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                                     <thead>
                                                         <tr className="border-b border-white/5 text-[9px] text-zinc-600 font-black uppercase tracking-widest bg-white/[0.01]">
                                                             <th className="pl-6 py-4">Jogador</th>
-                                                            <th className="py-4 text-center">K / D / A</th>
+                                                            <th className="py-4 text-center">K / A / D</th>
                                                             <th className="py-4 text-center">ADR</th>
                                                             <th className="py-4 text-center">HS%</th>
                                                             <th className="py-4 text-center">Impacto</th>
@@ -540,11 +725,15 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                                         {team.map((p: PlayerStats, i: number) => (
                                                             <tr key={i} className={`group hover:bg-white/[0.03] transition-colors ${p.isUser ? 'bg-white/5' : ''}`}>
                                                                 <td className="pl-6 py-4 flex items-center gap-3">
-                                                                    <img src={p.avatar} className="w-8 h-8 rounded-xl border border-white/10" alt="" />
-                                                                    <span className={`font-black italic uppercase text-sm ${p.isUser ? 'text-emerald-400' : 'text-zinc-200'}`}>{p.nickname}</span>
+                                                                    <a href={`/player/${p.steamId}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                                                                        <img src={p.avatar} className="w-8 h-8 rounded-xl border border-white/10" alt="" />
+                                                                        <span className={`font-black italic uppercase text-sm ${p.isUser ? 'text-emerald-400' : 'text-zinc-200'}`}>{p.nickname}</span>
+                                                                    </a>
                                                                 </td>
                                                                 <td className="py-4 text-center">
                                                                     <span className="text-white font-bold">{p.kills}</span>
+                                                                    <span className="text-zinc-700 mx-1">/</span>
+                                                                    <span className="text-zinc-500">{p.assists}</span>
                                                                     <span className="text-zinc-700 mx-1">/</span>
                                                                     <span className="text-zinc-400">{p.deaths}</span>
                                                                 </td>
@@ -587,8 +776,12 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                                         <tbody className="divide-y divide-white/5">
                                                             {team.map((p: PlayerStats, i: number) => (
                                                                 <tr key={i} className="hover:bg-white/[0.03]">
-                                                                    <td className="pl-6 py-4 font-black italic uppercase text-xs text-zinc-400">{p.nickname}</td>
-                                                                    <td className="py-4 text-center text-xs font-bold text-white">{p.kills}/{p.assists}/{p.deaths}</td>
+                                                                    <td className="pl-6 py-4 font-black italic uppercase text-xs text-zinc-400">
+                                                                        <a href={`/player/${p.steamId}`} className="hover:text-white transition-colors">
+                                                                            {p.nickname}
+                                                                        </a>
+                                                                    </td>
+                                                                    <td className="py-4 text-center text-xs font-bold text-white">{p.kills} / {p.assists} / {p.deaths}</td>
                                                                     {p.multikills.split('/').map((val, idx) => (
                                                                         <td key={idx} className={`py-4 text-center text-[10px] font-black ${parseInt(val) > 0 ? 'text-white' : 'text-zinc-800'}`}>{val}</td>
                                                                     ))}
@@ -607,7 +800,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                                     <div key={tIdx} className="bg-zinc-900 border border-white/5 rounded-[32px] p-6">
                                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-6 flex items-center gap-2">
                                                             <Zap size={14} className={tIdx === 0 ? 'text-emerald-500' : 'text-rose-500'} />
-                                                            {tIdx === 0 ? 'Flash / Smoke / HE / Molotov' : 'Usage Comparison'}
+                                                            {tIdx === 0 ? 'Flash / Smoke / HE / Molotov' : 'Comparação de Uso'}
                                                         </h4>
                                                         <div className="h-40 flex items-end justify-around gap-2 px-2">
                                                             {team.map((p, pIdx) => (
@@ -631,16 +824,20 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                                         <tr className="border-b border-white/5 text-[9px] text-zinc-600 font-black uppercase tracking-widest bg-white/[0.01]">
                                                             <th className="pl-6 py-4">Jogador</th>
                                                             <th className="py-4 text-center">Flashes</th>
-                                                            <th className="py-4 text-center">Enemies Blinded</th>
-                                                            <th className="py-4 text-center">Avg Blind Time</th>
-                                                            <th className="py-4 text-center">Util Damage</th>
-                                                            <th className="pr-6 py-4 text-right">Utility Rating</th>
+                                                            <th className="py-4 text-center">Inimigos Cegos</th>
+                                                            <th className="py-4 text-center">Tempo Médio</th>
+                                                            <th className="py-4 text-center">Dano Util.</th>
+                                                            <th className="pr-6 py-4 text-right">Rating Util.</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-white/5">
                                                         {[...team1, ...team2].map((p: PlayerStats, i: number) => (
                                                             <tr key={i} className="hover:bg-white/[0.03]">
-                                                                <td className="pl-6 py-4 text-xs font-black italic uppercase text-zinc-400">{p.nickname}</td>
+                                                                <td className="pl-6 py-4 text-xs font-black italic uppercase text-zinc-400">
+                                                                    <a href={`/player/${p.steamId}`} className="hover:text-white transition-colors">
+                                                                        {p.nickname}
+                                                                    </a>
+                                                                </td>
                                                                 <td className="py-4 text-center text-xs text-white">{p.util_thrown}</td>
                                                                 <td className="py-4 text-center text-xs text-zinc-300">{p.flash_assists}</td>
                                                                 <td className="py-4 text-center text-xs text-emerald-500">{p.blind_time.toFixed(1)}s</td>
@@ -670,17 +867,21 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                                     <thead>
                                                         <tr className="border-b border-white/5 text-[9px] text-zinc-600 font-black uppercase tracking-widest bg-white/[0.01]">
                                                             <th className="pl-6 py-4">Jogador</th>
-                                                            <th className="py-4 text-center">Opening Kills</th>
-                                                            <th className="py-4 text-center">Opening Deaths</th>
-                                                            <th className="py-4 text-center">Trade Kills</th>
+                                                            <th className="py-4 text-center">Kills de Abertura</th>
+                                                            <th className="py-4 text-center">Mortes de Abertura</th>
+                                                            <th className="py-4 text-center">Trocas (Trades)</th>
                                                             <th className="py-4 text-center">Clutches</th>
-                                                            <th className="pr-6 py-4 text-right">Impact</th>
+                                                            <th className="pr-6 py-4 text-right">Impacto</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-white/5">
                                                         {team.map((p: PlayerStats, i: number) => (
                                                             <tr key={i} className="hover:bg-white/[0.03]">
-                                                                <td className="pl-6 py-4 text-xs font-black italic uppercase text-emerald-500">{p.nickname}</td>
+                                                                <td className="pl-6 py-4 text-xs font-black italic uppercase text-emerald-500">
+                                                                    <a href={`/player/${p.steamId}`} className="hover:text-emerald-400 transition-colors">
+                                                                        {p.nickname}
+                                                                    </a>
+                                                                </td>
                                                                 <td className="py-4 text-center text-white font-bold">{p.fkd}</td>
                                                                 <td className="py-4 text-center text-rose-500 font-bold">{p.fkd_deaths}</td>
                                                                 <td className="py-4 text-center text-sky-400 font-bold">{p.trades}</td>
@@ -702,7 +903,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match: initialMatch
                                 <div className="flex items-center gap-6">
                                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">
                                         <Calendar size={12} className="text-emerald-500" />
-                                        <span>Data: {new Date(match.matchDate).toLocaleDateString('pt-BR')}</span>
+                                        <span>Data: {new Date(currentMatch.matchDate).toLocaleDateString('pt-BR')}</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">
                                         <Shield size={12} />
