@@ -2,7 +2,7 @@
 
 import InventoryDashboard from "@/components/dashboard/inventory-dashboard";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Loader2 } from "lucide-react";
 
 export default function InventoryPage() {
@@ -10,6 +10,8 @@ export default function InventoryPage() {
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [pricingProgress, setPricingProgress] = useState<{ current: number; total: number } | null>(null);
+    const pricingAbortRef = useRef<boolean>(false);
 
     useEffect(() => {
         // 1. Tentar carregar do cache local imediatamente
@@ -26,7 +28,6 @@ export default function InventoryPage() {
         }
 
         if (session) {
-            // Se já temos itens no cache, mostramos um status de "atualizando" discreto em vez de tela cheia
             if (items.length === 0) setLoading(true);
             else setIsRefreshing(true);
 
@@ -35,8 +36,9 @@ export default function InventoryPage() {
                 .then(data => {
                     if (data.items) {
                         setItems(data.items);
-                        // Salvar no cache para a próxima vez
                         localStorage.setItem('csbrasil_inventory_cache', JSON.stringify(data.items));
+                        // Iniciar busca progressiva de preços para itens sem preço
+                        fetchMissingPrices(data.items);
                     }
                     setLoading(false);
                     setIsRefreshing(false);
@@ -46,7 +48,61 @@ export default function InventoryPage() {
                     setIsRefreshing(false);
                 });
         }
+
+        return () => { pricingAbortRef.current = true; };
     }, [session]);
+
+    const fetchMissingPrices = async (loadedItems: any[]) => {
+        pricingAbortRef.current = false;
+        const itemsWithoutPrice = loadedItems.filter(i => !i.price && i.name_en);
+        if (itemsWithoutPrice.length === 0) return;
+
+        // Deduplica por name_en
+        const uniqueItems = Array.from(
+            new Map(itemsWithoutPrice.map(i => [i.name_en, i])).values()
+        );
+
+        setPricingProgress({ current: 0, total: uniqueItems.length });
+
+        for (let i = 0; i < uniqueItems.length; i++) {
+            if (pricingAbortRef.current) break;
+
+            const item = uniqueItems[i];
+            try {
+                const res = await fetch('/api/prices/fetch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ marketHashName: item.name_en })
+                });
+
+                if (res.status === 429) {
+                    // Rate limited — parar tentativas por agora
+                    console.warn("[PriceLoader] Rate limit atingido. Pausando.");
+                    break;
+                }
+
+                const data = await res.json();
+                if (data.price) {
+                    setItems(prev => {
+                        const updated = prev.map(p =>
+                            p.name_en === item.name_en ? { ...p, price: data.price } : p
+                        );
+                        localStorage.setItem('csbrasil_inventory_cache', JSON.stringify(updated));
+                        return updated;
+                    });
+                }
+            } catch (e) { /* silencioso */ }
+
+            setPricingProgress({ current: i + 1, total: uniqueItems.length });
+
+            // Delay entre requisições para evitar rate limit da Steam
+            if (i < uniqueItems.length - 1 && !pricingAbortRef.current) {
+                await new Promise(r => setTimeout(r, 1500 + Math.random() * 500));
+            }
+        }
+
+        setPricingProgress(null);
+    };
 
     if (!session) {
         return (
@@ -59,10 +115,14 @@ export default function InventoryPage() {
     return (
         <div className="p-0 md:p-8 relative">
             {/* Indicador discreto de atualização em segundo plano */}
-            {isRefreshing && (
+            {(isRefreshing || pricingProgress) && (
                 <div className="absolute top-4 right-8 z-50 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-2">
                     <Loader2 className="w-3 h-3 text-green-500 animate-spin" />
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Atualizando...</span>
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                        {pricingProgress
+                            ? `Buscando preços... ${pricingProgress.current}/${pricingProgress.total}`
+                            : 'Atualizando...'}
+                    </span>
                 </div>
             )}
 

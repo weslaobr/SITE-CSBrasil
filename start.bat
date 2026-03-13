@@ -21,7 +21,7 @@ if exist ".next\dev\lock" (
 )
 
 echo.
-echo [1/3] Generating Prisma Client...
+echo [1/4] Generating Prisma Client...
 call npx prisma generate
 if %ERRORLEVEL% NEQ 0 (
     echo.
@@ -30,7 +30,15 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo.
-echo [2/3] Starting Next.js Development Server...
+echo [2/4] Updating skin prices from market.csgo.com...
+call npx tsx scripts/update-prices.ts
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo [WARNING] Price update failed. Existing cached prices will be used.
+)
+
+echo.
+echo [3/4] Starting Next.js Development Server...
 echo The site will be available at http://localhost:3000
 echo.
 call npm run dev

@@ -1,7 +1,7 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Box, Eye, ShoppingCart, Info, ChevronDown, Loader2, DollarSign, Check, X } from 'lucide-react';
+import { Search, Filter, Box, Eye, ShoppingCart, Info, ChevronDown, Loader2, DollarSign, Check, X, RefreshCw } from 'lucide-react';
 
 interface InventoryItem {
     assetid: string;
@@ -28,13 +28,29 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
     const [filterType, setFilterType] = useState('all');
     const [filterRarity, setFilterRarity] = useState('all');
     const [language, setLanguage] = useState<'pt' | 'en'>('pt');
+    const [currency, setCurrency] = useState<'BRL' | 'USD'>('BRL');
     const [showRoiAssetId, setShowRoiAssetId] = useState<string | null>(null);
     const [localItems, setLocalItems] = useState<InventoryItem[]>(items);
+    const [exchangeRate, setExchangeRate] = useState<{ rate: number; bcbRate: number; updatedAt: string } | null>(null);
 
-    // Sincronizar localItems quando a prop items mudar (busca da API terminar)
-    React.useEffect(() => {
+    // Sincronizar localItems quando a prop items mudar
+    useEffect(() => {
         setLocalItems(items);
     }, [items]);
+
+    // Buscar taxa de câmbio
+    useEffect(() => {
+        fetch('/api/exchange-rate')
+            .then(r => r.json())
+            .then(d => setExchangeRate(d))
+            .catch(() => {});
+    }, []);
+
+    // Quando muda idioma, muda moeda padrão automaticamente
+    const handleLanguageChange = (lang: 'pt' | 'en') => {
+        setLanguage(lang);
+        setCurrency(lang === 'pt' ? 'BRL' : 'USD');
+    };
 
     // Extrair raridades únicas presentes no inventário
     const rarities = Array.from(new Set(localItems.map(i => i.rarity).filter(Boolean)));
@@ -112,13 +128,16 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
         return matchesSearch && matchesRarity && matchesType;
     });
 
-    const totalValueBRL = localItems.reduce((acc, item) => acc + (item.price || 0), 0);
+    const totalValueUSD = localItems.reduce((acc, item) => acc + (item.price || 0), 0);
+    const totalValueBRL = exchangeRate ? totalValueUSD * exchangeRate.rate : 0;
+    const totalValue = currency === 'BRL' ? totalValueBRL : totalValueUSD;
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-        }).format(value);
+    const formatCurrency = (usdValue: number) => {
+        if (currency === 'BRL' && exchangeRate) {
+            const brl = usdValue * exchangeRate.rate;
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(brl);
+        }
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(usdValue);
     };
 
     const handleSavePaidPrice = async (assetId: string, marketHashName: string, price: string) => {
@@ -191,24 +210,45 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                         />
                     </div>
 
-                    {/* Botão de Idioma */}
-                    <div className="flex bg-zinc-900/50 p-1 border border-white/10 rounded-xl backdrop-blur-md shadow-inner self-start">
-                        <button
-                            onClick={() => setLanguage('pt')}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${
-                                language === 'pt' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
-                            }`}
-                        >
-                            <span className="text-sm">🇧🇷</span> PT
-                        </button>
-                        <button
-                            onClick={() => setLanguage('en')}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${
-                                language === 'en' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
-                            }`}
-                        >
-                            <span className="text-sm">🇺🇸</span> EN
-                        </button>
+                    {/* Botão de Idioma + Moeda */}
+                    <div className="flex flex-col gap-2 self-start">
+                        <div className="flex bg-zinc-900/50 p-1 border border-white/10 rounded-xl backdrop-blur-md shadow-inner">
+                            <button
+                                onClick={() => handleLanguageChange('pt')}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${
+                                    language === 'pt' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
+                                }`}
+                            >
+                                <span className="text-sm">🇧🇷</span> PT
+                            </button>
+                            <button
+                                onClick={() => handleLanguageChange('en')}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${
+                                    language === 'en' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
+                                }`}
+                            >
+                                <span className="text-sm">🇺🇸</span> EN
+                            </button>
+                        </div>
+                        {/* Toggle USD/BRL */}
+                        <div className="flex bg-zinc-900/50 p-1 border border-white/10 rounded-xl backdrop-blur-md shadow-inner">
+                            <button
+                                onClick={() => setCurrency('BRL')}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
+                                    currency === 'BRL' ? 'bg-green-600 text-white shadow-lg shadow-green-500/20' : 'text-zinc-500 hover:text-zinc-300'
+                                }`}
+                            >
+                                R$ BRL
+                            </button>
+                            <button
+                                onClick={() => setCurrency('USD')}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
+                                    currency === 'USD' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-zinc-500 hover:text-zinc-300'
+                                }`}
+                            >
+                                $ USD
+                            </button>
+                        </div>
                     </div>
 
                     {/* Filtro de Raridade */}
@@ -253,10 +293,28 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                         <ShoppingCart className="w-12 h-12" />
                     </div>
                     <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-2">{language === 'pt' ? 'Valor Estimado' : 'Estimated Value'}</p>
-                    <h2 className="text-2xl font-black text-white">{totalValueBRL > 0 ? formatCurrency(totalValueBRL) : '...'}</h2>
-                    <p className="text-[10px] text-zinc-500 mt-1 flex items-center gap-1">
-                        <Info className="w-3 h-3" /> Steam Market
-                    </p>
+                    <h2 className="text-2xl font-black text-white">
+                        {totalValue > 0 ? formatCurrency(totalValueUSD) : (exchangeRate ? formatCurrency(0) : '...')}
+                    </h2>
+                    {exchangeRate && (
+                        <div className="mt-2 space-y-0.5">
+                            <p className="text-[9px] text-zinc-500 flex items-center gap-1">
+                                <Info className="w-3 h-3" /> market.csgo.com
+                            </p>
+                            <p className="text-[9px] text-zinc-400 flex items-center gap-1 font-mono">
+                                <RefreshCw className="w-2.5 h-2.5" />
+                                1 USD = R$ {exchangeRate.rate.toFixed(4)}
+                                <span className="text-zinc-600 ml-1">
+                                    · {new Date(exchangeRate.updatedAt).toLocaleTimeString(language === 'pt' ? 'pt-BR' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                            </p>
+                            {currency === 'BRL' && (
+                                <p className="text-[9px] text-zinc-600">
+                                    PTAX: R$ {exchangeRate.bcbRate.toFixed(4)}
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
                 <div className="bg-zinc-900/40 border border-white/5 p-6 rounded-2xl backdrop-blur-sm">
                     <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-2">{language === 'pt' ? 'Resultados' : 'Results'}</p>
@@ -334,7 +392,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                             {translateRarity(item.rarity)}
                                         </p>
                                         {item.price ? (
-                                            <span className="text-[9px] font-black text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20">
+                                            <span className="text-[9px] font-black text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20 cursor-default" title={`USD $${item.price.toFixed(2)}${exchangeRate ? ` · R$ ${(item.price * exchangeRate.rate).toFixed(2)}` : ''}`}>
                                                 {formatCurrency(item.price)}
                                             </span>
                                         ) : (

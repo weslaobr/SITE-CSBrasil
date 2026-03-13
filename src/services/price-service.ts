@@ -4,79 +4,54 @@ import { prisma } from '@/lib/prisma';
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 dias em ms
 
 /**
- * Busca todos os preços da Skinport e atualiza o banco de dados em massa.
- * Esta é a forma mais eficiente de ter "valores de referência" sem sofrer rate limit da Steam.
+ * Busca preços em massa da market.csgo.com (fonte pública confiável).
+ * Retorna preços em USD. ~24k itens.
  */
-/**
- * Busca todos os preços da CSGOTrader (usado pela extensão oficial) e atualiza o banco.
- * Esta é a forma mais eficiente de ter "valores de referência" oficiais.
- */
-export const updatePricesFromCSGOTrader = async (): Promise<{ success: boolean; count: number }> => {
+export const updatePricesFromMarketCSGO = async (): Promise<{ success: boolean; count: number }> => {
     try {
-        console.log("[PriceService] Iniciando atualização via CSGOTrader...");
-        const url = 'https://prices.csgotrader.app/latest/prices_v6.json';
-        
-        const response = await axios.get(url, { 
-            headers: { 'User-Agent': 'Mozilla/5.0' },
-            timeout: 30000 
+        console.log("[PriceService] Iniciando atualização via market.csgo.com...");
+        const url = 'https://market.csgo.com/api/v2/prices/USD.json';
+
+        const response = await axios.get(url, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CS2PriceBot/1.0)' },
+            timeout: 30000
         });
-        
-        const data = response.data;
-        if (!data || typeof data !== 'object') {
-            throw new Error("Resposta da CSGOTrader inválida");
-        }
 
-        const marketNames = Object.keys(data);
-        console.log(`[PriceService] Recebidos ${marketNames.length} itens da CSGOTrader.`);
+        const items: Array<{ market_hash_name: string; price: string; volume: string }> = response.data?.items;
+        if (!Array.isArray(items)) throw new Error("Resposta inválida: items não é array");
 
-        // Processar em lotes
+        console.log(`[PriceService] Recebidos ${items.length} itens da market.csgo.com.`);
+
         const batchSize = 100;
         let updatedCount = 0;
 
-        for (let i = 0; i < marketNames.length; i += batchSize) {
-            const batchNames = marketNames.slice(i, i + batchSize);
-            
-            await Promise.all(batchNames.map(name => {
-                const priceData = data[name];
-                // A CSGOTrader retorna um objeto ou valor direto. Vamos pegar o 'lowest_price' ou o valor numérico.
-                const price = typeof priceData === 'object' ? (priceData.starting_at || priceData.average || 0) : (priceData || 0);
-                
-                if (price <= 0) return Promise.resolve();
+        for (let i = 0; i < items.length; i += batchSize) {
+            const batch = items.slice(i, i + batchSize);
+            await Promise.all(batch.map(item => {
+                const price = parseFloat(item.price);
+                if (!item.market_hash_name || isNaN(price) || price <= 0) return Promise.resolve();
 
                 return prisma.itemPriceBase.upsert({
-                    where: { marketHashName: name },
-                    update: { 
-                        price: price, 
-                        lastUpdate: new Date(),
-                        source: 'csgotrader'
-                    },
-                    create: { 
-                        marketHashName: name, 
-                        price: price, 
-                        currency: 'BRL',
-                        source: 'csgotrader'
-                    }
+                    where: { marketHashName: item.market_hash_name },
+                    update: { price, lastUpdate: new Date(), source: 'market_csgo' },
+                    create: { marketHashName: item.market_hash_name, price, currency: 'USD', source: 'market_csgo' }
                 });
             }));
-            
-            updatedCount += batchNames.length;
-            if (i % 5000 === 0) console.log(`[PriceService] Processados ${i} itens...`);
+            updatedCount += batch.length;
+            if (i % 5000 === 0 && i > 0) console.log(`[PriceService] Processados ${i}/${items.length}...`);
         }
 
-        console.log(`[PriceService] Atualização concluída! ${updatedCount} preços salvos.`);
+        console.log(`[PriceService] Concluído! ${updatedCount} preços salvos.`);
         return { success: true, count: updatedCount };
     } catch (error: any) {
-        console.error("[PriceService] Erro ao atualizar via CSGOTrader:", error.message);
+        console.error("[PriceService] Erro ao buscar de market.csgo.com:", error.message);
         return { success: false, count: 0 };
     }
 };
 
-/**
- * Interface unificada para atualização (tenta CSGOTrader primeiro)
- */
-export const updatePricesFromSkinport = async (): Promise<{ success: boolean; count: number }> => {
-    return updatePricesFromCSGOTrader();
-};
+// Aliases para compatibilidade
+export const updatePricesFromSkinport = updatePricesFromMarketCSGO;
+export const updatePricesFromCSGOTrader = updatePricesFromMarketCSGO;
 
 /**
  * Busca o preço de um item individual
