@@ -118,8 +118,8 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                 case 'sniper':     matchesType = nameLower.includes('awp') || nameLower.includes('scar-20') || nameLower.includes('g3sg1') || nameLower.includes('ssg 08') || typeLower.includes('sniper'); break;
                 case 'shotgun':    matchesType = typeLower.includes('shotgun') || catInternal.includes('shotgun'); break;
                 case 'machinegun': matchesType = typeLower.includes('machinegun') || catInternal.includes('machinegun'); break;
-                case 'agent':      matchesType = typeLower.includes('agent') || catInternal.includes('agent') || typeLower.includes('character'); break;
-                case 'container':  matchesType = typeLower.includes('container') || catInternal.includes('container') || typeLower.includes('case'); break;
+                case 'agent':      matchesType = typeLower.includes('agent') || catInternal.includes('agent') || typeLower.includes('character') || typeLower.includes('customplayer') || catInternal.includes('customplayer'); break;
+                case 'container':  matchesType = typeLower.includes('container') || catInternal.includes('container') || typeLower.includes('case') || typeLower.includes('supply') || catInternal.includes('supply'); break;
                 case 'sticker':    matchesType = typeLower.includes('sticker') || catInternal.includes('sticker'); break;
                 case 'collectible':matchesType = typeLower.includes('collectible') || catInternal.includes('collectible') || typeLower.includes('pin'); break;
             }
