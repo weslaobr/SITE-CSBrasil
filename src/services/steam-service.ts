@@ -180,7 +180,7 @@ export const getPlayerInventory = async (steamId: string) => {
     }
 };
 
-export const getSteamMatchHistory = async (steamId: string, authCode: string, knownCode: string = '', limit: number = 20, baseDate: string = '', stopAtCode: string = '') => {
+export const getSteamMatchHistory = async (steamId: string, authCode: string, knownCode: string = '', limit: number = 10, baseDate: string = '', stopAtCode: string = '') => {
     if (!STEAM_API_KEY) {
         console.log("Steam API Error: STEAM_API_KEY is missing");
         return [];
@@ -189,40 +189,28 @@ export const getSteamMatchHistory = async (steamId: string, authCode: string, kn
         console.log("Steam API Warning: authCode is missing for SteamID", steamId);
         return [];
     }
+    if (!knownCode) {
+        console.log("Steam API Warning: knownCode (latest match code) is missing — cannot chain matches");
+        return [];
+    }
 
     try {
         const matches: any[] = [];
         let currentKnownCode = knownCode || '';
         const startTimestamp = baseDate ? new Date(baseDate).getTime() : Date.now();
 
-        console.log(`Steam Sync Start: SteamID=${steamId}, AuthCode=${authCode}, InitialKnownCode=${currentKnownCode}, Limit=${limit}, BaseDate=${baseDate || 'Now'}, StopAt=${stopAtCode || 'None'}`);
+        console.log(`Steam Sync Start: SteamID=${steamId}, AuthCode=${authCode?.substring(0,5)}..., InitialKnownCode=${currentKnownCode}, Limit=${limit}`);
 
         let cumulativeHours = 0;
         const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-        if (currentKnownCode && currentKnownCode !== stopAtCode && currentKnownCode !== 'n/a') {
-            console.log(`[DEBUG] Adding initial seed code to results: ${currentKnownCode}`);
-            matches.push({
-                externalId: currentKnownCode,
-                source: 'Steam',
-                gameMode: 'Matchmaking',
-                mapName: 'Desconhecido',
-                kills: 0,
-                deaths: 0,
-                assists: 0,
-                score: '0-0',
-                matchDate: new Date(startTimestamp).toISOString(),
-                duration: '0 min',
-                result: 'Unknown',
-                isMocked: true,
-                url: `steam://rungame/730/76561202255233023/+csgo_download_match%20${currentKnownCode}`
-            });
-        }
+        // Note: do NOT add the seed code itself as a fake match entry.
+        // currentKnownCode is just the starting point for the API chain, not an actual result.
 
-        // Fetch in batches to avoid timeouts
+        // Fetch in batches - use small delay to avoid rate limits
         for (let i = 0; i < limit; i++) {
-            // Increased delay to 1000ms to be safer
-            if (i > 0) await sleep(1000);
+            // Small 200ms delay only after the first call to avoid rate limits
+            if (i > 0) await sleep(200);
 
             let retries = 0;
             const maxRetries = 3;

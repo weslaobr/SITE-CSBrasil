@@ -59,7 +59,8 @@ export default function SettingsPage() {
         setSuccess(false);
 
         try {
-            const res = await fetch('/api/matches', {
+            // Save to /api/user/sync which handles all 3 fields including steamLatestMatchCode
+            const res = await fetch('/api/user/sync', {
                 method: "POST",
                 body: JSON.stringify(formData),
                 headers: { "Content-Type": "application/json" }
@@ -69,7 +70,7 @@ export default function SettingsPage() {
                 setSuccess(true);
                 setTimeout(() => setSuccess(false), 3000);
             } else {
-                alert("Erro ao salvar configurações");
+                alert("Erro ao salvar configurações. Verifique os dados e tente novamente.");
             }
         } catch (e) {
             console.error(e);
@@ -166,6 +167,34 @@ export default function SettingsPage() {
                                         >
                                             Obter código na Steam
                                         </a>
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Steam Latest Match Code - mandatory for sync chaining */}
+                            <div className="space-y-2 border border-yellow-500/10 bg-yellow-500/5 rounded-3xl p-6">
+                                <label className="text-[10px] font-black uppercase text-yellow-500/80 px-2 tracking-widest flex items-center gap-2">
+                                    <RefreshCw size={12} />
+                                    Código da Última Partida (Match Code)
+                                </label>
+                                <div className="relative group">
+                                    <input
+                                        type="text"
+                                        value={formData.steamLatestMatchCode}
+                                        onChange={(e) => setFormData({ ...formData, steamLatestMatchCode: e.target.value })}
+                                        placeholder="Ex: CSGO-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
+                                        className="w-full bg-black/30 border border-yellow-500/20 focus:border-yellow-500/60 outline-none rounded-2xl px-5 py-4 text-sm font-bold transition-all placeholder:text-zinc-700 font-mono"
+                                    />
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-yellow-700 group-focus-within:text-yellow-500 transition-colors">
+                                        <RefreshCw size={18} />
+                                    </div>
+                                </div>
+                                <div className="px-2 space-y-2">
+                                    <p className="text-[10px] text-yellow-500/60 font-bold leading-relaxed">
+                                        ⚠️ <strong>Campo obrigatório para sincronização Steam!</strong> A API da Valve funciona em cadeia — ela precisa do código de uma partida sua para encontrar as próximas.
+                                    </p>
+                                    <p className="text-[9px] text-zinc-600 leading-relaxed">
+                                        Para obter o código: abra o CS2 → vá em Configurações → Jogo → Role até <em>"Código de Compartilhamento de Partida"</em> → copie o código mais recente.
                                     </p>
                                 </div>
                             </div>

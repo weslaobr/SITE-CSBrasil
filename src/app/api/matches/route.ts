@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getFaceitMatches, getFaceitPlayer } from "@/services/faceit-service";
-import { getSteamMatchHistory } from "@/services/steam-service";
 
+// GET - Always read from database directly, never auto-sync (avoids timeouts)
 export async function GET(req: NextRequest) {
     try {
         const session = await getServerSession(getAuthOptions(req));
@@ -15,70 +14,24 @@ export async function GET(req: NextRequest) {
 
         const userId = (session.user as any).id;
 
-        // Fetch matches from DB
-        let matches = await prisma.match.findMany({
+        // Clean up any stale placeholder 'Desconhecido' / 'Unknown' entries from old sync code
+        await prisma.match.deleteMany({
+            where: {
+                userId,
+                OR: [
+                    { mapName: 'Desconhecido' },
+                    { result: 'Unknown' }
+                ]
+            }
+        });
+
+        // Fetch matches from DB — always read from DB, sync is done separately via POST /api/sync/all
+        const matches = await prisma.match.findMany({
             where: { userId },
             orderBy: { matchDate: 'desc' }
         });
 
-        // Auto-sync fallout if empty
-        if (matches.length === 0) {
-            const user = await prisma.user.findUnique({
-                where: { id: userId },
-                select: { faceitNickname: true, steamId: true, steamMatchAuthCode: true, steamLatestMatchCode: true }
-            });
-
-            if (user) {
-                // 1. Quick Faceit check
-                if (user.faceitNickname) {
-                    try {
-                        const faceitPlayer = await getFaceitPlayer(user.faceitNickname);
-                        if (faceitPlayer) {
-                            const faceitMatches = await getFaceitMatches(faceitPlayer.player_id);
-                            for (const m of faceitMatches.slice(0, 50)) {
-                                await prisma.match.upsert({
-                                    where: { externalId: m.externalId },
-                                    update: {},
-                                    create: { ...m, userId }
-                                });
-                            }
-                        }
-                    } catch (e) { console.error("Auto-sync Faceit error:", e); }
-                }
-
-                // 2. Quick Steam check (first few)
-                if (user.steamId && user.steamMatchAuthCode) {
-                    console.log(`[Sync] Attempting Steam sync for user ${userId} (SteamID: ${user.steamId})`);
-                    try {
-                        const steamMatches = await getSteamMatchHistory(user.steamId, user.steamMatchAuthCode, user.steamLatestMatchCode || '');
-                        console.log(`[Sync] Found ${steamMatches.length} Steam matches`);
-                        for (const m of steamMatches.slice(0, 20)) {
-                            if (m.id === 'sync-ready') {
-                                console.log(`[Sync] Steam sync ready (no new matches)`);
-                                continue;
-                            }
-                            if (m.id === 'error-412') {
-                                console.warn(`[Sync] Steam sync error 412: Invalid Auth Code`);
-                                continue;
-                            }
-                            await prisma.match.upsert({
-                                where: { externalId: m.externalId },
-                                update: {},
-                                create: { ...m, userId }
-                            });
-                        }
-                    } catch (e) { console.error("Auto-sync Steam error:", e); }
-                } else {
-                    console.log(`[Sync] Skipping Steam sync for user ${userId}: Missing credentials (SteamID: ${!!user.steamId}, AuthCode: ${!!user.steamMatchAuthCode})`);
-                }
-
-                // Final Re-fetch
-                matches = await prisma.match.findMany({
-                    where: { userId },
-                    orderBy: { matchDate: 'desc' }
-                });
-            }
-        }
+        console.log(`[Matches GET] userId=${userId} — Found ${matches.length} matches in DB`);
 
         return NextResponse.json({
             matches: matches || [],
