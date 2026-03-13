@@ -79,7 +79,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const filteredMatches = useMemo(() => {
-        return matches.filter(m => {
+        // 1. Initial Filtering
+        const baseFiltered = matches.filter(m => {
             const mapName = m.mapName || '';
             const source = m.source || '';
             const gameMode = m.gameMode || '';
@@ -94,6 +95,32 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 
             return matchesSearch && matchesMap && matchesMode;
         });
+
+        // 2. Fuzzy Deduplication (Steam placeholders often overlap with Leetify/Faceit)
+        const sorted = [...baseFiltered].sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
+        const uniqueMatches: Match[] = [];
+        const processedCodes = new Set<string>();
+
+        for (const match of sorted) {
+            const matchTime = new Date(match.matchDate).getTime();
+            const normalizedMap = match.mapName?.toLowerCase().replace('de_', '').trim();
+            
+            // Look for duplicates in matches already added
+            const isDuplicate = uniqueMatches.some(m => {
+                const diff = Math.abs(new Date(m.matchDate).getTime() - matchTime);
+                const mNormalizedMap = m.mapName?.toLowerCase().replace('de_', '').trim();
+                
+                // If same map and within 15 minutes, it's the same match
+                // We prefer Faceit/Leetify (which are processed first if they are same timestamp)
+                return diff < 15 * 60 * 1000 && mNormalizedMap === normalizedMap;
+            });
+
+            if (!isDuplicate) {
+                uniqueMatches.push(match);
+            }
+        }
+
+        return uniqueMatches;
     }, [matches, mapFilter, modeFilter, searchTerm]);
 
     const handleViewMatch = (match: Match) => {
@@ -378,7 +405,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     
                                     const isPremier = match.source?.toLowerCase().includes('premier') || 
                                                       match.gameMode?.toLowerCase().includes('premier') ||
-                                                      match.metadata?.source?.toLowerCase().includes('premier');
+                                                      match.metadata?.source?.toLowerCase().includes('premier') ||
+                                                      match.metadata?.data_source?.toLowerCase().includes('premier');
                                             
                                             return (
                                                 <motion.tr 
@@ -432,17 +460,25 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4 text-center">
-                                                <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-lg border tracking-widest transition-all ${
-                                                    isGamersClub ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                                                    match.source === 'Faceit' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                                                    isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[0_0_10px_rgba(168,85,247,0.1)]' :
-                                                    'bg-green-500/10 text-green-500 border-green-500/20'
-                                                }`}>
-                                                    {isGamersClub ? 'GamersClub' : 
-                                                     match.source === 'Faceit' ? 'Faceit' :
-                                                     isPremier ? 'Premier' :
-                                                     'Competitive'}
-                                                </span>
+                                                <div className="flex flex-col items-center gap-1.5">
+                                                    <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-lg border tracking-widest transition-all ${
+                                                        isGamersClub ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                                        match.source === 'Faceit' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                                                        isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[0_0_10px_rgba(168,85,247,0.1)]' :
+                                                        'bg-green-500/10 text-green-500 border-green-500/20'
+                                                    }`}>
+                                                        {isGamersClub ? 'GamersClub' : 
+                                                        match.source === 'Faceit' ? 'Faceit' :
+                                                        isPremier ? 'Premier' :
+                                                        'Competitive'}
+                                                    </span>
+                                                    {match.metadata?.isMocked && (
+                                                        <span className="text-[7px] text-zinc-600 font-bold uppercase tracking-widest flex items-center gap-1">
+                                                            <div className="w-1 h-1 rounded-full bg-yellow-500 animate-pulse" />
+                                                            Sync Pendente
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-2 py-4 text-center font-bold text-xs text-white">
                                                 {match.kills}

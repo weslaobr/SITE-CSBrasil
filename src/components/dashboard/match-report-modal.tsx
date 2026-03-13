@@ -55,10 +55,76 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
 
     if (!match) return null;
 
-    const getScoreboardData = () => {
-        // Generate Mock Data in CSBrasil style
+    const getScoreboardData = (): { team1: PlayerStats[]; team2: PlayerStats[] } => {
+        const meta = match.metadata || {};
+        
+        // 1. Check for Faceit fullStats
+        if (meta.fullStats?.rounds?.[0]?.teams) {
+            const rounds = meta.fullStats.rounds[0];
+            const teams = rounds.teams;
+            
+            const mapTeam = (team: any): PlayerStats[] => {
+                return (team.players || []).map((p: any) => {
+                    const s = p.player_stats || {};
+                    const kills = parseInt(s.Kills || '0');
+                    const deaths = parseInt(s.Deaths || '0');
+                    const adr = parseFloat(s.ADR || '0');
+                    const rating = parseFloat(s["K/D Ratio"] || '0'); // Faceit doesn't have Rating 2.0, using K/D as proxy for now
+                    
+                    return {
+                        nickname: p.nickname,
+                        avatar: `https://i.pravatar.cc/150?u=${p.player_id}`,
+                        rank: "Faceit",
+                        kills,
+                        deaths,
+                        assists: parseInt(s.Assists || '0'),
+                        diff: kills - deaths,
+                        kd: parseFloat(s["K/D Ratio"] || '0'),
+                        adr,
+                        hs: `${s["Headshots %"] || '0'}%`,
+                        kast: "75%",
+                        rating,
+                        ef: 0, fkd: 0, trades: 0, onevx: 0,
+                        multikills: "0/0/0",
+                        isUser: p.nickname === match.metadata?.playerNickname // Should be passed in match obj ideally
+                    };
+                });
+            };
+
+            return {
+                team1: mapTeam(teams[0]),
+                team2: mapTeam(teams[1])
+            };
+        }
+
+        // 2. Check for Steam Bot realDetails or Leetify metadata
+        if (meta.players && Array.isArray(meta.players)) {
+            const allPlayers = meta.players.map((p: any) => ({
+                nickname: p.name || p.nickname || "Player",
+                avatar: p.avatar || `https://i.pravatar.cc/150?u=${p.steamid || p.name}`,
+                rank: "Competitive",
+                kills: p.kills || 0,
+                deaths: p.deaths || 0,
+                assists: p.assists || 0,
+                diff: (p.kills || 0) - (p.deaths || 0),
+                kd: Number(((p.kills || 0) / (p.deaths || 1)).toFixed(2)),
+                adr: p.adr || 0,
+                hs: `${p.hs_percent || p.hs_percentage || 0}%`,
+                kast: "70%",
+                rating: p.rating || p.leetify_rating || 1.0,
+                ef: 0, fkd: 0, trades: 0, onevx: 0,
+                multikills: "0/0/0"
+            }));
+
+            // Basic splitting (first 5 vs last 5)
+            return {
+                team1: allPlayers.slice(0, 5),
+                team2: allPlayers.slice(5, 10)
+            };
+        }
+
+        // 3. Fallback to Mock Data
         const generateStats = (name: string, isUser = false): PlayerStats => {
-            const meta = match.metadata || {};
             const k = isUser ? (match.kills || 0) : 15 + Math.floor(Math.random() * 10);
             const d = isUser ? (match.deaths || 0) : 15 + Math.floor(Math.random() * 10);
             const a = isUser ? (match.assists || 0) : 1 + Math.floor(Math.random() * 5);
@@ -66,7 +132,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
             return {
                 nickname: isUser ? "[Sua Conta]" : name,
                 avatar: isUser ? "https://avatars.steamstatic.com/2cf8997181cfcbceeacd49034d12aaf4c378d15e.jpg" : `https://i.pravatar.cc/150?u=${name}`,
-                rank: "Global Elite",
+                rank: "Competitive",
                 kills: k,
                 deaths: d,
                 assists: a,
@@ -76,10 +142,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
                 hs: isUser ? (match.hsPercentage ? `${match.hsPercentage.toFixed(1)}%` : '20%') : `${20 + Math.floor(Math.random() * 40)}%`,
                 kast: `${70 + Math.floor(Math.random() * 20)}%`,
                 rating: isUser && meta.leetify_rating ? meta.leetify_rating : 0.9 + Math.random() * 0.4,
-                ef: Math.floor(Math.random() * 5),
-                fkd: 0,
-                trades: 0,
-                onevx: 0,
+                ef: 0, fkd: 0, trades: 0, onevx: 0,
                 multikills: isUser && meta.tripleKills ? `${meta.tripleKills}/${meta.quadroKills}/${meta.pentaKills}` : "0/0/0",
                 isUser
             };
@@ -115,6 +178,15 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
         const officialName = mapMapping[mapName] || `de_${mapName}`;
         return `https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/${officialName}.png`;
     };
+
+    const isPremier = match.source?.toLowerCase().includes('premier') || 
+                      match.gameMode?.toLowerCase().includes('premier') ||
+                      match.metadata?.data_source?.toLowerCase().includes('premier') ||
+                      match.metadata?.source?.toLowerCase().includes('premier');
+
+    const displayMode = isPremier ? 'Premier' : 
+                        match.gameMode?.toLowerCase().includes('matchmaking') ? 'Competitive' : 
+                        match.gameMode || 'Competitive';
 
     const { team1, team2 } = getScoreboardData();
     const isWin = match.result === 'Win' || match.result === 'Victory';
@@ -152,11 +224,11 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
                                         <div className="absolute inset-0 bg-green-500/10 mix-blend-overlay" />
                                     </div>
                                     <div>
-                                        <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white leading-none">
+                                        <h2 className={`text-3xl font-black italic uppercase tracking-tighter leading-none ${isPremier ? 'text-purple-400' : 'text-white'}`}>
                                             Relatório de Partida
                                         </h2>
                                         <p className="text-[11px] text-zinc-500 font-black uppercase tracking-widest mt-1">
-                                            {match.mapName?.replace('de_', '')} &nbsp;·&nbsp; {match.gameMode || 'Competitive'}
+                                            {match.mapName?.replace('de_', '')} &nbsp;·&nbsp; <span className={isPremier ? 'text-purple-500/80' : ''}>{displayMode}</span>
                                         </p>
                                     </div>
                                 </div>
@@ -203,7 +275,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
                                         onClick={() => setActiveTab(tab.id)}
                                         className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                                             activeTab === tab.id 
-                                                ? 'bg-green-500 text-black shadow-lg shadow-green-500/20' 
+                                                ? (isPremier ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-green-500 text-black shadow-lg shadow-green-500/20')
                                                 : 'text-zinc-500 hover:text-white hover:bg-white/5'
                                         }`}
                                     >
@@ -236,7 +308,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-white/5">
-                                                    {team1.map((p, i) => (
+                                                    {team1.map((p: PlayerStats, i: number) => (
                                                         <tr key={i} className={`group hover:bg-white/[0.03] transition-colors ${p.isUser ? 'bg-green-500/5' : ''}`}>
                                                             <td className="pl-6 py-4 flex items-center gap-3">
                                                                 <img src={p.avatar} className="w-8 h-8 rounded-xl border border-white/10 shadow-lg" alt="" />
@@ -275,7 +347,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
                                         <div className="bg-white/[0.02] border border-white/5 rounded-[32px] overflow-hidden">
                                             <table className="w-full text-left">
                                                 <tbody className="divide-y divide-white/5">
-                                                    {team2.map((p, i) => (
+                                                    {team2.map((p: PlayerStats, i: number) => (
                                                         <tr key={i} className="group hover:bg-white/[0.03] transition-colors">
                                                             <td className="pl-6 py-4 flex items-center gap-3">
                                                                 <img src={p.avatar} className="w-8 h-8 rounded-xl border border-white/10" alt="" />
@@ -313,7 +385,10 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
                                         </div>
                                         <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-3">Dados Analíticos Externos</h3>
                                         <p className="text-zinc-500 font-bold uppercase text-[10px] tracking-widest max-w-md mx-auto mb-8">
-                                            Essa partida foi importada do Steam. Para ver a análise granulada de utilitários e abertura de pixels, confira no CSStats.gg.
+                                            {match.source === 'Steam' ? 
+                                                'Essa partida foi importada do Steam através do código de compartilhamento. Para ver a análise granulada de utilitários e abertura de pixels, confira no CSStats.gg.' :
+                                                'Esta partida ainda não possui análise de demos detalhada em nosso servidor.'
+                                            }
                                         </p>
                                         <a 
                                             href={`https://csstats.gg/match/${match.externalId}`}
@@ -330,7 +405,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({ match, isOpen, onCl
                                             <Trophy size={14} className="text-yellow-500" /> Histórico de Rodadas
                                          </h4>
                                          <div className="flex flex-wrap gap-2">
-                                            {match.score.split('-').map((s, i) => (
+                                             {match.score.split('-').map((s: string, i: number) => (
                                                 <div key={i} className="px-6 py-3 bg-white/5 border border-white/5 rounded-2xl">
                                                     <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Total {i === 0 ? 'Time A' : 'Time B'}</span>
                                                     <span className="text-2xl font-black italic text-white">{s}</span>

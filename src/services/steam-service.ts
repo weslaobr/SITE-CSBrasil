@@ -249,7 +249,7 @@ export const getSteamMatchHistory = async (steamId: string, authCode: string, kn
                         matches.push({
                             externalId: nextCode,
                             source: 'Steam',
-                            gameMode: 'Matchmaking',
+                            gameMode: 'Competitive',
                             mapName: randomMap,
                             kills: 12 + Math.floor(Math.random() * 15),
                             deaths: 10 + Math.floor(Math.random() * 12),

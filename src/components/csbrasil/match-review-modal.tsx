@@ -62,17 +62,17 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                     <BarChart3 className="text-black" size={28} />
                                 </div>
                                 <div>
-                                    <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white leading-none">
+                                    <h2 className={`text-3xl font-black italic uppercase tracking-tighter leading-none ${(data?.data_source === 'matchmaking_premier' || data?.data_source?.includes('premier')) ? 'text-purple-400' : 'text-white'}`}>
                                         Relatório de Partida
                                     </h2>
                                     <p className="text-[11px] text-zinc-500 font-black uppercase tracking-widest mt-1">
-                                        {data?.map_name?.replace('de_', '') || 'Carregando...'} &nbsp;·&nbsp; {
-                                            data?.data_source === 'matchmaking_competitive' ? 'Competitive' :
-                                            data?.data_source === 'matchmaking_premier' ? 'Premier' :
+                                        {data?.map_name?.replace('de_', '') || 'Carregando...'} &nbsp;·&nbsp; <span className={(data?.data_source === 'matchmaking_premier' || data?.data_source?.includes('premier')) ? 'text-purple-500/80' : ''}>{
+                                            (data?.data_source === 'matchmaking_premier' || data?.data_source?.includes('premier')) ? 'Premier' :
+                                            (data?.data_source === 'matchmaking_competitive' || data?.data_source?.includes('matchmaking')) ? 'Competitive' :
                                             data?.data_source === 'faceit' ? 'Faceit' :
                                             data?.data_source === 'gamersclub' ? 'GamersClub' :
                                             (data?.data_source || 'Competitive')
-                                        }
+                                        }</span>
                                     </p>
                                 </div>
                             </div>
@@ -125,7 +125,7 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                 onClick={() => setActiveTab('geral')}
                                 className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                                     activeTab === 'geral' 
-                                        ? 'bg-green-500 text-black shadow-lg shadow-green-500/20' 
+                                        ? ((data?.data_source === 'matchmaking_premier' || data?.data_source?.includes('premier')) ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-green-500 text-black shadow-lg shadow-green-500/20')
                                         : 'text-zinc-500 hover:text-white hover:bg-white/5'
                                 }`}
                             >
@@ -135,7 +135,7 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                 onClick={() => setActiveTab('analitico')}
                                 className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                                     activeTab === 'analitico' 
-                                        ? 'bg-green-500 text-black shadow-lg shadow-green-500/20' 
+                                        ? ((data?.data_source === 'matchmaking_premier' || data?.data_source?.includes('premier')) ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-green-500 text-black shadow-lg shadow-green-500/20')
                                         : 'text-zinc-500 hover:text-white hover:bg-white/5'
                                 }`}
                             >
@@ -145,7 +145,7 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                 onClick={() => setActiveTab('utilitarios')}
                                 className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                                     activeTab === 'utilitarios' 
-                                        ? 'bg-green-500 text-black shadow-lg shadow-green-500/20' 
+                                        ? ((data?.data_source === 'matchmaking_premier' || data?.data_source?.includes('premier')) ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-green-500 text-black shadow-lg shadow-green-500/20')
                                         : 'text-zinc-500 hover:text-white hover:bg-white/5'
                                 }`}
                             >
