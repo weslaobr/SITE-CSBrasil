@@ -148,7 +148,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         const totalHs = hsMatches.reduce((acc, m) => acc + (m.hsPercentage ?? 0), 0);
 
         // Average rating from metadata where leetify_rating exists
-        const ratingMatches = filteredMatches.filter(m => m.metadata?.leetify_rating);
+        const ratingMatches = filteredMatches.filter(m => m.metadata?.leetify_rating !== undefined && m.metadata?.leetify_rating !== null);
         const totalRating = ratingMatches.reduce((acc, m) => acc + (m.metadata.leetify_rating || 0), 0);
 
         return {
@@ -187,17 +187,93 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         return `${cdnBase}/${officialName}.png`;
     };
 
-    const getRankIcon = (rank: string, source?: string, gameMode?: string) => {
+    const getRankInfo = (rank: any, source?: string, gameMode?: string, metadata?: any) => {
         const normMode = gameMode?.toLowerCase() || '';
         const normSource = source?.toLowerCase() || '';
+        
+        const isPremier = normSource.includes('premier') || 
+                         normMode.includes('premier') || 
+                         metadata?.data_source?.toLowerCase().includes('premier');
+
         const isGC = normSource.includes('gamersclub') || 
                      normMode.includes('gamersclub') || 
                      normMode.includes('gamers_club') || 
                      normMode.includes('gamers-club') || 
                      normMode === 'gc';
 
-        if (isGC || !rank || rank.toLowerCase() === 'unranked') return null;
-        return "https://www.csstats.gg/images/ranks/12.png";
+        const isFaceit = normSource === 'faceit';
+
+        // 1. Premier Logic (Numerical)
+        if (isPremier && rank) {
+            const rating = parseInt(rank);
+            if (!isNaN(rating)) {
+                let color = 'text-zinc-400';
+                if (rating >= 30000) color = 'text-amber-400';
+                else if (rating >= 25000) color = 'text-red-500';
+                else if (rating >= 20000) color = 'text-pink-500';
+                else if (rating >= 15000) color = 'text-purple-500';
+                else if (rating >= 10000) color = 'text-blue-500';
+                else if (rating >= 5000) color = 'text-cyan-400';
+                
+                return {
+                    label: rating.toLocaleString(),
+                    icon: null,
+                    color,
+                    isPremier: true
+                };
+            }
+        }
+
+        // 2. Faceit Logic
+        if (isFaceit && rank) {
+            return {
+                label: `Level ${rank}`,
+                icon: `https://pub-89f41b4e94cc4f36987f1eb79bc3eb97.r2.dev/faceit/faceit${rank}.png`,
+                color: 'text-orange-400',
+                isPremier: false
+            };
+        }
+
+        // 3. Competitive Rank Logic (Mapping IDs 1-18)
+        if (!isGC && !isPremier && rank) {
+            const rankId = parseInt(rank);
+            const ranks: Record<number, { name: string, icon: string }> = {
+                1: { name: 'Prata I', icon: '1' },
+                2: { name: 'Prata II', icon: '2' },
+                3: { name: 'Prata III', icon: '3' },
+                4: { name: 'Prata IV', icon: '4' },
+                5: { name: 'Prata Elite', icon: '5' },
+                6: { name: 'Prata Elite Mestre', icon: '6' },
+                7: { name: 'Ouro I', icon: '7' },
+                8: { name: 'Ouro II', icon: '8' },
+                9: { name: 'Ouro III', icon: '9' },
+                10: { name: 'Ouro Mestre', icon: '10' },
+                11: { name: 'AK I', icon: '11' },
+                12: { name: 'AK II', icon: '12' },
+                13: { name: 'AK Cruzada', icon: '13' },
+                14: { name: 'Xerife', icon: '14' },
+                15: { name: 'Águia I', icon: '15' },
+                16: { name: 'Águia II', icon: '16' },
+                17: { name: 'Supremo', icon: '17' },
+                18: { name: 'Global Elite', icon: '18' }
+            };
+
+            if (ranks[rankId]) {
+                return {
+                    label: ranks[rankId].name,
+                    icon: `https://www.csstats.gg/images/ranks/${ranks[rankId].icon}.png`,
+                    color: 'text-zinc-400',
+                    isPremier: false
+                };
+            }
+        }
+
+        return {
+            label: (rank && rank !== 'unranked' && isNaN(parseInt(rank))) ? rank : 'Unranked',
+            icon: null,
+            color: 'text-zinc-600',
+            isPremier: false
+        };
     };
 
     const formatTimeAgo = (date: string) => {
@@ -473,29 +549,32 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                 </div>
                                             </td>
                                             <td className="px-4 py-6 text-center">
-                                                <div className="flex justify-center flex-col items-center gap-1 group/rank">
-                                                    {getRankIcon(match.rank || '', match.source, match.gameMode) ? (
-                                                        <img 
-                                                            src={getRankIcon(match.rank || '', match.source, match.gameMode)!} 
-                                                            className="w-12 h-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.15)] group-hover/rank:scale-125 transition-all duration-500" 
-                                                            alt="rank" 
-                                                        />
-                                                    ) : (
-                                                        <div className="h-10 flex items-center justify-center">
-                                                            {match.source === 'Faceit' ? (
-                                                                <Trophy className="text-orange-500/40 w-6 h-6 group-hover:rotate-12 transition-transform" />
-                                                            ) : isGamersClub ? (
-                                                                <Zap className="text-cyan-500/40 w-6 h-6 group-hover:scale-110 transition-transform" />
-                                                            ) : (
-                                                                <span className="text-zinc-800 font-black italic text-[10px]">N/A</span>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    <span className="text-[8px] text-zinc-600 font-black uppercase tracking-tighter">
-                                                        {(match.rank && match.rank !== 'unranked') ? match.rank : (isGamersClub ? 'Level GC' : 'Unranked')}
-                                                    </span>
-                                                </div>
-                                            </td>
+                                                 <div className="flex justify-center flex-col items-center gap-1 group/rank">
+                                                     {(() => {
+                                                         const rankInfo = getRankInfo(match.rank, match.source, match.gameMode, match.metadata);
+                                                         return (
+                                                             <>
+                                                                 {rankInfo.icon ? (
+                                                                     <img 
+                                                                         src={rankInfo.icon} 
+                                                                         className="w-12 h-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.15)] group-hover/rank:scale-125 transition-all duration-500" 
+                                                                         alt={rankInfo.label}
+                                                                     />
+                                                                 ) : rankInfo.isPremier ? (
+                                                                     <div className={`text-xl font-black italic tracking-tighter ${rankInfo.color} group-hover/rank:scale-110 transition-transform`}>
+                                                                         {rankInfo.label}
+                                                                     </div>
+                                                                 ) : (
+                                                                     <span className="text-zinc-800 font-black italic text-[10px]">N/A</span>
+                                                                 )}
+                                                                 <span className={`text-[8px] font-black uppercase tracking-tighter ${rankInfo.isPremier ? 'text-zinc-500' : 'text-zinc-600'}`}>
+                                                                     {rankInfo.label}
+                                                                 </span>
+                                                             </>
+                                                         );
+                                                     })()}
+                                                 </div>
+                                             </td>
                                             <td className="px-4 py-6 text-center">
                                                 <div className="flex flex-col items-center gap-1.5">
                                                     <div className={`relative px-4 py-1.5 rounded-xl border transition-all overflow-hidden group/source ${
@@ -600,27 +679,30 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                                    match.metadata?.rating || 
                                                                    (match.source === 'Faceit' ? parseFloat(match.metadata?.kdRatio || '1.0') : 
                                                                     (match.kills / (match.deaths || 1)) || 1.0);
-                                                    
-                                                    const isLeetify = !!match.metadata?.leetify_rating;
-                                                    
-                                                    return (
-                                                        <div className="flex flex-col items-center gap-1 group/rating">
-                                                            <div className={`px-4 py-1.5 rounded-2xl font-black italic text-lg tracking-tighter transition-all group-hover:scale-110 ${
-                                                                rating >= 1.2 ? 'bg-orange-500/20 text-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.1)]' :
-                                                                rating >= 1 ? 'bg-emerald-500/10 text-emerald-400' : 
-                                                                'bg-red-500/10 text-red-500'
-                                                            }`}>
-                                                                {typeof rating === 'number' ? rating.toFixed(2) : parseFloat(String(rating)).toFixed(2)}
-                                                            </div>
-                                                            <div className="flex items-center gap-1">
-                                                                <Activity size={8} className="text-zinc-600" />
-                                                                <span className="text-[7px] text-zinc-600 font-black uppercase tracking-widest">
-                                                                    {isLeetify ? 'Leetify' : 'Impact'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })()}
+                                                     const isLeetify = !!match.metadata?.leetify_rating;
+                                                     
+                                                     // If it's Leetify, 0.00 is the baseline. If not (Faceit/Steam), 1.00 is the baseline.
+                                                     const isGood = isLeetify ? rating > 0 : rating >= 1.0;
+                                                     const isGreat = isLeetify ? rating >= 0.5 : rating >= 1.2;
+                                                     const isBad = isLeetify ? rating < -0.2 : rating < 0.8;
+
+                                                     return (
+                                                         <div className="flex flex-col items-center gap-1 group/rating">
+                                                             <div className={`px-4 py-1.5 rounded-2xl font-black italic text-lg tracking-tighter transition-all group-hover:scale-110 ${
+                                                                 isGreat ? 'bg-orange-500/20 text-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.1)]' :
+                                                                 isGood ? 'bg-emerald-500/10 text-emerald-400' : 
+                                                                 isBad ? 'bg-red-500/10 text-red-500' :
+                                                                 'bg-zinc-800/30 text-zinc-500'
+                                                             }`}>
+                                                                 {isLeetify && rating > 0 ? '+' : ''}{rating.toFixed(2)}
+                                                             </div>
+                                                             <div className="flex items-center gap-1 text-[7px] font-black text-zinc-700 uppercase tracking-widest">
+                                                                 <Activity size={8} className="text-zinc-600" />
+                                                                 {isLeetify ? 'LEETIFY' : 'IMPACT'}
+                                                             </div>
+                                                         </div>
+                                                     );
+                                                 })()}
                                             </td>
                                             <td className="px-8 py-6 text-right last:rounded-r-3xl">
                                                 <div className="flex flex-col items-end">
@@ -761,7 +843,10 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 matchId={selectedMatch?.source === 'Leetify' || selectedMatch?.externalId?.includes('leetify') ? 
                          (selectedMatch.externalId?.replace('leetify-', '') || selectedMatch.id) : null}
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setSelectedMatch(null);
+                }}
                 userSteamId={currentUserSteamId}
                 userNickname={currentFaceit}
             />

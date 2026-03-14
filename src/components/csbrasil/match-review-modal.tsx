@@ -17,6 +17,8 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
 
     useEffect(() => {
         if (matchId) {
+            setData(null); // Clear previous data
+            setActiveTab('geral'); // Reset tab
             fetchMatchDetails();
         }
     }, [matchId]);

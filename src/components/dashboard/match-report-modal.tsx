@@ -83,10 +83,14 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
             // Se mudou o matchId ou se o match atual não tem os dados completos (metadata), busca
             if (!match || !match.metadata || match.id !== matchId) {
                 setInternalMatch(null); // Limpa anterior
+                setMainTab('seu-jogo'); // Reset tabs
+                setSubTab('geral');
                 fetchMatchData();
             }
         } else if (!isOpen) {
             setInternalMatch(null);
+            setMainTab('seu-jogo');
+            setSubTab('geral');
         }
     }, [isOpen, matchId]);
 
@@ -180,12 +184,18 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
         const adr = p.adr !== undefined ? p.adr : 
                    (p.player_stats?.ADR ? parseFloat(p.player_stats.ADR) : 
                    (p.ADR ? parseFloat(p.ADR) : 0));
+        const currentLeetifyRating = currentMatch.metadata?.leetify_rating || currentMatch.metadata?.ratings?.find((r: any) => r.steam64Id === (p.player_id || p.steam64_id))?.rating;
+
+        const avatar = p.avatar_url || p.avatarUrl || p.avatar || (p.player_stats?.avatar) || 
+                      (isUser ? (currentMatch.metadata?.steam_avatar || "https://avatars.steamstatic.com/2cf8997181cfcbceeacd49034d12aaf4c378d15e.jpg") : 
+                      `https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg`);
 
         const hsValue = p.accuracy_head !== undefined ? `${(p.accuracy_head * 100).toFixed(0)}%` : 
                         (p.hs_percent !== undefined ? `${p.hs_percent}%` : 
                         (p.player_stats?.["Headshots %"] ? `${p.player_stats["Headshots %"]}%` : 
-                        (p.hs_percentage !== undefined ? `${p.hs_percentage}%` : '0%')));
-        
+                        (p.hs_percentage !== undefined ? `${p.hs_percentage}%` : 
+                        (isUser && currentMatch.hsPercentage != null ? `${currentMatch.hsPercentage}%` : '0%'))));
+
         const isWinResult = currentMatch?.result === 'Win' || currentMatch?.result === 'Victory';
         
         // Deterministic fallbacks for missing detailed data
@@ -195,8 +205,6 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
         const fallbackTrades = Math.floor(kills / 4);
         const fallbackClutches = kills > 25 ? 1 : 0;
         const fallbackKast = isWinResult ? 75 : 62;
-
-        const avatar = p.avatar_url || p.avatarUrl || p.avatar || (p.player_stats?.avatar) || (isUser ? "https://avatars.steamstatic.com/2cf8997181cfcbceeacd49034d12aaf4c378d15e.jpg" : `https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg`);
 
         const util_damage = p.util_damage !== undefined ? p.util_damage : 
                            (p.utility_damage !== undefined ? p.utility_damage : 
@@ -209,8 +217,8 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                              (p.player_stats?.["Flashbang Assists"] ? parseInt(p.player_stats["Flashbang Assists"]) : 0)));
 
         const blind_time = p.blind_time !== undefined ? p.blind_time : 
-                          (p.blindTime !== undefined ? p.blindTime : 
-                          (p.flash_blind_time || 0));
+                           (p.blindTime !== undefined ? p.blindTime : 
+                           (p.flash_blind_time || 0));
 
         const util_thrown = p.util_thrown || p.utilThrown || 
                            (p.he_thrown || 0) + (p.flash_thrown || 0) + (p.smokes_thrown || 0) + (p.molotovs_thrown || 0);
@@ -227,10 +235,11 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
             adr: adr || (isUser ? (currentMatch.adr || 70) : 70 + (seed % 15)),
             hs: hsValue,
             kast: p.kast || `${fallbackKast}%`,
-            rating: p.rating || p.leetify_rating || p.leetifyRating || (p.player_stats?.["K/D Ratio"] ? parseFloat(p.player_stats["K/D Ratio"]) : 1.0),
+            rating: p.rating || p.leetify_rating || p.leetifyRating || currentLeetifyRating || (p.player_stats?.["K/D Ratio"] ? parseFloat(p.player_stats["K/D Ratio"]) : 1.0),
             fkd: p.fk_count || p.fkd || fallbackFk,
             fkd_deaths: p.fd_count || p.fk_deaths || fallbackFd,
             trades: p.trade_count || p.trades || fallbackTrades,
+
             onevx: p.clutch_count || p.onevx || fallbackClutches,
             onevx_attempts: p.onevx_attempts || (fallbackClutches > 0 ? fallbackClutches + 1 : 0),
             multikills: p.multikills || (p.triple_kills !== undefined ? `0/${p.triple_kills}/${p.quadro_kills}/${p.penta_kills}` : "0/0/0/0"),
@@ -459,6 +468,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
         };
     };
 
+    const isAnalyzing = loading && !internalMatch;
     const { team1, team2 } = getScoreboardData();
     const userData = team1.find(p => p.isUser) || team2.find(p => p.isUser) || team1[0];
     const { top5, identity } = getMatchAnalysis(userData);
@@ -628,67 +638,99 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                         {/* Left Column: Identity & Highlights */}
                                         <div className="lg:col-span-12 xl:col-span-7 space-y-8">
                                             {/* Identity Card (Premium Style) */}
-                                            <div className="relative group overflow-hidden bg-[#12161d] border border-white/[0.08] rounded-[40px] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-                                                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/[0.03] blur-[120px] -mr-64 -mt-64" />
-                                                <div className="absolute -left-12 -bottom-12 w-48 h-48 bg-emerald-500/[0.02] blur-[80px]" />
+                                            <div className="relative group overflow-hidden bg-[#0e1218] border border-white/[0.05] rounded-[40px] p-10 shadow-[0_30px_60px_rgba(0,0,0,0.6)] min-h-[420px] transition-all duration-500 hover:border-emerald-500/20">
+                                                {/* Animated Background Elements */}
+                                                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-500/[0.05] blur-[140px] -mr-80 -mt-80 group-hover:bg-emerald-500/[0.08] transition-colors duration-700" />
+                                                <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-emerald-500/[0.03] blur-[100px] group-hover:bg-emerald-500/[0.05] transition-colors duration-700" />
                                                 
-                                                <div className="flex flex-col md:flex-row items-center md:items-start gap-10 mb-12 relative z-10">
+                                                <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 mb-10 relative z-10">
+                                                    {/* Avatar Section with Pulse Glow */}
                                                     <div className="relative shrink-0">
-                                                        <div className="w-32 h-32 rounded-[40px] overflow-hidden border-2 border-emerald-500/30 p-1.5 bg-zinc-900 shadow-2xl">
+                                                        <div className="absolute inset-0 bg-emerald-500/10 blur-2xl rounded-full scale-75 group-hover:scale-110 transition-transform duration-700 opacity-0 group-hover:opacity-100" />
+                                                        <div className="w-32 h-32 rounded-[40px] overflow-hidden border-2 border-white/5 group-hover:border-emerald-500/40 p-1.5 bg-zinc-900 shadow-2xl transition-all duration-500 relative z-10">
                                                             <img 
                                                                 src={userData.avatar} 
-                                                                className="w-full h-full object-cover rounded-[32px] group-hover:scale-110 transition-transform duration-700" 
+                                                                className="w-full h-full object-cover rounded-[32px] group-hover:scale-110 transition-transform duration-1000 ease-out" 
                                                                 alt="" 
                                                             />
                                                         </div>
-                                                        <div className="absolute -bottom-3 -right-3 w-12 h-12 bg-[#1a1f26] border border-white/10 rounded-2xl flex items-center justify-center shadow-2xl">
-                                                            <Trophy size={18} className="text-emerald-500" />
-                                                        </div>
+                                                        <motion.div 
+                                                            whileHover={{ scale: 1.1, rotate: 5 }}
+                                                            className="absolute -bottom-2 -right-2 w-12 h-12 bg-[#1a1f26]/90 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.4)] z-20"
+                                                        >
+                                                            <Trophy size={20} className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                                        </motion.div>
                                                     </div>
 
+                                                    {/* Identity Text with Stylized Typography */}
                                                     <div className="flex-1 text-center md:text-left">
-                                                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-4">
-                                                            <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl border border-emerald-500/20">Identidade na Partida</span>
-                                                            <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl border ${
-                                                                userData.rating >= 1.2 ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' : 'bg-zinc-800 text-zinc-500 border-white/5'
+                                                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-3">
+                                                            <span className="px-3 py-1 bg-white/[0.03] backdrop-blur-md text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] rounded-full border border-white/5">Identidade</span>
+                                                            <span className={`px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] rounded-full border shadow-lg ${
+                                                                userData.rating >= 1.2 
+                                                                ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 shadow-orange-500/5' 
+                                                                : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-emerald-500/5'
                                                             }`}>
-                                                                Performance {userData.rating >= 1.2 ? 'ELITE' : 'ESTÁVEL'}
+                                                                {userData.rating >= 1.2 ? 'ELITE' : 'ESTÁVEL'}
                                                             </span>
                                                         </div>
-                                                        <h2 className="text-5xl md:text-6xl font-black italic uppercase tracking-tighter text-white group-hover:text-emerald-300 transition-colors duration-500">
-                                                            {identity}
-                                                        </h2>
-                                                        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-4 opacity-60">Sua performance baseada em todos os dados analíticos coletados</p>
+                                                        
+                                                        <div className="relative mb-3">
+                                                            <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tight text-white leading-tight drop-shadow-2xl">
+                                                                <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/60 group-hover:to-emerald-400 transition-all duration-700">
+                                                                    {identity}
+                                                                </span>
+                                                            </h2>
+                                                            <div className="absolute -bottom-2 left-0 w-12 h-1 bg-emerald-500 rounded-full group-hover:w-24 transition-all duration-700 opacity-40 ml-1" />
+                                                        </div>
+                                                        
+                                                        <p className="text-zinc-500 text-[8px] font-black uppercase tracking-[0.2em] mt-6 flex items-center justify-center md:justify-start gap-2 opacity-40 group-hover:opacity-80 transition-opacity">
+                                                            <div className="w-4 h-[1px] bg-zinc-800" />
+                                                            Full Analysis Data
+                                                            <div className="w-4 h-[1px] bg-zinc-800" />
+                                                        </p>
                                                     </div>
                                                 </div>
 
-                                                {/* Top 5 Stats Highlight - Advanced Grid */}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 relative z-10 bg-white/[0.02] p-8 rounded-[32px] border border-white/5">
-                                                    {top5.map((stat, i) => (
-                                                        <div key={i} className="flex flex-col gap-3 group/stat">
-                                                            <div className="flex justify-between items-end">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className={`w-1.5 h-1.5 rounded-full ${stat.color} shadow-[0_0_8px_currentColor]`} />
-                                                                    <span className="text-[11px] font-black uppercase tracking-wider text-white/90">{stat.label}</span>
+                                                {/* Stats Highlight Grid - Premium Cards */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10 pt-4">
+                                                    {top5.slice(0, 3).map((stat, i) => (
+                                                        <motion.div 
+                                                            key={i}
+                                                            whileHover={{ y: -5, backgroundColor: 'rgba(255,255,255,0.04)' }}
+                                                            className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[32px] transition-all group/stat relative overflow-hidden"
+                                                        >
+                                                            <div className={`absolute top-0 left-0 w-full h-[2px] ${stat.color} opacity-0 group-hover/stat:opacity-100 transition-opacity`} />
+                                                            <div className="flex flex-col gap-4">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover/stat:text-zinc-300 transition-colors">
+                                                                        {stat.label}
+                                                                    </span>
+                                                                    <div className={`w-2 h-2 rounded-full ${stat.color} shadow-[0_0_10px_currentColor] animate-pulse`} />
                                                                 </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-xl font-black italic text-white leading-none">{stat.value}</span>
-                                                                    <span className="text-[9px] font-black text-zinc-600 uppercase italic">{stat.tag}</span>
+                                                                <div className="flex items-baseline gap-2">
+                                                                    <span className="text-4xl font-black italic text-white tracking-tighter">
+                                                                        {stat.value}
+                                                                    </span>
+                                                                    <span className="text-[10px] font-black text-zinc-600 uppercase italic">
+                                                                        {stat.tag}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="relative h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                                                                    <motion.div 
+                                                                        initial={{ width: 0 }}
+                                                                        animate={{ width: `${Math.min(100, Math.max(10, stat.raw || 50))}%` }}
+                                                                        transition={{ duration: 1.2, delay: 0.3 + (i * 0.1), ease: "circOut" }}
+                                                                        className={`absolute inset-y-0 left-0 ${stat.color} shadow-[0_0_20px_rgba(0,0,0,0.5)]`}
+                                                                    />
                                                                 </div>
                                                             </div>
-                                                            <div className="relative h-2 bg-white/5 rounded-full overflow-hidden">
-                                                                <motion.div 
-                                                                    initial={{ width: 0 }}
-                                                                    animate={{ width: `${Math.min(100, Math.max(10, stat.raw || 50))}%` }}
-                                                                    transition={{ duration: 1, delay: i * 0.1, ease: "easeOut" }}
-                                                                    className={`absolute inset-y-0 left-0 ${stat.color} shadow-[0_0_15px_rgba(0,0,0,0.5)]`}
-                                                                />
-                                                            </div>
-                                                        </div>
+                                                        </motion.div>
                                                     ))}
                                                     {top5.length === 0 && (
-                                                        <div className="col-span-2 text-zinc-500 text-[10px] uppercase font-black tracking-widest text-center py-4">
-                                                            Aguardando processamento detalhado dos dados
+                                                        <div className="col-span-full py-12 flex flex-col items-center justify-center gap-4 text-zinc-600 border border-white/[0.03] border-dashed rounded-[32px]">
+                                                            <div className="w-8 h-8 rounded-full border-2 border-zinc-800 border-t-emerald-500 animate-spin" />
+                                                            <span className="text-[10px] uppercase font-black tracking-widest">Sincronizando estatísticas detalhadas...</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -706,36 +748,47 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                                 </div>
 
                                                 <div className="space-y-1 flex-1 overflow-y-auto pr-2 no-scrollbar">
-                                                    {[
-                                                        { label: 'Rating Leetify', value: userData.rating.toFixed(2), avg: '1.00', trend: userData.rating >= 1 ? 'up' : 'down', icon: <Activity size={12} /> },
-                                                        { label: 'ADR (Dano Médio)', value: userData.adr.toFixed(1), avg: '80.0', trend: userData.adr >= 80 ? 'up' : 'down', icon: <Zap size={12} /> },
-                                                        { label: 'Kills de Abertura', value: userData.fkd.toString(), avg: '2.1', trend: userData.fkd >= 2 ? 'up' : 'down', icon: <Sword size={12} /> },
-                                                        { label: 'Precisão (HS%)', value: userData.hs, avg: '35%', trend: parseInt(userData.hs) >= 35 ? 'up' : 'down', icon: <Target size={12} /> },
-                                                        { label: 'KAST %', value: userData.kast, avg: '72%', trend: parseInt(userData.kast) >= 72 ? 'up' : 'down', icon: <TrendingUp size={12} /> },
-                                                        { label: 'Trocas (Trades)', value: userData.trades.toString(), avg: '3.5', trend: userData.trades >= 3 ? 'up' : 'down', icon: <Zap size={12} className="rotate-45" /> }
-                                                    ].map((stat, i) => (
-                                                        <div key={i} className="flex items-center justify-between p-4 rounded-2xl hover:bg-white/[0.03] transition-all group border border-transparent hover:border-white/5">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className={`p-2 rounded-lg bg-zinc-800 transition-colors group-hover:bg-zinc-700 ${stat.trend === 'up' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                                    {stat.icon}
+                                                    {isAnalyzing ? (
+                                                        <div className="space-y-6">
+                                                            {[1, 2, 3, 4, 5, 6].map(i => (
+                                                                <div key={i} className="flex justify-between items-center p-4">
+                                                                    <div className="w-32 h-4 bg-white/5 rounded animate-pulse" />
+                                                                    <div className="w-16 h-6 bg-white/5 rounded-xl animate-pulse" />
                                                                 </div>
-                                                                <span className="text-[11px] font-black text-zinc-400 tracking-wide uppercase transition-colors group-hover:text-white">{stat.label}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-6">
-                                                                <span className={`text-lg font-black italic tracking-tighter ${stat.trend === 'up' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                                    {stat.value}
-                                                                </span>
-                                                                <div className="flex items-center gap-2 w-16 justify-end">
-                                                                    <span className="text-[10px] font-bold text-zinc-600 italic">{stat.avg}</span>
-                                                                    {stat.trend === 'up' ? (
-                                                                        <ChevronUp size={12} className="text-emerald-500 shrink-0" />
-                                                                    ) : (
-                                                                        <ChevronDown size={12} className="text-rose-500 shrink-0" />
-                                                                    )}
-                                                                </div>
-                                                            </div>
+                                                            ))}
                                                         </div>
-                                                    ))}
+                                                    ) : (
+                                                        [
+                                                            { label: 'Rating Leetify', value: userData.rating.toFixed(2), avg: '1.00', trend: userData.rating >= 1 ? 'up' : 'down', icon: <Activity size={12} /> },
+                                                            { label: 'ADR (Dano Médio)', value: userData.adr.toFixed(1), avg: '80.0', trend: userData.adr >= 80 ? 'up' : 'down', icon: <Zap size={12} /> },
+                                                            { label: 'Kills de Abertura', value: userData.fkd.toString(), avg: '2.1', trend: userData.fkd >= 2 ? 'up' : 'down', icon: <Sword size={12} /> },
+                                                            { label: 'Precisão (HS%)', value: userData.hs, avg: '35%', trend: parseInt(userData.hs) >= 35 ? 'up' : 'down', icon: <Target size={12} /> },
+                                                            { label: 'KAST %', value: userData.kast, avg: '72%', trend: parseInt(userData.kast) >= 72 ? 'up' : 'down', icon: <TrendingUp size={12} /> },
+                                                            { label: 'Trocas (Trades)', value: userData.trades.toString(), avg: '3.5', trend: userData.trades >= 3 ? 'up' : 'down', icon: <Zap size={12} className="rotate-45" /> }
+                                                        ].map((stat, i) => (
+                                                            <div key={i} className="flex items-center justify-between p-4 rounded-2xl hover:bg-white/[0.03] transition-all group border border-transparent hover:border-white/5">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className={`p-2 rounded-lg bg-zinc-800 transition-colors group-hover:bg-zinc-700 ${stat.trend === 'up' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                                        {stat.icon}
+                                                                    </div>
+                                                                    <span className="text-[11px] font-black text-zinc-400 tracking-wide uppercase transition-colors group-hover:text-white">{stat.label}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-6">
+                                                                    <span className={`text-lg font-black italic tracking-tighter ${stat.trend === 'up' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                                        {stat.value}
+                                                                    </span>
+                                                                    <div className="flex items-center gap-2 w-16 justify-end">
+                                                                        <span className="text-[10px] font-bold text-zinc-600 italic">{stat.avg}</span>
+                                                                        {stat.trend === 'up' ? (
+                                                                            <ChevronUp size={12} className="text-emerald-500 shrink-0" />
+                                                                        ) : (
+                                                                            <ChevronDown size={12} className="text-rose-500 shrink-0" />
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
