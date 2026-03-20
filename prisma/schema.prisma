@@ -8,24 +8,20 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-
-// --- Autenticação (NextAuth) ---
-
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?  @db.Text
-  access_token       String?  @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?  @db.Text
-  session_state      String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -39,33 +35,28 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  
-  // Custom Tropa do CS2 fields
-  steamId            String?   @unique
-  steamMatchAuthCode String?
+  id                   String              @id @default(cuid())
+  name                 String?
+  email                String?             @unique
+  emailVerified        DateTime?
+  image                String?
+  steamId              String?             @unique
+  steamMatchAuthCode   String?
   steamLatestMatchCode String?
-  faceitNickname     String?
-  gcNickname         String?
-  gcLevel            Int?
-  cs2Rank            String?
-  adr                Float?
-  hsPercentage       Float?
-  winRate            Float?
-  matchesPlayed      Int       @default(0)
-
-  accounts      Account[]
-  sessions      Session[]
-  matches       Match[]
-  lobbiesCreated Lobby[] @relation("LobbyCreator")
-  lobbyParticipations LobbyPlayer[]
-  
-  // Relação com inventário personalizado
-  inventoryItems UserInventoryItem[]
+  faceitNickname       String?
+  gcNickname           String?
+  gcLevel              Int?
+  cs2Rank              String?
+  adr                  Float?
+  hsPercentage         Float?
+  winRate              Float?
+  matchesPlayed        Int                 @default(0)
+  accounts             Account[]
+  lobbiesCreated       Lobby[]             @relation("LobbyCreator")
+  lobbyParticipations  LobbyPlayer[]
+  matches              Match[]
+  sessions             Session[]
+  inventoryItems       UserInventoryItem[]
 }
 
 model VerificationToken {
@@ -76,62 +67,55 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// --- Sistema de Partidas ---
-
 model Match {
-  id          String   @id @default(cuid())
-  userId      String
-  source      String   @default("internal")
-  externalId  String?  @unique
-  gameMode    String?  
-  mapName     String
-  kills       Int
-  deaths      Int
-  assists     Int
-  score       String   
-  mvps        Int
-  duration    String?  
-  url         String?  
-  matchDate   DateTime @default(now())
-  result      String   
-  adr         Float?
+  id           String   @id @default(cuid())
+  userId       String
+  source       String   @default("internal")
+  externalId   String?  @unique
+  gameMode     String?
+  mapName      String
+  kills        Int
+  deaths       Int
+  assists      Int
+  score        String
+  mvps         Int
+  duration     String?
+  url          String?
+  matchDate    DateTime @default(now())
+  result       String
+  adr          Float?
   hsPercentage Float?
-  metadata     Json?     @default("{}")
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metadata     Json?    @default("{}")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Lobby {
-  id          String   @id @default(cuid())
-  name        String
-  password    String?
-  status      String   @default("waiting")
-  creatorId   String
-  leaderAId   String?
-  leaderBId   String?
-  turn        String   @default("A")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  creator     User     @relation("LobbyCreator", fields: [creatorId], references: [id])
-  players     LobbyPlayer[]
+  id        String        @id @default(cuid())
+  name      String
+  password  String?
+  status    String        @default("waiting")
+  creatorId String
+  leaderAId String?
+  leaderBId String?
+  turn      String        @default("A")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  creator   User          @relation("LobbyCreator", fields: [creatorId], references: [id])
+  players   LobbyPlayer[]
 }
 
 model LobbyPlayer {
-  id        String   @id @default(cuid())
-  lobbyId   String
-  userId    String
-  team      String   @default("none")
-  isLeader  Boolean  @default(false)
-  joinedAt  DateTime @default(now())
-
-  lobby     Lobby    @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id       String   @id @default(cuid())
+  lobbyId  String
+  userId   String
+  team     String   @default("none")
+  isLeader Boolean  @default(false)
+  joinedAt DateTime @default(now())
+  lobby    Lobby    @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([lobbyId, userId])
 }
-
-// --- Tabelas do Bot (Existentes no Neon) ---
 
 model GuildConfig {
   id               String        @id
