@@ -193,7 +193,9 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         
         const isPremier = normSource.includes('premier') || 
                          normMode.includes('premier') || 
-                         metadata?.data_source?.toLowerCase().includes('premier');
+                         metadata?.data_source?.toLowerCase().includes('premier') ||
+                         metadata?.rank_type === 11 || // Leetify Premier type
+                         (normMode.includes('competitive') && !isNaN(parseInt(rank)) && parseInt(rank) > 500); // High numbers in competitive are Premier
 
         const isGC = normSource.includes('gamersclub') || 
                      normMode.includes('gamersclub') || 
@@ -236,6 +238,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
 
         // 3. Competitive Rank Logic (Mapping IDs 1-18)
         if (!isGC && !isPremier && rank) {
+            // First try ID based mapping
             const rankId = parseInt(rank);
             const ranks: Record<number, { name: string, icon: string }> = {
                 1: { name: 'Prata I', icon: '1' },
@@ -248,14 +251,14 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 8: { name: 'Ouro II', icon: '8' },
                 9: { name: 'Ouro III', icon: '9' },
                 10: { name: 'Ouro Mestre', icon: '10' },
-                11: { name: 'AK I', icon: '11' },
-                12: { name: 'AK II', icon: '12' },
-                13: { name: 'AK Cruzada', icon: '13' },
-                14: { name: 'Xerife', icon: '14' },
-                15: { name: 'Águia I', icon: '15' },
-                16: { name: 'Águia II', icon: '16' },
-                17: { name: 'Supremo', icon: '17' },
-                18: { name: 'Global Elite', icon: '18' }
+                11: { name: 'Mestre de Elite (AK I)', icon: '11' },
+                12: { name: 'Mestre de Elite II (AK II)', icon: '12' },
+                13: { name: 'Mestre de Elite Guardião (AK Cruzada)', icon: '13' },
+                14: { name: 'Distinguidos Estelares (Xerife)', icon: '14' },
+                15: { name: 'Águia Lendária I', icon: '15' },
+                16: { name: 'Águia Lendária Mestre', icon: '16' },
+                17: { name: 'Supremo Mestre de Primeira Classe', icon: '17' },
+                18: { name: 'Elite Global', icon: '18' }
             };
 
             if (ranks[rankId]) {
@@ -266,10 +269,20 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     isPremier: false
                 };
             }
+
+            // If not an ID, it might be the rank name itself
+            if (isNaN(rankId) && rank.length > 3 && rank !== 'unranked') {
+                return {
+                    label: rank,
+                    icon: null,
+                    color: 'text-zinc-400',
+                    isPremier: false
+                };
+            }
         }
 
         return {
-            label: (rank && rank !== 'unranked' && isNaN(parseInt(rank))) ? rank : 'Unranked',
+            label: (rank && rank !== 'unranked' && isNaN(parseInt(rank))) ? rank : 'Sub-Tenente',
             icon: null,
             color: 'text-zinc-600',
             isPremier: false

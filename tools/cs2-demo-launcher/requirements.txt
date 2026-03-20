@@ -1,0 +1,7 @@
+customtkinter
+psutil
+pyautogui
+pygetwindow
+pywin32
+demoparser2
+pandas
