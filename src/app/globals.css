@@ -11,27 +11,33 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   
-  /* Brand Color Overrides - Yellow/Gold Theme */
-  --color-primary: #fed13d;
-  --color-primary-hover: #ea7208;
+  /* Brand Color Overrides - Yellow/Gold Theme (#f6cb02) */
+  --color-primary: #f6cb02;
+  --color-primary-hover: #d4ae02;
   
-  --color-green-50: #fffbeb;
-  --color-green-100: #fef3c7;
-  --color-green-200: #fde68a;
-  --color-green-300: #fcd34d;
-  --color-green-400: #fbbf24;
-  --color-green-500: #fed13d;
-  --color-green-600: #d97706;
-  --color-green-700: #b45309;
+  --color-yellow-50: #fffef0;
+  --color-yellow-100: #fff9c4;
+  --color-yellow-200: #fff48a;
+  --color-yellow-300: #ffef4d;
+  --color-yellow-400: #fbe024;
+  --color-yellow-500: #f6cb02;
+  --color-yellow-600: #d4ae02;
+  --color-yellow-700: #b39302;
+  --color-yellow-800: #8c7302;
+  --color-yellow-900: #665402;
+
+  /* Restore real green for success states */
+  --color-green-500: #10b981;
+  --color-emerald-500: #10b981;
 }
 
 @layer utilities {
   .text-glow-yellow {
-    text-shadow: 0 0 10px rgba(254, 209, 61, 0.5);
+    text-shadow: 0 0 10px rgba(246, 203, 2, 0.5);
   }
 
   .shadow-glow-yellow {
-    box-shadow: 0 0 20px rgba(254, 209, 61, 0.2);
+    box-shadow: 0 0 20px rgba(246, 203, 2, 0.2);
   }
 }
 
@@ -50,7 +56,7 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #fed13d;
+  background: #f6cb02;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -395,12 +395,12 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             {/* Summary Stat Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
-                    { label: 'Win Rate', value: `${stats.wr}%`, icon: <Trophy className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-                    { label: 'Avg ADR', value: stats.adr, icon: <Zap className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-                    { label: 'K/D Ratio', value: stats.kd, icon: <TrendingUp className="text-amber-500" />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                    { label: 'Total Kills', value: stats.kills, icon: <Target className="text-red-500" />, color: 'text-red-500', bg: 'bg-red-500/10' },
-                    { label: 'Avg HS%', value: stats.hs !== '—' ? `${stats.hs}%` : '—', icon: <Activity className="text-rose-500" />, color: 'text-rose-500', bg: 'bg-rose-500/10' },
-                    { label: 'Avg Rating', value: stats.rating, icon: <Zap className="text-purple-500" />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                    { label: 'Taxa de Vitória', value: `${stats.wr}%`, icon: <Trophy className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                    { label: 'ADR Médio', value: stats.adr, icon: <Zap className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                    { label: 'Ratio K/D', value: stats.kd, icon: <TrendingUp className="text-amber-500" />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                    { label: 'Total de Abates', value: stats.kills, icon: <Target className="text-red-500" />, color: 'text-red-500', bg: 'bg-red-500/10' },
+                    { label: 'Média HS%', value: stats.hs !== '—' ? `${stats.hs}%` : '—', icon: <Activity className="text-rose-500" />, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+                    { label: 'Média Rating', value: stats.rating, icon: <Zap className="text-purple-500" />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
                 ].map((stat, i) => (
                     <motion.div
                         key={i}
@@ -543,13 +543,19 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                             {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' : 
                                                              match.mapName.replace('de_', '').replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                                                         </span>
-                                                        <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-500 text-[8px] font-black uppercase tracking-widest rounded border border-yellow-500/20">Win</span>
+                                                        <span className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-widest rounded border ${
+                                                            isWin ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                                                            isLoss ? 'bg-red-500/10 text-red-500 border-red-500/20' : 
+                                                            'bg-zinc-800/50 text-zinc-500 border-white/5'
+                                                        }`}>
+                                                            {isWin ? 'VITÓRIA' : isLoss ? 'DERROTA' : 'EMPATE'}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-4 py-6 text-center">
                                                 <div className={`inline-flex flex-col items-center px-6 py-2 rounded-2xl border transition-all ${
-                                                    isWin ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]' : 
+                                                    isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 
                                                     isLoss ? 'bg-red-500/10 border-red-500/20 text-red-500' : 
                                                     'bg-zinc-800/50 border-white/5 text-zinc-500'
                                                 }`}>
@@ -557,7 +563,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                         {match.score || '0-0'}
                                                     </span>
                                                     <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-60">
-                                                        {isWin ? 'Victory' : isLoss ? 'Defeat' : 'Draw'}
+                                                        {isWin ? 'Vitória' : isLoss ? 'Derrota' : 'Empate'}
                                                     </span>
                                                 </div>
                                             </td>
@@ -640,7 +646,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                     <span className={`font-black text-xl italic leading-none tracking-tighter ${match.kills > 0 ? 'text-white' : 'text-zinc-700'}`}>
                                                         {match.kills > 0 ? match.kills : '—'}
                                                     </span>
-                                                    <span className="text-[7px] font-black text-zinc-600 uppercase mt-1">Kills</span>
+                                                    <span className="text-[7px] font-black text-zinc-600 uppercase mt-1">Abates</span>
                                                 </div>
                                             </td>
                                             <td className="px-2 py-6 text-center">
@@ -648,7 +654,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                     <span className={`font-black text-xl italic leading-none tracking-tighter ${match.deaths > 0 ? 'text-zinc-500' : 'text-zinc-700'}`}>
                                                         {match.deaths > 0 ? match.deaths : '—'}
                                                     </span>
-                                                    <span className="text-[7px] font-black text-zinc-700 uppercase mt-1">Deaths</span>
+                                                    <span className="text-[7px] font-black text-zinc-700 uppercase mt-1">Mortes</span>
                                                 </div>
                                             </td>
                                             <td className="px-2 py-6 text-center">

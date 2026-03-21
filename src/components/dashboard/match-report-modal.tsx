@@ -534,7 +534,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                     {/* Main Result */}
                                     <div className="flex flex-col items-center">
                                         <div className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-3 border ${
-                                            isWin ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
+                                            isWin ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
                                         }`}>
                                             {isWin ? 'VITÓRIA' : 'DERROTA'}
                                         </div>
