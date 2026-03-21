@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search, Trophy, Zap, Shield, BarChart3, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function CSBrasilHome() {
+export default function TropaCSHome() {
   const [steamId, setSteamId] = useState('');
   const router = useRouter();
 
@@ -36,7 +36,7 @@ export default function CSBrasilHome() {
                 <span className="text-green-500">JOGO</span>
               </h1>
               <p className="mt-6 text-zinc-500 font-bold uppercase tracking-[0.3em] text-xs md:text-sm">
-                Deep Analytics & Performance Insights para o CS2 Brasileiro
+                Deep Analytics & Performance Insights para a Tropa do CS2 Brasileiro
               </p>
             </motion.div>
 
@@ -101,7 +101,7 @@ export default function CSBrasilHome() {
           <Zap size={32} />
           <Trophy size={32} />
         </div>
-        <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.5em]">CSBRASIL © 2026 • TODOS OS DIREITOS RESERVADOS</p>
+        <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.5em]">TropaCS © 2026 • TODOS OS DIREITOS RESERVADOS</p>
       </footer>
     </div>
   );

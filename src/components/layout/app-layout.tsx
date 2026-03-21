@@ -47,11 +47,11 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 className="relative flex flex-col border-r border-white/5 bg-zinc-900/40 backdrop-blur-xl p-4 z-50 transition-all"
             >
                 {/* Logo */}
-                <div className="flex items-center gap-3 px-2 mb-10 overflow-hidden">
-                    <div className={`${collapsed ? 'w-8 h-8' : 'w-40 h-12'} rounded-lg flex items-center justify-center flex-shrink-0 transition-all`}>
+                <div className="flex items-center justify-center mb-6 overflow-hidden">
+                    <div className={`${collapsed ? 'w-8 h-8' : 'w-full h-32'} flex items-center justify-center flex-shrink-0 transition-all px-0`}>
                         <img
-                            src="/img/logo.png"
-                            alt="CSBrasil Logo"
+                            src="/img/logotipo-tropacs-retangular-pequeno.png"
+                            alt="TropaCS Logo"
                             className="w-full h-full object-contain"
                         />
                     </div>

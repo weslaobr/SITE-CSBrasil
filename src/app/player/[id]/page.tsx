@@ -4,9 +4,9 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
-import OverviewCard from "@/components/csbrasil/overview-card";
-import AttributesRadarChart from "@/components/csbrasil/radar-chart";
-import MatchHistory from "@/components/csbrasil/match-history";
+import OverviewCard from "@/components/tropacs/overview-card";
+import AttributesRadarChart from "@/components/tropacs/radar-chart";
+import MatchHistory from "@/components/tropacs/match-history";
 import InventoryDashboard from "@/components/dashboard/inventory-dashboard";
 import MatchReportModal from '@/components/dashboard/match-report-modal';
 import { Package, ShieldCheck, Trophy, Target, Zap } from 'lucide-react';
@@ -107,7 +107,7 @@ export default function PlayerProfilePage() {
 
                             <div className="mt-8 space-y-4">
                                 <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-relaxed">
-                                    Baseado em mais de 100 partidas processadas pelo motor de IA do CSBRASIL.
+                                    Baseado em mais de 100 partidas processadas pelo motor de IA da TropaCS.
                                 </p>
                             </div>
                         </div>
@@ -174,7 +174,7 @@ export default function PlayerProfilePage() {
             </main>
 
             <footer className="p-20 text-center border-t border-white/5 bg-zinc-900/10">
-                <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.5em]">CSBRASIL 2026 • Powered by Leetify & Steam</p>
+                <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.5em]">TropaCS 2026 • Powered by Leetify & Steam</p>
             </footer>
             <MatchReportModal
                 match={null}

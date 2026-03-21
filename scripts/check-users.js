@@ -2,18 +2,17 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
+  try {
     const users = await prisma.user.findMany({
-        select: {
-            id: true,
-            name: true,
-            steamId: true,
-            steamMatchAuthCode: true,
-            faceitNickname: true
-        }
+      take: 10
     });
-    console.log(JSON.stringify(users, null, 2));
+    console.log("Users in DB:");
+    console.dir(users, { depth: null });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-main()
-    .catch(e => console.error(e))
-    .finally(async () => await prisma.$disconnect());
+main();

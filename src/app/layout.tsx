@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CSBRASIL | Pro Analytics",
-  description: "Performance Insights & Analytics para o CS2 Brasileiro",
+  title: "TropaCS | Pro Analytics",
+  description: "Performance Insights & Analytics para a Tropa do CS2 Brasileiro",
 };
 
 export default function RootLayout({

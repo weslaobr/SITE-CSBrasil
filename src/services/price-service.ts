@@ -2,7 +2,7 @@ import axios from 'axios';
 import { prisma } from '@/lib/prisma';
 
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 dias em ms
-const USD_BRL_RATE = 6.15; // Taxa de conversão USD -> BRL
+const USD_BRL_RATE = Number(process.env.USD_BRL_RATE) || 6.15; // Taxa de conversão USD -> BRL
 
 /**
  * Busca preços em massa da market.csgo.com (fonte pública confiável).

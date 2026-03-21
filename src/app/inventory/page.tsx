@@ -54,7 +54,21 @@ export default function InventoryPage() {
 
     const fetchMissingPrices = async (loadedItems: any[]) => {
         pricingAbortRef.current = false;
-        const itemsWithoutPrice = loadedItems.filter(i => !i.price && i.name_en);
+        
+        // Carregar cache de falhas (Negative Caching)
+        const failedAttemptsRaw = localStorage.getItem('csbrasil_failed_prices') || '{}';
+        const failedAttempts = JSON.parse(failedAttemptsRaw);
+        const now = Date.now();
+        const FAIL_TTL = 6 * 60 * 60 * 1000; // 6 horas
+
+        const itemsWithoutPrice = loadedItems.filter(i => {
+            if (i.price || !i.name_en) return false;
+            // Se falhou recentemente, ignorar nesta sessão
+            const lastAttempt = failedAttempts[i.name_en];
+            if (lastAttempt && (now - lastAttempt < FAIL_TTL)) return false;
+            return true;
+        });
+
         if (itemsWithoutPrice.length === 0) return;
 
         // Deduplica por name_en
@@ -90,8 +104,16 @@ export default function InventoryPage() {
                         localStorage.setItem('csbrasil_inventory_cache', JSON.stringify(updated));
                         return updated;
                     });
+                } else {
+                    // Marcar como falha no cache para não tentar novamente tão cedo
+                    failedAttempts[item.name_en] = Date.now();
+                    localStorage.setItem('csbrasil_failed_prices', JSON.stringify(failedAttempts));
                 }
-            } catch (e) { /* silencioso */ }
+            } catch (e) {
+                // Erro de rede/servidor - marcar como falha temporária
+                failedAttempts[item.name_en] = Date.now();
+                localStorage.setItem('csbrasil_failed_prices', JSON.stringify(failedAttempts));
+            }
 
             setPricingProgress({ current: i + 1, total: uniqueItems.length });
 
