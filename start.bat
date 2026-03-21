@@ -7,6 +7,15 @@ echo Starting SITE-CSBrasil Local Development
 echo ==========================================
 
 echo.
+if not exist ".env" (
+    echo [ERROR] Arquivo .env nao encontrado! 
+    echo Para o login da Steam e banco de dados funcionarem, voce precisa do .env.
+    echo Crie um baseado no .env.example ou recupere o backup.
+    echo.
+    pause
+    exit /b 1
+)
+
 echo [0/3] Cleaning up lingering processes...
 :: Find process on port 3000 and kill it
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000 ^| findstr LISTENING') do (
@@ -22,7 +31,7 @@ if exist ".next\dev\lock" (
 
 echo.
 echo [1/4] Generating Prisma Client...
-call npx prisma generate
+call npx.cmd prisma generate
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [WARNING] Prisma generation failed. This might be due to file locking.
@@ -31,7 +40,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo.
 echo [2/4] Updating skin prices from market.csgo.com...
-call npx tsx scripts/update-prices.ts
+call npx.cmd tsx scripts/update-prices.ts
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [WARNING] Price update failed. Existing cached prices will be used.
@@ -40,6 +49,7 @@ if %ERRORLEVEL% NEQ 0 (
 echo.
 echo [3/4] Starting Next.js Development Server...
 echo The site will be available at http://localhost:3000
+echo IMPORTANTE: Verifique se NEXTAUTH_URL no .env esta como http://localhost:3000
 echo.
 call npm run dev
 

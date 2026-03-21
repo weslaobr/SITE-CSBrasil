@@ -24,7 +24,7 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
             {
                 ...(() => {
                     const url = req ? new URL(req.url) : null;
-                    const protocol = (url?.protocol === 'http:' && !url.hostname.includes('localhost')) ? 'https:' : (url?.protocol || 'https:');
+                    const protocol = (url?.protocol === 'http:' && (url.hostname.includes('localhost') || url.hostname === '127.0.0.1')) ? 'http:' : (url?.protocol || 'https:');
                     const origin = url ? `${protocol}//${url.host}` : process.env.NEXTAUTH_URL;
                     
                     return SteamProvider(req!, {
