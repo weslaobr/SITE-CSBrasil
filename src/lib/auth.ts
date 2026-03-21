@@ -56,9 +56,38 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
             async signIn({ user, account, profile }) {
                 if (account?.provider === "steam") {
                     // Garante que o steamId do perfil da Steam seja salvo no model User
-                    (user as any).steamId = account.providerAccountId;
+                    const steamId = account.providerAccountId;
+                    (user as any).steamId = steamId;
+                    
+                    // Se o usuário já existe no banco (login recorrente), garantimos que o steamId está lá
+                    // Se for novo, o PrismaAdapter criará, mas o steamId pode não ser salvo automaticamente 
+                    // se o adapter não estiver configurado para campos customizados.
+                    // Esta atualização manual garante a consistência.
+                    if (user.id) {
+                        try {
+                            await prisma.user.update({
+                                where: { id: user.id },
+                                data: { steamId: steamId }
+                            });
+                        } catch (e) {
+                            console.error("Error updating steamId on signin:", e);
+                        }
+                    }
                 }
                 return true;
+            },
+        },
+        events: {
+            async createUser({ user }) {
+                // Quando um novo usuário é criado via Steam, o profile() retorna steamId, 
+                // mas o PrismaAdapter padrão pode não salvá-lo.
+                // Aqui garantimos que ele seja salvo se estiver presente no objeto user
+                if ((user as any).steamId && user.id) {
+                    await prisma.user.update({
+                        where: { id: user.id },
+                        data: { steamId: (user as any).steamId }
+                    }).catch(e => console.error("Error setting steamId on user creation:", e));
+                }
             },
         },
         secret: process.env.NEXTAUTH_SECRET,
