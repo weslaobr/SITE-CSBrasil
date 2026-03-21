@@ -47,10 +47,10 @@ const GlobalRanking: React.FC = () => {
                 {/* Header Table */}
                 <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-6">
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <Trophy className="text-yellow-500 w-8 h-8" />
-                            <h1 className="text-4xl font-black tracking-tighter">RANKING GLOBAL</h1>
-                        </div>
+                        <h1 className="text-5xl font-black italic tracking-tighter flex items-center gap-4">
+                        <Trophy className="text-yellow-500 w-12 h-12" />
+                        RANKING GLOBAL
+                    </h1>
                         <p className="text-zinc-500">Os jogadores de maior elite da Tropa do CS2.</p>
                     </div>
 
@@ -99,10 +99,10 @@ const GlobalRanking: React.FC = () => {
                         <thead>
                             <tr className="border-b border-white/5 text-[10px] uppercase font-bold text-zinc-500 tracking-widest">
                                 <th className="px-6 py-4"># Pos</th>
-                                <th className="px-6 py-4">Player</th>
-                                <th className="px-6 py-4">Skill Rating</th>
-                                <th className="px-6 py-4">Win Rate</th>
-                                <th className="px-6 py-4">ADR</th>
+                                    <th className="px-6 py-4">Jogador</th>
+                                    <th className="px-6 py-4">Status</th>
+                                    <th className="px-6 py-4">Win Rate</th>
+                                    <th className="px-6 py-4">ADR</th>
                                 <th className="px-6 py-4">Trend</th>
                             </tr>
                         </thead>

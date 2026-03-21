@@ -149,12 +149,15 @@ export default function PlayerProfilePage() {
                             <p className="text-3xl font-black italic text-yellow-500">{steamStats?.total_wins || profile.wins || 0}</p>
                         </div>
                         <div className="bg-white/5 p-6 rounded-3xl border border-white/5 hover:bg-white/10 transition-colors">
-                            <p className="text-[10px] text-zinc-500 uppercase font-bold mb-2">HS %</p>
+                            <p className="text-[10px] text-zinc-500 uppercase font-bold mb-2">Porcentagem de HS</p>
                             <p className="text-3xl font-black italic text-yellow-500">{steamStats?.hs_percentage || 0}%</p>
                         </div>
                         <div className="bg-white/5 p-6 rounded-3xl border border-white/5 hover:bg-white/10 transition-colors">
-                            <p className="text-[10px] text-zinc-500 uppercase font-bold mb-2">Time Played</p>
-                            <p className="text-3xl font-black italic text-yellow-500">{Math.round((steamStats?.total_time_played || 0) / 3600)}h</p>
+                            <p className="text-[10px] text-zinc-500 uppercase font-bold mb-2">Tempo de Jogo</p>
+                            <p className="text-3xl font-black italic text-white flex items-baseline gap-1">
+                                {steamStats?.time_played ? Math.floor(steamStats.time_played / 3600) : profile.hours || 0}
+                                <span className="text-xs uppercase font-black text-zinc-600">HR</span>
+                            </p>
                         </div>
                     </div>
                 </motion.div>

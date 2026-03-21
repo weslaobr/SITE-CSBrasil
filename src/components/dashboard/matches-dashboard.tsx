@@ -362,7 +362,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     <Trophy className="text-yellow-500 w-7 h-7" />
                                 </div>
                                 <div>
-                                    <h4 className="text-lg font-black italic uppercase tracking-tight">Vincular Plataformas</h4>
+                                    <h3 className="font-black italic text-xl uppercase tracking-tighter">PARTIDAS RECENTES</h3>
                                     <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Adicione seus perfis para carregar estatísticas avançadas.</p>
                                 </div>
                             </div>
@@ -480,18 +480,18 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="text-[10px] uppercase font-black text-zinc-500 tracking-[0.2em] border-b border-white/10 bg-white/[0.02]">
-                                    <th className="px-8 py-5">Map</th>
-                                    <th className="px-4 py-5 text-center">Score</th>
-                                    <th className="px-4 py-5 text-center">Rank</th>
-                                    <th className="px-4 py-5 text-center">Type</th>
-                                    <th className="px-1 py-5 text-center">Code</th>
+                                    <th className="px-8 py-5">Mapa</th>
+                                    <th className="px-4 py-5 text-center">Placar</th>
+                                    <th className="px-4 py-5 text-center">Patente</th>
+                                    <th className="px-4 py-5 text-center">Tipo</th>
+                                    <th className="px-1 py-5 text-center">Código</th>
                                     <th className="px-2 py-5 text-center">K</th>
                                     <th className="px-2 py-5 text-center">D</th>
                                     <th className="px-2 py-5 text-center">A</th>
                                     <th className="px-4 py-5 text-center">ADR</th>
                                     <th className="px-4 py-5 text-center">HS%</th>
                                     <th className="px-4 py-5 text-center">Rating</th>
-                                    <th className="px-8 py-5 text-right">Time</th>
+                                    <th className="px-8 py-5 text-right">Data</th>
                                 </tr>
                             </thead>
                             <tbody className="">
@@ -543,7 +543,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                             {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' : 
                                                              match.mapName.replace('de_', '').replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                                                         </span>
-                                                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">{match.duration || 'MR12'} Match</span>
+                                                        <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-500 text-[8px] font-black uppercase tracking-widest rounded border border-yellow-500/20">Win</span>
                                                     </div>
                                                 </div>
                                             </td>

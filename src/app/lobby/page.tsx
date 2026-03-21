@@ -51,14 +51,13 @@ export default function LobbyDashboard() {
         <div className="p-8 max-w-6xl mx-auto space-y-10">
             <header className="flex justify-between items-end">
                 <div>
-                    <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white">MIX 5X5 LOBBY</h1>
+                    <h1 className="text-4xl font-black italic italic uppercase tracking-tighter">Lobbies de Mix 5x5</h1>
                     <p className="text-zinc-500 font-bold uppercase text-xs tracking-widest mt-2">Forme seu time e escolha seus adversários</p>
                 </div>
                 <button
                     onClick={() => setShowCreate(true)}
-                    className="bg-yellow-500 hover:bg-yellow-400 text-black px-6 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-yellow-500/20"
+                    className="px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase italic italic tracking-widest text-[10px] rounded-xl transition-all active:scale-95 shadow-lg shadow-yellow-500/20"
                 >
-                    <Plus size={18} />
                     Criar Sala
                 </button>
             </header>

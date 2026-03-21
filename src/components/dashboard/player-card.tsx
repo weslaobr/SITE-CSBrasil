@@ -54,7 +54,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
             {/* Main Stats: Ranking & Rating */}
             <div className="relative grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                    <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Skill Rating</p>
+                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500">Métricas de Skill</span>
                     <div className="flex items-center space-x-2">
                         <Trophy className="w-4 h-4 text-yellow-400" />
                         <span className="text-lg font-black text-white">
@@ -63,7 +63,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
                     </div>
                 </div>
                 <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                    <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Rank</p>
+                    <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500">Win Rate</span>
                     <div className="flex items-center space-x-2">
                         <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
                             {player.rank}

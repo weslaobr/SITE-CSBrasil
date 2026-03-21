@@ -36,7 +36,7 @@ export default function TropaCSHome() {
                 <span className="text-yellow-500">JOGO</span>
               </h1>
               <p className="mt-6 text-zinc-500 font-bold uppercase tracking-[0.3em] text-xs md:text-sm">
-                Deep Analytics & Performance Insights para a Tropa do CS2 Brasileiro
+                Análise Profunda & Insights de Performance para a Tropa do CS2 Brasileiro
               </p>
             </motion.div>
 
@@ -66,12 +66,12 @@ export default function TropaCSHome() {
             <div className="flex flex-wrap justify-center gap-12 pt-12">
               <div className="text-center">
                 <p className="text-3xl font-black italic text-white leading-none">V3</p>
-                <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest mt-2">API PUBLIC</p>
+                <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest mt-2">API PÚBLICA</p>
               </div>
               <div className="w-[1px] h-10 bg-white/10" />
               <div className="text-center">
                 <p className="text-3xl font-black italic text-white leading-none">1.2ms</p>
-                <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest mt-2">LATENCY</p>
+                <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest mt-2">LATÊNCIA</p>
               </div>
             </div>
           </div>
@@ -81,8 +81,8 @@ export default function TropaCSHome() {
         <section className="max-w-7xl mx-auto px-8 py-20 grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
             { icon: <Shield size={24} />, title: "IA ANTI-CHEAT", desc: "Algoritmos avançados que validam a integridade de cada pick e estatística." },
-            { icon: <BarChart3 size={24} />, title: "PROFESSIONAL RADAR", desc: "Compare seu estilo de jogo com os maiores IGLs e Entry Fraggers do país." },
-            { icon: <Users size={24} />, title: "SCOUTING TOOL", desc: "A ferramenta definitiva para times amadores encontrarem talentos ocultos." }
+            { icon: <BarChart3 size={24} />, title: "RADAR PROFISSIONAL", desc: "Compare seu estilo de jogo com os maiores IGLs e Entry Fraggers do país." },
+            { icon: <Users size={24} />, title: "FERRAMENTA DE SCOUTING", desc: "A ferramenta definitiva para times amadores encontrarem talentos ocultos." }
           ].map((f, i) => (
             <div key={i} className="bg-zinc-900/40 border border-white/5 p-10 rounded-[40px] hover:bg-zinc-900/60 transition-colors group">
               <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-yellow-500 mb-6 group-hover:scale-110 transition-transform">

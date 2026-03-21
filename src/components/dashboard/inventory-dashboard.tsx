@@ -188,7 +188,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                         {language === 'pt' ? 'SEU INVENTÁRIO' : 'YOUR INVENTORY'}
                     </h1>
                     <p className="text-zinc-500 text-sm font-semibold mt-1 ml-12">
-                        {filteredItems.length} {language === 'pt' ? 'de' : 'of'} <span className="text-zinc-300">{localItems.length}</span> {language === 'pt' ? 'itens' : 'items'}
+                        Rastreamento de Preços em Tempo Real & Gerenciamento de Assets
                     </p>
                 </div>
 

@@ -19,8 +19,8 @@ export default function TropaCSHeader() {
 
                 <nav className="hidden md:flex items-center gap-10 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
                     <Link href="/" className="hover:text-yellow-500 transition-colors">Dashboard</Link>
-                    <Link href="#" className="hover:text-yellow-500 transition-colors">Pro Players</Link>
-                    <Link href="#" className="hover:text-yellow-500 transition-colors">Global Leaderboard</Link>
+                    <Link href="#" className="hover:text-yellow-500 transition-colors">Jogadores Pro</Link>
+                    <Link href="/ranking" className="hover:text-yellow-500 transition-colors">Ranking Global</Link>
                 </nav>
             </div >
 

@@ -15,77 +15,23 @@ import {
     RefreshCw,
     LogOut
 } from "lucide-react";
+import SyncCenter from "@/components/dashboard/sync-center";
 
 export default function SettingsPage() {
-    const { data: session } = useSession();
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [success, setSuccess] = useState(false);
-
-    const [formData, setFormData] = useState({
-        faceitNickname: "",
-        steamMatchAuthCode: "",
-        steamLatestMatchCode: "",
-    });
-
+    const { data: session, status } = useSession();
     const [uiPrefs, setUiPrefs] = useState({
         showStats: true,
         compactMode: false,
         notifications: true,
     });
 
-    useEffect(() => {
-        if (session) {
-            setLoading(true);
-            fetch('/api/user')
-                .then(res => res.json())
-                .then(data => {
-                    if (data && !data.error) {
-                        setFormData({
-                            faceitNickname: data.faceitNickname || "",
-                            steamMatchAuthCode: data.steamMatchAuthCode || "",
-                            steamLatestMatchCode: data.steamLatestMatchCode || "",
-                        });
-                    }
-                })
-                .catch(err => console.error("Error fetching user data:", err))
-                .finally(() => setLoading(false));
-        }
-    }, [session]);
-
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setSaving(true);
-        setSuccess(false);
-
-        try {
-            // Save to /api/user/sync which handles all 3 fields including steamLatestMatchCode
-            const res = await fetch('/api/user/sync', {
-                method: "POST",
-                body: JSON.stringify(formData),
-                headers: { "Content-Type": "application/json" }
-            });
-
-            if (res.ok) {
-                setSuccess(true);
-                setTimeout(() => setSuccess(false), 3000);
-            } else {
-                alert("Erro ao salvar configurações. Verifique os dados e tente novamente.");
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    if (loading && session) return <div className="p-20 text-center text-zinc-500 animate-pulse font-black uppercase tracking-widest">Carregando configurações...</div>;
-    if (!session) return <div className="p-20 text-center text-zinc-500 uppercase font-black tracking-widest">Acesso restrito</div>;
-
     const containerVariants = {
         hidden: { opacity: 0, y: 20 },
         visible: { opacity: 1, y: 0, transition: { staggerChildren: 0.1 } }
     };
+
+    if (status === "loading") return <div className="p-20 text-center text-zinc-500 animate-pulse font-black uppercase tracking-widest">Carregando...</div>;
+    if (!session) return <div className="p-20 text-center text-zinc-500 uppercase font-black tracking-widest">Acesso restrito</div>;
 
     return (
         <div className="p-8 max-w-4xl mx-auto space-y-12 pb-20">
@@ -96,19 +42,6 @@ export default function SettingsPage() {
                     </h1>
                     <p className="text-zinc-500 text-xs font-bold uppercase mt-1 tracking-widest px-1">Gerencie seu perfil e integrações</p>
                 </div>
-
-                <AnimatePresence>
-                    {success && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            className="bg-yellow-500/10 text-yellow-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 border border-yellow-500/20 shadow-[0_0_20px_rgba(254,209,61,0.1)]"
-                        >
-                            <CheckCircle2 size={14} /> Salvo com Sucesso
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </header>
 
             <motion.div
@@ -117,100 +50,9 @@ export default function SettingsPage() {
                 animate="visible"
                 className="grid grid-cols-1 md:grid-cols-12 gap-8"
             >
-                {/* Integrações */}
+                {/* Integrações e Sincronização Unificada */}
                 <div className="md:col-span-12">
-                    <section className="bg-zinc-900/40 border border-white/5 rounded-[40px] p-8 backdrop-blur-xl">
-                        <h2 className="text-xl font-black italic uppercase tracking-tighter mb-8 flex items-center gap-3">
-                            <Share2 size={20} className="text-yellow-500" /> Integrações e Sincronização
-                        </h2>
-
-                        <form onSubmit={handleSave} className="space-y-8">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-zinc-500 px-2 tracking-widest">Faceit Nickname</label>
-                                    <div className="relative group">
-                                        <input
-                                            type="text"
-                                            value={formData.faceitNickname}
-                                            onChange={(e) => setFormData({ ...formData, faceitNickname: e.target.value })}
-                                            placeholder="Ex: weslao_skin"
-                                            className="w-full bg-white/5 border border-white/5 focus:border-yellow-500/50 outline-none rounded-2xl px-5 py-4 text-sm font-bold transition-all placeholder:text-zinc-700"
-                                        />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-800 group-focus-within:text-yellow-500/50 transition-colors">
-                                            <Activity size={18} />
-                                        </div>
-                                    </div>
-                                    <p className="text-[9px] text-zinc-600 px-2 leading-relaxed">Usado para buscar seu ELO e histórico do Faceit.</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-zinc-500 px-2 tracking-widest">Steam Match Auth Code</label>
-                                    <div className="relative group">
-                                        <input
-                                            type="text"
-                                            value={formData.steamMatchAuthCode}
-                                            onChange={(e) => setFormData({ ...formData, steamMatchAuthCode: e.target.value })}
-                                            placeholder="Ex: XXXX-XXXXX-XXXX"
-                                            className="w-full bg-white/5 border border-white/5 focus:border-yellow-500/50 outline-none rounded-2xl px-5 py-4 text-sm font-bold transition-all placeholder:text-zinc-700"
-                                        />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-800 group-focus-within:text-yellow-500/50 transition-colors">
-                                            <Shield size={18} />
-                                        </div>
-                                    </div>
-                                    <p className="text-[9px] text-zinc-600 px-2 leading-relaxed">
-                                        Necessário para carregar suas partidas oficiais da Valve.
-                                        <a
-                                            href="https://help.steampowered.com/en/wizard/HelpWithGameIssue/?appid=730&issueid=128"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-yellow-500 hover:underline ml-1"
-                                        >
-                                            Obter código na Steam
-                                        </a>
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Steam Latest Match Code - mandatory for sync chaining */}
-                            <div className="space-y-2 border border-yellow-500/10 bg-yellow-500/5 rounded-3xl p-6">
-                                <label className="text-[10px] font-black uppercase text-yellow-500/80 px-2 tracking-widest flex items-center gap-2">
-                                    <RefreshCw size={12} />
-                                    Código da Última Partida (Match Code)
-                                </label>
-                                <div className="relative group">
-                                    <input
-                                        type="text"
-                                        value={formData.steamLatestMatchCode}
-                                        onChange={(e) => setFormData({ ...formData, steamLatestMatchCode: e.target.value })}
-                                        placeholder="Ex: CSGO-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
-                                        className="w-full bg-black/30 border border-yellow-500/20 focus:border-yellow-500/60 outline-none rounded-2xl px-5 py-4 text-sm font-bold transition-all placeholder:text-zinc-700 font-mono"
-                                    />
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-yellow-700 group-focus-within:text-yellow-500 transition-colors">
-                                        <RefreshCw size={18} />
-                                    </div>
-                                </div>
-                                <div className="px-2 space-y-2">
-                                    <p className="text-[10px] text-yellow-500/60 font-bold leading-relaxed">
-                                        ⚠️ <strong>Campo obrigatório para sincronização Steam!</strong> A API da Valve funciona em cadeia — ela precisa do código de uma partida sua para encontrar as próximas.
-                                    </p>
-                                    <p className="text-[9px] text-zinc-600 leading-relaxed">
-                                        Para obter o código: abra o CS2 → vá em Configurações → Jogo → Role até <em>"Código de Compartilhamento de Partida"</em> → copie o código mais recente.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="pt-4 border-t border-white/5 flex justify-end">
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="bg-yellow-500 hover:bg-yellow-400 text-black px-10 py-4 rounded-[20px] font-black uppercase text-xs transition-all shadow-lg shadow-yellow-500/20 flex items-center gap-3 disabled:opacity-50 active:scale-95"
-                                >
-                                    {saving ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
-                                    Salvar Alterações
-                                </button>
-                            </div>
-                        </form>
-                    </section>
+                    <SyncCenter />
                 </div>
 
                 {/* Preferências */}
@@ -250,7 +92,7 @@ export default function SettingsPage() {
                             <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner">
                                 <User className="text-zinc-500" />
                             </div>
-                            <h3 className="text-lg font-black italic uppercase tracking-tighter mb-2">Sua Conta</h3>
+                            <h1 className="text-4xl font-black italic italic uppercase tracking-tighter mb-2">Configurações da Conta</h1>
                             <p className="text-xs text-zinc-500 font-bold leading-relaxed">Sua conta está vinculada permanentemente ao perfil Steam abaixo.</p>
                         </div>
 

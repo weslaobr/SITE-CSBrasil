@@ -75,7 +75,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     />
                     <SidebarItem
                         icon={<Wind size={20} />}
-                        label="Utilities"
+                        label="Utilidades"
                         active={pathname === '/tools'}
                         collapsed={collapsed}
                         href="/tools"
@@ -100,13 +100,6 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     />
                     {session && (
                         <>
-                            <SidebarItem
-                                icon={<RefreshCw size={20} />}
-                                label="Sincronização"
-                                collapsed={collapsed}
-                                active={pathname === '/sync'}
-                                href="/sync"
-                            />
                             <SidebarItem
                                 icon={<Package size={20} />}
                                 label="Meu Inventário"
@@ -143,7 +136,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 {/* Top Header/Bar */}
                 <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-zinc-900/20 sticky top-0 backdrop-blur-md z-40">
                     <div className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
-                        {pathname === '/' ? 'Dashboard' : pathname.split('/').pop()} Overview
+                        {pathname === '/' ? 'Dashboard' : pathname.split('/').pop()} Geral
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -151,7 +144,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                             <>
                                 <div className="text-right">
                                     <p className="text-xs font-bold text-white">{session.user?.name}</p>
-                                    <p className="text-[10px] text-yellow-500 font-bold uppercase">Player</p>
+                                    <p className="text-[10px] text-yellow-500 font-bold uppercase">Jogador</p>
                                 </div>
                                 <img
                                     src={session.user?.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=fallback"}

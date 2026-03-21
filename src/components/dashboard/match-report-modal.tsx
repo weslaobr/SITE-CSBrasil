@@ -348,13 +348,13 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
         const stats = [];
         
         // Aim Stats
-        if (user.hs) stats.push({ label: 'Headshot Accuracy', value: user.hs, color: 'bg-rose-500', tag: 'AIM', raw: parseInt(user.hs) });
+        if (user.hs) stats.push({ label: 'Precisão de Headshot', value: user.hs, color: 'bg-rose-500', tag: 'MIRA', raw: parseInt(user.hs) });
         stats.push({ label: 'ADR', value: user.adr.toFixed(1), color: 'bg-yellow-500', tag: 'IMPACT', raw: user.adr });
         
         // Multi-kills
         const [k2, k3, k4, k5] = (user.multikills || "0/0/0/0").split('/').map(Number);
-        if (k5 > 0) stats.push({ label: 'Ace Rounds', value: k5.toString(), color: 'bg-amber-500', tag: 'IMPACT', badge: 'LEGENDARY', raw: 100 });
-        else if (k4 > 0) stats.push({ label: '4K Rounds', value: k4.toString(), color: 'bg-rose-500', tag: 'IMPACT', raw: 80 });
+        if (k5 > 0) stats.push({ label: 'Rounds de Ace', value: k5.toString(), color: 'bg-amber-500', tag: 'IMPACTO', badge: 'LENDÁRIO', raw: 100 });
+        else if (k4 > 0) stats.push({ label: 'Rounds de 4K', value: k4.toString(), color: 'bg-rose-500', tag: 'IMPACTO', raw: 80 });
         
         // Utility
         if (user.util_damage > 0) stats.push({ label: 'Dano de Utilitário', value: user.util_damage.toString(), color: 'bg-yellow-500', tag: 'UTIL', raw: Math.min(100, (user.util_damage / 300) * 100) });
@@ -536,7 +536,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                         <div className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-3 border ${
                                             isWin ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
                                         }`}>
-                                            {isWin ? 'VICTORY' : 'DEFEAT'}
+                                            {isWin ? 'VITÓRIA' : 'DERROTA'}
                                         </div>
                                         <div className="flex items-center justify-center gap-6">
                                             <span className={`text-7xl font-black italic tracking-tighter drop-shadow-2xl ${isWin ? 'text-white' : 'text-zinc-400'}`}>
@@ -544,7 +544,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                             </span>
                                             <div className="flex flex-col items-center justify-center -mt-2">
                                                 <span className="text-4xl font-black text-zinc-700 italic">:</span>
-                                                <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Score</span>
+                                                <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Placar</span>
                                             </div>
                                             <span className={`text-7xl font-black italic tracking-tighter drop-shadow-2xl ${!isWin ? 'text-white' : 'text-zinc-400'}`}>
                                                 {enemiesScore}
@@ -684,11 +684,11 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                                             <div className="absolute -bottom-2 left-0 w-12 h-1 bg-yellow-500 rounded-full group-hover:w-24 transition-all duration-700 opacity-40 ml-1" />
                                                         </div>
                                                         
-                                                        <p className="text-zinc-500 text-[8px] font-black uppercase tracking-[0.2em] mt-6 flex items-center justify-center md:justify-start gap-2 opacity-40 group-hover:opacity-80 transition-opacity">
+                                                        <div className="text-zinc-500 text-[8px] font-black uppercase tracking-[0.2em] mt-6 flex items-center justify-center md:justify-start gap-2 opacity-40 group-hover:opacity-80 transition-opacity">
                                                             <div className="w-4 h-[1px] bg-zinc-800" />
-                                                            Full Analysis Data
+                                                            Análise Completa de Dados
                                                             <div className="w-4 h-[1px] bg-zinc-800" />
-                                                        </p>
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -743,7 +743,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                                 <div className="flex items-center justify-between mb-8 px-2">
                                                     <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500">Métricas Principais</h3>
                                                     <div className="flex items-center gap-2 text-[9px] font-black text-rose-500 uppercase tracking-widest">
-                                                        <Activity size={10} /> LIVE COMPARISON
+                                                        <Activity size={10} /> AO VIVO
                                                     </div>
                                                 </div>
 

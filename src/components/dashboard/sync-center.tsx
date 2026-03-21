@@ -183,7 +183,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                             <Shield className="text-white w-5 h-5" />
                         </div>
                         <div>
-                            <p className="font-bold text-sm">Steam Match History</p>
+                            <p className="font-bold text-sm">Histórico de Partidas Steam</p>
                             <div className="flex items-center gap-1.5 mt-0.5">
                                 <div className={`w-1.5 h-1.5 rounded-full ${botOnline ? 'bg-yellow-500 shadow-[0_0_8px_rgba(254,209,61,0.5)]' : 'bg-red-500'}`} />
                                 <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">

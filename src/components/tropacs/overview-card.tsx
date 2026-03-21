@@ -57,7 +57,7 @@ export default function OverviewCard({ player }: OverviewCardProps) {
                                     <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" /> Status: Ativo na TropaCS
                                 </p>
 
-                                {/* Platform Icons/Badges */}
+                                {/* Ícones/Emblemas da Plataforma */}
                                 <div className="flex items-center gap-2 ml-2">
                                     <span className="px-2 py-0.5 bg-white/5 border border-yellow-500/20 text-yellow-500 rounded text-[9px] font-black uppercase">
                                         GC {player.gamersClubLevel ? `LVL ${player.gamersClubLevel}` : 'N/A'}

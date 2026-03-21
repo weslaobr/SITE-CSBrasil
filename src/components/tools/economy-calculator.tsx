@@ -13,7 +13,7 @@ const EconomyCalculator: React.FC = () => {
         <div className="p-8 bg-zinc-950 text-white min-h-screen">
             <div className="max-w-4xl mx-auto">
                 <div className="mb-10">
-                    <h1 className="text-3xl font-black tracking-tighter mb-2 italic">CALCULADORA DE ECONOMIA</h1>
+                    <h2 className="text-2xl font-black italic tracking-tighter">CALCULADORA DE ECONOMIA</h2>
                     <p className="text-zinc-500">Planeje seu próximo round baseado no bônus de derrota e saldo atual.</p>
                 </div>
 
@@ -57,7 +57,7 @@ const EconomyCalculator: React.FC = () => {
                         </div>
 
                         <div>
-                            <p className="text-zinc-400 font-bold uppercase text-xs mb-2">Próximo Round</p>
+                            <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Resultado Possível</p>
                             <h2 className="text-5xl font-black text-white mb-2 tracking-tighter">
                                 ${nextRoundMoney.toLocaleString()}
                             </h2>
