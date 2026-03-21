@@ -1,10 +1,10 @@
 @echo off
+title TropaCS - Iniciar Website
+echo ========================================
+echo   INCIA SERVIDOR TropaCS
+echo ========================================
 setlocal
 cd /d %~dp0
-
-echo ==========================================
-echo Starting SITE-CSBrasil Local Development
-echo ==========================================
 
 echo.
 if not exist ".env" (

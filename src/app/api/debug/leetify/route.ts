@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getLeetifyPlayerData } from "@/services/leetify-csbrasil";
+import { getLeetifyPlayerData } from "@/services/leetify-tropacs";
 
 // Debug endpoint — remove in production
 export async function GET(req: NextRequest) {

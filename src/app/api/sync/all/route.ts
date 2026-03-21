@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getLeetifyPlayerData } from "@/services/leetify-csbrasil";
+import { getLeetifyPlayerData } from "@/services/leetify-tropacs";
 import axios from "axios";
 
 const LEETIFY_API_KEY = process.env.LEETIFY_API_KEY || '4549d73d-8a0d-40ff-9051-a3166c518dae';

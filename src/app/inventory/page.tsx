@@ -15,7 +15,7 @@ export default function InventoryPage() {
 
     useEffect(() => {
         // 1. Tentar carregar do cache local imediatamente
-        const cachedData = localStorage.getItem('csbrasil_inventory_cache');
+        const cachedData = localStorage.getItem('tropacs_inventory_cache');
         if (cachedData) {
             try {
                 const parsed = JSON.parse(cachedData);
@@ -36,7 +36,7 @@ export default function InventoryPage() {
                 .then(data => {
                     if (data.items) {
                         setItems(data.items);
-                        localStorage.setItem('csbrasil_inventory_cache', JSON.stringify(data.items));
+                        localStorage.setItem('tropacs_inventory_cache', JSON.stringify(data.items));
                         // Iniciar busca progressiva de preços para itens sem preço
                         fetchMissingPrices(data.items);
                     }
@@ -56,7 +56,7 @@ export default function InventoryPage() {
         pricingAbortRef.current = false;
         
         // Carregar cache de falhas (Negative Caching)
-        const failedAttemptsRaw = localStorage.getItem('csbrasil_failed_prices') || '{}';
+        const failedAttemptsRaw = localStorage.getItem('tropacs_failed_prices') || '{}';
         const failedAttempts = JSON.parse(failedAttemptsRaw);
         const now = Date.now();
         const FAIL_TTL = 6 * 60 * 60 * 1000; // 6 horas
@@ -101,18 +101,18 @@ export default function InventoryPage() {
                         const updated = prev.map(p =>
                             p.name_en === item.name_en ? { ...p, price: data.price } : p
                         );
-                        localStorage.setItem('csbrasil_inventory_cache', JSON.stringify(updated));
+                        localStorage.setItem('tropacs_inventory_cache', JSON.stringify(updated));
                         return updated;
                     });
                 } else {
                     // Marcar como falha no cache para não tentar novamente tão cedo
                     failedAttempts[item.name_en] = Date.now();
-                    localStorage.setItem('csbrasil_failed_prices', JSON.stringify(failedAttempts));
+                    localStorage.setItem('tropacs_failed_prices', JSON.stringify(failedAttempts));
                 }
             } catch (e) {
                 // Erro de rede/servidor - marcar como falha temporária
                 failedAttempts[item.name_en] = Date.now();
-                localStorage.setItem('csbrasil_failed_prices', JSON.stringify(failedAttempts));
+                localStorage.setItem('tropacs_failed_prices', JSON.stringify(failedAttempts));
             }
 
             setPricingProgress({ current: i + 1, total: uniqueItems.length });

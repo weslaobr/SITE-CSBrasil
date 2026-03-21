@@ -54,7 +54,7 @@ export default function OverviewCard({ player }: OverviewCardProps) {
                             </h1>
                             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
                                 <p className="text-zinc-500 font-bold uppercase text-[9px] tracking-widest flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Status: Ativo no CSBRASIL
+                                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Status: Ativo na TropaCS
                                 </p>
 
                                 {/* Platform Icons/Badges */}

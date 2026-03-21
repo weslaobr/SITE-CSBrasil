@@ -1,7 +1,7 @@
 import { updatePricesFromSkinport } from '../src/services/price-service';
 
 async function main() {
-    console.log("=== SITE-CSBrasil: Atualizador de Preços ===");
+    console.log("=== TropaCS: Atualizador de Preços ===");
     console.log("Objetivo: Buscar preços de referência na Skinport e salvar no Banco.");
     console.log("Isso resolve o problema de inventários sem valores.\n");
 

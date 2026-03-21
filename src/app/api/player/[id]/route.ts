@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPlayerProfile, getCS2Stats, getPlayerInventory } from "@/services/steam-service";
 import { prisma } from "@/lib/prisma";
-import { getLeetifyPlayerData } from "@/services/leetify-csbrasil";
+import { getLeetifyPlayerData } from "@/services/leetify-tropacs";
 
 export async function GET(
     req: NextRequest,
