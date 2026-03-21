@@ -2,6 +2,7 @@ import axios from 'axios';
 import { prisma } from '@/lib/prisma';
 
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 dias em ms
+const USD_BRL_RATE = 6.15; // Taxa de conversão USD -> BRL
 
 /**
  * Busca preços em massa da market.csgo.com (fonte pública confiável).
@@ -47,10 +48,12 @@ export const updatePricesFromMarketCSGO = async (force = false): Promise<{ succe
                 const price = parseFloat(item.price);
                 if (!item.market_hash_name || isNaN(price) || price <= 0) return Promise.resolve();
 
+                const priceUSD = parseFloat(item.price);
+
                 return prisma.itemPriceBase.upsert({
                     where: { marketHashName: item.market_hash_name },
-                    update: { price, lastUpdate: new Date(), source: 'market_csgo' },
-                    create: { marketHashName: item.market_hash_name, price, currency: 'USD', source: 'market_csgo' }
+                    update: { price: priceUSD, lastUpdate: new Date(), source: 'market_csgo' },
+                    create: { marketHashName: item.market_hash_name, price: priceUSD, currency: 'USD', source: 'market_csgo' }
                 });
             }));
             updatedCount += batch.length;
@@ -101,12 +104,15 @@ export const getItemPrice = async (marketHashName: string): Promise<number | nul
             const price = parseFloat(priceStr);
             
             if (!isNaN(price)) {
+                // Steam retornou BRL (currency=7). Converter para USD para o Banco.
+                const priceInUSD = parseFloat((price / USD_BRL_RATE).toFixed(2));
+                
                 await prisma.itemPriceBase.upsert({
                     where: { marketHashName },
-                    update: { price, lastUpdate: new Date(), source: 'steam_community' },
-                    create: { marketHashName, price, currency: 'BRL', source: 'steam_community' }
+                    update: { price: priceInUSD, lastUpdate: new Date(), source: 'steam_community' },
+                    create: { marketHashName, price: priceInUSD, currency: 'USD', source: 'steam_community' }
                 });
-                return price;
+                return priceInUSD;
             }
         }
         
@@ -135,7 +141,13 @@ export const getMultiplePrices = async (marketHashNames: string[]): Promise<Map<
         });
 
         for (const item of dbPrices) {
-            priceMap.set(item.marketHashName, item.price);
+            // O Banco agora é padronizado em USD.
+            // Se houver algum item antigo em BRL, converter para USD (opcional, mas seguro)
+            let finalPrice = item.price;
+            if (item.currency === 'BRL') {
+                finalPrice = parseFloat((item.price / USD_BRL_RATE).toFixed(2));
+            }
+            priceMap.set(item.marketHashName, finalPrice);
         }
     } catch (error) {
         console.error("[PriceService] Erro na busca em lote:", error);

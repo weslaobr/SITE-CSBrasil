@@ -42,13 +42,17 @@ export async function POST(req: NextRequest) {
         if (response.data?.success && response.data.lowest_price) {
             let priceStr: string = response.data.lowest_price;
             priceStr = priceStr.replace('R$', '').trim().replace(/\./g, '').replace(',', '.');
-            const price = parseFloat(priceStr);
+            const priceBRL = parseFloat(priceStr);
 
-            if (!isNaN(price) && price > 0) {
+            if (!isNaN(priceBRL) && priceBRL > 0) {
+                // Converter BRL para USD (Base do Banco)
+                const USD_BRL_RATE = 6.15;
+                const price = parseFloat((priceBRL / USD_BRL_RATE).toFixed(2));
+
                 await prisma.itemPriceBase.upsert({
                     where: { marketHashName },
                     update: { price, lastUpdate: new Date(), source: 'steam_community' },
-                    create: { marketHashName, price, currency: 'BRL', source: 'steam_community' }
+                    create: { marketHashName, price, currency: 'USD', source: 'steam_community' }
                 });
                 return NextResponse.json({ price, source: 'steam_community', cached: false });
             }
