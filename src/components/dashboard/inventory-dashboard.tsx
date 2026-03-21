@@ -184,7 +184,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                 {/* Título */}
                 <div className="flex-shrink-0">
                     <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
-                        <Box className="text-green-500 w-9 h-9 flex-shrink-0" />
+                        <Box className="text-yellow-500 w-9 h-9 flex-shrink-0" />
                         {language === 'pt' ? 'SEU INVENTÁRIO' : 'YOUR INVENTORY'}
                     </h1>
                     <p className="text-zinc-500 text-sm font-semibold mt-1 ml-12">
@@ -242,11 +242,11 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                             className="group flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-black/40 border border-white/5 hover:border-white/20 transition-all"
                         >
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-md transition-all ${
-                                currency === 'BRL' ? 'bg-green-500 text-black shadow-[0_0_10px_rgba(34,197,94,0.3)]' : 'bg-white/10 text-zinc-400 group-hover:text-white'
+                                currency === 'BRL' ? 'bg-yellow-500 text-black shadow-[0_0_10px_rgba(254,209,61,0.3)]' : 'bg-white/10 text-zinc-400 group-hover:text-white'
                             }`}>R$</span>
                             <RefreshCw className="w-3 h-3 text-zinc-600 group-hover:rotate-180 transition-transform duration-500" />
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-md transition-all ${
-                                currency === 'USD' ? 'bg-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.3)]' : 'bg-white/10 text-zinc-400 group-hover:text-white'
+                                currency === 'USD' ? 'bg-yellow-600 text-white shadow-[0_0_10px_rgba(234,179,8,0.3)]' : 'bg-white/10 text-zinc-400 group-hover:text-white'
                             }`}>USD</span>
                         </button>
 
@@ -255,7 +255,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                             <div className="hidden lg:flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-black/20 border border-white/5 font-mono">
                                 <span className="flex items-center gap-1.5">
                                     <span className="text-[9px] text-zinc-600 font-black uppercase tracking-tighter">Live</span>
-                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse shadow-[0_0_8px_#fed13d]" />
                                 </span>
                                 <div className="h-3 w-px bg-white/10" />
                                 <span className="text-[11px] text-zinc-400 font-bold">1 $ = R$ {exchangeRate.rate.toFixed(2)}</span>
@@ -320,7 +320,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                         onClick={() => setFilterType(cat.id)}
                         className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap flex-shrink-0 border ${
                             filterType === cat.id
-                                ? 'bg-green-500 text-black border-green-400 shadow-lg shadow-green-500/20 scale-105'
+                                ? 'bg-yellow-500 text-black border-yellow-400 shadow-lg shadow-yellow-500/20 scale-105'
                                 : 'bg-transparent text-zinc-500 border-transparent hover:text-white hover:bg-white/5'
                         }`}
                     >
@@ -333,8 +333,8 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {/* Valor Estimado */}
                 <div className="relative bg-zinc-900/50 border border-green-500/20 p-6 rounded-2xl overflow-hidden group backdrop-blur-md">
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-500/8 to-transparent pointer-events-none" />
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 blur-3xl rounded-full translate-x-8 -translate-y-8 group-hover:bg-green-500/10 transition-all duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/8 to-transparent pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 blur-3xl rounded-full translate-x-8 -translate-y-8 group-hover:bg-yellow-500/10 transition-all duration-700" />
                     <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
                         <ShoppingCart className="w-3.5 h-3.5" />
                         {language === 'pt' ? 'Valor Estimado' : 'Estimated Value'}
@@ -364,7 +364,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
 
                 {/* Resultados */}
                 <div className="relative bg-zinc-900/50 border border-white/5 p-6 rounded-2xl overflow-hidden backdrop-blur-md">
-                    <div className="absolute top-0 right-0 w-28 h-28 bg-blue-500/5 blur-3xl rounded-full translate-x-8 -translate-y-8" />
+                    <div className="absolute top-0 right-0 w-28 h-28 bg-yellow-500/5 blur-3xl rounded-full translate-x-8 -translate-y-8" />
                     <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3">
                         {language === 'pt' ? 'Resultados' : 'Results'}
                     </p>
@@ -375,7 +375,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                     <p className="text-sm text-zinc-600 mt-3 border-t border-white/5 pt-3">
                         {language === 'pt' ? `de ${localItems.length} total` : `of ${localItems.length} total`}
                         {filterRarity !== 'all' && (
-                            <span className="ml-2 text-xs">· <button onClick={() => setFilterRarity('all')} className="text-green-400 hover:underline">
+                            <span className="ml-2 text-xs">· <button onClick={() => setFilterRarity('all')} className="text-yellow-400 hover:underline">
                                 {language === 'pt' ? 'limpar' : 'clear'}
                             </button></span>
                         )}
@@ -417,7 +417,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                     {item.inspect_url && (
                                         <a
                                             href={item.inspect_url}
-                                            className="p-2.5 bg-black/90 hover:bg-green-600 text-white rounded-xl border border-white/10 hover:border-green-400/50 shadow-xl transition-all hover:scale-110 active:scale-95"
+                                            className="p-2.5 bg-black/90 hover:bg-yellow-600 text-white rounded-xl border border-white/10 hover:border-yellow-400/50 shadow-xl transition-all hover:scale-110 active:scale-95"
                                             title={language === 'pt' ? "Inspecionar no Jogo" : "Inspect in Game"}
                                         >
                                             <Eye className="w-4 h-4" />
@@ -428,7 +428,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                             href={item.market_url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="p-2.5 bg-black/90 hover:bg-blue-600 text-white rounded-xl border border-white/10 hover:border-blue-400/50 shadow-xl transition-all hover:scale-110 active:scale-95"
+                                            className="p-2.5 bg-black/90 hover:bg-yellow-600 text-white rounded-xl border border-white/10 hover:border-yellow-400/50 shadow-xl transition-all hover:scale-110 active:scale-95"
                                             title={language === 'pt' ? "Ver no Mercado Steam" : "View on Steam Market"}
                                         >
                                             <ShoppingCart className="w-4 h-4" />
@@ -438,7 +438,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                         onClick={() => setShowRoiAssetId(showRoiAssetId === item.assetid ? null : item.assetid)}
                                         className={`p-2.5 rounded-xl border shadow-xl transition-all hover:scale-110 active:scale-95 ${
                                             item.paidPrice
-                                                ? 'bg-green-600/20 text-green-400 border-green-500/30 hover:bg-green-600/40'
+                                                ? 'bg-yellow-600/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-600/40'
                                                 : 'bg-black/90 text-white border-white/10 hover:bg-yellow-600'
                                         }`}
                                         title={language === 'pt' ? "Gerenciar Preço Pago" : "Manage Purchase Price"}
@@ -459,7 +459,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                         </p>
                                         {item.price ? (
                                             <span
-                                                className="text-[10px] font-black text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20 cursor-default whitespace-nowrap"
+                                                className="text-[10px] font-black text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20 cursor-default whitespace-nowrap"
                                                 title={`USD $${item.price.toFixed(2)}${exchangeRate ? ` · R$ ${(item.price * exchangeRate.rate).toFixed(2)}` : ''}`}
                                             >
                                                 {formatCurrency(item.price)}
@@ -469,7 +469,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                         )}
                                     </div>
                                     <div className="pt-2 border-t border-white/5">
-                                        <h3 className="text-xs font-black text-white leading-tight line-clamp-2 min-h-[2.4em] group-hover:text-green-400 transition-colors">
+                                        <h3 className="text-xs font-black text-white leading-tight line-clamp-2 min-h-[2.4em] group-hover:text-yellow-400 transition-colors">
                                             {language === 'pt' ? (item.name_pt || item.name) : (item.name_en || item.name)}
                                         </h3>
                                         <div className="flex justify-between gap-1 items-center mt-1.5">
@@ -495,8 +495,8 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                                              <span className="text-xs text-zinc-400 font-bold uppercase flex items-center gap-1.5">
                                                                  {language === 'pt' ? 'Preço Pago' : 'Paid Price'}
                                                                  <span className={`text-[9px] px-1 py-0.5 rounded font-black ${
-                                                                     currency === 'BRL' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
-                                                                 }`}>{currency}</span>
+                                       currency === 'BRL' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-yellow-500/20 text-yellow-500'
+                                   }`}>{currency}</span>
                                                              </span>
                                                             <div className="flex items-center gap-1 bg-zinc-800/50 border border-white/5 rounded px-2 py-1">
                                                                 <input
@@ -521,7 +521,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                                                         const input = document.getElementById(`price-input-${item.assetid}`) as HTMLInputElement;
                                                                         if (input) handleSavePaidPrice(item.assetid, item.name_en || item.name, input.value);
                                                                     }}
-                                                                    className="p-1 hover:text-green-400 text-zinc-400 transition-colors"
+                                                                    className="p-1 hover:text-yellow-400 text-zinc-400 transition-colors"
                                                                 >
                                                                     <Check className="w-3.5 h-3.5" />
                                                                 </button>
@@ -541,10 +541,10 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                                         </div>
                                                         {item.paidPrice && item.price ? (
                                                             <div className="flex justify-between items-center border-t border-white/5 pt-2">
-                                                                <span className={`text-xs font-bold uppercase ${item.price > item.paidPrice ? 'text-green-500' : item.price < item.paidPrice ? 'text-red-500' : 'text-zinc-400'}`}>
+                                                                <span className={`text-xs font-bold uppercase ${item.price > item.paidPrice ? 'text-yellow-500' : item.price < item.paidPrice ? 'text-red-500' : 'text-zinc-400'}`}>
                                                                     Resultado
                                                                 </span>
-                                                                <span className={`text-sm font-black ${item.price > item.paidPrice ? 'text-green-500' : item.price < item.paidPrice ? 'text-red-500' : 'text-zinc-400'}`}>
+                                                                <span className={`text-sm font-black ${item.price > item.paidPrice ? 'text-yellow-500' : item.price < item.paidPrice ? 'text-red-500' : 'text-zinc-400'}`}>
                                                                     {item.price > item.paidPrice ? '+' : ''}{formatCurrency(item.price - item.paidPrice)}
                                                                 </span>
                                                             </div>

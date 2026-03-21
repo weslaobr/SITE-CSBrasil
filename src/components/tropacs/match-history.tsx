@@ -42,7 +42,7 @@ export default function MatchHistory({ matches, onReview }: MatchHistoryProps) {
     return (
         <div className="bg-zinc-900/40 rounded-[40px] border border-white/5 p-8 backdrop-blur-xl flex flex-col h-full">
             <h3 className="text-xl font-black italic uppercase tracking-tighter mb-6 flex items-center gap-3">
-                <span className="w-1.5 h-6 bg-green-500 rounded-full" /> Histórico de Combate
+                <span className="w-1.5 h-6 bg-yellow-500 rounded-full" /> Histórico de Combate
             </h3>
 
             <div className="space-y-4 flex-grow">
@@ -71,7 +71,7 @@ export default function MatchHistory({ matches, onReview }: MatchHistoryProps) {
                                             alt={match.map_name}
                                         />
                                         <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center font-black italic text-[9px] shadow-lg border-2 border-zinc-950 ${
-                                            match.outcome === 'win' ? 'bg-green-500 text-black' : 'bg-red-500 text-white'
+                                            match.outcome === 'win' ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white'
                                         }`}>
                                             {match.outcome === 'win' ? 'W' : 'L'}
                                         </div>
@@ -95,14 +95,14 @@ export default function MatchHistory({ matches, onReview }: MatchHistoryProps) {
                                     </div>
                                     <div className="text-center">
                                         <p className="text-[9px] text-zinc-500 font-bold uppercase mb-1">Rating</p>
-                                        <p className={`font-black italic ${(match.leetify_rating || 0) > 0 ? 'text-green-500' : 'text-zinc-400'
+                                        <p className={`font-black italic ${(match.leetify_rating || 0) > 0 ? 'text-yellow-500' : 'text-zinc-400'
                                             }`}>
                                             {(match.leetify_rating || 0).toFixed(2)}
                                         </p>
                                     </div>
                                     <button
                                         onClick={() => onReview(match.id)}
-                                        className="bg-white/5 hover:bg-green-500 hover:text-black p-2 rounded-xl border border-white/10 transition-colors inline-block"
+                                        className="bg-white/5 hover:bg-yellow-500 hover:text-black p-2 rounded-xl border border-white/10 transition-colors inline-block"
                                     >
                                         <span className="text-[10px] font-black uppercase">Review</span>
                                     </button>
@@ -137,7 +137,7 @@ export default function MatchHistory({ matches, onReview }: MatchHistoryProps) {
                                     key={i}
                                     onClick={() => setCurrentPage(i + 1)}
                                     className={`w-1.5 h-1.5 rounded-full transition-all ${
-                                        currentPage === i + 1 ? 'bg-green-500 w-4' : 'bg-zinc-800 hover:bg-zinc-700'
+                                        currentPage === i + 1 ? 'bg-yellow-500 w-4' : 'bg-zinc-800 hover:bg-zinc-700'
                                     }`}
                                 />
                             ))}

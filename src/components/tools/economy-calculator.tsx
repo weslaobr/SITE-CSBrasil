@@ -23,10 +23,10 @@ const EconomyCalculator: React.FC = () => {
                         <div className="bg-zinc-900/50 border border-white/5 p-6 rounded-2xl">
                             <label className="block text-xs font-bold uppercase text-zinc-500 mb-4 tracking-widest">Saldo Atual</label>
                             <div className="relative">
-                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-cyan-500 w-5 h-5" />
+                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-500 w-5 h-5" />
                                 <input
                                     type="number"
-                                    className="w-full bg-zinc-950 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-2xl font-black text-white focus:border-cyan-500 outline-none"
+                                    className="w-full bg-zinc-950 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-2xl font-black text-white focus:border-yellow-500 outline-none"
                                     value={currentMoney}
                                     onChange={(e) => setCurrentMoney(Number(e.target.value))}
                                 />
@@ -40,7 +40,7 @@ const EconomyCalculator: React.FC = () => {
                                     <button
                                         key={num}
                                         onClick={() => setLossStreak(num)}
-                                        className={`flex-1 py-3 rounded-xl font-bold transition-all ${lossStreak === num ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20' : 'bg-zinc-950 text-zinc-500 border border-white/5 hover:border-white/20'
+                                        className={`flex-1 py-3 rounded-xl font-bold transition-all ${lossStreak === num ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20' : 'bg-zinc-950 text-zinc-500 border border-white/5 hover:border-white/20'
                                             }`}
                                     >
                                         {num}
@@ -51,7 +51,7 @@ const EconomyCalculator: React.FC = () => {
                     </div>
 
                     {/* Results Section */}
-                    <div className="bg-zinc-900 border border-cyan-500/20 rounded-3xl p-8 flex flex-col justify-between relative overflow-hidden">
+                    <div className="bg-zinc-900 border border-yellow-500/20 rounded-3xl p-8 flex flex-col justify-between relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-4 opacity-5">
                             <DollarSign size={200} />
                         </div>
@@ -61,7 +61,7 @@ const EconomyCalculator: React.FC = () => {
                             <h2 className="text-5xl font-black text-white mb-2 tracking-tighter">
                                 ${nextRoundMoney.toLocaleString()}
                             </h2>
-                            <p className="text-cyan-500 font-bold text-sm">
+                            <p className="text-yellow-500 font-bold text-sm">
                                 Bônus: +${LOSS_BONUS[lossStreak] || 3400}
                             </p>
                         </div>
@@ -69,10 +69,10 @@ const EconomyCalculator: React.FC = () => {
                         <div className="mt-8 space-y-4">
                             <div className="flex items-center justify-between p-3 bg-zinc-950 rounded-xl border border-white/5">
                                 <div className="flex items-center gap-2">
-                                    <Shield className="w-4 h-4 text-blue-400" />
+                                    <Shield className="w-4 h-4 text-yellow-400" />
                                     <span className="text-sm font-bold text-zinc-300">Full Buy (AK/M4 + Kevlar)</span>
                                 </div>
-                                <span className={`text-sm font-bold ${nextRoundMoney >= 3900 ? 'text-green-500' : 'text-red-500'}`}>
+                                <span className={`text-sm font-bold ${nextRoundMoney >= 3900 ? 'text-yellow-500' : 'text-red-500'}`}>
                                     {nextRoundMoney >= 3900 ? 'POSSÍVEL' : 'INSUFICIENTE'}
                                 </span>
                             </div>
@@ -82,7 +82,7 @@ const EconomyCalculator: React.FC = () => {
                                     <Zap className="w-4 h-4 text-orange-400" />
                                     <span className="text-sm font-bold text-zinc-300">Force Buy (Galil/Famas)</span>
                                 </div>
-                                <span className={`text-sm font-bold ${nextRoundMoney >= 2800 ? 'text-green-500' : 'text-red-500'}`}>
+                                <span className={`text-sm font-bold ${nextRoundMoney >= 2800 ? 'text-yellow-500' : 'text-red-500'}`}>
                                     {nextRoundMoney >= 2800 ? 'POSSÍVEL' : 'INSUFICIENTE'}
                                 </span>
                             </div>

@@ -26,10 +26,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ scale: 1.02 }}
-            className="relative group w-80 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/40 p-6 backdrop-blur-xl shadow-2xl transition-all hover:border-cyan-500/50"
+            className="relative group w-80 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/40 p-6 backdrop-blur-xl shadow-2xl transition-all hover:border-yellow-500/50"
         >
             {/* Glow Effect on Hover */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl blur opacity-0 group-hover:opacity-20 transition duration-500" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-2xl blur opacity-0 group-hover:opacity-20 transition duration-500" />
 
             {/* Header: Avatar & Nickname */}
             <div className="relative flex items-center space-x-4 mb-6">
@@ -37,9 +37,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
                     <img
                         src={player.avatar}
                         alt={player.nickname}
-                        className="w-16 h-16 rounded-full border-2 border-cyan-500/30 p-0.5"
+                        className="w-16 h-16 rounded-full border-2 border-yellow-500/30 p-0.5"
                     />
-                    <div className="absolute -bottom-1 -right-1 bg-cyan-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase">
+                    <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase">
                         Pro
                     </div>
                 </div>
@@ -56,7 +56,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
                 <div className="bg-white/5 rounded-xl p-3 border border-white/5">
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Skill Rating</p>
                     <div className="flex items-center space-x-2">
-                        <Trophy className="w-4 h-4 text-cyan-400" />
+                        <Trophy className="w-4 h-4 text-yellow-400" />
                         <span className="text-lg font-black text-white">
                             {player.rating > 0 ? new Intl.NumberFormat('en-US').format(player.rating) : 'N/A'}
                         </span>
@@ -65,7 +65,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
                 <div className="bg-white/5 rounded-xl p-3 border border-white/5">
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Rank</p>
                     <div className="flex items-center space-x-2">
-                        <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+                        <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
                             {player.rank}
                         </span>
                     </div>
@@ -79,7 +79,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
                         <Target className="w-4 h-4 mr-2" />
                         <span>ADR Médio</span>
                     </div>
-                    <span className="font-mono text-cyan-400 font-bold">{player.adr}</span>
+                    <span className="font-mono text-yellow-500 font-bold">{player.adr}</span>
                 </div>
 
                 {/* ADR Progress Bar */}
@@ -88,7 +88,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
                         initial={{ width: 0 }}
                         animate={{ width: `${(player.adr / 120) * 100}%` }}
                         transition={{ duration: 1, ease: "easeOut" }}
-                        className="h-full bg-gradient-to-r from-cyan-500 to-blue-500"
+                        className="h-full bg-gradient-to-r from-yellow-500 to-orange-500"
                     />
                 </div>
 
@@ -120,14 +120,14 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
             {/* View Profile Button */}
             {player.steamId && (
                 <Link href={`/player/${player.steamId}`} className="block w-full mt-6">
-                    <button className="w-full py-2.5 bg-white text-black font-bold rounded-lg text-sm transition-transform active:scale-95 hover:bg-cyan-500 hover:text-white">
+                    <button className="w-full py-2.5 bg-white text-black font-bold rounded-lg text-sm transition-transform active:scale-95 hover:bg-yellow-500 hover:text-white">
                         Ver Detalhes
                     </button>
                 </Link>
             )}
 
             {/* Background Decorative Element */}
-            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-cyan-500/10 rounded-full blur-3xl" />
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-yellow-500/10 rounded-full blur-3xl" />
         </motion.div>
     );
 };

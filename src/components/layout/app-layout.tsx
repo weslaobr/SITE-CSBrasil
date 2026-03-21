@@ -25,7 +25,7 @@ const SidebarItem = ({ icon, label, active, collapsed, href }: { icon: any, labe
     <Link
         href={href}
         className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all ${active
-            ? 'bg-green-500 text-black shadow-lg shadow-green-500/20'
+            ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20'
             : 'text-zinc-500 hover:text-white hover:bg-white/5'
             }`}
     >
@@ -130,7 +130,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         active={pathname === '/settings'}
                         href="/settings"
                     />
-                    <button className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-black border-4 border-zinc-950 focus:outline-none"
+                    <button className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-black border-4 border-zinc-950 focus:outline-none"
                         onClick={() => setCollapsed(!collapsed)}
                     >
                         {collapsed ? <ChevronRight size={14} fill="currentColor" /> : <ChevronLeft size={14} fill="currentColor" />}
@@ -151,7 +151,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                             <>
                                 <div className="text-right">
                                     <p className="text-xs font-bold text-white">{session.user?.name}</p>
-                                    <p className="text-[10px] text-green-500 font-bold uppercase">Player</p>
+                                    <p className="text-[10px] text-yellow-500 font-bold uppercase">Player</p>
                                 </div>
                                 <img
                                     src={session.user?.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=fallback"}

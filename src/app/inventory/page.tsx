@@ -139,7 +139,7 @@ export default function InventoryPage() {
             {/* Indicador discreto de atualização em segundo plano */}
             {(isRefreshing || pricingProgress) && (
                 <div className="absolute top-4 right-8 z-50 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-2">
-                    <Loader2 className="w-3 h-3 text-green-500 animate-spin" />
+                    <div className="w-12 h-12 border-4 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin mx-auto" />
                     <span className="text-[10px] font-black text-white uppercase tracking-widest">
                         {pricingProgress
                             ? `Buscando preços... ${pricingProgress.current}/${pricingProgress.total}`

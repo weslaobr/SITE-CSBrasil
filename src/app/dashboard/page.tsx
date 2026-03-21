@@ -61,7 +61,7 @@ export default function DashboardPage() {
 
     if (!session) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] p-8 text-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-cyan-500/5 via-transparent to-transparent">
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] p-8 text-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-yellow-500/5 via-transparent to-transparent">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -69,7 +69,7 @@ export default function DashboardPage() {
                     className="space-y-6"
                 >
                     <div className="w-24 h-24 bg-zinc-900 border border-white/10 rounded-3xl flex items-center justify-center mx-auto shadow-2xl">
-                        <Swords size={40} className="text-cyan-500" />
+                        <Swords size={40} className="text-yellow-500" />
                     </div>
                     <h2 className="text-4xl font-black mb-4 uppercase tracking-tighter italic">Bem-vindo à Tropa do CS2</h2>
                     <p className="text-zinc-500 max-w-md mx-auto leading-relaxed">
@@ -133,7 +133,7 @@ export default function DashboardPage() {
                             animate={{ opacity: 1 }}
                             className="text-3xl font-black italic uppercase tracking-tighter"
                         >
-                            Overview <span className="text-cyan-500">Dashboard</span>
+                            Overview <span className="text-yellow-500">Dashboard</span>
                         </motion.h1>
                         <button
                             onClick={fetchData}
@@ -150,7 +150,7 @@ export default function DashboardPage() {
                         animate="visible"
                         className="grid grid-cols-2 md:grid-cols-4 gap-4"
                     >
-                        <StatCard icon={<Target className="text-cyan-400" />} label="Kills" value={playerData?.stats?.total_kills || 0} color="cyan" />
+                        <StatCard icon={<Target className="text-yellow-400" />} label="Kills" value={playerData?.stats?.total_kills || 0} color="yellow" />
                         <StatCard icon={<TrendingUp className="text-green-400" />} label="Vitórias" value={playerData?.stats?.total_wins || 0} color="green" />
                         <StatCard icon={<Zap className="text-yellow-400" />} label="MVPs" value={playerData?.stats?.total_mvps || 0} color="yellow" />
                         <StatCard icon={<History className="text-purple-400" />} label="Matches" value={matches.length} color="purple" />
@@ -166,7 +166,7 @@ export default function DashboardPage() {
                             <h2 className="text-sm font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                                 <Users size={16} /> Lobbies Ativos
                             </h2>
-                            <Link href="/lobby" className="text-[10px] font-bold uppercase text-cyan-500 hover:text-cyan-400 transition-colors">Ver todos</Link>
+                            <Link href="/lobby" className="text-[10px] font-bold uppercase text-yellow-500 hover:text-yellow-400 transition-colors">Ver todos</Link>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {lobbies.length > 0 ? lobbies.map((lobby) => (
@@ -196,7 +196,7 @@ export default function DashboardPage() {
                 >
                     <div className="flex justify-between items-center">
                         <h2 className="text-2xl font-black italic uppercase tracking-tighter flex items-center gap-3">
-                            <History className="text-cyan-500" /> Partidas Recentes
+                            <History className="text-yellow-500" /> Partidas Recentes
                         </h2>
                         <span className="text-[10px] bg-white/5 px-2 py-1 rounded font-bold text-zinc-500 uppercase">Last 5 Matches</span>
                     </div>
@@ -231,7 +231,7 @@ export default function DashboardPage() {
                                     </div>
                                     <div className="text-center">
                                         <p className="text-zinc-500 text-[9px] font-black uppercase mb-1">ADR</p>
-                                        <p className="font-bold text-sm text-cyan-500 italic">{match.adr?.toFixed(1) || 0}</p>
+                                        <p className="font-bold text-sm text-yellow-500 italic">{match.adr?.toFixed(1) || 0}</p>
                                     </div>
                                 </div>
 
@@ -253,7 +253,7 @@ export default function DashboardPage() {
                     animate={{ opacity: 1, x: 0 }}
                     className="lg:col-span-4 space-y-8"
                 >
-                    <div className="bg-gradient-to-br from-cyan-600 to-blue-800 p-8 rounded-[40px] text-white relative overflow-hidden group shadow-2xl shadow-cyan-500/20">
+                    <div className="bg-gradient-to-br from-yellow-600 to-orange-800 p-8 rounded-[40px] text-white relative overflow-hidden group shadow-2xl shadow-yellow-500/20">
                         <div className="relative z-10 space-y-4">
                             <h3 className="text-2xl font-black italic uppercase tracking-tighter leading-none">Pronto para o Próximo Mix?</h3>
                             <p className="text-white/70 text-sm font-medium">Melhore suas estatísticas jogando com a Tropa. Ranking atualizado a cada partida.</p>
@@ -311,7 +311,7 @@ function NewsItem({ title, date }: any) {
     return (
         <div className="group cursor-pointer">
             <p className="text-[9px] text-zinc-600 font-black uppercase mb-1">{date}</p>
-            <p className="text-sm font-bold group-hover:text-cyan-400 transition-colors uppercase tracking-tight">{title}</p>
+            <p className="text-sm font-bold group-hover:text-yellow-400 transition-colors uppercase tracking-tight">{title}</p>
         </div>
     );
 }

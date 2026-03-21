@@ -40,7 +40,7 @@ export default function PlayerProfilePage() {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
                 <div className="text-center space-y-4">
-                    <div className="w-12 h-12 border-4 border-green-500/20 border-t-green-500 rounded-full animate-spin mx-auto" />
+                    <div className="w-12 h-12 border-4 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin mx-auto" />
                     <p className="text-zinc-500 font-black uppercase text-[10px] tracking-[0.3em]">Sincronizando Perfil...</p>
                 </div>
             </div>
@@ -63,7 +63,7 @@ export default function PlayerProfilePage() {
     const isOwner = (session?.user as any)?.steamId === steamId;
 
     return (
-        <div className="min-h-screen bg-black text-white selection:bg-green-500 selection:text-black">
+        <div className="min-h-screen bg-black text-white selection:bg-yellow-500 selection:text-black">
             <main className="max-w-7xl mx-auto p-8 space-y-12">
                 {/* 1. Header Overview (Leetify Inspired) */}
                 <motion.div
@@ -95,7 +95,7 @@ export default function PlayerProfilePage() {
                     >
                         <div className="bg-zinc-900/40 rounded-[40px] border border-white/5 p-8 backdrop-blur-xl h-full">
                             <h3 className="text-xl font-black italic uppercase tracking-tighter mb-8 flex items-center gap-3">
-                                <span className="w-1.5 h-6 bg-green-500 rounded-full" /> Perfil de Performance
+                                <span className="w-1.5 h-6 bg-yellow-500 rounded-full" /> Perfil de Performance
                             </h3>
                             {leetifyData?.ratings ? (
                                 <AttributesRadarChart data={leetifyData.ratings} />
@@ -130,10 +130,10 @@ export default function PlayerProfilePage() {
                 >
                     <div className="flex items-center justify-between mb-8">
                         <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3">
-                            <span className="w-1.5 h-6 bg-green-500 rounded-full" /> Resumo Steam Global
+                            <span className="w-1.5 h-6 bg-yellow-500 rounded-full" /> Resumo Steam Global
                         </h3>
                         {isOwner && (
-                            <span className="bg-green-500/10 text-green-400 text-[10px] font-black px-3 py-1 rounded-full border border-green-500/20 uppercase tracking-widest">
+                            <span className="bg-yellow-500/10 text-yellow-400 text-[10px] font-black px-3 py-1 rounded-full border border-yellow-500/20 uppercase tracking-widest">
                                 Seu Perfil
                             </span>
                         )}
@@ -146,11 +146,11 @@ export default function PlayerProfilePage() {
                         </div>
                         <div className="bg-white/5 p-6 rounded-3xl border border-white/5 hover:bg-white/10 transition-colors">
                             <p className="text-[10px] text-zinc-500 uppercase font-bold mb-2">Vitórias</p>
-                            <p className="text-3xl font-black italic text-green-500">{steamStats?.total_wins || profile.wins || 0}</p>
+                            <p className="text-3xl font-black italic text-yellow-500">{steamStats?.total_wins || profile.wins || 0}</p>
                         </div>
                         <div className="bg-white/5 p-6 rounded-3xl border border-white/5 hover:bg-white/10 transition-colors">
                             <p className="text-[10px] text-zinc-500 uppercase font-bold mb-2">HS %</p>
-                            <p className="text-3xl font-black italic text-green-500">{steamStats?.hs_percentage || 0}%</p>
+                            <p className="text-3xl font-black italic text-yellow-500">{steamStats?.hs_percentage || 0}%</p>
                         </div>
                         <div className="bg-white/5 p-6 rounded-3xl border border-white/5 hover:bg-white/10 transition-colors">
                             <p className="text-[10px] text-zinc-500 uppercase font-bold mb-2">Time Played</p>
@@ -166,7 +166,7 @@ export default function PlayerProfilePage() {
                     className="space-y-6"
                 >
                     <div className="flex items-center gap-3 px-2">
-                        <Package className="text-green-500" size={24} />
+                        <Package className="text-yellow-500" size={24} />
                         <h3 className="text-2xl font-black italic uppercase tracking-tighter">Inventário do Jogador</h3>
                     </div>
                     <InventoryDashboard items={data?.inventory || []} />

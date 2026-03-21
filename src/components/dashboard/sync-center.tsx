@@ -139,7 +139,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-black tracking-tighter flex items-center gap-2">
-                        <RefreshCw className={`text-cyan-500 w-6 h-6 ${isSyncing ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`text-yellow-500 w-6 h-6 ${isSyncing ? 'animate-spin' : ''}`} />
                         CENTRAL DE SINCRONIZAÇÃO
                     </h2>
                     <p className="text-zinc-500 text-sm">Conecte suas plataformas para unificar suas estatísticas e partidas.</p>
@@ -156,7 +156,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                         disabled={isSyncing}
                         className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isSyncing
                             ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                            : 'bg-cyan-500 text-black hover:bg-cyan-400 shadow-lg shadow-cyan-500/20 active:scale-95'
+                            : 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-lg shadow-yellow-500/20 active:scale-95'
                             }`}
                     >
                         {isSyncing ? 'Sincronizando...' : 'Sincronizar Tudo'}
@@ -165,7 +165,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold ${message.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold ${message.type === 'success' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-red-500/10 text-red-500'
                                 }`}
                         >
                             {message.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
@@ -185,7 +185,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                         <div>
                             <p className="font-bold text-sm">Steam Match History</p>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                                <div className={`w-1.5 h-1.5 rounded-full ${botOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`} />
+                                <div className={`w-1.5 h-1.5 rounded-full ${botOnline ? 'bg-yellow-500 shadow-[0_0_8px_rgba(254,209,61,0.5)]' : 'bg-red-500'}`} />
                                 <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
                                     {botOnline ? 'GC Online' : 'GC Offline'}
                                 </span>
@@ -198,7 +198,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                             <a
                                 href="https://help.steampowered.com/pt-br/wizard/HelpWithGameIssue/?appid=730&issueid=128"
                                 target="_blank"
-                                className="text-[9px] text-cyan-500 hover:underline font-bold uppercase"
+                                className="text-[9px] text-yellow-500 hover:underline font-bold uppercase"
                             >
                                 Pegar Código
                             </a>
@@ -206,7 +206,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                         <input
                             type="text"
                             placeholder="Ex: ABCDE-12345"
-                            className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-cyan-500 transition-all font-mono"
+                            className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-yellow-500 transition-all font-mono"
                             value={syncData.steamMatchAuthCode}
                             onChange={(e) => setSyncData({ ...syncData, steamMatchAuthCode: e.target.value })}
                         />
@@ -219,7 +219,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                         <input
                             type="text"
                             placeholder="CSGO-XXXXX-..."
-                            className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-cyan-500 transition-all font-mono"
+                            className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-yellow-500 transition-all font-mono"
                             value={syncData.steamLatestMatchCode}
                             onChange={(e) => setSyncData({ ...syncData, steamLatestMatchCode: e.target.value })}
                         />
@@ -262,7 +262,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                         <input
                             type="text"
                             placeholder="Seu nick na Faceit"
-                            className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-cyan-500 transition-all"
+                            className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-yellow-500 transition-all"
                             value={syncData.faceitNickname}
                             onChange={(e) => setSyncData({ ...syncData, faceitNickname: e.target.value })}
                         />
@@ -279,12 +279,12 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                 {/* Gamers Club */}
                 <div className="bg-white/5 p-6 rounded-2xl border border-white/5 space-y-4">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-cyan-500/20 rounded-xl flex items-center justify-center">
-                            <Gamepad2 className="text-cyan-500 w-5 h-5" />
+                        <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center">
+                            <Gamepad2 className="text-yellow-500 w-5 h-5" />
                         </div>
                         <div>
                             <p className="font-bold text-sm">Gamers Club</p>
-                            <p className="text-[10px] text-zinc-500 uppercase font-bold text-cyan-500">Level & Medalhas</p>
+                            <p className="text-[10px] text-zinc-500 uppercase font-bold text-yellow-500">Level & Medalhas</p>
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -294,7 +294,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                                 <a
                                     href="https://gamersclub.com.br/jogadores"
                                     target="_blank"
-                                    className="text-[9px] text-cyan-500 hover:underline font-bold uppercase"
+                                    className="text-[9px] text-yellow-500 hover:underline font-bold uppercase"
                                 >
                                     Perfil
                                 </a>
@@ -302,7 +302,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                             <input
                                 type="text"
                                 placeholder="Nick GC"
-                                className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-cyan-500 transition-all"
+                                className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-yellow-500 transition-all"
                                 value={syncData.gcNickname}
                                 onChange={(e) => setSyncData({ ...syncData, gcNickname: e.target.value })}
                             />
@@ -312,7 +312,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                             <input
                                 type="number"
                                 placeholder="1-21"
-                                className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-cyan-500 transition-all"
+                                className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-yellow-500 transition-all"
                                 value={syncData.gcLevel}
                                 onChange={(e) => setSyncData({ ...syncData, gcLevel: e.target.value })}
                             />
@@ -324,7 +324,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                             handleSave('gcLevel');
                         }}
                         disabled={saving}
-                        className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-500 text-xs font-bold py-2 rounded-xl transition-all"
+                        className="w-full bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 text-xs font-bold py-2 rounded-xl transition-all"
                     >
                         Atualizar Gamers Club
                     </button>
@@ -335,7 +335,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                 <AlertCircle className="text-zinc-500 w-5 h-5 mt-0.5" />
                 <div className="text-[11px] text-zinc-500 leading-relaxed">
                     <p className="font-bold text-zinc-400 mb-1 uppercase tracking-wider">Como obter o Código de Autenticação da Steam?</p>
-                    Para puxarmos suas partidas oficiais, você precisa acessar o link <a href="https://help.steampowered.com/pt-br/wizard/HelpWithGameIssue/?appid=730&issueid=128" target="_blank" className="text-cyan-500 hover:underline">Histórico de Jogos Pessoais</a> na Steam, ir em "Matches" e gerar seu código. Seus dados estão seguros conosco e são usados apenas para estatísticas.
+                    Para puxarmos suas partidas oficiais, você precisa acessar o link <a href="https://help.steampowered.com/pt-br/wizard/HelpWithGameIssue/?appid=730&issueid=128" target="_blank" className="text-yellow-500 hover:underline">Histórico de Jogos Pessoais</a> na Steam, ir em "Matches" e gerar seu código. Seus dados estão seguros conosco e são usados apenas para estatísticas.
                 </div>
             </div>
         </div>

@@ -56,7 +56,7 @@ export default function LobbyDashboard() {
                 </div>
                 <button
                     onClick={() => setShowCreate(true)}
-                    className="bg-cyan-500 hover:bg-cyan-400 text-black px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 transition-all active:scale-95"
+                    className="bg-yellow-500 hover:bg-yellow-400 text-black px-6 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-yellow-500/20"
                 >
                     <Plus size={18} />
                     Criar Sala
@@ -76,7 +76,7 @@ export default function LobbyDashboard() {
                                 type="text"
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
-                                className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-cyan-500 outline-none transition-all"
+                                className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-yellow-500 outline-none transition-all"
                                 placeholder="Ex: Mix do Final de Semana"
                             />
                         </div>
@@ -86,7 +86,7 @@ export default function LobbyDashboard() {
                                 type="password"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-cyan-500 outline-none transition-all"
+                                className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-yellow-500 outline-none transition-all"
                                 placeholder="Deixe em branco para sala pública"
                             />
                         </div>
@@ -111,11 +111,11 @@ export default function LobbyDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {lobbies.map((lobby) => (
                     <Link key={lobby.id} href={`/lobby/${lobby.id}`}>
-                        <div className="group bg-zinc-900/40 border border-white/5 p-6 rounded-3xl hover:border-cyan-500/50 transition-all cursor-pointer relative overflow-hidden backdrop-blur-md">
+                        <div className="group bg-zinc-900/40 border border-white/5 p-6 rounded-3xl hover:border-yellow-500/50 transition-all cursor-pointer relative overflow-hidden backdrop-blur-md">
                             <div className="absolute top-0 right-0 p-4">
                                 {lobby.password && <Lock size={14} className="text-zinc-600" />}
                             </div>
-                            <h3 className="text-xl font-black uppercase italic tracking-tighter group-hover:text-cyan-500 transition-colors">
+                            <h3 className="text-xl font-black uppercase italic tracking-tighter group-hover:text-yellow-500 transition-colors">
                                 {lobby.name}
                             </h3>
                             <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Host: {lobby.creator?.name}</p>
@@ -124,13 +124,16 @@ export default function LobbyDashboard() {
                                 <div className="flex items-center gap-2">
                                     <div className="flex -space-x-2">
                                         {[1, 2, 3].map(i => (
-                                            <div key={i} className="w-6 h-6 rounded-full bg-zinc-800 border-2 border-zinc-900" />
+                                            <span key={i} className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(254,209,61,0.5)]" />
                                         ))}
                                     </div>
                                     <span className="text-xs font-black text-zinc-400">{lobby._count?.players}/10</span>
                                 </div>
-                                <div className="bg-white/5 p-2 rounded-xl group-hover:bg-cyan-500 group-hover:text-black transition-all">
-                                    <ChevronRight size={16} />
+                                <div className="relative z-10">
+                                    <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
+                                    <div className="p-2 rounded-xl group-hover:bg-yellow-500 group-hover:text-black transition-all relative">
+                                        <ChevronRight size={16} />
+                                    </div>
                                 </div>
                             </div>
                         </div>

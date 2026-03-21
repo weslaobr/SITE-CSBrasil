@@ -215,7 +215,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 else if (rating >= 20000) color = 'text-pink-500';
                 else if (rating >= 15000) color = 'text-purple-500';
                 else if (rating >= 10000) color = 'text-blue-500';
-                else if (rating >= 5000) color = 'text-cyan-400';
+                else if (rating >= 5000) color = 'text-yellow-400';
                 
                 return {
                     label: rating.toLocaleString(),
@@ -308,11 +308,11 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div>
                     <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter flex items-center gap-4">
-                        <Swords className="text-green-500 w-10 h-10 md:w-12 md:h-12" />
+                        <Swords className="text-yellow-500 w-10 h-10 md:w-12 md:h-12" />
                         Minhas Partidas
                     </h1>
                     <p className="text-zinc-500 text-xs font-bold uppercase mt-2 tracking-[0.2em] px-1 flex items-center gap-2">
-                        Histórico Competitivo <span className="w-1 h-1 rounded-full bg-zinc-800" /> {matches.length} Registradas
+                        Histórico Competitivo <span className="w-1 h-1 rounded-full bg-yellow-500" /> {matches.length} Registradas
                     </p>
                 </div>
 
@@ -333,14 +333,14 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                         disabled={loading}
                         className="flex items-center justify-center gap-3 px-6 py-4 bg-white/[0.02] hover:bg-white/[0.05] transition-all disabled:opacity-50 group border-b md:border-b-0 md:border-r border-white/5"
                     >
-                        <RefreshCw className={`w-4 h-4 text-green-500 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+                        <RefreshCw className={`w-4 h-4 text-yellow-500 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
                         <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">
                             {loading ? 'Sincronizando' : 'Sincronizar'}
                         </span>
                     </button>
                     <button
                         onClick={() => setIsEditing(!isEditing)}
-                        className={`flex items-center justify-center gap-3 px-6 py-4 transition-all group ${isEditing ? 'bg-green-500 text-black' : 'bg-white/[0.02] hover:bg-white/[0.05] text-zinc-400 hover:text-white'}`}
+                        className={`flex items-center justify-center gap-3 px-6 py-4 transition-all group ${isEditing ? 'bg-yellow-500 text-black' : 'bg-white/[0.02] hover:bg-white/[0.05] text-zinc-400 hover:text-white'}`}
                     >
                         <Users className="w-4 h-4" />
                         <span className="text-[10px] font-black uppercase tracking-widest">Contas</span>
@@ -358,8 +358,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     >
                         <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-8">
                             <div className="flex items-center gap-5">
-                                <div className="w-14 h-14 bg-green-500/10 rounded-2xl flex items-center justify-center border border-green-500/20 shadow-inner">
-                                    <Trophy className="text-green-500 w-7 h-7" />
+                                <div className="w-14 h-14 bg-yellow-500/10 rounded-2xl flex items-center justify-center border border-yellow-500/20 shadow-inner">
+                                    <Trophy className="text-yellow-500 w-7 h-7" />
                                 </div>
                                 <div>
                                     <h4 className="text-lg font-black italic uppercase tracking-tight">Vincular Plataformas</h4>
@@ -371,7 +371,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     <input
                                         type="text"
                                         placeholder="Seu Nickname no Faceit"
-                                        className="bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-green-500/50 w-full md:w-72 font-bold transition-all"
+                                        className="bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-yellow-500/50 w-full md:w-72 font-bold transition-all"
                                         value={faceitInput}
                                         onChange={(e) => setFaceitInput(e.target.value)}
                                     />
@@ -395,8 +395,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             {/* Summary Stat Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
-                    { label: 'Win Rate', value: `${stats.wr}%`, icon: <Trophy className="text-emerald-500" />, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                    { label: 'Avg ADR', value: stats.adr, icon: <Zap className="text-green-500" />, color: 'text-green-500', bg: 'bg-green-500/10' },
+                    { label: 'Win Rate', value: `${stats.wr}%`, icon: <Trophy className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                    { label: 'Avg ADR', value: stats.adr, icon: <Zap className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
                     { label: 'K/D Ratio', value: stats.kd, icon: <TrendingUp className="text-amber-500" />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
                     { label: 'Total Kills', value: stats.kills, icon: <Target className="text-red-500" />, color: 'text-red-500', bg: 'bg-red-500/10' },
                     { label: 'Avg HS%', value: stats.hs !== '—' ? `${stats.hs}%` : '—', icon: <Activity className="text-rose-500" />, color: 'text-rose-500', bg: 'bg-rose-500/10' },
@@ -425,7 +425,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             {/* Quick Filters Row */}
             <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 mr-2">
-                    <Filter size={14} className="text-green-500/50" />
+                    <Filter size={14} className="text-yellow-500/50" />
                     Filtros:
                 </div>
                 <div className="flex gap-1.5 bg-zinc-900/50 p-1 rounded-2xl border border-white/5">
@@ -453,7 +453,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                             onClick={() => setMapFilter(map)}
                             className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${
                                 mapFilter === map 
-                                ? 'bg-green-500/10 text-green-500 border-green-500/30' 
+                                ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30' 
                                 : 'bg-transparent text-zinc-600 border-transparent hover:text-zinc-400'
                             }`}
                         >
@@ -468,9 +468,9 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 {loading && filteredMatches.length === 0 ? (
                     <div className="py-48 flex flex-col items-center justify-center text-center">
                         <div className="relative w-20 h-20 mb-10">
-                            <div className="absolute inset-0 border-4 border-green-500/10 rounded-full" />
-                            <div className="absolute inset-0 border-4 border-t-green-500 rounded-full animate-spin shadow-[0_0_15px_rgba(254,209,61,0.5)]" />
-                            <Activity className="absolute inset-0 m-auto w-8 h-8 text-green-500/50" />
+                            <div className="absolute inset-0 border-4 border-yellow-500/10 rounded-full" />
+                            <div className="absolute inset-0 border-4 border-t-yellow-500 rounded-full animate-spin shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+                            <Activity className="absolute inset-0 m-auto w-8 h-8 text-yellow-500/50" />
                         </div>
                         <h3 className="text-xl font-black uppercase italic tracking-tighter mb-2">Buscando Partidas</h3>
                         <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest animate-pulse">Aguarde enquanto sincronizamos com a Valve e Faceit...</p>
@@ -539,7 +539,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="font-black text-sm text-white uppercase italic tracking-tighter group-hover:text-emerald-400 transition-colors">
+                                                        <span className="font-black text-sm text-white uppercase italic tracking-tighter group-hover:text-yellow-400 transition-colors">
                                                             {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' : 
                                                              match.mapName.replace('de_', '').replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                                                         </span>
@@ -549,7 +549,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             </td>
                                             <td className="px-4 py-6 text-center">
                                                 <div className={`inline-flex flex-col items-center px-6 py-2 rounded-2xl border transition-all ${
-                                                    isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 
+                                                    isWin ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]' : 
                                                     isLoss ? 'bg-red-500/10 border-red-500/20 text-red-500' : 
                                                     'bg-zinc-800/50 border-white/5 text-zinc-500'
                                                 }`}>
@@ -594,7 +594,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                         isGamersClub ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
                                                         match.source === 'Faceit' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
                                                         isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.15)]' :
-                                                        'bg-emerald-500/5 text-emerald-500 border-emerald-500/20'
+                                                        'bg-yellow-500/5 text-yellow-500 border-yellow-500/20'
                                                     }`}>
                                                         <div className="absolute inset-0 bg-white/5 opacity-0 group-hover/source:opacity-100 transition-opacity" />
                                                         <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.15em]">
@@ -605,7 +605,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                         </span>
                                                     </div>
                                                     {isPremier && match.metadata?.rank_delta && (
-                                                        <div className={`flex items-center gap-1 text-[9px] font-black italic ${match.metadata.rank_delta > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                        <div className={`flex items-center gap-1 text-[9px] font-black italic ${match.metadata.rank_delta > 0 ? 'text-yellow-500' : 'text-red-500'}`}>
                                                             {match.metadata.rank_delta > 0 ? (
                                                                 <ChevronUp size={10} className="fill-current" />
                                                             ) : (
@@ -670,7 +670,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             </td>
                                             <td className="px-4 py-6 text-center">
                                                 <div className="flex flex-col">
-                                                    <span className="font-black text-xl italic text-green-500/80 leading-none tracking-tighter">
+                                                    <span className="font-black text-xl italic text-yellow-500/80 leading-none tracking-tighter">
                                                         {(match.adr || match.metadata?.adr) ? Math.round(match.adr || match.metadata?.adr) : '—'}
                                                     </span>
                                                     <span className="text-[7px] font-black text-zinc-700 uppercase mt-1">ADR</span>
@@ -703,7 +703,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                          <div className="flex flex-col items-center gap-1 group/rating">
                                                              <div className={`px-4 py-1.5 rounded-2xl font-black italic text-lg tracking-tighter transition-all group-hover:scale-110 ${
                                                                  isGreat ? 'bg-orange-500/20 text-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.1)]' :
-                                                                 isGood ? 'bg-emerald-500/10 text-emerald-400' : 
+                                                                 isGood ? 'bg-yellow-500/10 text-yellow-500' : 
                                                                  isBad ? 'bg-red-500/10 text-red-500' :
                                                                  'bg-zinc-800/30 text-zinc-500'
                                                              }`}>
@@ -719,11 +719,11 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             </td>
                                             <td className="px-8 py-6 text-right last:rounded-r-3xl">
                                                 <div className="flex flex-col items-end">
-                                                    <span className="text-[10px] font-black text-white hover:text-emerald-400 transition-colors uppercase tracking-widest whitespace-nowrap">
+                                                    <span className="text-[10px] font-black text-white hover:text-yellow-400 transition-colors uppercase tracking-widest whitespace-nowrap">
                                                         {formatTimeAgo(match.matchDate)}
                                                     </span>
                                                     <div className="flex items-center gap-1.5 mt-1">
-                                                        <div className={`w-1 h-1 rounded-full ${isWin ? 'bg-emerald-500' : isLoss ? 'bg-red-500' : 'bg-zinc-500'}`} />
+                                                        <div className={`w-1 h-1 rounded-full ${isWin ? 'bg-yellow-500' : isLoss ? 'bg-red-500' : 'bg-zinc-500'}`} />
                                                         <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">Analítico ✓</span>
                                                     </div>
                                                 </div>
@@ -737,10 +737,10 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 ) : (
                     <div className="py-32 px-10 text-center max-w-2xl mx-auto">
                         <div className="relative inline-block mb-12">
-                            <div className="w-24 h-24 bg-gradient-to-tr from-green-500/20 to-amber-500/10 rounded-[2.5rem] flex items-center justify-center border border-white/10 shadow-2xl relative z-10">
-                                <Lock className="w-10 h-10 text-green-500/50" />
+                            <div className="w-24 h-24 bg-gradient-to-tr from-yellow-500/20 to-amber-500/10 rounded-[2.5rem] flex items-center justify-center border border-white/10 shadow-2xl relative z-10">
+                                <Lock className="w-10 h-10 text-yellow-500/50" />
                             </div>
-                            <div className="absolute -inset-4 bg-green-500/5 blur-3xl rounded-full" />
+                            <div className="absolute -inset-4 bg-yellow-500/5 blur-3xl rounded-full" />
                         </div>
 
                         {hasSteamCode ? (
@@ -748,12 +748,12 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                             <>
                                 <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-4">Credenciais Salvas ✓</h3>
                                 <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest mb-12 leading-relaxed max-w-md mx-auto">
-                                    Seus dados estão configurados! Clique em <span className="text-green-400">Sincronizar</span> para carregar suas partidas. A primeira sincronização pode demorar um pouco.
+                                    Seus dados estão configurados! Clique em <span className="text-yellow-400">Sincronizar</span> para carregar suas partidas. A primeira sincronização pode demorar um pouco.
                                 </p>
                                 <button
                                     onClick={onSync}
                                     disabled={loading}
-                                    className="flex items-center justify-center gap-4 mx-auto bg-green-500 hover:bg-green-400 text-black font-black uppercase text-sm tracking-widest py-5 px-12 rounded-3xl transition-all active:scale-95 shadow-xl shadow-green-500/30 disabled:opacity-50"
+                                    className="flex items-center justify-center gap-4 mx-auto bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase text-sm tracking-widest py-5 px-12 rounded-3xl transition-all active:scale-95 shadow-xl shadow-yellow-500/30 disabled:opacity-50"
                                 >
                                     <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
                                     {loading ? 'Sincronizando...' : 'Sincronizar Agora'}
@@ -764,7 +764,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                             <>
                                 <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-4">Configuração Necessária</h3>
                                 <p className="text-zinc-500 text-sm font-bold tracking-wide mb-12 leading-relaxed max-w-lg mx-auto">
-                                    Para ver suas partidas Steam, você precisa configurar o <span className="text-green-400">Auth Code</span> e o <span className="text-yellow-400">Código da Última Partida</span> nas configurações.
+                                    Para ver suas partidas Steam, você precisa configurar o <span className="text-yellow-400">Auth Code</span> e o <span className="text-yellow-400">Código da Última Partida</span> nas configurações.
                                 </p>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -774,7 +774,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                         rel="noopener noreferrer"
                                         className="group bg-zinc-900 hover:bg-zinc-800 text-white font-black uppercase text-[10px] tracking-widest py-5 rounded-3xl border border-white/5 transition-all flex flex-col items-center justify-center gap-3 active:scale-95"
                                     >
-                                        <ExternalLink size={20} className="text-zinc-600 group-hover:text-cyan-500 transition-colors" />
+                                        <ExternalLink size={20} className="text-zinc-600 group-hover:text-yellow-500 transition-colors" />
                                         1. Auth Code
                                     </a>
                                     <a
@@ -788,7 +788,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     </a>
                                     <button
                                         onClick={() => (window as any).location.href = '/settings'}
-                                        className="group bg-green-500 hover:bg-green-400 text-black font-black uppercase text-[10px] tracking-widest py-5 rounded-3xl transition-all flex flex-col items-center justify-center gap-3 active:scale-95 shadow-xl shadow-green-500/20"
+                                        className="group bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase text-[10px] tracking-widest py-5 rounded-3xl transition-all flex flex-col items-center justify-center gap-3 active:scale-95 shadow-xl shadow-yellow-500/20"
                                     >
                                         <RefreshCw size={20} className="group-hover:rotate-180 transition-transform duration-700" />
                                         3. Configurações
@@ -831,7 +831,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                 <ChevronDown className="rotate-90" size={18} />
                             </button>
                             <div className="px-8 py-2 text-[10px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-3">
-                                <span className="text-green-500">{currentPage}</span>
+                                <span className="text-yellow-500">{currentPage}</span>
                                 <span className="text-zinc-800">/</span>
                                 <span className="text-zinc-500">{Math.ceil(filteredMatches.length / itemsPerPage)}</span>
                             </div>

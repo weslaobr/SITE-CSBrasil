@@ -79,7 +79,7 @@ const SmokesHub: React.FC = () => {
                                 key={map}
                                 onClick={() => setSelectedMap(map)}
                                 className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${selectedMap === map
-                                    ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20'
+                                    ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20'
                                     : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 border border-white/5'
                                     }`}
                             >
@@ -93,7 +93,7 @@ const SmokesHub: React.FC = () => {
                         <input
                             type="text"
                             placeholder="Buscar utilitário..."
-                            className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:border-cyan-500/50"
+                            className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:border-yellow-500/50"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -113,7 +113,7 @@ const SmokesHub: React.FC = () => {
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                className="group relative bg-zinc-900 border border-white/5 rounded-2xl overflow-hidden hover:border-cyan-500/30 transition-all shadow-xl"
+                                className="group relative bg-zinc-900 border border-white/5 rounded-2xl overflow-hidden hover:border-yellow-500/30 transition-all shadow-xl"
                             >
                                 {/* Thumbnail Area */}
                                 <div className="relative aspect-video">
@@ -122,14 +122,14 @@ const SmokesHub: React.FC = () => {
                                     <div className="absolute inset-0 flex items-center justify-center z-20">
                                         <motion.div
                                             whileHover={{ scale: 1.1 }}
-                                            className="w-12 h-12 bg-cyan-500 rounded-full flex items-center justify-center text-black cursor-pointer shadow-lg"
+                                            className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center text-black cursor-pointer shadow-lg"
                                         >
                                             <Play className="w-6 h-6 fill-current" />
                                         </motion.div>
                                     </div>
                                     {/* Difficulty Badge */}
                                     <div className="absolute top-4 left-4 z-20">
-                                        <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${utility.difficulty === 'Easy' ? 'bg-green-500/20 text-green-400' :
+                                        <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${utility.difficulty === 'Easy' ? 'bg-yellow-500/20 text-yellow-500' :
                                             utility.difficulty === 'Medium' ? 'bg-orange-500/20 text-orange-400' :
                                                 'bg-red-500/20 text-red-400'
                                             }`}>
@@ -141,13 +141,13 @@ const SmokesHub: React.FC = () => {
                                 {/* Content */}
                                 <div className="p-5">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] text-cyan-500 font-bold uppercase tracking-widest">{utility.map}</span>
+                                        <span className="text-[10px] text-yellow-500 font-bold uppercase tracking-widest">{utility.map}</span>
                                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${utility.side === 'T' ? 'border-orange-500/30 text-orange-500' : 'border-blue-500/30 text-blue-500'
                                             }`}>
                                             {utility.side} SIDE
                                         </span>
                                     </div>
-                                    <h3 className="text-lg font-bold text-white mb-1 group-hover:text-cyan-400 transition-colors">{utility.title}</h3>
+                                    <h3 className="text-lg font-bold text-white mb-1 group-hover:text-yellow-400 transition-colors">{utility.title}</h3>
                                     <div className="flex items-center text-zinc-500 text-xs">
                                         <Info className="w-3 h-3 mr-1" />
                                         Locação: {utility.location}

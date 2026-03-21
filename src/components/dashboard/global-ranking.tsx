@@ -48,7 +48,7 @@ const GlobalRanking: React.FC = () => {
                 <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-6">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <Trophy className="text-cyan-500 w-8 h-8" />
+                            <Trophy className="text-yellow-500 w-8 h-8" />
                             <h1 className="text-4xl font-black tracking-tighter">RANKING GLOBAL</h1>
                         </div>
                         <p className="text-zinc-500">Os jogadores de maior elite da Tropa do CS2.</p>
@@ -59,7 +59,7 @@ const GlobalRanking: React.FC = () => {
                         <input
                             type="text"
                             placeholder="Buscar player..."
-                            className="w-full bg-zinc-900 border border-white/5 rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:border-cyan-500/50"
+                            className="w-full bg-zinc-900 border border-white/5 rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:border-yellow-500/50"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -81,9 +81,9 @@ const GlobalRanking: React.FC = () => {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: idx * 0.1 }}
-                                className={`relative p-6 rounded-2xl border ${idx === 0 ? 'bg-cyan-500/10 border-cyan-500/20 shadow-glow-cyan' : 'bg-zinc-900/50 border-white/5'} flex flex-col items-center text-center overflow-hidden`}
+                                className={`relative p-6 rounded-2xl border ${idx === 0 ? 'bg-yellow-500/10 border-yellow-500/20 shadow-yellow-500/20' : 'bg-zinc-900/50 border-white/5'} flex flex-col items-center text-center overflow-hidden`}
                             >
-                                {idx === 0 && <Medal className="absolute top-4 right-4 text-cyan-500 w-6 h-6" />}
+                                {idx === 0 && <Medal className="absolute top-4 right-4 text-yellow-500 w-6 h-6" />}
                                 <img src={user.avatar} className="w-20 h-20 rounded-full border-4 border-zinc-800 mb-4" />
                                 <p className="text-zinc-500 text-xs font-bold uppercase mb-1">Rank #{user.rank}</p>
                                 <h3 className="text-xl font-bold mb-2 truncate max-w-full">{user.nickname}</h3>
@@ -132,14 +132,14 @@ const GlobalRanking: React.FC = () => {
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-3">
                                                 <img src={user.avatar} className="w-8 h-8 rounded-full" />
-                                                <span className="font-bold text-white group-hover:text-cyan-400 transition-colors truncate max-w-[150px]">{user.nickname}</span>
+                                                <span className="font-bold text-white group-hover:text-yellow-400 transition-colors truncate max-w-[150px]">{user.nickname}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-black text-zinc-200">{user.rating}</span>
                                                 <div className="w-16 h-1 bg-white/5 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-cyan-500" style={{ width: `${Math.min((user.rating / 30000) * 100, 100)}%` }} />
+                                                    <div className="h-full bg-yellow-500" style={{ width: `${Math.min((user.rating / 30000) * 100, 100)}%` }} />
                                                 </div>
                                             </div>
                                         </td>

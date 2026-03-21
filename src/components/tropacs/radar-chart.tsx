@@ -49,7 +49,7 @@ export default function AttributesRadarChart({ data }: AttributesRadarChartProps
     return (
         <div className="w-full h-[320px] flex items-center justify-center bg-black/20 rounded-[40px] border border-white/5 p-2 backdrop-blur-xl relative overflow-hidden group">
             {/* Ambient Glow */}
-            <div className="absolute inset-0 bg-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+            <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
             
             <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chartData}>

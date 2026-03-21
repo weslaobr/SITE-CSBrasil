@@ -92,7 +92,7 @@ export default function SettingsPage() {
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-black italic uppercase tracking-tighter flex items-center gap-3">
-                        <Settings className="text-cyan-500" /> Configurações
+                        <Settings className="text-yellow-500" /> Configurações
                     </h1>
                     <p className="text-zinc-500 text-xs font-bold uppercase mt-1 tracking-widest px-1">Gerencie seu perfil e integrações</p>
                 </div>
@@ -103,7 +103,7 @@ export default function SettingsPage() {
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.8 }}
-                            className="bg-green-500/10 text-green-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 border border-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.1)]"
+                            className="bg-yellow-500/10 text-yellow-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 border border-yellow-500/20 shadow-[0_0_20px_rgba(254,209,61,0.1)]"
                         >
                             <CheckCircle2 size={14} /> Salvo com Sucesso
                         </motion.div>
@@ -121,7 +121,7 @@ export default function SettingsPage() {
                 <div className="md:col-span-12">
                     <section className="bg-zinc-900/40 border border-white/5 rounded-[40px] p-8 backdrop-blur-xl">
                         <h2 className="text-xl font-black italic uppercase tracking-tighter mb-8 flex items-center gap-3">
-                            <Share2 size={20} className="text-cyan-500" /> Integrações e Sincronização
+                            <Share2 size={20} className="text-yellow-500" /> Integrações e Sincronização
                         </h2>
 
                         <form onSubmit={handleSave} className="space-y-8">
@@ -134,9 +134,9 @@ export default function SettingsPage() {
                                             value={formData.faceitNickname}
                                             onChange={(e) => setFormData({ ...formData, faceitNickname: e.target.value })}
                                             placeholder="Ex: weslao_skin"
-                                            className="w-full bg-white/5 border border-white/5 focus:border-cyan-500/50 outline-none rounded-2xl px-5 py-4 text-sm font-bold transition-all placeholder:text-zinc-700"
+                                            className="w-full bg-white/5 border border-white/5 focus:border-yellow-500/50 outline-none rounded-2xl px-5 py-4 text-sm font-bold transition-all placeholder:text-zinc-700"
                                         />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-800 group-focus-within:text-cyan-500/50 transition-colors">
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-800 group-focus-within:text-yellow-500/50 transition-colors">
                                             <Activity size={18} />
                                         </div>
                                     </div>
@@ -151,9 +151,9 @@ export default function SettingsPage() {
                                             value={formData.steamMatchAuthCode}
                                             onChange={(e) => setFormData({ ...formData, steamMatchAuthCode: e.target.value })}
                                             placeholder="Ex: XXXX-XXXXX-XXXX"
-                                            className="w-full bg-white/5 border border-white/5 focus:border-cyan-500/50 outline-none rounded-2xl px-5 py-4 text-sm font-bold transition-all placeholder:text-zinc-700"
+                                            className="w-full bg-white/5 border border-white/5 focus:border-yellow-500/50 outline-none rounded-2xl px-5 py-4 text-sm font-bold transition-all placeholder:text-zinc-700"
                                         />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-800 group-focus-within:text-cyan-500/50 transition-colors">
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-800 group-focus-within:text-yellow-500/50 transition-colors">
                                             <Shield size={18} />
                                         </div>
                                     </div>
@@ -163,7 +163,7 @@ export default function SettingsPage() {
                                             href="https://help.steampowered.com/en/wizard/HelpWithGameIssue/?appid=730&issueid=128"
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-cyan-500 hover:underline ml-1"
+                                            className="text-yellow-500 hover:underline ml-1"
                                         >
                                             Obter código na Steam
                                         </a>
@@ -203,7 +203,7 @@ export default function SettingsPage() {
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="bg-cyan-500 hover:bg-cyan-400 text-black px-10 py-4 rounded-[20px] font-black uppercase text-xs transition-all shadow-lg shadow-cyan-500/20 flex items-center gap-3 disabled:opacity-50 active:scale-95"
+                                    className="bg-yellow-500 hover:bg-yellow-400 text-black px-10 py-4 rounded-[20px] font-black uppercase text-xs transition-all shadow-lg shadow-yellow-500/20 flex items-center gap-3 disabled:opacity-50 active:scale-95"
                                 >
                                     {saving ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
                                     Salvar Alterações
@@ -283,7 +283,7 @@ function PrefToggle({ label, desc, active, onToggle }: any) {
                 <p className="text-sm font-bold uppercase tracking-tight group-hover:text-white transition-colors">{label}</p>
                 <p className="text-[10px] text-zinc-500 font-bold mt-0.5">{desc}</p>
             </div>
-            <div className={`w-12 h-6 rounded-full p-1 transition-all duration-300 ${active ? 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]' : 'bg-zinc-800'}`}>
+            <div className={`w-12 h-6 rounded-full p-1 transition-all duration-300 ${active ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]' : 'bg-zinc-800'}`}>
                 <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-300 ${active ? 'translate-x-6' : 'translate-x-0'}`} />
             </div>
         </div>

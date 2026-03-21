@@ -11,18 +11,46 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   
-  /* Brand Color Overrides */
+  /* Brand Color Overrides - Yellow/Gold Theme */
+  --color-primary: #fed13d;
+  --color-primary-hover: #ea7208;
+  
   --color-green-50: #fffbeb;
   --color-green-100: #fef3c7;
   --color-green-200: #fde68a;
   --color-green-300: #fcd34d;
   --color-green-400: #fbbf24;
-  --color-green-500: #fed13d; /* Primary Logo Gold */
+  --color-green-500: #fed13d;
   --color-green-600: #d97706;
   --color-green-700: #b45309;
-  --color-green-800: #92400e;
-  --color-green-900: #78350f;
-  --color-green-950: #451a03;
+}
+
+@layer utilities {
+  .text-glow-yellow {
+    text-shadow: 0 0 10px rgba(254, 209, 61, 0.5);
+  }
+
+  .shadow-glow-yellow {
+    box-shadow: 0 0 20px rgba(254, 209, 61, 0.2);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #fed13d;
 }
 
 @media (prefers-color-scheme: dark) {

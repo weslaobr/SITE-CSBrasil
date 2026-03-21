@@ -144,8 +144,8 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                         className="relative bg-[#0b0e13] border border-white/10 rounded-[40px] p-20 flex flex-col items-center gap-8 shadow-2xl"
                     >
                         <div className="relative w-20 h-20">
-                            <div className="absolute inset-0 border-4 border-emerald-500/10 rounded-full" />
-                            <div className="absolute inset-0 border-4 border-t-emerald-500 rounded-full animate-spin" />
+                            <div className="absolute inset-0 border-4 border-yellow-500/10 rounded-full" />
+                            <div className="absolute inset-0 border-4 border-t-yellow-500 rounded-full animate-spin" />
                         </div>
                         <div className="text-center">
                             <h3 className="text-xl font-black uppercase italic tracking-tighter text-white mb-2">Analisando Partida</h3>
@@ -349,7 +349,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
         
         // Aim Stats
         if (user.hs) stats.push({ label: 'Headshot Accuracy', value: user.hs, color: 'bg-rose-500', tag: 'AIM', raw: parseInt(user.hs) });
-        stats.push({ label: 'ADR', value: user.adr.toFixed(1), color: 'bg-emerald-500', tag: 'IMPACT', raw: user.adr });
+        stats.push({ label: 'ADR', value: user.adr.toFixed(1), color: 'bg-yellow-500', tag: 'IMPACT', raw: user.adr });
         
         // Multi-kills
         const [k2, k3, k4, k5] = (user.multikills || "0/0/0/0").split('/').map(Number);
@@ -357,8 +357,8 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
         else if (k4 > 0) stats.push({ label: '4K Rounds', value: k4.toString(), color: 'bg-rose-500', tag: 'IMPACT', raw: 80 });
         
         // Utility
-        if (user.util_damage > 0) stats.push({ label: 'Dano de Utilitário', value: user.util_damage.toString(), color: 'bg-cyan-500', tag: 'UTIL', raw: Math.min(100, (user.util_damage / 300) * 100) });
-        if (user.flash_assists > 0) stats.push({ label: 'Assist. de Flash', value: user.flash_assists.toString(), color: 'bg-cyan-400', tag: 'UTIL', raw: Math.min(100, user.flash_assists * 20) });
+        if (user.util_damage > 0) stats.push({ label: 'Dano de Utilitário', value: user.util_damage.toString(), color: 'bg-yellow-500', tag: 'UTIL', raw: Math.min(100, (user.util_damage / 300) * 100) });
+        if (user.flash_assists > 0) stats.push({ label: 'Assist. de Flash', value: user.flash_assists.toString(), color: 'bg-yellow-400', tag: 'UTIL', raw: Math.min(100, user.flash_assists * 20) });
 
         // Entry
         if (user.fkd > 0) stats.push({ label: 'Duelos de Abertura Vencidos', value: user.fkd.toString(), color: 'bg-purple-500', tag: 'OPENING', raw: (user.fkd / (user.fkd + user.fkd_deaths || 1)) * 100 });
@@ -526,7 +526,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Activity size={12} className="text-emerald-500" />
+                                            <Activity size={12} className="text-yellow-500" />
                                             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{displayMode}</span>
                                         </div>
                                     </div>
@@ -534,7 +534,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                     {/* Main Result */}
                                     <div className="flex flex-col items-center">
                                         <div className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-3 border ${
-                                            isWin ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
+                                            isWin ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
                                         }`}>
                                             {isWin ? 'VICTORY' : 'DEFEAT'}
                                         </div>
@@ -555,13 +555,13 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                     {/* Date info right */}
                                     <div className="hidden md:flex flex-col items-start gap-2">
                                         <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-white/10 rounded-xl backdrop-blur-md text-white/80">
-                                            <Calendar size={14} className="text-emerald-500" />
+                                            <Calendar size={14} className="text-yellow-500" />
                                             <span className="text-xs font-black tracking-widest uppercase">
                                                 {new Date(currentMatch.matchDate).toLocaleDateString('pt-BR')}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${isVerified ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`} />
+                                            <div className={`w-2 h-2 rounded-full ${isVerified ? 'bg-yellow-500 animate-pulse' : 'bg-zinc-600'}`} />
                                             <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
                                                 {isVerified ? 'Dados Verificados' : 'Dados Estimados'}
                                             </span>
@@ -588,14 +588,14 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                             className="relative py-4 px-2 group"
                                         >
                                             <span className={`text-[11px] font-black uppercase tracking-[0.2em] transition-colors ${
-                                                mainTab === tab.id ? 'text-emerald-500' : 'text-zinc-500 group-hover:text-white'
+                                                mainTab === tab.id ? 'text-yellow-500' : 'text-zinc-500 group-hover:text-white'
                                             }`}>
                                                 {tab.label}
                                             </span>
                                             {mainTab === tab.id && (
                                                 <motion.div 
                                                     layoutId="activeTab"
-                                                    className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500 rounded-t-full shadow-[0_0_15px_rgba(16,185,129,0.5)]" 
+                                                    className="absolute bottom-0 left-0 right-0 h-1 bg-yellow-500 rounded-t-full shadow-[0_0_15px_rgba(234,179,8,0.5)]" 
                                                 />
                                             )}
                                         </button>
@@ -638,16 +638,16 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                         {/* Left Column: Identity & Highlights */}
                                         <div className="lg:col-span-12 xl:col-span-7 space-y-8">
                                             {/* Identity Card (Premium Style) */}
-                                            <div className="relative group overflow-hidden bg-[#0e1218] border border-white/[0.05] rounded-[40px] p-10 shadow-[0_30px_60px_rgba(0,0,0,0.6)] min-h-[420px] transition-all duration-500 hover:border-emerald-500/20">
+                                            <div className="relative group overflow-hidden bg-[#0e1218] border border-white/[0.05] rounded-[40px] p-10 shadow-[0_30px_60px_rgba(0,0,0,0.6)] min-h-[420px] transition-all duration-500 hover:border-yellow-500/20">
                                                 {/* Animated Background Elements */}
-                                                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-500/[0.05] blur-[140px] -mr-80 -mt-80 group-hover:bg-emerald-500/[0.08] transition-colors duration-700" />
-                                                <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-emerald-500/[0.03] blur-[100px] group-hover:bg-emerald-500/[0.05] transition-colors duration-700" />
+                                                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-yellow-500/[0.05] blur-[140px] -mr-80 -mt-80 group-hover:bg-yellow-500/[0.08] transition-colors duration-700" />
+                                                <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-yellow-500/[0.03] blur-[100px] group-hover:bg-yellow-500/[0.05] transition-colors duration-700" />
                                                 
                                                 <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 mb-10 relative z-10">
                                                     {/* Avatar Section with Pulse Glow */}
                                                     <div className="relative shrink-0">
-                                                        <div className="absolute inset-0 bg-emerald-500/10 blur-2xl rounded-full scale-75 group-hover:scale-110 transition-transform duration-700 opacity-0 group-hover:opacity-100" />
-                                                        <div className="w-32 h-32 rounded-[40px] overflow-hidden border-2 border-white/5 group-hover:border-emerald-500/40 p-1.5 bg-zinc-900 shadow-2xl transition-all duration-500 relative z-10">
+                                                        <div className="absolute inset-0 bg-yellow-500/10 blur-2xl rounded-full scale-75 group-hover:scale-110 transition-transform duration-700 opacity-0 group-hover:opacity-100" />
+                                                        <div className="w-32 h-32 rounded-[40px] overflow-hidden border-2 border-white/5 group-hover:border-yellow-500/40 p-1.5 bg-zinc-900 shadow-2xl transition-all duration-500 relative z-10">
                                                             <img 
                                                                 src={userData.avatar} 
                                                                 className="w-full h-full object-cover rounded-[32px] group-hover:scale-110 transition-transform duration-1000 ease-out" 
@@ -658,7 +658,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                                             whileHover={{ scale: 1.1, rotate: 5 }}
                                                             className="absolute -bottom-2 -right-2 w-12 h-12 bg-[#1a1f26]/90 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.4)] z-20"
                                                         >
-                                                            <Trophy size={20} className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                                            <Trophy size={20} className="text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]" />
                                                         </motion.div>
                                                     </div>
 
@@ -669,7 +669,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                                             <span className={`px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] rounded-full border shadow-lg ${
                                                                 userData.rating >= 1.2 
                                                                 ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 shadow-orange-500/5' 
-                                                                : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-emerald-500/5'
+                                                                : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 shadow-yellow-500/5'
                                                             }`}>
                                                                 {userData.rating >= 1.2 ? 'ELITE' : 'ESTÁVEL'}
                                                             </span>
@@ -677,11 +677,11 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                                         
                                                         <div className="relative mb-3">
                                                             <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tight text-white leading-tight drop-shadow-2xl">
-                                                                <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/60 group-hover:to-emerald-400 transition-all duration-700">
+                                                                <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/60 group-hover:to-yellow-400 transition-all duration-700">
                                                                     {identity}
                                                                 </span>
                                                             </h2>
-                                                            <div className="absolute -bottom-2 left-0 w-12 h-1 bg-emerald-500 rounded-full group-hover:w-24 transition-all duration-700 opacity-40 ml-1" />
+                                                            <div className="absolute -bottom-2 left-0 w-12 h-1 bg-yellow-500 rounded-full group-hover:w-24 transition-all duration-700 opacity-40 ml-1" />
                                                         </div>
                                                         
                                                         <p className="text-zinc-500 text-[8px] font-black uppercase tracking-[0.2em] mt-6 flex items-center justify-center md:justify-start gap-2 opacity-40 group-hover:opacity-80 transition-opacity">
@@ -729,7 +729,7 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                                     ))}
                                                     {top5.length === 0 && (
                                                         <div className="col-span-full py-12 flex flex-col items-center justify-center gap-4 text-zinc-600 border border-white/[0.03] border-dashed rounded-[32px]">
-                                                            <div className="w-8 h-8 rounded-full border-2 border-zinc-800 border-t-emerald-500 animate-spin" />
+                                                            <div className="w-8 h-8 rounded-full border-2 border-zinc-800 border-t-yellow-500 animate-spin" />
                                                             <span className="text-[10px] uppercase font-black tracking-widest">Sincronizando estatísticas detalhadas...</span>
                                                         </div>
                                                     )}
@@ -768,19 +768,19 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                                         ].map((stat, i) => (
                                                             <div key={i} className="flex items-center justify-between p-4 rounded-2xl hover:bg-white/[0.03] transition-all group border border-transparent hover:border-white/5">
                                                                 <div className="flex items-center gap-4">
-                                                                    <div className={`p-2 rounded-lg bg-zinc-800 transition-colors group-hover:bg-zinc-700 ${stat.trend === 'up' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                                    <div className={`p-2 rounded-lg bg-zinc-800 transition-colors group-hover:bg-zinc-700 ${stat.trend === 'up' ? 'text-yellow-500' : 'text-rose-500'}`}>
                                                                         {stat.icon}
                                                                     </div>
                                                                     <span className="text-[11px] font-black text-zinc-400 tracking-wide uppercase transition-colors group-hover:text-white">{stat.label}</span>
                                                                 </div>
                                                                 <div className="flex items-center gap-6">
-                                                                    <span className={`text-lg font-black italic tracking-tighter ${stat.trend === 'up' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                                    <span className={`text-lg font-black italic tracking-tighter ${stat.trend === 'up' ? 'text-yellow-500' : 'text-rose-500'}`}>
                                                                         {stat.value}
                                                                     </span>
                                                                     <div className="flex items-center gap-2 w-16 justify-end">
                                                                         <span className="text-[10px] font-bold text-zinc-600 italic">{stat.avg}</span>
                                                                         {stat.trend === 'up' ? (
-                                                                            <ChevronUp size={12} className="text-emerald-500 shrink-0" />
+                                                                            <ChevronUp size={12} className="text-yellow-500 shrink-0" />
                                                                         ) : (
                                                                             <ChevronDown size={12} className="text-rose-500 shrink-0" />
                                                                         )}

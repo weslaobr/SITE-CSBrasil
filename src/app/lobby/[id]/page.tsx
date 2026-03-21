@@ -79,7 +79,7 @@ export default function LobbyRoom() {
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
-                        <span className="bg-cyan-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Mix 5x5</span>
+                        <span className="bg-yellow-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Mix 5x5</span>
                         <h1 className="text-3xl font-black italic tracking-tighter uppercase">{lobby.name}</h1>
                     </div>
                     <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
@@ -132,7 +132,7 @@ export default function LobbyRoom() {
                     {!lobby.players.find((p: any) => p.userId === currentUserId) && (
                         <button
                             onClick={() => handleAction("join")}
-                            className="bg-cyan-500 hover:bg-cyan-400 text-black px-8 py-3 rounded-2xl font-black uppercase text-xs transition-all shadow-lg shadow-cyan-500/10"
+                            className="bg-yellow-500 hover:bg-yellow-400 text-black px-8 py-3 rounded-2xl font-black uppercase text-xs transition-all shadow-lg shadow-yellow-500/10"
                         >
                             Entrar na Sala
                         </button>
@@ -158,15 +158,15 @@ export default function LobbyRoom() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Team A */}
                 <div className="lg:col-span-3 space-y-4">
-                    <div className={`bg-zinc-900/60 border ${lobby.turn === 'A' && lobby.status === 'picking' ? 'border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.15)]' : 'border-white/5'} p-6 rounded-3xl min-h-[400px] relative overflow-hidden transition-all duration-500`}>
+                    <div className={`bg-zinc-900/60 border ${lobby.turn === 'A' && lobby.status === 'picking' ? 'border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.15)]' : 'border-white/5'} p-6 rounded-3xl min-h-[400px] relative overflow-hidden transition-all duration-500`}>
                         {lobby.turn === 'A' && lobby.status === 'picking' && (
-                            <div className="absolute top-0 left-0 w-full h-1 bg-cyan-500 animate-pulse" />
+                            <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500 animate-pulse" />
                         )}
                         <div className="absolute top-0 right-0 p-4 opacity-5">
                             <Sword size={80} />
                         </div>
                         <h2 className="text-xl font-black uppercase italic tracking-tighter mb-6 flex items-center gap-2">
-                            <div className="w-1.5 h-6 bg-cyan-500" /> TIME A
+                            <div className="w-1.5 h-6 bg-yellow-500" /> TIME A
                         </h2>
                         <div className="space-y-3">
                             {teamA.map((p: any) => (
@@ -188,12 +188,12 @@ export default function LobbyRoom() {
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="bg-green-500/10 border border-green-500/20 p-8 rounded-[40px] backdrop-blur-xl text-center space-y-4 mb-8"
+                                className="bg-orange-500/10 border border-orange-500/20 p-8 rounded-[40px] backdrop-blur-xl text-center space-y-4 mb-8"
                             >
-                                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(34,197,94,0.4)]">
+                                <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(249,115,22,0.4)]">
                                     <CheckCircle2 size={32} className="text-black" />
                                 </div>
-                                <h2 className="text-3xl font-black italic tracking-tighter uppercase text-green-500">CONVITES ENVIADOS / MIX PRONTO!</h2>
+                                <h2 className="text-3xl font-black italic tracking-tighter uppercase text-orange-500">CONVITES ENVIADOS / MIX PRONTO!</h2>
                                 <p className="text-zinc-400 text-sm font-bold uppercase tracking-widest">Os times foram definidos e a partida pode começar.</p>
                             </motion.div>
                         )}
@@ -233,7 +233,7 @@ export default function LobbyRoom() {
 
                                         <div className="flex gap-2">
                                             {isOwner && !lobby.leaderAId && (
-                                                <button onClick={() => handleAction("setLeader", p.userId)} className="p-2 bg-cyan-500/10 text-cyan-500 rounded-lg hover:bg-cyan-500 hover:text-black transition-all" title="Tornar Capitão">
+                                                <button onClick={() => handleAction("setLeader", p.userId)} className="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg hover:bg-yellow-500 hover:text-black transition-all" title="Tornar Capitão">
                                                     <Shield size={14} />
                                                 </button>
                                             )}
@@ -250,7 +250,7 @@ export default function LobbyRoom() {
                             <div className="py-10 text-center space-y-6">
                                 <div className="flex justify-center items-center gap-12">
                                     <div className="text-center">
-                                        <p className="text-4xl font-black italic text-cyan-500">5</p>
+                                        <p className="text-4xl font-black italic text-yellow-500">5</p>
                                         <p className="text-[10px] text-zinc-500 uppercase font-bold">Time A</p>
                                     </div>
                                     <div className="text-zinc-800 text-4xl font-black italic">VS</div>
@@ -301,7 +301,7 @@ function PlayerRow({ player, isLeader, reverse }: any) {
             <div className={reverse ? 'text-right' : 'text-left'}>
                 <p className="text-sm font-bold truncate max-w-[120px]">{player.user.name}</p>
                 <div className={`flex items-center gap-1 ${reverse ? 'flex-row-reverse' : ''}`}>
-                    {isLeader && <Shield size={10} className="text-cyan-500" />}
+                    {isLeader && <Shield size={10} className="text-yellow-500" />}
                     <span className="text-[9px] text-zinc-500 font-black uppercase">LVL {player.user.gcLevel || 10}</span>
                 </div>
             </div>
