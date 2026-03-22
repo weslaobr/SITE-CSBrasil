@@ -23,6 +23,19 @@ export interface LeetifyPlayerStats {
         positioning: number;
         clutching: number;
         opening: number;
+        // Advanced Stats
+        timeToDamage?: number;
+        reactionTime?: number;
+        crosshairPlacement?: number;
+        preaim?: number;
+        kdRatio?: number;
+        adr?: number;
+        aimAccuracy?: number;
+        headAccuracy?: number;
+        wallbangKillPercentage?: number;
+        smokeKillPercentage?: number;
+        hltvRating2?: number;
+        kast?: number;
     };
     recentMatches: any[];
 }
@@ -50,6 +63,19 @@ export const getLeetifyPlayerData = async (steamId64: string): Promise<LeetifyPl
             positioning: data.ratings?.positioning || 0,
             clutching: data.ratings?.clutching || data.ratings?.clutch || 0,
             opening: data.ratings?.opening || 0,
+            // Map advanced stats if present, otherwise null (will be mocked in API or frontend)
+            timeToDamage: data.ratings?.timeToDamage,
+            reactionTime: data.ratings?.reactionTime,
+            crosshairPlacement: data.ratings?.crosshairPlacement,
+            preaim: data.ratings?.preaim,
+            kdRatio: data.ratings?.kdRatio,
+            adr: data.ratings?.adr,
+            aimAccuracy: data.ratings?.aimAccuracy,
+            headAccuracy: data.ratings?.headAccuracy,
+            wallbangKillPercentage: data.ratings?.wallbangKillPercentage,
+            smokeKillPercentage: data.ratings?.smokeKillPercentage,
+            hltvRating2: data.ratings?.hltvRating2,
+            kast: data.ratings?.kast,
         } : null;
 
         return {

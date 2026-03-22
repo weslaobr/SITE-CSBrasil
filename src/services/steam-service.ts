@@ -9,6 +9,16 @@ export interface SteamProfile {
     profileurl: string;
     avatarfull: string;
     timecreated: number;
+    loccountrycode?: string;
+}
+
+export interface SteamBans {
+    CommunityBanned: boolean;
+    VACBanned: boolean;
+    NumberOfVACBans: number;
+    DaysSinceLastBan: number;
+    NumberOfGameBans: number;
+    EconomyBan: string;
 }
 
 export interface CS2Stats {
@@ -110,6 +120,38 @@ export const getCS2Stats = async (steamId: string): Promise<CS2Stats> => {
         hs_percentage: stats.total_kills ? Math.round(((stats.total_kills_headshot || 0) / stats.total_kills) * 100) : 0,
         adr: stats.total_damage_done ? Math.round(stats.total_damage_done / (stats.total_rounds_played || 1)) : 85
     };
+};
+
+export const getSteamLevel = async (steamId: string): Promise<number> => {
+    if (!STEAM_API_KEY) return 0;
+    try {
+        const response = await axios.get(`${STEAM_BASE_URL}/IPlayerService/GetSteamLevel/v1/`, {
+            params: {
+                key: STEAM_API_KEY,
+                steamid: steamId,
+            },
+        });
+        return response.data?.response?.player_level || 0;
+    } catch (error) {
+        console.error("Error fetching Steam level:", error);
+        return 0;
+    }
+};
+
+export const getPlayerBans = async (steamId: string): Promise<SteamBans | null> => {
+    if (!STEAM_API_KEY) return null;
+    try {
+        const response = await axios.get(`${STEAM_BASE_URL}/ISteamUser/GetPlayerBans/v1/`, {
+            params: {
+                key: STEAM_API_KEY,
+                steamids: steamId,
+            },
+        });
+        return response.data?.players?.[0] || null;
+    } catch (error) {
+        console.error("Error fetching player bans:", error);
+        return null;
+    }
 };
 
 export const getPlayerInventory = async (steamId: string) => {

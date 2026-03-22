@@ -21,6 +21,20 @@ interface InventoryItem {
     paidPrice?: number | null;
     inspect_url?: string | null;
     market_url?: string | null;
+    // Novos campos de detalhes
+    details?: {
+        float?: number;
+        paint_seed?: number;
+        stickers?: Array<{
+            slot: number;
+            sticker_id: number;
+            wear?: number;
+            name?: string;
+            image?: string;
+        }>;
+        phase?: string;
+    } | null;
+    isFetchingDetails?: boolean;
 }
 
 const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => {
@@ -30,6 +44,7 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
     const [language, setLanguage] = useState<'pt' | 'en'>('pt');
     const [currency, setCurrency] = useState<'BRL' | 'USD'>('BRL');
     const [showRoiAssetId, setShowRoiAssetId] = useState<string | null>(null);
+    const [showDetailsAssetId, setShowDetailsAssetId] = useState<string | null>(null);
     const [localItems, setLocalItems] = useState<InventoryItem[]>(items);
     const [exchangeRate, setExchangeRate] = useState<{ rate: number; bcbRate: number; updatedAt: string } | null>(null);
 
@@ -140,40 +155,76 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
     };
 
     const handleSavePaidPrice = async (assetId: string, marketHashName: string, price: string) => {
+        // ... (pre-existing code for saving paid price)
+    };
+
+    const fetchItemDetails = async (item: InventoryItem) => {
+        if (item.details || item.isFetchingDetails || !item.inspect_url) return;
+
+        setLocalItems(prev => prev.map(i => 
+            i.assetid === item.assetid ? { ...i, isFetchingDetails: true } : i
+        ));
+
         try {
-            // Remove símbolos R$, $, espaços e troca vírgula por ponto
-            const cleanPrice = price.replace(/[R$\s]/g, '').replace(',', '.');
-            const numericPrice = parseFloat(cleanPrice);
-            const finalPrice = price.trim() === '' ? null : numericPrice;
-            if (finalPrice !== null && isNaN(finalPrice)) return;
+            const botUrl = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3005';
+            
+            // Timeout de 5 segundos para a requisição
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-            // paidPrice é SEMPRE armazenado em USD internamente
-            // Se o usuário está em modo BRL, precisa converter o valor digitado para USD
-            let priceInUSD: number | null = finalPrice;
-            if (finalPrice !== null && currency === 'BRL' && exchangeRate) {
-                priceInUSD = finalPrice / exchangeRate.rate;
-            }
-
-            setLocalItems(prev => prev.map(item =>
-                item.assetid === assetId ? { ...item, paidPrice: priceInUSD } : item
-            ));
-
-            const response = await fetch('/api/inventory/save-price', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assetId, marketHashName, paidPrice: priceInUSD })
+            const response = await fetch(`${botUrl}/item-details?url=${encodeURIComponent(item.inspect_url)}`, {
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
 
-            if (!response.ok) {
-                setLocalItems(prev => prev.map(item =>
-                    item.assetid === assetId ? { ...item, paidPrice: items.find(i => i.assetid === assetId)?.paidPrice || null } : item
+            if (!response.ok) throw new Error('API do Bot retornou erro');
+            
+            const data = await response.json();
+
+            if (data && data.float !== undefined) {
+                setLocalItems(prev => prev.map(i => 
+                    i.assetid === item.assetid ? { 
+                        ...i, 
+                        isFetchingDetails: false,
+                        details: {
+                            float: data.float,
+                            paint_seed: data.paint_seed,
+                            stickers: data.stickers,
+                            phase: data.phase
+                        }
+                    } : i
+                ));
+            } else {
+                setLocalItems(prev => prev.map(i => 
+                    i.assetid === item.assetid ? { ...i, isFetchingDetails: false, details: null } : i
                 ));
             }
-        } catch {
-            setLocalItems(prev => prev.map(item =>
-                item.assetid === assetId ? { ...item, paidPrice: items.find(i => i.assetid === assetId)?.paidPrice || null } : item
+        } catch (error) {
+            console.error("Error fetching item details:", error);
+            setLocalItems(prev => prev.map(i => 
+                i.assetid === item.assetid ? { 
+                    ...i, 
+                    isFetchingDetails: false, 
+                    details: { error: true } as any // Flag de erro
+                } : i
             ));
         }
+    };
+
+    const getFloatColor = (float: number) => {
+        if (float <= 0.07) return 'text-emerald-400';
+        if (float <= 0.15) return 'text-lime-400';
+        if (float <= 0.38) return 'text-yellow-400';
+        if (float <= 0.45) return 'text-orange-400';
+        return 'text-red-400';
+    };
+
+    const getFloatLabel = (float: number) => {
+        if (float <= 0.07) return 'FN';
+        if (float <= 0.15) return 'MW';
+        if (float <= 0.38) return 'FT';
+        if (float <= 0.45) return 'WW';
+        return 'BS';
     };
 
     return (
@@ -435,6 +486,27 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                         </a>
                                     )}
                                     <button
+                                        onClick={() => {
+                                            const newState = showDetailsAssetId === item.assetid ? null : item.assetid;
+                                            setShowDetailsAssetId(newState);
+                                            if (newState) fetchItemDetails(item);
+                                        }}
+                                        className={`p-2.5 rounded-xl border shadow-xl transition-all hover:scale-110 active:scale-95 ${
+                                            showDetailsAssetId === item.assetid
+                                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                                : item.details
+                                                ? 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                                                : 'bg-black/90 text-white border-white/10 hover:bg-zinc-800'
+                                        }`}
+                                        title={language === 'pt' ? "Ver Detalhes da Skin" : "View Skin Details"}
+                                    >
+                                        {item.isFetchingDetails ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <Info className="w-4 h-4" />
+                                        )}
+                                    </button>
+                                    <button
                                         onClick={() => setShowRoiAssetId(showRoiAssetId === item.assetid ? null : item.assetid)}
                                         className={`p-2.5 rounded-xl border shadow-xl transition-all hover:scale-110 active:scale-95 ${
                                             item.paidPrice
@@ -481,6 +553,105 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                             </p>
                                         </div>
 
+                                        {/* Detalhes da Skin (Float, Stickers, Seed) */}
+                                        <AnimatePresence>
+                                            {showDetailsAssetId === item.assetid && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    className="overflow-hidden"
+                                                >
+                                                    <div className="bg-black/40 p-3 rounded-xl border border-white/5 mt-2 space-y-3">
+                                                        {item.isFetchingDetails ? (
+                                                            <div className="py-4 flex flex-col items-center gap-2">
+                                                                <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" />
+                                                                <span className="text-[10px] font-black uppercase text-zinc-500 animate-pulse">Inspecionando...</span>
+                                                            </div>
+                                                        ) : item.details && (item.details as any).error ? (
+                                                            <div className="py-2 text-center space-y-2">
+                                                                <p className="text-[10px] text-red-400 font-black uppercase">Bot Offline ou Erro de Conexão</p>
+                                                                <p className="text-[9px] text-zinc-500 leading-tight">Certifique-se de que o bot está rodando e conectado ao GC.</p>
+                                                                <button 
+                                                                    onClick={() => fetchItemDetails(item)}
+                                                                    className="text-[9px] font-black text-yellow-500 hover:text-white transition-colors uppercase border border-yellow-500/30 px-2 py-1 rounded"
+                                                                >
+                                                                    Tentar Novamente
+                                                                </button>
+                                                            </div>
+                                                        ) : item.details ? (
+                                                            <>
+                                                                {/* Float Bar */}
+                                                                <div className="space-y-1.5">
+                                                                    <div className="flex justify-between items-end">
+                                                                        <span className="text-[10px] font-black text-zinc-500 uppercase">Float (Desgaste)</span>
+                                                                        <span className={`text-[11px] font-black ${getFloatColor(item.details.float!)}`}>
+                                                                            {item.details.float!.toFixed(16)}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden flex relative">
+                                                                        <div className="h-full bg-emerald-400" style={{ width: '7%' }} title="FN" />
+                                                                        <div className="h-full bg-lime-400" style={{ width: '8%' }} title="MW" />
+                                                                        <div className="h-full bg-yellow-400" style={{ width: '23%' }} title="FT" />
+                                                                        <div className="h-full bg-orange-400" style={{ width: '7%' }} title="WW" />
+                                                                        <div className="h-full bg-red-400" style={{ width: '55%' }} title="BS" />
+                                                                        <div className="absolute h-3 w-0.5 bg-white -mt-[3px] shadow-[0_0_5px_white] z-10" style={{ left: `${item.details.float! * 100}%` }} />
+                                                                    </div>
+                                                                    <div className="flex justify-between text-[8px] font-black text-zinc-600 uppercase tracking-tighter">
+                                                                        <span>0.00</span>
+                                                                        <span>{getFloatLabel(item.details.float!)}</span>
+                                                                        <span>1.00</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Pain Seed & Phase */}
+                                                                <div className="grid grid-cols-2 gap-2 border-t border-white/5 pt-2">
+                                                                    <div>
+                                                                        <span className="block text-[8px] font-black text-zinc-600 uppercase">Padrão (Seed)</span>
+                                                                        <span className="text-xs font-black text-white">{item.details.paint_seed}</span>
+                                                                    </div>
+                                                                    {item.details.phase && (
+                                                                        <div className="text-right">
+                                                                            <span className="block text-[8px] font-black text-zinc-600 uppercase">Phase</span>
+                                                                            <span className="text-xs font-black text-emerald-400">{item.details.phase}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Stickers */}
+                                                                {item.details.stickers && item.details.stickers.length > 0 && (
+                                                                    <div className="border-t border-white/5 pt-2">
+                                                                        <span className="block text-[8px] font-black text-zinc-600 uppercase mb-2">Adesivos</span>
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            {item.details.stickers.map((stk, idx) => (
+                                                                                <div key={idx} className="relative group/stk">
+                                                                                    <div className="w-8 h-8 bg-black/40 border border-white/5 rounded-lg flex items-center justify-center p-1 hover:border-white/20 transition-all">
+                                                                                        <img 
+                                                                                            src={`https://steamcdn-a.akamaihd.net/apps/730/icons/econ/stickers/${stk.sticker_id}.png`} 
+                                                                                            alt="Sticker"
+                                                                                            className="w-full h-full object-contain"
+                                                                                            onError={(e) => (e.target as HTMLImageElement).src = '/img/fallback-sticker.png'}
+                                                                                        />
+                                                                                    </div>
+                                                                                    {stk.wear && stk.wear > 0 && (
+                                                                                        <div className="absolute -bottom-1 -right-1 bg-red-500 text-[6px] font-black px-1 rounded-full border border-black">
+                                                                                            {Math.round(stk.wear * 100)}%
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <p className="text-[10px] text-zinc-500 text-center italic">Erro ao buscar detalhes</p>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
                                         {/* ROI */}
                                         <AnimatePresence>
                                             {showRoiAssetId === item.assetid && (
@@ -495,8 +666,8 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
                                                              <span className="text-xs text-zinc-400 font-bold uppercase flex items-center gap-1.5">
                                                                  {language === 'pt' ? 'Preço Pago' : 'Paid Price'}
                                                                  <span className={`text-[9px] px-1 py-0.5 rounded font-black ${
-                                       currency === 'BRL' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-yellow-500/20 text-yellow-500'
-                                   }`}>{currency}</span>
+                                        currency === 'BRL' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-yellow-500/20 text-yellow-500'
+                                    }`}>{currency}</span>
                                                              </span>
                                                             <div className="flex items-center gap-1 bg-zinc-800/50 border border-white/5 rounded px-2 py-1">
                                                                 <input

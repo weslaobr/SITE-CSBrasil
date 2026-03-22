@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "TropaCS | Pro Analytics",
   description: "Performance Insights & Analytics para a Tropa do CS2 Brasileiro",
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({

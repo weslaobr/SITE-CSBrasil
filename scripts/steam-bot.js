@@ -9,6 +9,14 @@ dotenv.config();
 const app = express();
 const port = process.env.STEAM_BOT_PORT || 3005;
 
+// Middleware para CORS
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+});
+
 const user = new SteamUser();
 const cs2 = new CS2(user);
 
@@ -124,6 +132,58 @@ app.get('/match/:sharingCode', (req, res) => {
         };
 
         res.json(resData);
+    });
+});
+
+// API para buscar detalhes da skin (Float, Seed, Stickers) via URL de Inspeção
+app.get('/item-details', (req, res) => {
+    const { url } = req.query;
+
+    if (!url) {
+        return res.status(400).json({ error: 'URL de inspeção ausente' });
+    }
+
+    console.log(`💎 Inspecionando item: ${url.substring(0, 50)}...`);
+
+    if (!cs2.haveGCCheckedIn) {
+        return res.status(503).json({ error: 'Bot ainda não está conectado ao GC' });
+    }
+
+    // O node-cs2/globaloffensive geralmente oferece o método de inspeção.
+    // A estrutura da URL é steam://rungame/730/76561202255233023/+csgo_download_match%20S...
+    // Na verdade para itens é steam://rungame/730/76561202255233023/+csgo_econ_action_preview%20S...
+    
+    // O método inspectItem aceita a URL diretamente ou os parâmetros s, a, d, m
+    cs2.inspectItem(url, (item, err) => {
+        if (err || !item) {
+            console.error(`❌ Erro ao inspecionar item:`, err);
+            return res.status(500).json({ error: 'Erro ao inspecionar item no GC' });
+        }
+
+        console.log(`✅ Item inspecionado com sucesso! Float: ${item.paint_wear}`);
+
+        // Mapear stickers
+        const stickers = (item.stickers || []).map(s => ({
+            slot: s.slot,
+            sticker_id: s.sticker_id,
+            wear: s.wear,
+            scale: s.scale,
+            rotation: s.rotation,
+            tint_id: s.tint_id,
+            // Poderíamos adicionar um mapeamento de ID para Imagem aqui se tivéssemos a base
+        }));
+
+        res.json({
+            float: item.paint_wear,
+            paint_seed: item.paint_seed,
+            paint_index: item.paint_index,
+            stickers: stickers,
+            defindex: item.defindex,
+            quality: item.quality,
+            rarity: item.rarity,
+            origin: item.origin,
+            full_item: item // Opcional: retornar tudo para debug
+        });
     });
 });
 
