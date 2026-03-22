@@ -43,7 +43,7 @@ const GlobalRanking: React.FC = () => {
 
     return (
         <div className="p-8 bg-zinc-950 min-h-screen text-white">
-            <div className="max-w-5xl mx-auto">
+            <div className="w-full">
                 {/* Header Table */}
                 <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-6">
                     <div>

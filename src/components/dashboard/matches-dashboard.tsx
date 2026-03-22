@@ -55,6 +55,7 @@ interface MatchesDashboardProps {
     loading?: boolean;
     hasSteamCode?: boolean;
     syncError?: string | null;
+    variant?: 'full' | 'profile';
 }
 
 const MatchesDashboard: React.FC<MatchesDashboardProps> = ({ 
@@ -65,7 +66,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     onSync, 
     loading, 
     hasSteamCode, 
-    syncError 
+    syncError,
+    variant = 'full'
 }) => {
     const [faceitInput, setFaceitInput] = useState(currentFaceit || '');
     const [isEditing, setIsEditing] = useState(!currentFaceit);
@@ -303,21 +305,30 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     };
 
     return (
-        <div className="p-4 md:p-8 space-y-8 max-w-[1400px] mx-auto min-h-screen pb-24">
-            {/* Header Section */}
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                <div>
-                    <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter flex items-center gap-4">
-                        <Swords className="text-yellow-500 w-10 h-10 md:w-12 md:h-12" />
-                        Minhas Partidas
-                    </h1>
-                    <p className="text-zinc-500 text-xs font-bold uppercase mt-2 tracking-[0.2em] px-1 flex items-center gap-2">
-                        Histórico Competitivo <span className="w-1 h-1 rounded-full bg-yellow-500" /> {matches.length} Registradas
-                    </p>
-                </div>
+        <div className={variant === 'full' ? "p-4 md:p-8 space-y-8 min-h-screen pb-24" : "bg-zinc-900/40 rounded-[40px] border border-white/5 p-4 md:p-8 backdrop-blur-xl flex flex-col h-full space-y-6 w-full"}>
+            
+            {variant === 'profile' && (
+                <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3 px-2">
+                    <span className="w-1.5 h-6 bg-yellow-500 rounded-full" /> Histórico de Combate
+                </h3>
+            )}
 
-                {/* Toolbar Unificada */}
-                <div className="w-full md:w-auto flex flex-col md:flex-row items-stretch gap-0 bg-zinc-950/80 border border-white/10 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-2xl">
+            {variant === 'full' && (
+                <>
+                    {/* Header Section */}
+                    <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                        <div>
+                            <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter flex items-center gap-4">
+                                <Swords className="text-yellow-500 w-10 h-10 md:w-12 md:h-12" />
+                                Minhas Partidas
+                            </h1>
+                            <p className="text-zinc-500 text-xs font-bold uppercase mt-2 tracking-[0.2em] px-1 flex items-center gap-2">
+                                Histórico Competitivo <span className="w-1 h-1 rounded-full bg-yellow-500" /> {matches.length} Registradas
+                            </p>
+                        </div>
+
+                        {/* Toolbar Unificada */}
+                        <div className="w-full md:w-auto flex flex-col md:flex-row items-stretch gap-0 bg-zinc-950/80 border border-white/10 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-2xl">
                     <div className="relative flex-grow flex items-center border-b md:border-b-0 md:border-r border-white/5">
                         <Search className="absolute left-5 w-4 h-4 text-zinc-500" />
                         <input
@@ -349,7 +360,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             </header>
 
             <AnimatePresence>
-                {isEditing && (
+                {isEditing && variant === 'full' && (
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -393,6 +404,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             </AnimatePresence>
 
             {/* Summary Stat Cards */}
+            {variant === 'full' && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
                     { label: 'Taxa de Vitória', value: `${stats.wr}%`, icon: <Trophy className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
@@ -421,6 +433,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     </motion.div>
                 ))}
             </div>
+            )}
 
             {/* Quick Filters Row */}
             <div className="flex flex-wrap items-center gap-3">
@@ -462,9 +475,11 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     ))}
                 </div>
             </div>
+            </>
+            )}
 
             {/* Main Content Area */}
-            <main className="bg-zinc-900/30 border border-white/5 rounded-[3rem] overflow-hidden shadow-2xl backdrop-blur-md">
+            <main className={`overflow-hidden flex-grow ${variant === 'full' ? 'bg-zinc-900/30 border border-white/5 shadow-2xl backdrop-blur-md rounded-[3rem]' : 'rounded-[20px]'}`}>
                 {loading && filteredMatches.length === 0 ? (
                     <div className="py-48 flex flex-col items-center justify-center text-center">
                         <div className="relative w-20 h-20 mb-10">

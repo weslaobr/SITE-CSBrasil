@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
-import { Package, ShieldCheck, Trophy, Target, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, ShieldCheck, Trophy, Target, Zap } from 'lucide-react';
 
 // New Components
 import ProfileSidebar from "@/components/profile/profile-sidebar";
@@ -27,7 +27,6 @@ export default function PlayerProfilePage() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
-    const [showFullInventory, setShowFullInventory] = useState(false);
 
     useEffect(() => {
         if (steamId) {
@@ -98,7 +97,7 @@ export default function PlayerProfilePage() {
 
     return (
         <div className="min-h-screen bg-[#0a0a0b] text-white selection:bg-emerald-500 selection:text-black font-sans">
-            <main className="max-w-[1600px] mx-auto p-4 md:p-8 lg:p-12 space-y-12">
+            <main className="p-4 md:p-8 lg:p-12 space-y-12">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
                     {/* LEFT SIDEBAR */}
                     <motion.div 
@@ -178,6 +177,15 @@ export default function PlayerProfilePage() {
                             <AccountReputation data={repData} />
                         </motion.div>
 
+                        {/* Stats Analysis Section */}
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.4 }}
+                        >
+                            <StatsAnalysis stats={leetifyData?.ratings} />
+                        </motion.div>
+
                         <p className="text-[9px] text-zinc-600 font-bold uppercase italic flex items-start gap-2 max-w-4xl opacity-60">
                             <span className="text-amber-500 font-black italic">⚠️ Disclaimer:</span> 
                             This analysis provides statistical estimates based on gameplay patterns and should be used as a supplementary tool only. Results may vary and should not be considered definitive proof of any behavior. Always consider multiple factors and context when evaluating player reputation.
@@ -185,20 +193,12 @@ export default function PlayerProfilePage() {
                     </div>
                 </div>
 
-                {/* Match History & Stats Section */}
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-12 pt-12 border-t border-white/5">
-                    {/* Match History */}
-                    <div className="xl:col-span-8">
-                        <MatchHistory
-                            matches={leetifyData?.recentMatches || []}
-                            onReview={setSelectedMatchId}
-                        />
-                    </div>
-
-                    {/* Stats Analysis Section */}
-                    <div className="xl:col-span-4 h-full">
-                        <StatsAnalysis stats={leetifyData?.ratings} />
-                    </div>
+                {/* Match History Section */}
+                <div className="pt-12 border-t border-white/5">
+                    <MatchHistory
+                        matches={leetifyData?.recentMatches || []}
+                        onReview={setSelectedMatchId}
+                    />
                 </div>
 
                 {/* Inventory View */}
@@ -208,15 +208,8 @@ export default function PlayerProfilePage() {
                             <Package className="text-emerald-500" size={24} />
                             <h3 className="text-2xl font-black italic uppercase tracking-tighter">Inventário do Jogador</h3>
                         </div>
-                        <button 
-                            onClick={() => setShowFullInventory(!showFullInventory)}
-                            className="bg-white/5 hover:bg-white/10 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 border border-white/10 transition-all font-sans"
-                        >
-                            {showFullInventory ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                            {showFullInventory ? 'Recolher' : 'Expandir Inventário'}
-                        </button>
                     </div>
-                    <InventoryDashboard items={showFullInventory ? inventory : inventory.slice(0, 12)} />
+                    <InventoryDashboard items={inventory} />
                 </div>
             </main>
 

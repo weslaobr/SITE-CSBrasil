@@ -34,7 +34,7 @@ export default function SettingsPage() {
     if (!session) return <div className="p-20 text-center text-zinc-500 uppercase font-black tracking-widest">Acesso restrito</div>;
 
     return (
-        <div className="p-8 max-w-4xl mx-auto space-y-12 pb-20">
+        <div className="p-8 space-y-12 pb-20">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-black italic uppercase tracking-tighter flex items-center gap-3">

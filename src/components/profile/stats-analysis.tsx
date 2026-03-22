@@ -101,7 +101,7 @@ const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ stats }) => {
                 <span className="text-[9px] font-black uppercase bg-zinc-800 text-zinc-500 px-2 py-1 rounded-md border border-white/5">-0.4%</span>
             </div>
 
-            <div className="grid grid-cols-1 gap-y-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-12 gap-y-4 mt-6">
                 {items.map((item, i) => (
                     <StatItem key={item.label} label={item.label} value={item.value} unit={item.unit} index={i} />
                 ))}
