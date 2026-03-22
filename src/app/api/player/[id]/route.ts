@@ -39,35 +39,43 @@ export async function GET(
 
         // 1. Calculate Trust Rating (Heuristic)
         let trustRating = 50; // Neutral base
+        const breakdown = {
+            base: 50,
+            age: 0,
+            inventory: 0,
+            level: 0,
+            leetify: 0,
+            penalties: 0
+        };
         
         // Account Age Bonus (max 25)
         if (profile.timecreated) {
             const years = (Date.now() / 1000 - profile.timecreated) / (365 * 24 * 3600);
-            trustRating += Math.min(years * 2.5, 25);
+            breakdown.age = Math.round(Math.min(years * 2.5, 25) * 10) / 10;
         }
 
         // Inventory Value Bonus (max 20)
         const inventoryValue = inventory.reduce((acc: number, item: any) => acc + (item.price || 0), 0);
-        if (inventoryValue > 500) trustRating += 20;
-        else if (inventoryValue > 100) trustRating += 10;
-        else if (inventoryValue > 20) trustRating += 5;
+        if (inventoryValue > 500) breakdown.inventory = 20;
+        else if (inventoryValue > 100) breakdown.inventory = 10;
+        else if (inventoryValue > 20) breakdown.inventory = 5;
 
         // Steam Level Bonus (max 10)
-        if (steamLevel > 50) trustRating += 10;
-        else if (steamLevel > 20) trustRating += 7;
-        else if (steamLevel > 10) trustRating += 5;
+        if (steamLevel > 50) breakdown.level = 10;
+        else if (steamLevel > 20) breakdown.level = 7;
+        else if (steamLevel > 10) breakdown.level = 5;
 
         // Leetify Rating Bonus (max 10)
         const currentLeetifyRating = leetifyData?.ratings?.leetifyRating || 0;
-        if (currentLeetifyRating > 1.2) trustRating += 10;
-        else if (currentLeetifyRating > 0.8) trustRating += 5;
+        if (currentLeetifyRating > 1.2) breakdown.leetify = 10;
+        else if (currentLeetifyRating > 0.8) breakdown.leetify = 5;
 
         // Penalties (Bans)
-        if (bans?.VACBanned) trustRating -= 60;
-        if (bans?.CommunityBanned) trustRating -= 30;
-        if (bans?.EconomyBan !== 'none') trustRating -= 20;
+        if (bans?.VACBanned) breakdown.penalties -= 60;
+        if (bans?.CommunityBanned) breakdown.penalties -= 30;
+        if (bans?.EconomyBan !== 'none') breakdown.penalties -= 20;
 
-        // Clamp trust rating
+        trustRating = Object.values(breakdown).reduce((a, b) => a + b, 0);
         trustRating = Math.max(0, Math.min(100, Math.round(trustRating)));
 
         // 2. Identify Anomalies
@@ -148,6 +156,7 @@ export async function GET(
             steamLevel,
             bans,
             trustRating,
+            trustBreakdown: breakdown,
             anomalies,
             inventoryValue,
             matches: (dbUser?.matches || []).filter((m: any) => m.source === 'Leetify')

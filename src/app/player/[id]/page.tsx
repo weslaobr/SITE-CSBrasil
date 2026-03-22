@@ -12,6 +12,7 @@ import TrustRating from "@/components/profile/trust-rating";
 import StatsAnalysis from "@/components/profile/stats-analysis";
 import AnomaliesDetected from "@/components/profile/anomalies-detected";
 import AccountReputation from "@/components/profile/account-reputation";
+import TrustCriteria from "@/components/profile/trust-criteria";
 
 // Existing Components
 import AttributesRadarChart from "@/components/tropacs/radar-chart";
@@ -67,7 +68,7 @@ export default function PlayerProfilePage() {
         );
     }
 
-    const { profile, steamStats, dbUser, leetifyData, inventory, steamLevel, trustRating, anomalies, inventoryValue } = data;
+    const { profile, steamStats, dbUser, leetifyData, inventory, steamLevel, trustRating, trustBreakdown, anomalies, inventoryValue } = data;
     const isOwner = (session?.user as any)?.steamId === steamId;
 
     // Filter Medals for the sidebar
@@ -130,8 +131,9 @@ export default function PlayerProfilePage() {
                                 <div className="flex-1 flex flex-col items-center justify-center w-full">
                                     <TrustRating rating={trustRating} status={trustRating >= 90 ? "Normal" : trustRating >= 70 ? "Stable" : "Risky"} />
                                     <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-center mt-8 px-8">
-                                        Data-driven analysis of gameplay patterns and performance trends
+                                        Análise baseada em padrões de gameplay e performance.
                                     </p>
+                                    <TrustCriteria breakdown={trustBreakdown} />
                                 </div>
                             </motion.div>
 

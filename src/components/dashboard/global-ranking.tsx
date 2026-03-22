@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Trophy, ArrowUp, ArrowDown, Search, Medal } from 'lucide-react';
 
@@ -84,9 +85,11 @@ const GlobalRanking: React.FC = () => {
                                 className={`relative p-6 rounded-2xl border ${idx === 0 ? 'bg-yellow-500/10 border-yellow-500/20 shadow-yellow-500/20' : 'bg-zinc-900/50 border-white/5'} flex flex-col items-center text-center overflow-hidden`}
                             >
                                 {idx === 0 && <Medal className="absolute top-4 right-4 text-yellow-500 w-6 h-6" />}
-                                <img src={user.avatar} className="w-20 h-20 rounded-full border-4 border-zinc-800 mb-4" />
-                                <p className="text-zinc-500 text-xs font-bold uppercase mb-1">Rank #{user.rank}</p>
-                                <h3 className="text-xl font-bold mb-2 truncate max-w-full">{user.nickname}</h3>
+                                <Link href={`/player/${user.steamId}`} className="contents">
+                                    <img src={user.avatar} className="w-20 h-20 rounded-full border-4 border-zinc-800 mb-4 hover:border-yellow-500 transition-colors" />
+                                    <p className="text-zinc-500 text-xs font-bold uppercase mb-1">Rank #{user.rank}</p>
+                                    <h3 className="text-xl font-bold mb-2 truncate max-w-full hover:text-yellow-500 transition-colors">{user.nickname}</h3>
+                                </Link>
                                 <div className="text-2xl font-black text-white">{user.rating} SR</div>
                             </motion.div>
                         ))}
@@ -130,10 +133,10 @@ const GlobalRanking: React.FC = () => {
                                             {user.rank < 10 ? `0${user.rank}` : user.rank}
                                         </td>
                                         <td className="px-6 py-5">
-                                            <div className="flex items-center gap-3">
+                                            <Link href={`/player/${user.steamId}`} className="flex items-center gap-3 w-fit">
                                                 <img src={user.avatar} className="w-8 h-8 rounded-full" />
                                                 <span className="font-bold text-white group-hover:text-yellow-400 transition-colors truncate max-w-[150px]">{user.nickname}</span>
-                                            </div>
+                                            </Link>
                                         </td>
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-2">

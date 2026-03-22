@@ -48,20 +48,36 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                         <p className="text-[10px] font-black text-sky-500 uppercase tracking-widest mt-2">{profile.personaState === 1 ? 'Online' : 'Offline'}</p>
                     </div>
 
-                    <div className="flex items-center justify-center gap-3 pt-6 pb-2 border-t border-white/5">
-                        <div className="w-10 h-10 bg-zinc-950/80 rounded-[14px] flex items-center justify-center border border-white/5 hover:bg-zinc-800 transition-colors cursor-help" title="Steam">
-                             <img src="/icons/steam-bw.svg" className="w-5 h-5 opacity-70" alt="Steam" />
-                             {!medals.length && <span className="text-[10px] font-black text-white">S</span>}
-                        </div>
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-900/40 to-indigo-900/40 rounded-[14px] flex items-center justify-center border border-blue-500/20 hover:border-blue-500/50 transition-colors cursor-help" title="CS2">
-                            <span className="text-[10px] font-black text-blue-400 italic">CS</span>
-                        </div>
-                        <div className="w-10 h-10 bg-[#FF5500]/10 rounded-[14px] flex items-center justify-center border border-[#FF5500]/20 hover:border-[#FF5500]/50 transition-colors cursor-help" title="Leetify">
-                            <span className="text-[10px] font-black text-[#FF5500]">L</span>
-                        </div>
-                        <div className={`w-10 h-10 ${leetifyData?.ranks?.faceitLevel ? 'bg-orange-600/20 border-orange-500/30 text-orange-500 hover:border-orange-500/60' : 'bg-zinc-950/80 border-white/5 text-zinc-600'} rounded-[14px] border flex items-center justify-center transition-colors cursor-help`} title="FACEIT">
-                            <span className="text-[10px] font-black">F</span>
-                        </div>
+                    <div className="flex items-center justify-center gap-2 pt-6 pb-2 border-t border-white/5 flex-wrap">
+                        {/* Steam */}
+                        <a href={`https://steamcommunity.com/profiles/${profile.steamid}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-zinc-950/80 rounded-[12px] flex items-center justify-center border border-white/5 hover:bg-zinc-800 transition-colors" title="Steam Community">
+                             <img src="/img/icone-steam.png" className="w-5 h-5 object-contain opacity-80" alt="Steam" />
+                        </a>
+
+                        {/* CS-Stats */}
+                        <a href={`https://csstats.gg/player/${profile.steamid}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-blue-600/10 rounded-[12px] flex items-center justify-center border border-blue-500/20 hover:border-blue-500/50 transition-colors" title="CS-Stats">
+                            <img src="/img/icone-csstats.png" className="w-5 h-5 object-contain" alt="CS-Stats" />
+                        </a>
+
+                        {/* Leetify */}
+                        <a href={`https://leetify.com/app/profile/${profile.steamid}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-[#FF5500]/10 rounded-[12px] flex items-center justify-center border border-[#FF5500]/20 hover:border-[#FF5500]/50 transition-colors" title="Leetify">
+                            <img src="/img/icone-leetify.png" className="w-5 h-5 object-contain" alt="Leetify" />
+                        </a>
+
+                        {/* FACEIT */}
+                        <a href={`https://www.faceit.com/en/players/${profile.personaname}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-[#FF5500]/10 rounded-[12px] flex items-center justify-center border border-[#FF5500]/20 hover:border-[#FF5500]/50 transition-colors" title="FACEIT">
+                            <img src="/img/icone-faceit.png" className="w-5 h-5 object-contain" alt="FACEIT" />
+                        </a>
+
+                        {/* Gamers Club */}
+                        <a href={`https://gamersclub.com.br/jogador/${profile.steamid}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-cyan-600/10 rounded-[12px] flex items-center justify-center border border-cyan-500/20 hover:border-cyan-500/50 transition-colors" title="Gamers Club">
+                            <img src="/img/icone-gamersclub.png" className="w-5 h-5 object-contain" alt="Gamers Club" />
+                        </a>
+
+                        {/* CS-Rep */}
+                        <a href={`https://csrep.gg/player/${profile.steamid}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-yellow-600/10 rounded-[12px] flex items-center justify-center border border-yellow-500/20 hover:border-yellow-500/50 transition-colors" title="CS-Rep">
+                            <img src="/img/icone-csrep.png" className="w-5 h-5 object-contain font-black" alt="CS-Rep" />
+                        </a>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/5">
