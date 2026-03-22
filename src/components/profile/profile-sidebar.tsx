@@ -78,7 +78,7 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/10 text-center">
                             <p className="text-[9px] text-emerald-500/60 uppercase font-black italic tracking-widest mb-1">Premier</p>
-                            <p className="text-base font-black text-emerald-500 italic uppercase">{leetifyData?.ranks?.premier || 'N/A'}</p>
+                            <p className="text-base font-black text-emerald-500 italic uppercase">{steamStats?.premier_rating || leetifyData?.ranks?.premier || 'N/A'}</p>
                         </div>
                         <div className="bg-orange-500/10 p-4 rounded-2xl border border-orange-500/10 text-center">
                             <p className="text-[9px] text-orange-500/60 uppercase font-black italic tracking-widest mb-1">Elo FACEIT</p>

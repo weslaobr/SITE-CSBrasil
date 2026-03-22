@@ -30,6 +30,8 @@ export interface CS2Stats {
     adr: number;
     hs_percentage: number;
     kd: number;
+    premier_rating?: number;
+    competitive_wins?: number;
 }
 
 export const getMultiplePlayerProfiles = async (steamIds: string[]): Promise<SteamProfile[]> => {
@@ -110,7 +112,7 @@ export const getCS2Stats = async (steamId: string): Promise<CS2Stats> => {
         stats[s.name] = s.value;
     });
 
-    return {
+    const baseStats: CS2Stats = {
         total_kills: stats.total_kills || 0,
         total_deaths: stats.total_deaths || 0,
         total_time_played: stats.total_time_played || 0,
@@ -120,6 +122,28 @@ export const getCS2Stats = async (steamId: string): Promise<CS2Stats> => {
         hs_percentage: stats.total_kills ? Math.round(((stats.total_kills_headshot || 0) / stats.total_kills) * 100) : 0,
         adr: stats.total_damage_done ? Math.round(stats.total_damage_done / (stats.total_rounds_played || 1)) : 85
     };
+
+    // Tentar obter dados reais do GC através do Discloud Bot
+    const botUrl = process.env.NEXT_PUBLIC_BOT_API_URL;
+    if (botUrl) {
+        try {
+            const botResponse = await axios.get(`${botUrl}/player-profile/${steamId}`);
+            if (botResponse.data && botResponse.data.global_stats) {
+                // A rating do Premier fica geralmente no ranking type 12 (Premier)
+                const ranking = botResponse.data.global_stats.ranking || botResponse.data.ranking;
+                if (ranking && ranking.rank_id) {
+                    baseStats.premier_rating = ranking.rank_id; // Rank_id costuma ser o rating no Premier
+                }
+                if (ranking && ranking.wins) {
+                    baseStats.competitive_wins = ranking.wins;
+                }
+            }
+        } catch (botError) {
+            console.warn(`Aviso: Falha ao buscar perfil CS2 do bot para ${steamId}`);
+        }
+    }
+
+    return baseStats;
 };
 
 export const getSteamLevel = async (steamId: string): Promise<number> => {
