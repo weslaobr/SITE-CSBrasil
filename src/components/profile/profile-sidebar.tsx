@@ -7,13 +7,13 @@ import { LayoutGrid, Award, Shield, MessageCircle } from 'lucide-react';
 interface ProfileSidebarProps {
     profile: any;
     steamStats: any;
-    inventoryValue: number;
+    inventoryValueStr: string;
     steamLevel: number;
     medals: any[];
     leetifyData: any;
 }
 
-const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, inventoryValue, steamLevel, medals, leetifyData }) => {
+const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, inventoryValueStr, steamLevel, medals, leetifyData }) => {
     const joinedDate = profile.timecreated 
         ? new Date(profile.timecreated * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         : 'N/A';
@@ -87,7 +87,7 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                         </div>
                         <div className="bg-zinc-950/80 p-4 rounded-2xl border border-white/5 text-center flex flex-col items-center justify-center hover:bg-zinc-900 transition-colors">
                             <p className="text-[9px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Inventory</p>
-                            <p className="text-sm font-black text-white italic">${Math.round(inventoryValue).toLocaleString()}</p>
+                            <p className="text-sm font-black text-white italic">{inventoryValueStr}</p>
                         </div>
                     </div>
 

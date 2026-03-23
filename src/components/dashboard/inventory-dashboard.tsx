@@ -37,25 +37,21 @@ interface InventoryItem {
     isFetchingDetails?: boolean;
 }
 
-const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => {
+const InventoryDashboard: React.FC<{ 
+    items: InventoryItem[],
+    currency: 'BRL' | 'USD',
+    setCurrency: (c: 'BRL' | 'USD') => void,
+    exchangeRate: any
+}> = ({ items, currency, setCurrency, exchangeRate }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('all');
     const [filterRarity, setFilterRarity] = useState('all');
     const [language, setLanguage] = useState<'pt' | 'en'>('pt');
-    const [currency, setCurrency] = useState<'BRL' | 'USD'>('BRL');
     const [showRoiAssetId, setShowRoiAssetId] = useState<string | null>(null);
     const [showDetailsAssetId, setShowDetailsAssetId] = useState<string | null>(null);
     const [localItems, setLocalItems] = useState<InventoryItem[]>(items);
-    const [exchangeRate, setExchangeRate] = useState<{ rate: number; bcbRate: number; updatedAt: string } | null>(null);
 
     useEffect(() => { setLocalItems(items); }, [items]);
-
-    useEffect(() => {
-        fetch('/api/exchange-rate')
-            .then(r => r.json())
-            .then(d => setExchangeRate(d))
-            .catch(() => {});
-    }, []);
 
     const handleLanguageChange = (lang: 'pt' | 'en') => {
         setLanguage(lang);
@@ -148,8 +144,9 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
     const totalValue    = currency === 'BRL' ? totalValueBRL : totalValueUSD;
 
     const formatCurrency = (usdValue: number) => {
-        if (currency === 'BRL' && exchangeRate) {
-            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(usdValue * exchangeRate.rate);
+        if (currency === 'BRL') {
+            const rate = exchangeRate ? exchangeRate.rate : 6.15;
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(usdValue * rate);
         }
         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(usdValue);
     };
@@ -289,7 +286,11 @@ const InventoryDashboard: React.FC<{ items: InventoryItem[] }> = ({ items }) => 
 
                         {/* Switch de Moeda */}
                         <button
-                            onClick={() => setCurrency(c => c === 'BRL' ? 'USD' : 'BRL')}
+                            onClick={() => {
+                                const newCurrency = currency === 'BRL' ? 'USD' : 'BRL';
+                                setCurrency(newCurrency);
+                                setLanguage(newCurrency === 'BRL' ? 'pt' : 'en');
+                            }}
                             className="group flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-black/40 border border-white/5 hover:border-white/20 transition-all"
                         >
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-md transition-all ${

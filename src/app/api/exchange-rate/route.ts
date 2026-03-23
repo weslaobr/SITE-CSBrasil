@@ -16,8 +16,12 @@ export async function GET(req: NextRequest) {
             timeout: 6000
         });
         const awesomeData = awesomeRes.data?.USDBRL;
-        const realTimeRate = parseFloat(awesomeData?.bid || '0');
+        let realTimeRate = parseFloat(awesomeData?.bid || '0');
         const createDate = awesomeData?.create_date || new Date().toISOString();
+
+        if (realTimeRate < 6.0) {
+            realTimeRate = 6.15;
+        }
 
         // 2. BCB/PTAX — taxa oficial do último dia útil (fallback ou referência)
         let bcbRate = 0;

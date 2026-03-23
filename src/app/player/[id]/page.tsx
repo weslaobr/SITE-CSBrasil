@@ -28,6 +28,15 @@ export default function PlayerProfilePage() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+    const [currency, setCurrency] = useState<'BRL' | 'USD'>('BRL');
+    const [exchangeRate, setExchangeRate] = useState<any>(null);
+
+    useEffect(() => {
+        fetch('/api/exchange-rate')
+            .then(res => res.json())
+            .then(json => setExchangeRate(json))
+            .catch(console.error);
+    }, []);
 
     useEffect(() => {
         if (steamId) {
@@ -88,10 +97,18 @@ export default function PlayerProfilePage() {
         ? Math.floor(((Date.now() / 1000 - profile.timecreated) % (365 * 24 * 3600)) / (30 * 24 * 3600))
         : 0;
 
+    const formatCurrency = (valUSD: number) => {
+        if (currency === 'BRL') {
+            const rate = exchangeRate ? exchangeRate.rate : 6.15;
+            return `R$ ${Math.round(valUSD * rate).toLocaleString('pt-BR')}`;
+        }
+        return `$${Math.round(valUSD).toLocaleString('en-US')}`;
+    };
+
     const repData = {
         accountAge: `${accountAgeYears}y ${accountAgeMonths}m`,
         hoursPlayed: `${Math.floor(steamStats?.total_time_played / 3600 || 0).toLocaleString()}h`,
-        inventoryValue: `$${Math.round(inventoryValue || 0).toLocaleString()}`,
+        inventoryValue: formatCurrency(inventoryValue || 0),
         steamLevel: steamLevel || 0,
         collectibles: medals.length
     };
@@ -109,7 +126,7 @@ export default function PlayerProfilePage() {
                         <ProfileSidebar 
                             profile={profile}
                             steamStats={steamStats}
-                            inventoryValue={inventoryValue}
+                            inventoryValueStr={formatCurrency(inventoryValue || 0)}
                             steamLevel={steamLevel}
                             medals={medals}
                             leetifyData={leetifyData}
@@ -211,7 +228,12 @@ export default function PlayerProfilePage() {
                             <h3 className="text-2xl font-black italic uppercase tracking-tighter">Inventário do Jogador</h3>
                         </div>
                     </div>
-                    <InventoryDashboard items={inventory} />
+                    <InventoryDashboard 
+                        items={inventory} 
+                        currency={currency} 
+                        setCurrency={setCurrency} 
+                        exchangeRate={exchangeRate}
+                    />
                 </div>
             </main>
 

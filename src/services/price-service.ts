@@ -45,10 +45,21 @@ export const updatePricesFromMarketCSGO = async (force = false): Promise<{ succe
         for (let i = 0; i < items.length; i += batchSize) {
             const batch = items.slice(i, i + batchSize);
             await Promise.all(batch.map(item => {
-                const price = parseFloat(item.price);
-                if (!item.market_hash_name || isNaN(price) || price <= 0) return Promise.resolve();
+                const rawPrice = parseFloat(item.price);
+                if (!item.market_hash_name || isNaN(rawPrice) || rawPrice <= 0) return Promise.resolve();
 
-                const priceUSD = parseFloat(item.price);
+                let priceUSD = rawPrice;
+                
+                // DATA SANITY CHECK: Detect and fix common API anomalies
+                // Some Sticker/Graffiti prices in market.csgo.com come inflated by 1000x or 10000x
+                const isSticker = item.market_hash_name.includes('Sticker');
+                const isGraffiti = item.market_hash_name.includes('Graffiti');
+                
+                if ((isSticker || isGraffiti) && priceUSD > 1000) {
+                    priceUSD = priceUSD / 10000; // Likely a decimal point error in API
+                } else if (priceUSD > 50000) {
+                    return Promise.resolve();
+                }
 
                 return prisma.itemPriceBase.upsert({
                     where: { marketHashName: item.market_hash_name },

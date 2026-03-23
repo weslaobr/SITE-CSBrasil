@@ -11,7 +11,16 @@ export default function InventoryPage() {
     const [loading, setLoading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [pricingProgress, setPricingProgress] = useState<{ current: number; total: number } | null>(null);
+    const [currency, setCurrency] = useState<'BRL' | 'USD'>('BRL');
+    const [exchangeRate, setExchangeRate] = useState<any>(null);
     const pricingAbortRef = useRef<boolean>(false);
+
+    useEffect(() => {
+        fetch('/api/exchange-rate')
+            .then(res => res.json())
+            .then(json => setExchangeRate(json))
+            .catch(console.error);
+    }, []);
 
     useEffect(() => {
         // 1. Tentar carregar do cache local imediatamente
@@ -156,7 +165,12 @@ export default function InventoryPage() {
                     </div>
                 </div>
             ) : (
-                <InventoryDashboard items={items} />
+                <InventoryDashboard 
+                    items={items} 
+                    currency={currency} 
+                    setCurrency={setCurrency} 
+                    exchangeRate={exchangeRate}
+                />
             )}
         </div>
     );
