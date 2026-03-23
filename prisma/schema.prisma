@@ -90,18 +90,20 @@ model Match {
 }
 
 model Lobby {
-  id        String        @id @default(cuid())
-  name      String
-  password  String?
-  status    String        @default("waiting")
-  creatorId String
-  leaderAId String?
-  leaderBId String?
-  turn      String        @default("A")
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  creator   User          @relation("LobbyCreator", fields: [creatorId], references: [id])
-  players   LobbyPlayer[]
+  id         String        @id @default(cuid())
+  name       String
+  password   String?
+  status     String        @default("waiting")
+  creatorId  String
+  leaderAId  String?
+  leaderBId  String?
+  turn       String        @default("A")
+  rpsEnabled Boolean       @default(false)
+  rpsState   String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  creator    User          @relation("LobbyCreator", fields: [creatorId], references: [id])
+  players    LobbyPlayer[]
 }
 
 model LobbyPlayer {
@@ -138,8 +140,6 @@ model Player {
   discordId    String   @unique
   steamId      String   @unique
   steamUrl     String
-  steamName    String?
-  steamAvatar  String?
   faceitId     String?  @unique
   faceitName   String?
   leetifyId    String?  @unique
@@ -147,6 +147,8 @@ model Player {
   updatedAt    DateTime @updatedAt
   invitesCount Int      @default(0)
   referredById String?
+  steamName    String?
+  steamAvatar  String?
   Stats        Stats?
 }
 

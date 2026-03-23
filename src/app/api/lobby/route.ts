@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { name, password } = await req.json();
+        const { name, password, rpsEnabled } = await req.json();
         if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
         const userId = (session.user as any).id;
@@ -34,12 +34,13 @@ export async function POST(req: NextRequest) {
         const lobby = await prisma.lobby.create({
             data: {
                 name,
-                password,
+                password: password || null,
+                rpsEnabled: !!rpsEnabled,
                 creatorId: userId,
                 players: {
                     create: {
                         userId: userId,
-                        isLeader: true,
+                        isLeader: false,
                         team: "none"
                     }
                 }

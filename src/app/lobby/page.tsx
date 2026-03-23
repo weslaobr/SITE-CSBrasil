@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Users, Lock, ChevronRight } from "lucide-react";
+import { Plus, Users, Lock, ChevronRight, Star } from "lucide-react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function LobbyDashboard() {
     const [lobbies, setLobbies] = useState<any[]>([]);
@@ -11,17 +11,15 @@ export default function LobbyDashboard() {
     const [showCreate, setShowCreate] = useState(false);
     const [newName, setNewName] = useState("");
     const [newPassword, setNewPassword] = useState("");
+    const [rpsEnabled, setRpsEnabled] = useState(false);
 
     const fetchLobbies = async () => {
         try {
             const res = await fetch("/api/lobby");
             const data = await res.json();
             setLobbies(Array.isArray(data) ? data : []);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
     };
 
     useEffect(() => {
@@ -31,118 +29,139 @@ export default function LobbyDashboard() {
     }, []);
 
     const handleCreate = async () => {
-        if (!newName) return;
+        if (!newName.trim()) return;
         try {
             const res = await fetch("/api/lobby", {
                 method: "POST",
-                body: JSON.stringify({ name: newName, password: newPassword }),
+                body: JSON.stringify({ name: newName, password: newPassword, rpsEnabled }),
                 headers: { "Content-Type": "application/json" }
             });
             const data = await res.json();
-            if (data.id) {
-                window.location.href = `/lobby/${data.id}`;
-            }
-        } catch (e) {
-            console.error(e);
-        }
+            if (data.id) window.location.href = `/lobby/${data.id}`;
+        } catch (e) { console.error(e); }
+    };
+
+    const statusBadge: Record<string, string> = {
+        waiting:  "bg-zinc-700/30 text-zinc-500",
+        rps:      "bg-purple-500/20 text-purple-400",
+        picking:  "bg-yellow-500/20 text-yellow-400",
+        finished: "bg-green-500/20 text-green-400",
+    };
+    const statusLabel: Record<string, string> = {
+        waiting: "Aguardando", rps: "RPS", picking: "Escolhendo", finished: "Finalizado"
     };
 
     return (
         <div className="p-8 max-w-6xl mx-auto space-y-10">
             <header className="flex justify-between items-end">
                 <div>
-                    <h1 className="text-4xl font-black italic italic uppercase tracking-tighter">Lobbies de Mix 5x5</h1>
-                    <p className="text-zinc-500 font-bold uppercase text-xs tracking-widest mt-2">Forme seu time e escolha seus adversários</p>
+                    <h1 className="text-4xl font-black italic uppercase tracking-tighter">Lobbies Mix 5×5</h1>
+                    <p className="text-zinc-500 font-bold uppercase text-xs tracking-widest mt-2">Forme seu time, escolha seus adversários</p>
                 </div>
-                <button
-                    onClick={() => setShowCreate(true)}
-                    className="px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase italic italic tracking-widest text-[10px] rounded-xl transition-all active:scale-95 shadow-lg shadow-yellow-500/20"
-                >
-                    Criar Sala
+                <button onClick={() => setShowCreate(v => !v)}
+                    className="px-7 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase italic tracking-widest text-[10px] rounded-xl transition-all active:scale-95 shadow-lg shadow-yellow-500/20 flex items-center gap-2">
+                    <Plus size={14} /> Criar Sala
                 </button>
             </header>
 
-            {showCreate && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-zinc-900/60 border border-white/10 p-8 rounded-3xl backdrop-blur-xl space-y-6"
-                >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Nome da Sala</label>
-                            <input
-                                type="text"
-                                value={newName}
-                                onChange={(e) => setNewName(e.target.value)}
-                                className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-yellow-500 outline-none transition-all"
-                                placeholder="Ex: Mix do Final de Semana"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Senha (Opcional)</label>
-                            <input
-                                type="password"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-yellow-500 outline-none transition-all"
-                                placeholder="Deixe em branco para sala pública"
-                            />
-                        </div>
-                    </div>
-                    <div className="flex gap-4">
-                        <button
-                            onClick={handleCreate}
-                            className="bg-white text-black px-8 py-3 rounded-2xl font-black uppercase text-xs transition-all active:scale-95"
-                        >
-                            Confirmar Criação
-                        </button>
-                        <button
-                            onClick={() => setShowCreate(false)}
-                            className="bg-white/5 hover:bg-white/10 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs transition-all"
-                        >
-                            Cancelar
-                        </button>
-                    </div>
-                </motion.div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {lobbies.map((lobby) => (
-                    <Link key={lobby.id} href={`/lobby/${lobby.id}`}>
-                        <div className="group bg-zinc-900/40 border border-white/5 p-6 rounded-3xl hover:border-yellow-500/50 transition-all cursor-pointer relative overflow-hidden backdrop-blur-md">
-                            <div className="absolute top-0 right-0 p-4">
-                                {lobby.password && <Lock size={14} className="text-zinc-600" />}
+            {/* Create form */}
+            <AnimatePresence>
+                {showCreate && (
+                    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
+                        className="bg-zinc-900/60 border border-white/10 p-8 rounded-3xl backdrop-blur-xl space-y-6">
+                        <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400">Nova Sala</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Nome da Sala</label>
+                                <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
+                                    className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-yellow-500 outline-none transition-all"
+                                    placeholder="Ex: Mix do Final de Semana" />
                             </div>
-                            <h3 className="text-xl font-black uppercase italic tracking-tighter group-hover:text-yellow-500 transition-colors">
-                                {lobby.name}
-                            </h3>
-                            <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Host: {lobby.creator?.name}</p>
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Senha (Opcional)</label>
+                                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                                    className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-yellow-500 outline-none transition-all"
+                                    placeholder="Deixe em branco para sala pública" />
+                            </div>
+                        </div>
 
-                            <div className="mt-6 flex items-center justify-between">
+                        {/* RPS Toggle */}
+                        <button onClick={() => setRpsEnabled(v => !v)}
+                            className={`flex items-center gap-3 px-5 py-3 rounded-2xl border transition-all ${rpsEnabled ? 'bg-purple-500/15 border-purple-500/30 text-purple-300' : 'bg-white/5 border-white/10 text-zinc-500 hover:border-purple-500/20'}`}>
+                            <span className="text-xl">🪨</span>
+                            <div className="text-left">
+                                <p className="text-[11px] font-black uppercase">Pedra Papel Tesoura</p>
+                                <p className="text-[9px] font-bold uppercase tracking-widest opacity-70">
+                                    {rpsEnabled ? "Ativo — capitães jogam RPS para decidir quem escolhe primeiro" : "Desativado — capitão A começa"}
+                                </p>
+                            </div>
+                            <div className={`ml-auto w-8 h-4 rounded-full transition-all ${rpsEnabled ? 'bg-purple-500' : 'bg-zinc-700'} relative`}>
+                                <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${rpsEnabled ? 'left-4' : 'left-0.5'}`} />
+                            </div>
+                        </button>
+
+                        <div className="flex gap-3">
+                            <button onClick={handleCreate}
+                                className="bg-yellow-500 hover:bg-yellow-400 text-black px-7 py-3 rounded-2xl font-black uppercase text-xs transition-all active:scale-95 shadow-lg shadow-yellow-500/20">
+                                Criar Sala
+                            </button>
+                            <button onClick={() => setShowCreate(false)}
+                                className="bg-white/5 hover:bg-white/10 text-white px-7 py-3 rounded-2xl font-black uppercase text-xs transition-all">
+                                Cancelar
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Lobby list */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {loading && Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-40 bg-zinc-900/40 border border-white/5 rounded-3xl animate-pulse" />
+                ))}
+
+                {!loading && lobbies.map((lobby) => (
+                    <Link key={lobby.id} href={`/lobby/${lobby.id}`}>
+                        <motion.div whileHover={{ y: -2 }}
+                            className="group bg-zinc-900/40 border border-white/5 p-6 rounded-3xl hover:border-yellow-500/30 transition-all cursor-pointer relative overflow-hidden backdrop-blur-md">
+                            <div className="flex items-start justify-between mb-3">
                                 <div className="flex items-center gap-2">
-                                    <div className="flex -space-x-2">
-                                        {[1, 2, 3].map(i => (
-                                            <span key={i} className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(254,209,61,0.5)]" />
+                                    {lobby.password && <Lock size={12} className="text-zinc-600" />}
+                                    {lobby.rpsEnabled && <Star size={12} className="text-purple-400" />}
+                                </div>
+                                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${statusBadge[lobby.status] || statusBadge.waiting}`}>
+                                    {statusLabel[lobby.status] || "Aguardando"}
+                                </span>
+                            </div>
+
+                            <h3 className="text-lg font-black uppercase italic tracking-tight group-hover:text-yellow-400 transition-colors leading-tight">{lobby.name}</h3>
+                            <p className="text-[10px] text-zinc-600 font-bold uppercase mt-1">Host: {lobby.creator?.name}</p>
+
+                            <div className="mt-5 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="flex gap-1">
+                                        {Array.from({ length: Math.min(lobby._count?.players || 0, 10) }).map((_, i) => (
+                                            <div key={i} className="w-2 h-2 rounded-full bg-yellow-500/60" />
+                                        ))}
+                                        {Array.from({ length: Math.max(0, 10 - (lobby._count?.players || 0)) }).map((_, i) => (
+                                            <div key={i} className="w-2 h-2 rounded-full bg-white/10" />
                                         ))}
                                     </div>
-                                    <span className="text-xs font-black text-zinc-400">{lobby._count?.players}/10</span>
+                                    <span className="text-xs font-black text-zinc-500">{lobby._count?.players || 0}/10</span>
                                 </div>
-                                <div className="relative z-10">
-                                    <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
-                                    <div className="p-2 rounded-xl group-hover:bg-yellow-500 group-hover:text-black transition-all relative">
-                                        <ChevronRight size={16} />
-                                    </div>
+                                <div className="p-2 rounded-xl group-hover:bg-yellow-500 group-hover:text-black transition-all text-zinc-600">
+                                    <ChevronRight size={15} />
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
                     </Link>
                 ))}
 
-                {lobbies.length === 0 && !loading && (
-                    <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
-                        <Users className="mx-auto text-zinc-700 mb-4" size={40} />
-                        <p className="text-zinc-500 font-bold uppercase text-xs">Nenhuma sala ativa no momento</p>
+                {!loading && lobbies.length === 0 && (
+                    <div className="col-span-full py-24 text-center border-2 border-dashed border-white/5 rounded-3xl space-y-3">
+                        <Users className="mx-auto text-zinc-700" size={36} />
+                        <p className="text-zinc-600 font-bold uppercase text-xs tracking-widest">Nenhuma sala ativa</p>
+                        <p className="text-zinc-700 text-[10px]">Crie a primeira sala e convide seus amigos!</p>
                     </div>
                 )}
             </div>
