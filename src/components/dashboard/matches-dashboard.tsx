@@ -153,7 +153,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
 
     const stats = useMemo(() => {
         const total = filteredMatches.length;
-        if (total === 0) return { wr: 0, kills: 0, adr: '0.0', kd: '0.00', hs: '0', rating: '0.00' };
+        if (total === 0) return { wr: 0, kills: 0, adr: '0.0', kd: '0.00', hs: '0', rating: '—' };
         
         const wins = filteredMatches.filter(m => m.result === 'Win').length;
         const totalKills = filteredMatches.reduce((acc, m) => acc + (m.kills || 0), 0);
@@ -167,17 +167,40 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         const hsMatches = filteredMatches.filter(m => m.hsPercentage != null && m.hsPercentage > 0);
         const totalHs = hsMatches.reduce((acc, m) => acc + (m.hsPercentage ?? 0), 0);
 
-        // Average rating from metadata where leetify_rating exists
-        const ratingMatches = filteredMatches.filter(m => m.metadata?.leetify_rating !== undefined && m.metadata?.leetify_rating !== null);
-        const totalRating = ratingMatches.reduce((acc, m) => acc + (m.metadata.leetify_rating || 0), 0);
+        // Helper: extract Leetify rating from a match's metadata
+        // The sync saves it as: metadata.leetify_rating (flat) OR metadata.leetify_ratings (object from detail.ratings)
+        // The Leetify v2 detail.ratings object has a top-level `leetify` field  
+        const getLeetifyRating = (m: Match): number | null => {
+            const meta = m.metadata;
+            if (!meta) return null;
+            // Direct flat field (set by some sync paths)
+            if (meta.leetify_rating !== undefined && meta.leetify_rating !== null) return Number(meta.leetify_rating);
+            // Nested object from detail.ratings
+            if (meta.leetify_ratings?.leetify !== undefined) return Number(meta.leetify_ratings.leetify);
+            if (meta.leetify_ratings?.leetifyRating !== undefined) return Number(meta.leetify_ratings.leetifyRating);
+            // Sometimes stored at the match root in recent_matches response
+            if (meta.leetify !== undefined && meta.leetify !== null) return Number(meta.leetify);
+            return null;
+        };
+
+        const ratingMatches = filteredMatches.map(m => ({ m, r: getLeetifyRating(m) })).filter(x => x.r !== null);
+        const totalRating = ratingMatches.reduce((acc, x) => acc + x.r!, 0);
+
+        // If no Leetify ratings at all, fall back to K/D as a proxy
+        const kd = totalKills / (totalDeaths || 1);
+        const ratingDisplay = ratingMatches.length > 0
+            ? (ratingMatches.reduce((acc, x) => acc + x.r!, 0) / ratingMatches.length).toFixed(2)
+            : kd.toFixed(2);
+        const ratingLabel = ratingMatches.length > 0 ? ratingDisplay : ratingDisplay; // same, label shown in card
 
         return {
             wr: Math.round((wins / total) * 100),
             kills: totalKills,
             adr: adrMatches.length > 0 ? (totalAdr / adrMatches.length).toFixed(1) : '—',
-            kd: (totalKills / (totalDeaths || 1)).toFixed(2),
+            kd: kd.toFixed(2),
             hs: hsMatches.length > 0 ? Math.round(totalHs / hsMatches.length).toString() : '—',
-            rating: ratingMatches.length > 0 ? (totalRating / ratingMatches.length).toFixed(2) : '—'
+            rating: ratingDisplay,
+            ratingIsLeetify: ratingMatches.length > 0,
         };
     }, [filteredMatches]);
 
@@ -425,12 +448,12 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             {variant === 'full' && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
-                    { label: 'Taxa de Vitória', value: `${stats.wr}%`, icon: <Trophy className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-                    { label: 'ADR Médio', value: stats.adr, icon: <Zap className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-                    { label: 'Ratio K/D', value: stats.kd, icon: <TrendingUp className="text-amber-500" />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                    { label: 'Total de Abates', value: stats.kills, icon: <Target className="text-red-500" />, color: 'text-red-500', bg: 'bg-red-500/10' },
-                    { label: 'Média HS%', value: stats.hs !== '—' ? `${stats.hs}%` : '—', icon: <Activity className="text-rose-500" />, color: 'text-rose-500', bg: 'bg-rose-500/10' },
-                    { label: 'Média Rating', value: stats.rating, icon: <Zap className="text-purple-500" />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                    { label: 'Taxa de Vitória', value: `${stats.wr}%`, sub: null, icon: <Trophy className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                    { label: 'ADR Médio', value: stats.adr, sub: null, icon: <Zap className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                    { label: 'Ratio K/D', value: stats.kd, sub: null, icon: <TrendingUp className="text-amber-500" />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                    { label: 'Total de Abates', value: stats.kills, sub: null, icon: <Target className="text-red-500" />, color: 'text-red-500', bg: 'bg-red-500/10' },
+                    { label: 'Média HS%', value: stats.hs !== '—' ? `${stats.hs}%` : '—', sub: null, icon: <Activity className="text-rose-500" />, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+                    { label: 'Média Rating', value: stats.rating, sub: (stats as any).ratingIsLeetify ? 'Leetify' : 'K/D', icon: <Zap className="text-purple-500" />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
                 ].map((stat, i) => (
                     <motion.div
                         key={i}
@@ -448,6 +471,9 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                         <div className={`text-3xl font-black italic tracking-tighter ${stat.color}`}>
                             {stat.value}
                         </div>
+                        {(stat as any).sub && (
+                            <span className="text-[8px] font-black uppercase tracking-widest text-zinc-700 -mt-1">{(stat as any).sub}</span>
+                        )}
                     </motion.div>
                 ))}
             </div>
@@ -519,7 +545,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="text-[9px] uppercase font-black text-zinc-600 tracking-widest border-b border-white/5 bg-black/30 sticky top-0 z-10">
-                                    <th className="px-6 py-3 pl-5">Mapa</th>
+                                    <th className="w-[3px] p-0" />
+                                    <th className="px-4 py-3 pl-2">Mapa</th>
                                     <th className="px-3 py-3 text-center">Placar</th>
                                     <th className="px-3 py-3 text-center">Patente</th>
                                     <th className="px-3 py-3 text-center">Modo</th>

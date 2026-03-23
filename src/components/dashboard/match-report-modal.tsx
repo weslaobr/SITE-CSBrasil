@@ -188,9 +188,13 @@ const MatchReportModal: React.FC<Props> = ({
     const getTeams = (): { t1: PlayerStats[]; t2: PlayerStats[] } => {
         const meta = currentMatch?.metadata || {};
 
+        const byKills = (a: PlayerStats, b: PlayerStats) => b.kills - a.kills;
         if (meta.fullStats?.rounds?.[0]?.teams) {
             const [a, b] = meta.fullStats.rounds[0].teams;
-            return { t1: (a.players||[]).map((p:any)=>normalizeP(p,isUserP(p))), t2: (b.players||[]).map((p:any)=>normalizeP(p,isUserP(p))) };
+            return {
+                t1: (a.players||[]).map((p:any)=>normalizeP(p,isUserP(p))).sort(byKills),
+                t2: (b.players||[]).map((p:any)=>normalizeP(p,isUserP(p))).sort(byKills)
+            };
         }
         if (meta.stats && Array.isArray(meta.stats)) {
             const map: Record<string, any[]> = {};
@@ -204,10 +208,16 @@ const MatchReportModal: React.FC<Props> = ({
             if (ids.length >= 2) { ids.sort(); t1 = map[ids[0]]; t2 = map[ids[1]]; }
             else { t1 = meta.stats.slice(0,5); t2 = meta.stats.slice(5,10); }
             if (t2.some(isUserP)) { [t1, t2] = [t2, t1]; }
-            return { t1: t1.map((p:any)=>normalizeP(p,isUserP(p))), t2: t2.map((p:any)=>normalizeP(p,isUserP(p))) };
+            return {
+                t1: t1.map((p:any)=>normalizeP(p,isUserP(p))).sort(byKills),
+                t2: t2.map((p:any)=>normalizeP(p,isUserP(p))).sort(byKills)
+            };
         }
         if (meta.players && Array.isArray(meta.players)) {
-            return { t1: meta.players.slice(0,5).map((p:any)=>normalizeP(p,isUserP(p))), t2: meta.players.slice(5,10).map((p:any)=>normalizeP(p,isUserP(p))) };
+            return {
+                t1: meta.players.slice(0,5).map((p:any)=>normalizeP(p,isUserP(p))).sort(byKills),
+                t2: meta.players.slice(5,10).map((p:any)=>normalizeP(p,isUserP(p))).sort(byKills)
+            };
         }
         return {
             t1: [
