@@ -23,11 +23,11 @@ export default function AttributesRadarChart({ data }: AttributesRadarChartProps
     if (!data) return null;
 
     const chartData: RadarData[] = [
-        { subject: 'Aim', A: data.aim || 0, fullMark: 100 },
-        { subject: 'Utility', A: data.utility || 0, fullMark: 100 },
-        { subject: 'Positioning', A: data.positioning || 0, fullMark: 100 },
-        { subject: 'Clutching', A: data.clutching || 0, fullMark: 100 },
-        { subject: 'Opening', A: data.opening || 0, fullMark: 100 },
+        { subject: 'Mira', A: data.aim || 0, fullMark: 100 },
+        { subject: 'Utilitários', A: data.utility || 0, fullMark: 100 },
+        { subject: 'Posicionamento', A: data.positioning || 0, fullMark: 100 },
+        { subject: 'Clutch', A: data.clutching || 0, fullMark: 100 },
+        { subject: 'Abertura', A: data.opening || 0, fullMark: 100 },
     ];
 
     // Check if all values are zero

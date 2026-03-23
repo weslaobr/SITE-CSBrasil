@@ -44,7 +44,7 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
 
                     <div className="text-center space-y-1">
                         <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">{profile.personaname}</h2>
-                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Joined Steam: {joinedDate}</p>
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Entrou na Steam: {joinedDate}</p>
                         <p className="text-[10px] font-black text-sky-500 uppercase tracking-widest mt-2">{profile.personaState === 1 ? 'Online' : 'Offline'}</p>
                     </div>
 
@@ -82,11 +82,11 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
 
                     <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/5">
                         <div className="bg-zinc-950/80 p-4 rounded-2xl border border-white/5 text-center flex flex-col items-center justify-center hover:bg-zinc-900 transition-colors">
-                            <p className="text-[9px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Playtime</p>
-                            <p className="text-sm font-black text-white italic">{(steamStats?.total_time_played / 3600).toFixed(0).toLocaleString()} hrs</p>
+                            <p className="text-[9px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Tempo de Jogo</p>
+                            <p className="text-sm font-black text-white italic">{(steamStats?.total_time_played / 3600).toFixed(0).toLocaleString()} h</p>
                         </div>
                         <div className="bg-zinc-950/80 p-4 rounded-2xl border border-white/5 text-center flex flex-col items-center justify-center hover:bg-zinc-900 transition-colors">
-                            <p className="text-[9px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Inventory</p>
+                            <p className="text-[9px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Inventário</p>
                             <p className="text-sm font-black text-white italic">{inventoryValueStr}</p>
                         </div>
                     </div>
@@ -107,8 +107,8 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
             {/* Medals/Badges */}
             <div className="bg-zinc-900/40 rounded-[40px] border border-white/5 p-8 flex-1">
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Medals & Badges</h3>
-                    <span className="text-[8px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full font-black uppercase">Show All ({medals.length})</span>
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Medalhas e Insígnias</h3>
+                    <span className="text-[8px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full font-black uppercase">Ver Todas ({medals.length})</span>
                 </div>
                 
                 <div className="grid grid-cols-4 gap-3">

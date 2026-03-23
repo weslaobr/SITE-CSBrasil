@@ -50,7 +50,7 @@ const TrustRating: React.FC<TrustRatingProps> = ({ rating, status }) => {
                 >
                     {rating}%
                 </motion.span>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mt-1">Trust Rating</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mt-1">Nível de Confiança</span>
             </div>
 
             <div className="mt-6 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">

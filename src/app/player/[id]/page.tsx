@@ -98,8 +98,8 @@ export default function PlayerProfilePage() {
     const isOwner = (session?.user as any)?.steamId === steamId;
 
     // Filter Medals for the sidebar
-    const medals = inventory.filter((item: any) => 
-        item.category_internal === 'Collectible' || 
+    const medals = inventory.filter((item: any) =>
+        item.category_internal === 'Collectible' ||
         item.type === 'Collectible' ||
         item.name_en?.includes('Medal') ||
         item.name_en?.includes('Coin') ||
@@ -107,7 +107,7 @@ export default function PlayerProfilePage() {
     );
 
     // Prepare Account Reputation Data
-    const accountAgeYears = profile.timecreated 
+    const accountAgeYears = profile.timecreated
         ? Math.floor((Date.now() / 1000 - profile.timecreated) / (365 * 24 * 3600))
         : 0;
     const accountAgeMonths = profile.timecreated
@@ -123,7 +123,7 @@ export default function PlayerProfilePage() {
     };
 
     const repData = {
-        accountAge: `${accountAgeYears}y ${accountAgeMonths}m`,
+        accountAge: `${accountAgeYears}a ${accountAgeMonths}m`,
         hoursPlayed: `${Math.floor(steamStats?.total_time_played / 3600 || 0).toLocaleString()}h`,
         inventoryValue: formatCurrency(inventoryValue || 0),
         steamLevel: steamLevel || 0,
@@ -135,12 +135,12 @@ export default function PlayerProfilePage() {
             <main className="p-4 md:p-8 lg:p-12 space-y-12">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
                     {/* LEFT SIDEBAR */}
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         className="lg:col-span-3 h-full"
                     >
-                        <ProfileSidebar 
+                        <ProfileSidebar
                             profile={profile}
                             steamStats={steamStats}
                             inventoryValueStr={formatCurrency(inventoryValue || 0)}
@@ -154,16 +154,16 @@ export default function PlayerProfilePage() {
                     <div className="lg:col-span-9 space-y-8">
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                             {/* Trust Rating Section */}
-                            <motion.div 
+                            <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className="bg-zinc-900/40 rounded-[40px] border border-white/5 p-12 backdrop-blur-xl flex items-center justify-center flex-col h-full"
                             >
                                 <h3 className="text-xl font-black italic uppercase tracking-tighter mb-4 lg:mb-12 self-start flex items-center gap-3">
-                                    <span className="w-1.5 h-6 bg-emerald-500 rounded-full" /> Player Reputation
+                                    <span className="w-1.5 h-6 bg-emerald-500 rounded-full" /> Reputação do jogador
                                 </h3>
                                 <div className="flex-1 flex flex-col items-center justify-center w-full">
-                                    <TrustRating rating={trustRating} status={trustRating >= 90 ? "Normal" : trustRating >= 70 ? "Stable" : "Risky"} />
+                                    <TrustRating rating={trustRating} status={trustRating >= 90 ? "Normal" : trustRating >= 70 ? "Estável" : "Arriscado"} />
                                     <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-center mt-8 px-8">
                                         Análise baseada em padrões de gameplay e performance.
                                     </p>
@@ -172,7 +172,7 @@ export default function PlayerProfilePage() {
                             </motion.div>
 
                             {/* Radar Chart (Perfil de Performance) */}
-                            <motion.div 
+                            <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 }}
@@ -196,7 +196,7 @@ export default function PlayerProfilePage() {
                         </div>
 
                         {/* Anomalies Section */}
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.2 }}
@@ -205,7 +205,7 @@ export default function PlayerProfilePage() {
                         </motion.div>
 
                         {/* Account Reputation Summary Section */}
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.3 }}
@@ -214,7 +214,7 @@ export default function PlayerProfilePage() {
                         </motion.div>
 
                         {/* Stats Analysis Section */}
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.4 }}
@@ -223,8 +223,8 @@ export default function PlayerProfilePage() {
                         </motion.div>
 
                         <p className="text-[9px] text-zinc-600 font-bold uppercase italic flex items-start gap-2 max-w-4xl opacity-60">
-                            <span className="text-amber-500 font-black italic">⚠️ Disclaimer:</span> 
-                            This analysis provides statistical estimates based on gameplay patterns and should be used as a supplementary tool only. Results may vary and should not be considered definitive proof of any behavior. Always consider multiple factors and context when evaluating player reputation.
+                            <span className="text-amber-500 font-black italic">⚠️ Aviso Legal:</span>
+                            Esta análise fornece estimativas estatísticas baseadas em padrões de jogabilidade e deve ser usada apenas como uma ferramenta complementar. Os resultados podem variar e não devem ser considerados provas definitivas de qualquer comportamento. Sempre considere vários fatores e o contexto ao avaliar a reputação do jogador.
                         </p>
                     </div>
                 </div>
@@ -247,10 +247,10 @@ export default function PlayerProfilePage() {
                             <h3 className="text-2xl font-black italic uppercase tracking-tighter">Inventário do Jogador</h3>
                         </div>
                     </div>
-                    <InventoryDashboard 
-                        items={inventory} 
-                        currency={currency} 
-                        setCurrency={setCurrency} 
+                    <InventoryDashboard
+                        items={inventory}
+                        currency={currency}
+                        setCurrency={setCurrency}
                         exchangeRate={exchangeRate}
                     />
                 </div>

@@ -18,16 +18,16 @@ const getProgressColor = (label: string, value: number) => {
 const calculateProgress = (label: string, value: number) => {
     const val = Number(value) || 0;
     switch (label) {
-        case "Time to Damage": return Math.min(100, Math.max(0, 100 - ((val - 300) / 700) * 100)); // lower is better
-        case "Reaction Time": return Math.min(100, Math.max(0, 100 - ((val - 200) / 300) * 100)); // lower is better
-        case "Crosshair Placement": return Math.min(100, (val / 15) * 100);
-        case "Preaim": return Math.min(100, (val / 15) * 100);
+        case "Tempo para Dano": return Math.min(100, Math.max(0, 100 - ((val - 300) / 700) * 100)); // lower is better
+        case "Tempo de Reação": return Math.min(100, Math.max(0, 100 - ((val - 200) / 300) * 100)); // lower is better
+        case "Posicionamento da Mira": return Math.min(100, (val / 15) * 100);
+        case "Pré-mira": return Math.min(100, (val / 15) * 100);
         case "K/D Ratio": return Math.min(100, (val / 2.0) * 100);
         case "ADR": return Math.min(100, (val / 150) * 100);
-        case "Aim Accuracy": return Math.min(100, val);
-        case "Head Accuracy": return Math.min(100, val);
-        case "Wallbang Kill %": return Math.min(100, (val / 10) * 100);
-        case "Smoke Kill %": return Math.min(100, (val / 10) * 100);
+        case "Precisão de Mira": return Math.min(100, val);
+        case "Precisão na Cabeça": return Math.min(100, val);
+        case "Kills Varadas %": return Math.min(100, (val / 10) * 100);
+        case "Kills na Smoke %": return Math.min(100, (val / 10) * 100);
         case "HLTV Rating 2.0": return Math.min(100, (val / 2.0) * 100);
         case "KAST": return Math.min(100, val);
         default: return 50;
@@ -78,16 +78,16 @@ const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ stats }) => {
     if (!stats) return null;
 
     const items = [
-        { label: "Time to Damage", value: stats.timeToDamage, unit: "ms" },
-        { label: "Reaction Time", value: stats.reactionTime, unit: "ms" },
-        { label: "Crosshair Placement", value: stats.crosshairPlacement, unit: "°" },
-        { label: "Preaim", value: stats.preaim, unit: "°" },
+        { label: "Tempo para Dano", value: stats.timeToDamage, unit: "ms" },
+        { label: "Tempo de Reação", value: stats.reactionTime, unit: "ms" },
+        { label: "Posicionamento da Mira", value: stats.crosshairPlacement, unit: "°" },
+        { label: "Pré-mira", value: stats.preaim, unit: "°" },
         { label: "K/D Ratio", value: stats.kdRatio },
         { label: "ADR", value: stats.adr },
-        { label: "Aim Accuracy", value: stats.aimAccuracy, unit: "%" },
-        { label: "Head Accuracy", value: stats.headAccuracy, unit: "%" },
-        { label: "Wallbang Kill %", value: stats.wallbangKillPercentage, unit: "%" },
-        { label: "Smoke Kill %", value: stats.smokeKillPercentage, unit: "%" },
+        { label: "Precisão de Mira", value: stats.aimAccuracy, unit: "%" },
+        { label: "Precisão na Cabeça", value: stats.headAccuracy, unit: "%" },
+        { label: "Kills Varadas %", value: stats.wallbangKillPercentage, unit: "%" },
+        { label: "Kills na Smoke %", value: stats.smokeKillPercentage, unit: "%" },
         { label: "HLTV Rating 2.0", value: stats.hltvRating2 },
         { label: "KAST", value: stats.kast, unit: "%" },
     ];
@@ -96,7 +96,7 @@ const StatsAnalysis: React.FC<StatsAnalysisProps> = ({ stats }) => {
         <div className="bg-zinc-950/30 rounded-[32px] border border-white/5 p-8 h-full flex flex-col justify-center">
             <div className="flex items-center justify-between mb-6">
                 <h3 className="text-sm font-black italic tracking-widest text-zinc-300 flex items-center gap-3">
-                    <span className="w-1 h-4 bg-emerald-500 rounded-full" /> Stats Based Analysis
+                    <span className="w-1 h-4 bg-emerald-500 rounded-full" /> Análise Estatística
                 </h3>
                 <span className="text-[9px] font-black uppercase bg-zinc-800 text-zinc-500 px-2 py-1 rounded-md border border-white/5">-0.4%</span>
             </div>

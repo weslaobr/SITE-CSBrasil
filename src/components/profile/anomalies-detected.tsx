@@ -27,7 +27,7 @@ const AnomaliesDetected: React.FC<AnomaliesDetectedProps> = ({ anomalies }) => {
                         <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold mt-1">Comportamento de conta saudável detectado.</p>
                     </div>
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 px-4 py-1.5 rounded-xl border border-emerald-500/20">Clean Player</span>
+                <span className="text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 px-4 py-1.5 rounded-xl border border-emerald-500/20">Jogador Limpo</span>
             </div>
         );
     }
@@ -35,7 +35,7 @@ const AnomaliesDetected: React.FC<AnomaliesDetectedProps> = ({ anomalies }) => {
     return (
         <div className="bg-zinc-950/30 rounded-[32px] border border-white/5 p-8 space-y-6">
             <h3 className="text-xs font-black italic uppercase tracking-widest text-zinc-400 flex items-center gap-3">
-                <AlertTriangle size={16} className="text-amber-500" /> Anomalies Detected
+                <AlertTriangle size={16} className="text-amber-500" /> Anomalias Detectadas
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -51,7 +51,7 @@ const AnomaliesDetected: React.FC<AnomaliesDetectedProps> = ({ anomalies }) => {
                             <span className={`text-[9px] font-black tracking-widest uppercase px-2 py-1 rounded-md border ${
                                 anomaly.status === 'Critical' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
                             }`}>
-                                {anomaly.status}
+                                {anomaly.status === 'Critical' ? 'Crítico' : anomaly.status === 'Warning' ? 'Aviso' : anomaly.status}
                             </span>
                         </div>
                         <div>

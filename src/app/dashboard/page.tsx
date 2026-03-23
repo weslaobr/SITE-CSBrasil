@@ -174,7 +174,7 @@ export default function DashboardPage() {
                                     <div className="bg-white/5 hover:bg-white/10 p-4 rounded-2xl border border-white/5 transition-all group">
                                         <p className="font-bold text-sm truncate mb-1">{lobby.name}</p>
                                         <div className="flex justify-between items-center text-[10px] text-zinc-500 uppercase font-bold">
-                                            <span>{lobby._count.players}/10 Players</span>
+                                            <span>{lobby._count.players}/10 Jogadores</span>
                                             <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                                         </div>
                                     </div>
@@ -198,7 +198,7 @@ export default function DashboardPage() {
                         <h2 className="text-2xl font-black italic uppercase tracking-tighter flex items-center gap-3">
                             <History className="text-yellow-500" /> Partidas Recentes
                         </h2>
-                        <span className="text-[10px] bg-white/5 px-2 py-1 rounded font-bold text-zinc-500 uppercase">Last 5 Matches</span>
+                        <span className="text-[10px] bg-white/5 px-2 py-1 rounded font-bold text-zinc-500 uppercase">Últimos 5 jogos</span>
                     </div>
 
                     <div className="space-y-3">
@@ -265,7 +265,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="bg-zinc-900/40 border border-white/5 p-8 rounded-[40px] backdrop-blur-xl">
-                        <h3 className="text-lg font-black italic uppercase tracking-tighter mb-6">News & Updates</h3>
+                        <h3 className="text-lg font-black italic uppercase tracking-tighter mb-6">Notícias e atualizações</h3>
                         <div className="space-y-6">
                             <NewsItem title="Novo Radar de Utilidades" date="Hoje" />
                             <NewsItem title="Subida de Patente Liberada" date="Ontem" />
