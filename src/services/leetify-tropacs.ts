@@ -15,6 +15,7 @@ export interface LeetifyPlayerStats {
         faceitElo?: number;
         wingmanElo?: number;
         gamersClubLevel?: number;
+        matchmaking?: number;
     };
     ratings: {
         leetifyRating: number;
@@ -89,7 +90,8 @@ export const getLeetifyPlayerData = async (steamId64: string): Promise<LeetifyPl
                 faceitLevel: data.ranks?.faceit,
                 faceitElo: data.ranks?.faceit_elo,
                 wingmanElo: data.ranks?.wingman,
-                gamersClubLevel: data.ranks?.gamers_club
+                gamersClubLevel: data.ranks?.gamers_club,
+                matchmaking: data.ranks?.skill_level || data.ranks?.matchmaking
             },
             ratings: ratingsData as any,
             recentMatches: data.recent_matches || []

@@ -13,6 +13,8 @@ interface RankUser {
     winRate: string;
     adr: number;
     trend: 'up' | 'down' | 'neutral';
+    gcLevel: number;
+    faceitLevel: number;
 }
 
 const GlobalRanking: React.FC = () => {
@@ -59,7 +61,7 @@ const GlobalRanking: React.FC = () => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <input
                             type="text"
-                            placeholder="Buscar player..."
+                            placeholder="Buscar jogador..."
                             className="w-full bg-zinc-900 border border-white/5 rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:border-yellow-500/50"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -101,12 +103,12 @@ const GlobalRanking: React.FC = () => {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="border-b border-white/5 text-[10px] uppercase font-bold text-zinc-500 tracking-widest">
-                                <th className="px-6 py-4"># Pos</th>
+                                <th className="px-6 py-4">Posição</th>
                                     <th className="px-6 py-4">Jogador</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4">Win Rate</th>
-                                    <th className="px-6 py-4">ADR</th>
-                                <th className="px-6 py-4">Trend</th>
+                                    <th className="px-6 py-4">Pontuação</th>
+                                    <th className="px-6 py-4">Nível GC</th>
+                                    <th className="px-6 py-4">Nível Faceit</th>
+                                <th className="px-6 py-4">Tendência</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -146,8 +148,16 @@ const GlobalRanking: React.FC = () => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5 font-mono text-xs text-zinc-400">{user.winRate}</td>
-                                        <td className="px-6 py-5 font-mono text-xs text-zinc-400">{user.adr}</td>
+                                        <td className="px-6 py-5 font-mono text-xs">
+                                            {user.gcLevel ? (
+                                                <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 rounded-md font-bold">Lvl {user.gcLevel}</span>
+                                            ) : <span className="text-zinc-600">N/A</span>}
+                                        </td>
+                                        <td className="px-6 py-5 font-mono text-xs">
+                                            {user.faceitLevel ? (
+                                                <span className="bg-[#ff5500]/10 text-[#ff5500] border border-[#ff5500]/20 px-2 py-0.5 rounded-md font-bold">Lvl {user.faceitLevel}</span>
+                                            ) : <span className="text-zinc-600">N/A</span>}
+                                        </td>
                                         <td className="px-6 py-5">
                                             {user.trend === 'up' && <ArrowUp className="text-green-500 w-4 h-4" />}
                                             {user.trend === 'down' && <ArrowDown className="text-red-500 w-4 h-4" />}

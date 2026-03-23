@@ -11,12 +11,33 @@ interface ProfileSidebarProps {
     steamLevel: number;
     medals: any[];
     leetifyData: any;
+    playerStats?: any;
 }
 
-const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, inventoryValueStr, steamLevel, medals, leetifyData }) => {
+const getMMRank = (rankId: number) => {
+    if (!rankId || rankId < 1 || rankId > 18) return { name: "Unranked", icon: null };
+    
+    const names = [
+        "",
+        "Prata I", "Prata II", "Prata III", "Prata IV", "Prata de Elite", "Prata Mestre",
+        "Ouro I", "Ouro II", "Ouro III", "Ouro Mestre",
+        "Mestre Guardião I", "Mestre Guardião II", "Mestre Guardião Elite", "Distinto Mestre Guardião",
+        "Águia Lendária", "Águia Lendária Mestre",
+        "Mestre Supremo", "A Global Elite"
+    ];
+
+    return {
+        name: names[rankId],
+        icon: `https://steamcdn-a.akamaihd.net/apps/730/icons/econ/status_icons/skillgroup${rankId}.png`
+    };
+};
+
+const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, inventoryValueStr, steamLevel, medals, leetifyData, playerStats }) => {
     const joinedDate = profile.timecreated 
         ? new Date(profile.timecreated * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         : 'N/A';
+
+    const mmRank = getMMRank(leetifyData?.ranks?.matchmaking || 0);
 
     return (
         <div className="space-y-8 h-full flex flex-col">
@@ -91,14 +112,26 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/10 text-center">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-emerald-500/10 p-3 rounded-2xl border border-emerald-500/10 text-center flex flex-col justify-center">
                             <p className="text-[9px] text-emerald-500/60 uppercase font-black italic tracking-widest mb-1">Premier</p>
-                            <p className="text-base font-black text-emerald-500 italic uppercase">{steamStats?.premier_rating || leetifyData?.ranks?.premier || 'N/A'}</p>
+                            <p className="text-base font-black text-emerald-500 italic uppercase">{playerStats?.premierRating || steamStats?.premier_rating || leetifyData?.ranks?.premier || 'N/A'}</p>
                         </div>
-                        <div className="bg-orange-500/10 p-4 rounded-2xl border border-orange-500/10 text-center">
-                            <p className="text-[9px] text-orange-500/60 uppercase font-black italic tracking-widest mb-1">Elo FACEIT</p>
-                            <p className="text-base font-black text-orange-500 italic uppercase">{leetifyData?.ranks?.faceitElo || 'N/A'}</p>
+                        <div className="bg-sky-500/10 p-3 rounded-2xl border border-sky-500/10 text-center flex flex-col items-center justify-center">
+                            <p className="text-[9px] text-sky-500/60 uppercase font-black italic tracking-widest mb-1">Competitivo</p>
+                            {mmRank.icon ? (
+                                <img src={mmRank.icon} alt={mmRank.name} className="h-6 mt-1 object-contain drop-shadow-lg" title={mmRank.name} />
+                            ) : (
+                                <p className="text-[10px] mt-1 font-black text-sky-500 italic uppercase">Unranked</p>
+                            )}
+                        </div>
+                        <div className="bg-yellow-500/10 p-3 rounded-2xl border border-yellow-500/10 text-center flex flex-col justify-center">
+                            <p className="text-[9px] text-yellow-500/60 uppercase font-black italic tracking-widest mb-1">Nível GC</p>
+                            <p className="text-base font-black text-yellow-500 italic uppercase">{playerStats?.gcLevel || 'N/A'}</p>
+                        </div>
+                        <div className="bg-[#ff5500]/10 p-3 rounded-2xl border border-[#ff5500]/20 text-center flex flex-col justify-center">
+                            <p className="text-[9px] text-[#ff5500]/60 uppercase font-black italic tracking-widest mb-1">Nível Faceit</p>
+                            <p className="text-base font-black text-[#ff5500] italic uppercase">{playerStats?.faceitLevel || leetifyData?.ranks?.faceitLevel || 'N/A'}</p>
                         </div>
                     </div>
                 </div>

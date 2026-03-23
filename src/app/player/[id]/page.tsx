@@ -94,7 +94,7 @@ export default function PlayerProfilePage() {
         );
     }
 
-    const { profile, steamStats, dbUser, leetifyData, inventory, steamLevel, trustRating, trustBreakdown, anomalies, inventoryValue, matches } = data;
+    const { profile, steamStats, dbUser, playerStats, leetifyData, inventory, steamLevel, trustRating, trustBreakdown, anomalies, inventoryValue, matches } = data;
     const isOwner = (session?.user as any)?.steamId === steamId;
 
     // Filter Medals for the sidebar
@@ -147,6 +147,7 @@ export default function PlayerProfilePage() {
                             steamLevel={steamLevel}
                             medals={medals}
                             leetifyData={leetifyData}
+                            playerStats={playerStats}
                         />
                     </motion.div>
 

@@ -17,6 +17,10 @@ export async function GET(
                 where: { steamId: steamId },
                 include: { matches: { orderBy: { matchDate: 'desc' }, take: 20 } }
             }),
+            prisma.player.findUnique({
+                where: { steamId: steamId },
+                include: { Stats: true }
+            }),
             getPlayerProfile(steamId),
             getCS2Stats(steamId).catch(() => null),
             getLeetifyPlayerData(steamId).catch(() => null),
@@ -26,12 +30,13 @@ export async function GET(
         ]);
 
         const dbUser = results[0] as any;
-        const profile = results[1] as any;
-        const steamStats = results[2] as any;
-        let leetifyData = results[3] as any;
-        const inventory = results[4] as any;
-        const steamLevel = results[5] as any;
-        const bans = results[6] as any;
+        const dbPlayer = results[1] as any;
+        const profile = results[2] as any;
+        const steamStats = results[3] as any;
+        let leetifyData = results[4] as any;
+        const inventory = results[5] as any;
+        const steamLevel = results[6] as any;
+        const bans = results[7] as any;
 
         if (!profile) {
             return NextResponse.json({ error: "Player not found" }, { status: 404 });
@@ -151,6 +156,7 @@ export async function GET(
             profile,
             steamStats,
             dbUser,
+            playerStats: dbPlayer?.Stats || null,
             leetifyData,
             inventory,
             steamLevel,
