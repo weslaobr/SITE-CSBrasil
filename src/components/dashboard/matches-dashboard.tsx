@@ -205,29 +205,57 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     }, [filteredMatches]);
 
     const getMapImage = (name: string) => {
-        if (!name) return 'https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/de_mirage.png';
+        const CDN = 'https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images';
+        const fallback = `${CDN}/de_mirage.png`;
+        if (!name) return fallback;
 
-        const mapName = name.toLowerCase().replace('de_', '').trim();
-        const cdnBase = 'https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images';
-        
-        // Map common aliases to official names
-        const mapMapping: Record<string, string> = {
-            'dust 2': 'de_dust2',
-            'dust2': 'de_dust2',
-            'dust ii': 'de_dust2',
-            'mirage': 'de_mirage',
-            'inferno': 'de_inferno',
-            'nuke': 'de_nuke',
-            'overpass': 'de_overpass',
-            'vertigo': 'de_vertigo',
-            'ancient': 'de_ancient',
-            'anubis': 'de_anubis',
-            'cache': 'de_cache',
-            'train': 'de_train'
+        const raw = name.toLowerCase().trim();
+
+        // Explicit full map table — covers all CS2 maps including cs_ and ar_ prefixes
+        const MAP_TABLE: Record<string, string> = {
+            // ── Aliases / short names ───────────────────────────────────────────
+            'dust 2': 'de_dust2', 'dust2': 'de_dust2', 'dust ii': 'de_dust2', 'd2': 'de_dust2',
+            'mirage': 'de_mirage', 'inferno': 'de_inferno', 'nuke': 'de_nuke',
+            'overpass': 'de_overpass', 'vertigo': 'de_vertigo', 'ancient': 'de_ancient',
+            'anubis': 'de_anubis', 'cache': 'de_cache', 'train': 'de_train',
+            'cobblestone': 'de_cbble', 'cbble': 'de_cbble',
+            'office': 'cs_office', 'italy': 'cs_italy', 'agency': 'cs_agency', 'alpine': 'cs_alpine',
+            'assembly': 'de_assembly', 'basalt': 'de_basalt', 'brewery': 'de_brewery',
+            'canals': 'de_canals', 'dogtown': 'de_dogtown', 'dust': 'de_dust',
+            'edin': 'de_edin', 'golden': 'de_golden', 'grail': 'de_grail',
+            'jura': 'de_jura', 'lake': 'de_lake', 'memento': 'de_memento',
+            'mills': 'de_mills', 'palacio': 'de_palacio', 'palais': 'de_palais',
+            'poseidon': 'de_poseidon', 'rooftop': 'de_rooftop', 'sanctum': 'de_sanctum',
+            'stronghold': 'de_stronghold', 'sugarcane': 'de_sugarcane', 'thera': 'de_thera',
+            'transit': 'de_transit', 'warden': 'de_warden', 'whistle': 'de_whistle',
+            // ── Full prefixed names (map already includes prefix) ───────────────
+            'de_dust2': 'de_dust2', 'de_mirage': 'de_mirage', 'de_inferno': 'de_inferno',
+            'de_nuke': 'de_nuke', 'de_overpass': 'de_overpass', 'de_vertigo': 'de_vertigo',
+            'de_ancient': 'de_ancient', 'de_anubis': 'de_anubis', 'de_cache': 'de_cache',
+            'de_train': 'de_train', 'de_cbble': 'de_cbble', 'de_assembly': 'de_assembly',
+            'de_basalt': 'de_basalt', 'de_brewery': 'de_brewery', 'de_canals': 'de_canals',
+            'de_dogtown': 'de_dogtown', 'de_dust': 'de_dust', 'de_edin': 'de_edin',
+            'de_golden': 'de_golden', 'de_grail': 'de_grail', 'de_jura': 'de_jura',
+            'de_lake': 'de_lake', 'de_memento': 'de_memento', 'de_mills': 'de_mills',
+            'de_palacio': 'de_palacio', 'de_palais': 'de_palais', 'de_poseidon': 'de_poseidon',
+            'de_rooftop': 'de_rooftop', 'de_sanctum': 'de_sanctum', 'de_stronghold': 'de_stronghold',
+            'de_sugarcane': 'de_sugarcane', 'de_thera': 'de_thera', 'de_transit': 'de_transit',
+            'de_warden': 'de_warden', 'de_whistle': 'de_whistle',
+            'cs_office': 'cs_office', 'cs_italy': 'cs_italy', 'cs_agency': 'cs_agency', 'cs_alpine': 'cs_alpine',
+            'ar_baggage': 'ar_baggage', 'ar_pool_day': 'ar_pool_day', 'ar_shoots': 'ar_shoots',
         };
 
-        const officialName = mapMapping[mapName] || `de_${mapName}`;
-        return `${cdnBase}/${officialName}.png`;
+        if (MAP_TABLE[raw]) return `${CDN}/${MAP_TABLE[raw]}.png`;
+
+        // If no exact match, try stripping de_/cs_/ar_ and look up the bare name
+        const bare = raw.replace(/^(de_|cs_|ar_)/, '');
+        if (MAP_TABLE[bare]) return `${CDN}/${MAP_TABLE[bare]}.png`;
+
+        // If name already has a valid prefix, trust it
+        if (/^(de_|cs_|ar_)/.test(raw)) return `${CDN}/${raw}.png`;
+
+        // Final fallback: assume de_
+        return `${CDN}/de_${bare}.png`;
     };
 
     const getRankInfo = (rank: any, source?: string, gameMode?: string, metadata?: any) => {

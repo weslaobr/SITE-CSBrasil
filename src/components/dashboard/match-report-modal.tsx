@@ -47,6 +47,7 @@ interface Match {
     deaths: number;
     assists: number;
     mvps?: number;
+    rank?: string;
     matchDate: string;
     result: string;
     score: string;
@@ -100,8 +101,10 @@ const MatchReportModal: React.FC<Props> = ({
 
             setInternalMatch({
                 id: data.match_id || matchId!,
-                source: data.data_source || initialMatch?.source || 'Leetify',
-                gameMode: data.game_mode || initialMatch?.gameMode || 'Competitive',
+                // Always trust the source/gameMode from the match list (set during sync),
+                // since the Leetify API returns generic values like "valve" / "matchmaking"
+                source: initialMatch?.source || data.data_source || 'Leetify',
+                gameMode: initialMatch?.gameMode || data.game_mode || 'Competitive',
                 mapName: data.map_name || initialMatch?.mapName || 'de_mirage',
                 kills: data.stats?.find((p: any) => p.is_user)?.total_kills || initialMatch?.kills || 0,
                 deaths: data.stats?.find((p: any) => p.is_user)?.total_deaths || initialMatch?.deaths || 0,
@@ -125,13 +128,44 @@ const MatchReportModal: React.FC<Props> = ({
     // ── HELPERS ───────────────────────────────────────────────────────────────
 
     const mapImg = (name: string) => {
-        const n = (name || '').toLowerCase().replace('de_', '').trim();
-        const aliases: Record<string, string> = {
-            'dust 2': 'de_dust2', dust2: 'de_dust2', mirage: 'de_mirage', inferno: 'de_inferno',
-            nuke: 'de_nuke', overpass: 'de_overpass', vertigo: 'de_vertigo', ancient: 'de_ancient',
-            anubis: 'de_anubis', cache: 'de_cache', train: 'de_train'
+        const CDN = 'https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images';
+        if (!name) return `${CDN}/de_mirage.png`;
+        const raw = name.toLowerCase().trim();
+        const MAP_TABLE: Record<string, string> = {
+            'dust 2': 'de_dust2', 'dust2': 'de_dust2', 'dust ii': 'de_dust2', 'd2': 'de_dust2',
+            'mirage': 'de_mirage', 'inferno': 'de_inferno', 'nuke': 'de_nuke',
+            'overpass': 'de_overpass', 'vertigo': 'de_vertigo', 'ancient': 'de_ancient',
+            'anubis': 'de_anubis', 'cache': 'de_cache', 'train': 'de_train',
+            'cobblestone': 'de_cbble', 'cbble': 'de_cbble',
+            'office': 'cs_office', 'italy': 'cs_italy', 'agency': 'cs_agency', 'alpine': 'cs_alpine',
+            'assembly': 'de_assembly', 'basalt': 'de_basalt', 'brewery': 'de_brewery',
+            'canals': 'de_canals', 'dogtown': 'de_dogtown', 'dust': 'de_dust',
+            'edin': 'de_edin', 'golden': 'de_golden', 'grail': 'de_grail',
+            'jura': 'de_jura', 'lake': 'de_lake', 'memento': 'de_memento',
+            'mills': 'de_mills', 'palacio': 'de_palacio', 'palais': 'de_palais',
+            'poseidon': 'de_poseidon', 'rooftop': 'de_rooftop', 'sanctum': 'de_sanctum',
+            'stronghold': 'de_stronghold', 'sugarcane': 'de_sugarcane', 'thera': 'de_thera',
+            'transit': 'de_transit', 'warden': 'de_warden', 'whistle': 'de_whistle',
+            'de_dust2': 'de_dust2', 'de_mirage': 'de_mirage', 'de_inferno': 'de_inferno',
+            'de_nuke': 'de_nuke', 'de_overpass': 'de_overpass', 'de_vertigo': 'de_vertigo',
+            'de_ancient': 'de_ancient', 'de_anubis': 'de_anubis', 'de_cache': 'de_cache',
+            'de_train': 'de_train', 'de_cbble': 'de_cbble', 'de_assembly': 'de_assembly',
+            'de_basalt': 'de_basalt', 'de_brewery': 'de_brewery', 'de_canals': 'de_canals',
+            'de_dogtown': 'de_dogtown', 'de_dust': 'de_dust', 'de_edin': 'de_edin',
+            'de_golden': 'de_golden', 'de_grail': 'de_grail', 'de_jura': 'de_jura',
+            'de_lake': 'de_lake', 'de_memento': 'de_memento', 'de_mills': 'de_mills',
+            'de_palacio': 'de_palacio', 'de_palais': 'de_palais', 'de_poseidon': 'de_poseidon',
+            'de_rooftop': 'de_rooftop', 'de_sanctum': 'de_sanctum', 'de_stronghold': 'de_stronghold',
+            'de_sugarcane': 'de_sugarcane', 'de_thera': 'de_thera', 'de_transit': 'de_transit',
+            'de_warden': 'de_warden', 'de_whistle': 'de_whistle',
+            'cs_office': 'cs_office', 'cs_italy': 'cs_italy', 'cs_agency': 'cs_agency', 'cs_alpine': 'cs_alpine',
+            'ar_baggage': 'ar_baggage', 'ar_pool_day': 'ar_pool_day', 'ar_shoots': 'ar_shoots',
         };
-        return `https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/${aliases[n] || `de_${n}`}.png`;
+        if (MAP_TABLE[raw]) return `${CDN}/${MAP_TABLE[raw]}.png`;
+        const bare = raw.replace(/^(de_|cs_|ar_)/, '');
+        if (MAP_TABLE[bare]) return `${CDN}/${MAP_TABLE[bare]}.png`;
+        if (/^(de_|cs_|ar_)/.test(raw)) return `${CDN}/${raw}.png`;
+        return `${CDN}/de_${bare}.png`;
     };
 
     const isUserP = (p: any) => {
@@ -253,12 +287,30 @@ const MatchReportModal: React.FC<Props> = ({
         return { a: 0, e: 0 };
     };
 
-    const detectMode = () => {
-        const src = (currentMatch?.source || '').toLowerCase();
-        const mode = (currentMatch?.gameMode || '').toLowerCase();
-        if (src.includes('gamersclub') || mode.includes('gamersclub') || mode === 'gc') return 'GamersClub';
-        if (src === 'faceit' || mode.includes('faceit')) return 'Faceit';
-        if (src.includes('premier') || mode.includes('premier')) return 'Premier';
+    const detectMode = (): 'Faceit' | 'Premier' | 'GamersClub' | 'Competitivo' => {
+        const m = currentMatch;
+        if (!m) return 'Competitivo';
+
+        const src  = (m.source    || '').toLowerCase();
+        const mode = (m.gameMode  || '').toLowerCase();
+        const meta = (m.metadata?.source || m.metadata?.data_source || '').toLowerCase();
+        const rank    = m.rank || m.metadata?.rank || '';
+        const rankNum = parseInt(String(rank));
+
+        // GamersClub
+        if (src.includes('gamersclub') || src.includes('gamers_club') || src === 'gc' ||
+            mode.includes('gamersclub') || mode.includes('gamers_club') || mode === 'gc' ||
+            meta.includes('gamersclub')) return 'GamersClub';
+
+        // Faceit
+        if (src === 'faceit' || mode.includes('faceit') || meta.includes('faceit')) return 'Faceit';
+
+        // Premier — same heuristics as the match list:
+        // rank_type 11 = Premier in Leetify, or numeric rank > 1000 in a competitive context
+        if (src.includes('premier') || mode.includes('premier') || meta.includes('premier') ||
+            m.metadata?.rank_type === 11 ||
+            (!isNaN(rankNum) && rankNum > 1000 && !src.includes('gamersclub'))) return 'Premier';
+
         return 'Competitivo';
     };
 
