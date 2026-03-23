@@ -168,15 +168,15 @@ export default function PlayerProfilePage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="bg-zinc-900/40 rounded-[40px] border border-white/5 p-12 backdrop-blur-xl flex items-center justify-center flex-col h-full"
                             >
-                                <h3 className="text-xl font-black italic uppercase tracking-tighter mb-4 lg:mb-12 self-start flex items-center gap-3">
+                                <h3 className="text-xl font-black italic uppercase tracking-tighter mb-4 lg:mb-5 self-start flex items-center gap-3">
                                     <span className="w-1.5 h-6 bg-emerald-500 rounded-full" /> Reputação do jogador
                                 </h3>
-                                <div className="flex-1 flex flex-col items-center justify-center w-full">
+                                <div className="flex-1 flex flex-col items-center justify-center w-full gap-5">
                                     <TrustRating rating={trustRating} status={trustRating >= 90 ? "Normal" : trustRating >= 70 ? "Estável" : "Arriscado"} />
-                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-center mt-8 px-8">
+                                    <TrustCriteria breakdown={trustBreakdown} />
+                                    <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest text-center">
                                         Análise baseada em padrões de gameplay e performance.
                                     </p>
-                                    <TrustCriteria breakdown={trustBreakdown} />
                                 </div>
                             </motion.div>
 

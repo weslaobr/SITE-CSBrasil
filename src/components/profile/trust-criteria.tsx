@@ -28,7 +28,7 @@ const Criterion: React.FC<{
 
     return (
         <div 
-            className={`relative flex items-center justify-between text-[9px] font-bold uppercase tracking-wider p-2 rounded-lg border transition-colors ${
+            className={`relative flex items-center justify-between text-[9px] font-bold uppercase tracking-wider px-3 py-2 rounded-lg border transition-colors ${
                 isPenalty 
                 ? 'bg-red-500/5 border-red-500/10 text-red-400 hover:bg-red-500/10' 
                 : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'
@@ -64,13 +64,13 @@ const TrustCriteria: React.FC<TrustCriteriaProps> = ({ breakdown }) => {
     if (!breakdown) return null;
 
     return (
-        <div className="mt-8 pt-8 border-t border-white/5 w-full">
-            <div className="flex items-center gap-2 mb-4">
+        <div className="mt-4 pt-4 border-t border-white/5 w-full">
+            <div className="flex items-center gap-2 mb-3">
                 <Info size={14} className="text-zinc-500" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Distribuição de Pontos</span>
             </div>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
                 <Criterion 
                     icon={<Clock size={10} />} 
                     label="Idade Conta" 
@@ -106,7 +106,7 @@ const TrustCriteria: React.FC<TrustCriteriaProps> = ({ breakdown }) => {
                 </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between px-2 py-1.5 bg-zinc-800/30 rounded-lg text-[9px] font-bold uppercase tracking-widest text-zinc-500">
+            <div className="mt-3 flex items-center justify-between px-3 py-2 bg-zinc-800/30 rounded-lg text-[9px] font-bold uppercase tracking-widest text-zinc-500">
                 <span>Pontuação Base</span>
                 <span className="text-white">+50</span>
             </div>

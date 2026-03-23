@@ -9,29 +9,29 @@ interface TrustRatingProps {
 }
 
 const TrustRating: React.FC<TrustRatingProps> = ({ rating, status }) => {
-    const strokeDasharray = 2 * Math.PI * 90;
+    const strokeDasharray = 2 * Math.PI * 64;
     const strokeDashoffset = strokeDasharray - (strokeDasharray * rating) / 100;
 
     return (
         <div className="flex flex-col items-center justify-center relative">
-            <svg className="w-48 h-48 transform -rotate-90">
+            <svg className="w-36 h-36 transform -rotate-90">
                 {/* Background Circle */}
                 <circle
-                    cx="96"
-                    cy="96"
-                    r="90"
+                    cx="72"
+                    cy="72"
+                    r="64"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="6"
                     fill="transparent"
                     className="text-zinc-800/50"
                 />
                 {/* Progress Circle */}
                 <motion.circle
-                    cx="96"
-                    cy="96"
-                    r="90"
+                    cx="72"
+                    cy="72"
+                    r="64"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="6"
                     fill="transparent"
                     strokeDasharray={strokeDasharray}
                     initial={{ strokeDashoffset: strokeDasharray }}
@@ -46,14 +46,14 @@ const TrustRating: React.FC<TrustRatingProps> = ({ rating, status }) => {
                 <motion.span 
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="text-5xl font-black italic text-white"
+                    className="text-4xl font-black italic text-white"
                 >
                     {rating}%
                 </motion.span>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mt-1">Nível de Confiança</span>
+                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 mt-0.5">Nível de Confiança</span>
             </div>
 
-            <div className="mt-6 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+            <div className="absolute -bottom-3 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest backdrop-blur-md shadow-lg">
                 {status || 'Normal'}
             </div>
         </div>
