@@ -1,34 +1,39 @@
 "use client";
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trophy, Target, TrendingUp, Calendar, ExternalLink, Download, BarChart2, BarChart3, Zap, Shield, Sword, Activity, ChevronDown, ChevronUp } from 'lucide-react';
-
+import {
+    X, Calendar, MapPin, Shield, Target, Activity,
+    Zap, TrendingUp, Crosshair, Star, Flame, Eye
+} from 'lucide-react';
 import axios from 'axios';
+
+// ── TYPES ────────────────────────────────────────────────────────────────────
 
 interface PlayerStats {
     nickname: string;
     avatar: string;
-    rank: string;
     kills: number;
     deaths: number;
     assists: number;
-    diff: number;
-    kd: number;
     adr: number;
-    hs: string;
-    kast: string;
+    hs: number;          // raw number 0-100
+    kast: number;        // raw number 0-100
     rating: number;
-    fkd: number;
-    fkd_deaths: number;
+    // Extended
+    fk: number;          // first kills
+    fd: number;          // first deaths
+    triples: number;
+    quads: number;
+    aces: number;
+    clutches: number;
     trades: number;
-    onevx: number;
-    onevx_attempts: number;
-    multikills: string;
-    // Utility stats
-    util_damage: number;
-    flash_assists: number;
-    util_thrown: number;
-    blind_time: number;
+    utilDmg: number;
+    flashAssists: number;
+    blindTime: number;   // seconds
+    heThrown: number;
+    flashThrown: number;
+    smokesThrown: number;
+    molotovThrown: number;
     isUser?: boolean;
     steamId?: string;
 }
@@ -43,7 +48,6 @@ interface Match {
     assists: number;
     mvps?: number;
     matchDate: string;
-    duration?: string;
     result: string;
     score: string;
     url?: string;
@@ -53,44 +57,36 @@ interface Match {
     hsPercentage?: number;
 }
 
-interface MatchReportModalProps {
+interface Props {
     match: Match | null;
     matchId?: string | null;
     isOpen: boolean;
     onClose: () => void;
-    // Explicit user identifiers for accurate identification
     userSteamId?: string;
     userNickname?: string;
 }
 
-const MatchReportModal: React.FC<MatchReportModalProps> = ({ 
-    match: initialMatch, 
-    matchId, 
-    isOpen, 
-    onClose,
-    userSteamId,
-    userNickname
+// ── COMPONENT ────────────────────────────────────────────────────────────────
+
+const MatchReportModal: React.FC<Props> = ({
+    match: initialMatch, matchId, isOpen, onClose, userSteamId, userNickname
 }) => {
-    const [mainTab, setMainTab] = useState('seu-jogo');
-    const [subTab, setSubTab] = useState('geral');
     const [internalMatch, setInternalMatch] = useState<Match | null>(null);
     const [loading, setLoading] = useState(false);
+    const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos'>('placar');
 
     const match = initialMatch || internalMatch;
 
     React.useEffect(() => {
         if (isOpen && matchId) {
-            // Se mudou o matchId ou se o match atual não tem os dados completos (metadata), busca
             if (!match || !match.metadata || match.id !== matchId) {
-                setInternalMatch(null); // Limpa anterior
-                setMainTab('seu-jogo'); // Reset tabs
-                setSubTab('geral');
+                setInternalMatch(null);
+                setTab('placar');
                 fetchMatchData();
             }
         } else if (!isOpen) {
             setInternalMatch(null);
-            setMainTab('seu-jogo');
-            setSubTab('geral');
+            setTab('placar');
         }
     }, [isOpen, matchId]);
 
@@ -99,13 +95,10 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
         try {
             const res = await axios.get(`/api/match/${matchId}`);
             const data = res.data;
-            
-            // Map API data to Match interface, preserving initial data where needed
-            const scoreFromAPI = (data.team_2_score !== undefined && data.team_3_score !== undefined) 
-                ? `${data.team_2_score}-${data.team_3_score}` 
-                : null;
+            const scoreFromAPI = (data.team_2_score !== undefined && data.team_3_score !== undefined)
+                ? `${data.team_2_score}-${data.team_3_score}` : null;
 
-            const fetchedMatch: Match = {
+            setInternalMatch({
                 id: data.match_id || matchId!,
                 source: data.data_source || initialMatch?.source || 'Leetify',
                 gameMode: data.game_mode || initialMatch?.gameMode || 'Competitive',
@@ -114,931 +107,557 @@ const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 deaths: data.stats?.find((p: any) => p.is_user)?.total_deaths || initialMatch?.deaths || 0,
                 assists: data.stats?.find((p: any) => p.is_user)?.total_assists || initialMatch?.assists || 0,
                 matchDate: data.match_date || initialMatch?.matchDate || new Date().toISOString(),
-                result: data.result || initialMatch?.result || (data.team_2_score > data.team_3_score ? 'Win' : 'Loss'),
-                score: scoreFromAPI && scoreFromAPI !== "0-0" ? scoreFromAPI : (initialMatch?.score || "0-0"),
+                result: data.result || initialMatch?.result || 'Loss',
+                score: scoreFromAPI && scoreFromAPI !== '0-0' ? scoreFromAPI : (initialMatch?.score || '0-0'),
                 url: data.demo_url || initialMatch?.url,
                 externalId: data.match_id || initialMatch?.externalId,
-                metadata: {
-                    ...initialMatch?.metadata, // Preserve initial metadata (like playerNickname)
-                    ...data,
-                },
-                adr: data.stats?.find((p: any) => p.is_user)?.adr || initialMatch?.adr,
+                metadata: { ...initialMatch?.metadata, ...data },
+                adr: data.stats?.find((p: any) => p.is_user)?.dpr || data.stats?.find((p: any) => p.is_user)?.adr || initialMatch?.adr,
                 hsPercentage: (data.stats?.find((p: any) => p.is_user)?.accuracy_head * 100) || initialMatch?.hsPercentage
-            };
-            setInternalMatch(fetchedMatch);
-        } catch (error) {
-            console.error("Error fetching match in modal:", error);
-        } finally {
-            setLoading(false);
-        }
+            });
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
     };
 
-    if (!match && loading) {
+    const currentMatch = internalMatch?.metadata ? internalMatch : (initialMatch || internalMatch);
+    if (!isOpen) return null;
+
+    // ── HELPERS ───────────────────────────────────────────────────────────────
+
+    const mapImg = (name: string) => {
+        const n = (name || '').toLowerCase().replace('de_', '').trim();
+        const aliases: Record<string, string> = {
+            'dust 2': 'de_dust2', dust2: 'de_dust2', mirage: 'de_mirage', inferno: 'de_inferno',
+            nuke: 'de_nuke', overpass: 'de_overpass', vertigo: 'de_vertigo', ancient: 'de_ancient',
+            anubis: 'de_anubis', cache: 'de_cache', train: 'de_train'
+        };
+        return `https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/${aliases[n] || `de_${n}`}.png`;
+    };
+
+    const isUserP = (p: any) => {
+        if (!p) return false;
+        const metaN = currentMatch?.metadata?.playerNickname || currentMatch?.metadata?.metadata?.playerNickname;
+        const metaS = currentMatch?.metadata?.metadata?.steamId || currentMatch?.metadata?.steam64Id;
+        const pS = p.player_id || p.steam64_id || p.steamId || p.steam_id;
+        const pN = p.nickname || p.name;
+        return (userSteamId && pS === userSteamId) ||
+               (userNickname && pN === userNickname) ||
+               p.is_user === true || p.isUser === true ||
+               (metaN && pN === metaN) ||
+               (metaS && pS === metaS) || false;
+    };
+
+    const normalizeP = (p: any, isUser = false): PlayerStats => {
+        const kills   = p.kills ?? p.total_kills ?? parseInt(p.player_stats?.Kills ?? '0') ?? 0;
+        const deaths  = p.deaths ?? p.total_deaths ?? parseInt(p.player_stats?.Deaths ?? '0') ?? 0;
+        const assists = p.assists ?? p.total_assists ?? parseInt(p.player_stats?.Assists ?? '0') ?? 0;
+        const adr     = p.dpr ?? p.adr ?? parseFloat(p.player_stats?.ADR ?? '0') ?? (isUser ? currentMatch?.adr ?? 70 : 70);
+        const rating  = p.rating ?? p.leetify_rating ?? parseFloat(p.player_stats?.['K/D Ratio'] ?? '1.0') ?? 1.0;
+        const hsRaw   = p.accuracy_head !== undefined ? p.accuracy_head > 1 ? Math.round(p.accuracy_head) : Math.round(p.accuracy_head * 100)
+                      : p.hs_percent ?? p.hs_percentage ?? (isUser && currentMatch?.hsPercentage ? Math.round(Number(currentMatch.hsPercentage)) : 0);
+        const kastRaw = p.kast !== undefined
+            ? typeof p.kast === 'string' ? parseFloat(p.kast) : (p.kast > 1 ? p.kast : Math.round(p.kast * 100))
+            : (currentMatch?.result === 'Win' ? 72 : 60);
+        const avatar  = p.avatar_url || p.avatarUrl || p.avatar
+                      || (isUser ? currentMatch?.metadata?.steam_avatar ?? '' : '')
+                      || 'https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg';
+
+        return {
+            nickname: p.name || p.nickname || (isUser ? '[Você]' : 'Jogador'),
+            avatar, kills, deaths, assists, adr, rating,
+            hs: hsRaw, kast: kastRaw,
+            fk: p.fk_count ?? p.fkd ?? 0,
+            fd: p.fd_count ?? p.fk_deaths ?? 0,
+            triples: p.triple_kills ?? 0,
+            quads: p.quadro_kills ?? p.quad_kills ?? 0,
+            aces: p.penta_kills ?? p.ace_kills ?? 0,
+            clutches: p.clutch_count ?? p.clutches ?? 0,
+            trades: p.trade_count ?? p.trades ?? 0,
+            utilDmg: p.util_damage ?? p.utility_damage ?? p.utilityDamage ?? 0,
+            flashAssists: p.flash_assists ?? p.flashbang_assists ?? 0,
+            blindTime: p.blind_time ?? p.blindTime ?? 0,
+            heThrown: p.he_thrown ?? 0,
+            flashThrown: p.flash_thrown ?? 0,
+            smokesThrown: p.smokes_thrown ?? 0,
+            molotovThrown: p.molotovs_thrown ?? p.molotov_thrown ?? 0,
+            isUser,
+            steamId: p.player_id || p.steamId || p.steam64_id
+        };
+    };
+
+    const getTeams = (): { t1: PlayerStats[]; t2: PlayerStats[] } => {
+        const meta = currentMatch?.metadata || {};
+
+        if (meta.fullStats?.rounds?.[0]?.teams) {
+            const [a, b] = meta.fullStats.rounds[0].teams;
+            return { t1: (a.players||[]).map((p:any)=>normalizeP(p,isUserP(p))), t2: (b.players||[]).map((p:any)=>normalizeP(p,isUserP(p))) };
+        }
+        if (meta.stats && Array.isArray(meta.stats)) {
+            const map: Record<string, any[]> = {};
+            meta.stats.forEach((s: any) => {
+                const k = String(s.initial_team_number || s.team_id || 'x');
+                if (!map[k]) map[k] = [];
+                map[k].push(s);
+            });
+            const ids = Object.keys(map).filter(k => k !== 'x');
+            let t1: any[] = [], t2: any[] = [];
+            if (ids.length >= 2) { ids.sort(); t1 = map[ids[0]]; t2 = map[ids[1]]; }
+            else { t1 = meta.stats.slice(0,5); t2 = meta.stats.slice(5,10); }
+            if (t2.some(isUserP)) { [t1, t2] = [t2, t1]; }
+            return { t1: t1.map((p:any)=>normalizeP(p,isUserP(p))), t2: t2.map((p:any)=>normalizeP(p,isUserP(p))) };
+        }
+        if (meta.players && Array.isArray(meta.players)) {
+            return { t1: meta.players.slice(0,5).map((p:any)=>normalizeP(p,isUserP(p))), t2: meta.players.slice(5,10).map((p:any)=>normalizeP(p,isUserP(p))) };
+        }
+        return {
+            t1: [
+                normalizeP({nickname:'[Você]',kills:currentMatch?.kills,deaths:currentMatch?.deaths,assists:currentMatch?.assists,adr:currentMatch?.adr},true),
+                normalizeP({nickname:'Aliado 1'}),normalizeP({nickname:'Aliado 2'}),
+                normalizeP({nickname:'Aliado 3'}),normalizeP({nickname:'Aliado 4'}),
+            ],
+            t2: [normalizeP({nickname:'Inimigo 1'}),normalizeP({nickname:'Inimigo 2'}),
+                 normalizeP({nickname:'Inimigo 3'}),normalizeP({nickname:'Inimigo 4'}),normalizeP({nickname:'Inimigo 5'})]
+        };
+    };
+
+    const getScore = () => {
+        if (!currentMatch) return { a: 0, e: 0 };
+        const meta = currentMatch.metadata || {};
+        const stats: any[] = meta.stats || [];
+        const uP = stats.find(isUserP);
+        const uT = uP?.initial_team_number;
+        const eT = stats.find((s: any) => s.initial_team_number && s.initial_team_number !== uT)?.initial_team_number;
+        const sc = (t: any) => {
+            if (!t) return null;
+            if (meta[`team_${t}_score`] !== undefined) return meta[`team_${t}_score`];
+            if (meta[`team${t}Score`] !== undefined) return meta[`team${t}Score`];
+            return null;
+        };
+        const s1 = sc(uT), s2 = sc(eT);
+        if (s1 !== null && s2 !== null) return { a: s1, e: s2 };
+        const parts = (currentMatch.score || '').split(/[^\d]+/).map(Number).filter(n => !isNaN(n));
+        if (parts.length >= 2) {
+            const win = currentMatch.result === 'Win';
+            return { a: win ? Math.max(...parts) : Math.min(...parts), e: win ? Math.min(...parts) : Math.max(...parts) };
+        }
+        return { a: 0, e: 0 };
+    };
+
+    const detectMode = () => {
+        const src = (currentMatch?.source || '').toLowerCase();
+        const mode = (currentMatch?.gameMode || '').toLowerCase();
+        if (src.includes('gamersclub') || mode.includes('gamersclub') || mode === 'gc') return 'GamersClub';
+        if (src === 'faceit' || mode.includes('faceit')) return 'Faceit';
+        if (src.includes('premier') || mode.includes('premier')) return 'Premier';
+        return 'Competitivo';
+    };
+
+    const modeLabel: Record<string, string> = {
+        Faceit:'🔴 Faceit', Premier:'⭐ Premier', GamersClub:'🛡 Gamers Club', Competitivo:'🎮 Competitivo'
+    };
+
+    if (!currentMatch && loading) {
         return (
-            <AnimatePresence>
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="relative bg-[#0b0e13] border border-white/10 rounded-[40px] p-20 flex flex-col items-center gap-8 shadow-2xl"
-                    >
-                        <div className="relative w-20 h-20">
-                            <div className="absolute inset-0 border-4 border-yellow-500/10 rounded-full" />
-                            <div className="absolute inset-0 border-4 border-t-yellow-500 rounded-full animate-spin" />
-                        </div>
-                        <div className="text-center">
-                            <h3 className="text-xl font-black uppercase italic tracking-tighter text-white mb-2">Analisando Partida</h3>
-                            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest animate-pulse">Cruzando dados do Leetify...</p>
-                        </div>
-                    </motion.div>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                <div className="relative w-14 h-14">
+                    <div className="absolute inset-0 border-4 border-yellow-500/10 rounded-full" />
+                    <div className="absolute inset-0 border-4 border-t-yellow-500 rounded-full animate-spin" />
                 </div>
-            </AnimatePresence>
+            </div>
         );
     }
-
-    // Determine the most complete version of the match data
-    const currentMatch = internalMatch?.metadata ? internalMatch : (initialMatch || internalMatch);
-    
-    // Final safety check
     if (!currentMatch) return null;
 
-    // Helper to normalize any player object to our standard PlayerStats
-    const normalizePlayerData = (p: any, isUser: boolean = false): PlayerStats => {
-        // Leetify often uses snake_case, Faceit uses camelCase or specific names
-        const kills = p.kills !== undefined ? p.kills : 
-                     (p.total_kills !== undefined ? p.total_kills : 
-                     (p.player_stats?.Kills ? parseInt(p.player_stats.Kills) : 
-                     (p.Kills ? parseInt(p.Kills) : 0)));
-                     
-        const deaths = p.deaths !== undefined ? p.deaths : 
-                      (p.total_deaths !== undefined ? p.total_deaths : 
-                      (p.player_stats?.Deaths ? parseInt(p.player_stats.Deaths) : 
-                      (p.Deaths ? parseInt(p.Deaths) : 0)));
-                      
-        const assists = p.assists !== undefined ? p.assists : 
-                       (p.total_assists !== undefined ? p.total_assists : 
-                       (p.player_stats?.Assists ? parseInt(p.player_stats.Assists) : 
-                       (p.Assists ? parseInt(p.Assists) : 0)));
+    const { t1, t2 } = getTeams();
+    const { a: scoreA, e: scoreE } = getScore();
+    const isWin = currentMatch.result === 'Win' || scoreA > scoreE;
+    const mode = detectMode();
+    const mapDisplay = currentMatch.mapName?.replace('de_','').split('_').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Mapa';
+    const dateStr = new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
+    const userData = t1.find(p=>p.isUser) || t2.find(p=>p.isUser) || t1[0];
+    const allPlayers = [...t1, ...t2];
+    const isVerified = !!currentMatch.metadata?.stats || currentMatch.source === 'Faceit';
+    const hasRichData = allPlayers.some(p => p.utilDmg > 0 || p.flashAssists > 0 || p.fk > 0 || p.triples > 0);
 
-        const adr = p.adr !== undefined ? p.adr : 
-                   (p.player_stats?.ADR ? parseFloat(p.player_stats.ADR) : 
-                   (p.ADR ? parseFloat(p.ADR) : 0));
-        const currentLeetifyRating = currentMatch.metadata?.leetify_rating || currentMatch.metadata?.ratings?.find((r: any) => r.steam64Id === (p.player_id || p.steam64_id))?.rating;
+    // ── TABS CONFIG ───────────────────────────────────────────────────────────
+    const tabs: { id: 'placar'|'desempenho'|'utilitarios'|'confrontos'; label: string; icon: React.ReactNode }[] = [
+        { id: 'placar',       label: 'Placar',       icon: <Shield size={12} /> },
+        { id: 'desempenho',   label: 'Desempenho',   icon: <TrendingUp size={12} /> },
+        { id: 'utilitarios',  label: 'Utilitários',  icon: <Zap size={12} /> },
+        { id: 'confrontos',   label: 'Confrontos',   icon: <Crosshair size={12} /> },
+    ];
 
-        const avatar = p.avatar_url || p.avatarUrl || p.avatar || (p.player_stats?.avatar) || 
-                      (isUser ? (currentMatch.metadata?.steam_avatar || "https://avatars.steamstatic.com/2cf8997181cfcbceeacd49034d12aaf4c378d15e.jpg") : 
-                      `https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg`);
+    // ── SUB-COMPONENTS ────────────────────────────────────────────────────────
 
-        const hsValue = p.accuracy_head !== undefined ? `${(p.accuracy_head * 100).toFixed(0)}%` : 
-                        (p.hs_percent !== undefined ? `${p.hs_percent}%` : 
-                        (p.player_stats?.["Headshots %"] ? `${p.player_stats["Headshots %"]}%` : 
-                        (p.hs_percentage !== undefined ? `${p.hs_percentage}%` : 
-                        (isUser && currentMatch.hsPercentage != null ? `${currentMatch.hsPercentage}%` : '0%'))));
-
-        const isWinResult = currentMatch?.result === 'Win' || currentMatch?.result === 'Victory';
-        
-        // Deterministic fallbacks for missing detailed data
-        const seed = (p.player_id || p.name || p.nickname || "0").length;
-        const fallbackFk = Math.max(0, Math.floor(kills / 6));
-        const fallbackFd = Math.max(0, Math.floor(deaths / 8));
-        const fallbackTrades = Math.floor(kills / 4);
-        const fallbackClutches = kills > 25 ? 1 : 0;
-        const fallbackKast = isWinResult ? 75 : 62;
-
-        const util_damage = p.util_damage !== undefined ? p.util_damage : 
-                           (p.utility_damage !== undefined ? p.utility_damage : 
-                           (p.utilityDamage !== undefined ? p.utilityDamage : 
-                           (p.player_stats?.["Utility Damage"] ? parseInt(p.player_stats["Utility Damage"]) : 0)));
-
-        const flash_assists = p.flash_assists !== undefined ? p.flash_assists : 
-                             (p.flashbang_assists !== undefined ? p.flashbang_assists : 
-                             (p.flashbangAssists !== undefined ? p.flashbangAssists : 
-                             (p.player_stats?.["Flashbang Assists"] ? parseInt(p.player_stats["Flashbang Assists"]) : 0)));
-
-        const blind_time = p.blind_time !== undefined ? p.blind_time : 
-                           (p.blindTime !== undefined ? p.blindTime : 
-                           (p.flash_blind_time || 0));
-
-        const util_thrown = p.util_thrown || p.utilThrown || 
-                           (p.he_thrown || 0) + (p.flash_thrown || 0) + (p.smokes_thrown || 0) + (p.molotovs_thrown || 0);
-
-        return {
-            nickname: p.name || p.nickname || (isUser ? "[Sua Conta]" : "Jogador"),
-            avatar,
-            rank: p.rank || "Competitive",
-            kills,
-            deaths,
-            assists,
-            diff: kills - deaths,
-            kd: Number((kills / (deaths || 1)).toFixed(2)),
-            adr: adr || (isUser ? (currentMatch.adr || 70) : 70 + (seed % 15)),
-            hs: hsValue,
-            kast: p.kast || `${fallbackKast}%`,
-            rating: p.rating || p.leetify_rating || p.leetifyRating || currentLeetifyRating || (p.player_stats?.["K/D Ratio"] ? parseFloat(p.player_stats["K/D Ratio"]) : 1.0),
-            fkd: p.fk_count || p.fkd || fallbackFk,
-            fkd_deaths: p.fd_count || p.fk_deaths || fallbackFd,
-            trades: p.trade_count || p.trades || fallbackTrades,
-
-            onevx: p.clutch_count || p.onevx || fallbackClutches,
-            onevx_attempts: p.onevx_attempts || (fallbackClutches > 0 ? fallbackClutches + 1 : 0),
-            multikills: p.multikills || (p.triple_kills !== undefined ? `0/${p.triple_kills}/${p.quadro_kills}/${p.penta_kills}` : "0/0/0/0"),
-            util_damage,
-            flash_assists,
-            util_thrown,
-            blind_time,
-            isUser: isUser,
-            steamId: p.player_id || p.steamId || p.steam64Id || p.player_stats?.steam_id
-        };
+    /** Compact player row for main scoreboard */
+    const ScoreRow = ({ p, isAlly }: { p: PlayerStats; isAlly: boolean }) => {
+        const kd = (p.kills / (p.deaths || 1)).toFixed(2);
+        const mvpKills = p.kills === Math.max(...(isAlly ? t1 : t2).map(x => x.kills));
+        return (
+            <tr className={`border-b border-white/[0.04] group transition-colors ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
+                <td className="py-2 px-3">
+                    <div className="flex items-center gap-2">
+                        <div className={`w-7 h-7 rounded-lg overflow-hidden border shrink-0 ${p.isUser ? 'border-yellow-500/50' : 'border-white/10'}`}>
+                            {p.avatar ? (
+                                <img src={p.avatar} alt="" className="w-full h-full object-cover" onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}} />
+                            ) : (
+                                <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-[9px] text-zinc-500 font-black">{p.nickname.charAt(0)}</div>
+                            )}
+                        </div>
+                        <span className={`text-[11px] font-bold truncate max-w-[110px] ${p.isUser ? 'text-yellow-400' : 'text-white'}`}>
+                            {p.isUser ? '★ ' : ''}{p.nickname}
+                        </span>
+                    </div>
+                </td>
+                <td className="py-2 px-2 text-center"><span className={`text-sm font-black italic ${mvpKills ? 'text-yellow-400' : 'text-white'}`}>{p.kills}</span></td>
+                <td className="py-2 px-2 text-center"><span className="text-sm font-black italic text-zinc-500">{p.deaths}</span></td>
+                <td className="py-2 px-2 text-center"><span className="text-xs font-bold text-zinc-600">{p.assists}</span></td>
+                <td className="py-2 px-2 text-center"><span className={`text-xs font-black ${parseFloat(kd)>=1?'text-emerald-400':'text-red-400'}`}>{kd}</span></td>
+                <td className="py-2 px-2 text-center"><span className="text-xs font-bold text-yellow-500/70">{p.adr > 0 ? Math.round(p.adr) : '—'}</span></td>
+                <td className="py-2 px-3 text-center"><span className="text-xs text-zinc-600">{p.hs}%</span></td>
+            </tr>
+        );
     };
 
-    // ROBUST USER DETECTION
-    const isUserPlayer = (p: any) => {
-        if (!p) return false;
-        const metadataNickname = currentMatch.metadata?.playerNickname || currentMatch.metadata?.metadata?.playerNickname;
-        const metadataSteamId = currentMatch.metadata?.metadata?.steamId || currentMatch.metadata?.steam64Id;
-        const pSteamId = p.player_id || p.steam64_id || p.steamId || p.steam_id || p.player_stats?.steam_id;
-        const pNickname = p.nickname || p.name;
-        if (userSteamId && pSteamId === userSteamId) return true;
-        if (userNickname && (pNickname === userNickname)) return true;
-        if (p.is_user === true || p.isUser === true) return true;
-        if (metadataNickname && pNickname === metadataNickname) return true;
-        if (metadataSteamId && pSteamId === metadataSteamId) return true;
-        return false;
+    /** Desempenho individual - rating, kast, multi-kills */
+    const PerfRow = ({ p }: { p: PlayerStats }) => {
+        const kd = (p.kills / (p.deaths || 1)).toFixed(2);
+        const multiStr = [
+            p.triples > 0 ? `${p.triples}×3K` : null,
+            p.quads > 0 ? `${p.quads}×4K` : null,
+            p.aces > 0 ? `${p.aces}×ACE` : null,
+        ].filter(Boolean).join(' ');
+        return (
+            <tr className={`border-b border-white/[0.04] ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
+                <td className="py-2 px-3">
+                    <span className={`text-[11px] font-bold truncate max-w-[100px] block ${p.isUser ? 'text-yellow-400' : 'text-zinc-300'}`}>
+                        {p.isUser ? '★ ' : ''}{p.nickname}
+                    </span>
+                </td>
+                <td className="py-2 px-2 text-center">
+                    <span className={`text-sm font-black italic ${p.rating >= 1.2 ? 'text-yellow-400' : p.rating >= 0.9 ? 'text-white' : 'text-red-400'}`}>
+                        {p.rating.toFixed(2)}
+                    </span>
+                </td>
+                <td className="py-2 px-2 text-center">
+                    <span className={`text-xs font-bold ${p.kast >= 72 ? 'text-emerald-400' : p.kast >= 60 ? 'text-zinc-300' : 'text-red-400'}`}>
+                        {p.kast}%
+                    </span>
+                </td>
+                <td className="py-2 px-2 text-center">
+                    <div className="flex justify-center">
+                        <div className="relative h-1.5 w-20 bg-zinc-900 rounded-full overflow-hidden">
+                            <div className="absolute inset-y-0 left-0 bg-rose-500 rounded-full" style={{ width: `${Math.min(100, p.hs)}%` }} />
+                        </div>
+                    </div>
+                    <span className="text-[9px] text-zinc-600 mt-0.5 block text-center">{p.hs}%</span>
+                </td>
+                <td className="py-2 px-2 text-center">
+                    {p.clutches > 0
+                        ? <span className="text-xs font-black text-purple-400">{p.clutches}</span>
+                        : <span className="text-zinc-700">—</span>}
+                </td>
+                <td className="py-2 px-2 text-center">
+                    {p.trades > 0
+                        ? <span className="text-xs font-bold text-blue-400">{p.trades}</span>
+                        : <span className="text-zinc-700">—</span>}
+                </td>
+                <td className="py-2 px-3 text-center">
+                    {multiStr
+                        ? <span className="text-[10px] font-black text-amber-400 whitespace-nowrap">{multiStr}</span>
+                        : <span className="text-zinc-700 text-[10px]">—</span>}
+                </td>
+            </tr>
+        );
     };
 
-    const getScoreboardData = (): { team1: PlayerStats[]; team2: PlayerStats[] } => {
-        const meta = currentMatch.metadata || {};
+    /** Utilitários per player */
+    const UtilRow = ({ p }: { p: PlayerStats }) => (
+        <tr className={`border-b border-white/[0.04] ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
+            <td className="py-2 px-3">
+                <span className={`text-[11px] font-bold truncate max-w-[100px] block ${p.isUser ? 'text-yellow-400' : 'text-zinc-300'}`}>
+                    {p.isUser ? '★ ' : ''}{p.nickname}
+                </span>
+            </td>
+            <td className="py-2 px-2 text-center"><span className={`text-sm font-black italic ${p.utilDmg > 50 ? 'text-yellow-400' : 'text-zinc-400'}`}>{p.utilDmg > 0 ? Math.round(p.utilDmg) : '—'}</span></td>
+            <td className="py-2 px-2 text-center"><span className={`text-xs font-black ${p.flashAssists > 0 ? 'text-blue-400' : 'text-zinc-700'}`}>{p.flashAssists > 0 ? p.flashAssists : '—'}</span></td>
+            <td className="py-2 px-2 text-center"><span className="text-xs text-zinc-500">{p.blindTime > 0 ? `${p.blindTime.toFixed(1)}s` : '—'}</span></td>
+            <td className="py-2 px-2 text-center"><span className="text-xs text-red-400/70">{p.heThrown > 0 ? p.heThrown : '—'}</span></td>
+            <td className="py-2 px-2 text-center"><span className="text-xs text-blue-400/70">{p.flashThrown > 0 ? p.flashThrown : '—'}</span></td>
+            <td className="py-2 px-2 text-center"><span className="text-xs text-zinc-500/70">{p.smokesThrown > 0 ? p.smokesThrown : '—'}</span></td>
+            <td className="py-2 px-3 text-center"><span className="text-xs text-orange-400/70">{p.molotovThrown > 0 ? p.molotovThrown : '—'}</span></td>
+        </tr>
+    );
 
-        // 1. Faceit fullStats
-        if (meta.fullStats?.rounds?.[0]?.teams) {
-            const teams = meta.fullStats.rounds[0].teams;
-            return {
-                team1: (teams[0].players || []).map((p: any) => normalizePlayerData(p, isUserPlayer(p))),
-                team2: (teams[1].players || []).map((p: any) => normalizePlayerData(p, isUserPlayer(p)))
-            };
-        }
-
-        // 2. Leetify stats
-        if (meta.stats && Array.isArray(meta.stats)) {
-            const stats = meta.stats;
-            
-            const teamsMap: Record<string, any[]> = {};
-            stats.forEach((s: any) => {
-                const tid = s.initial_team_number || s.team_id || s.teamId || "unknown";
-                if (!teamsMap[tid]) teamsMap[tid] = [];
-                teamsMap[tid].push(s);
-            });
-
-            let t1: any[] = [];
-            let t2: any[] = [];
-            const teamIds = Object.keys(teamsMap).filter(id => id !== "unknown");
-            
-            if (teamIds.length >= 2) {
-                teamIds.sort();
-                t1 = teamsMap[teamIds[0]];
-                t2 = teamsMap[teamIds[1]];
-            } else if (teamsMap["unknown"]?.length >= 10 || teamIds.length === 1) {
-                t1 = stats.slice(0, 5);
-                t2 = stats.slice(5, 10);
-            }
-
-            const userInT2 = t2.some(isUserPlayer);
-            if (userInT2) {
-                const temp = t1;
-                t1 = t2;
-                t2 = temp;
-            }
-
-            return {
-                team1: t1.map((p: any) => normalizePlayerData(p, isUserPlayer(p))),
-                team2: t2.map((p: any) => normalizePlayerData(p, isUserPlayer(p)))
-            };
-        }
-
-        // 3. Metadata players (Legacy/Steam)
-        if (meta.players && Array.isArray(meta.players)) {
-            return {
-                team1: meta.players.slice(0, 5).map((p: any) => normalizePlayerData(p, isUserPlayer(p))),
-                team2: meta.players.slice(5, 10).map((p: any) => normalizePlayerData(p, isUserPlayer(p)))
-            };
-        }
-
-        // 3. Fallback (Mock)
-        return {
-            team1: [
-                normalizePlayerData({ nickname: "[Sua Conta]", kills: currentMatch.kills, deaths: currentMatch.deaths, assists: currentMatch.assists, adr: currentMatch.adr }, true),
-                normalizePlayerData({ nickname: "Aliado 1" }),
-                normalizePlayerData({ nickname: "Aliado 2" }),
-                normalizePlayerData({ nickname: "Aliado 3" }),
-                normalizePlayerData({ nickname: "Aliado 4" }),
-            ],
-            team2: [
-                normalizePlayerData({ nickname: "Inimigo 1" }),
-                normalizePlayerData({ nickname: "Inimigo 2" }),
-                normalizePlayerData({ nickname: "Inimigo 3" }),
-                normalizePlayerData({ nickname: "Inimigo 4" }),
-                normalizePlayerData({ nickname: "Inimigo 5" }),
-            ]
-        };
-
+    /** Confrontos (FK/FD) per player */
+    const DuelRow = ({ p }: { p: PlayerStats }) => {
+        const total = p.fk + p.fd;
+        const fkPct = total > 0 ? Math.round((p.fk / total) * 100) : 50;
+        return (
+            <tr className={`border-b border-white/[0.04] ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
+                <td className="py-2 px-3">
+                    <span className={`text-[11px] font-bold truncate max-w-[100px] block ${p.isUser ? 'text-yellow-400' : 'text-zinc-300'}`}>
+                        {p.isUser ? '★ ' : ''}{p.nickname}
+                    </span>
+                </td>
+                <td className="py-2 px-2 text-center">
+                    <span className={`text-sm font-black italic ${p.fk > p.fd ? 'text-emerald-400' : p.fk === p.fd ? 'text-zinc-400' : 'text-red-400'}`}>{p.fk > 0 || p.fd > 0 ? p.fk : '—'}</span>
+                </td>
+                <td className="py-2 px-2 text-center">
+                    <span className="text-sm font-black italic text-red-500/70">{p.fk > 0 || p.fd > 0 ? p.fd : '—'}</span>
+                </td>
+                <td className="py-2 px-2 text-center">
+                    {(p.fk > 0 || p.fd > 0) ? (
+                        <div className="flex flex-col items-center gap-0.5">
+                            <div className="relative h-1.5 w-20 bg-red-900/40 rounded-full overflow-hidden">
+                                <div className="absolute inset-y-0 left-0 bg-emerald-500 rounded-full" style={{ width: `${fkPct}%` }} />
+                            </div>
+                            <span className="text-[9px] text-zinc-600">{fkPct}% ganhos</span>
+                        </div>
+                    ) : <span className="text-zinc-700">—</span>}
+                </td>
+                <td className="py-2 px-2 text-center">
+                    <span className={`text-xs font-bold ${p.fk - p.fd > 0 ? 'text-emerald-400' : p.fk - p.fd === 0 ? 'text-zinc-500' : 'text-red-400'}`}>
+                        {p.fk > 0 || p.fd > 0 ? (p.fk - p.fd > 0 ? `+${p.fk - p.fd}` : p.fk - p.fd) : '—'}
+                    </span>
+                </td>
+                <td className="py-2 px-3 text-center">
+                    <span className={`text-xs font-bold ${p.trades >= 3 ? 'text-blue-400' : 'text-zinc-600'}`}>{p.trades > 0 ? p.trades : '—'}</span>
+                </td>
+            </tr>
+        );
     };
 
-    const getMatchAnalysis = (user: PlayerStats) => {
-        const stats = [];
-        
-        // Aim Stats
-        if (user.hs) stats.push({ label: 'Precisão de Headshot', value: user.hs, color: 'bg-rose-500', tag: 'MIRA', raw: parseInt(user.hs) });
-        stats.push({ label: 'ADR', value: user.adr.toFixed(1), color: 'bg-yellow-500', tag: 'IMPACT', raw: user.adr });
-        
-        // Multi-kills
-        const [k2, k3, k4, k5] = (user.multikills || "0/0/0/0").split('/').map(Number);
-        if (k5 > 0) stats.push({ label: 'Rounds de Ace', value: k5.toString(), color: 'bg-amber-500', tag: 'IMPACTO', badge: 'LENDÁRIO', raw: 100 });
-        else if (k4 > 0) stats.push({ label: 'Rounds de 4K', value: k4.toString(), color: 'bg-rose-500', tag: 'IMPACTO', raw: 80 });
-        
-        // Utility
-        if (user.util_damage > 0) stats.push({ label: 'Dano de Utilitário', value: user.util_damage.toString(), color: 'bg-yellow-500', tag: 'UTIL', raw: Math.min(100, (user.util_damage / 300) * 100) });
-        if (user.flash_assists > 0) stats.push({ label: 'Assist. de Flash', value: user.flash_assists.toString(), color: 'bg-yellow-400', tag: 'UTIL', raw: Math.min(100, user.flash_assists * 20) });
+    const TeamBlock = ({ players, title, scoreVal, ally }: { players: PlayerStats[]; title: string; scoreVal: number; ally: boolean }) => (
+        <div className={`flex-1 min-w-0 rounded-2xl overflow-hidden border ${ally
+            ? (isWin ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-red-500/20 bg-red-500/[0.02]')
+            : 'border-white/[0.06] bg-white/[0.01]'
+        }`}>
+            <div className={`flex items-center justify-between px-4 py-2 border-b ${ally
+                ? (isWin ? 'border-emerald-500/15 bg-emerald-500/[0.04]' : 'border-red-500/15 bg-red-500/[0.04]')
+                : 'border-white/5 bg-white/[0.02]'
+            }`}>
+                <div className="flex items-center gap-2">
+                    <Shield size={11} className={ally ? (isWin ? 'text-emerald-500' : 'text-red-400') : 'text-zinc-600'} />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{title}</span>
+                </div>
+                <span className={`text-2xl font-black italic ${ally ? (isWin ? 'text-emerald-400' : 'text-red-400') : 'text-zinc-500'}`}>{scoreVal}</span>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="border-b border-white/[0.05] bg-black/20">
+                            {tab === 'placar' && <>
+                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700">Jogador</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">K</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">D</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">A</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">K/D</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">ADR</th>
+                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700 text-center">HS%</th>
+                            </>}
+                            {tab === 'desempenho' && <>
+                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700">Jogador</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Rating</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">KAST</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">HS%</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Clutch</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Trade</th>
+                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700 text-center">Multikills</th>
+                            </>}
+                            {tab === 'utilitarios' && <>
+                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700">Jogador</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Dano Util</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Flash Ast</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Cegos</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">HE</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Flash</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Smoke</th>
+                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700 text-center">Molotov</th>
+                            </>}
+                            {tab === 'confrontos' && <>
+                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700">Jogador</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">1ª Kill</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">1ª Morte</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Win Rate</th>
+                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Saldo</th>
+                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700 text-center">Trocas</th>
+                            </>}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {players.map((p, i) => tab === 'placar' ? <ScoreRow key={i} p={p} isAlly={ally} />
+                            : tab === 'desempenho' ? <PerfRow key={i} p={p} />
+                            : tab === 'utilitarios' ? <UtilRow key={i} p={p} />
+                            : <DuelRow key={i} p={p} />
+                        )}
+                        {Array.from({ length: Math.max(0, 5 - players.length) }).map((_, i) => (
+                            <tr key={`pad-${i}`} className="border-b border-white/[0.02]">
+                                <td colSpan={8} className="py-2 px-3"><span className="text-zinc-800 text-[10px]">—</span></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
 
-        // Entry
-        if (user.fkd > 0) stats.push({ label: 'Duelos de Abertura Vencidos', value: user.fkd.toString(), color: 'bg-purple-500', tag: 'OPENING', raw: (user.fkd / (user.fkd + user.fkd_deaths || 1)) * 100 });
-
-        // Sort by 'raw' importance and take top 5
-        const top5 = stats.sort((a, b) => (b.raw || 0) - (a.raw || 0)).slice(0, 5);
-        
-        // Identity logic
-        let identity = "O Consistente";
-        if (top5.some(s => s.tag === 'AIM' && s.raw > 50)) identity = "O Especialista em Mira";
-        if (top5.some(s => s.tag === 'UTIL' && s.raw > 40)) identity = "O Rei dos Utilitários";
-        if (top5.some(s => s.tag === 'OPENING' && s.raw > 60)) identity = "O Entry Fragger";
-        if (user.rating > 1.3) identity = "O Carregador";
-        if (user.onevx > 0) identity = "O Clutch Master";
-
-        return { top5, identity };
-    };
-
-    const getMapImage = (name: string) => {
-        if (!name) return 'https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/de_mirage.png';
-        const mapName = name.toLowerCase().replace('de_', '').trim();
-        const mapMapping: Record<string, string> = {
-            'dust 2': 'de_dust2', 'dust2': 'de_dust2', 'dust ii': 'de_dust2',
-            'mirage': 'de_mirage', 'inferno': 'de_inferno', 'nuke': 'de_nuke',
-            'overpass': 'de_overpass', 'vertigo': 'de_vertigo', 'ancient': 'de_ancient',
-            'anubis': 'de_anubis'
-        };
-        const officialName = mapMapping[mapName] || `de_${mapName}`;
-        return `https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/${officialName}.png`;
-    };
-
-    const isPremier = currentMatch.source?.toLowerCase().includes('premier') || 
-                      currentMatch.gameMode?.toLowerCase().includes('premier') ||
-                      currentMatch.metadata?.data_source?.toLowerCase().includes('premier') ||
-                      currentMatch.metadata?.source?.toLowerCase().includes('premier');
-
-    const displayMode = isPremier ? 'Premier' : 
-                        currentMatch.gameMode?.toLowerCase().includes('matchmaking') ? 'Competitivo' : 
-                        currentMatch.gameMode || 'Competitivo';
-
-    // DYNAMIC SCORE AND RESULT
-    // Find team numbers/scores from metadata to get the REAL score
-    const getMatchResult = () => {
-        const meta = currentMatch.metadata || {};
-        const stats = meta.stats || [];
-        
-        // 1. Identify all team numbers present in the match
-        const teamNumbers = Array.from(new Set(stats.map((s: any) => s.initial_team_number).filter(Boolean))) as number[];
-        
-        // 2. Identify the user's team number
-        const userPlayer = stats.find((p: any) => {
-            const userNickname = meta.playerNickname || meta.metadata?.playerNickname;
-            const userSteamId = meta.metadata?.steamId || meta.steam64Id;
-            return (
-                p.is_user === true || 
-                p.isUser === true ||
-                (userNickname && (p.nickname === userNickname || p.name === userNickname)) ||
-                (userSteamId && (p.player_id === userSteamId || p.steam64_id === userSteamId || p.steamId === userSteamId))
-            );
-        });
-
-        const userTeamNum = userPlayer?.initial_team_number;
-        const enemyTeamNum = teamNumbers.find(n => n !== userTeamNum);
-
-        // Exhaustive search for scores
-        const findScore = (teamNum: number | undefined) => {
-            if (teamNum === undefined) return 0;
-            // Try team_X_score
-            if (meta[`team_${teamNum}_score`] !== undefined) return meta[`team_${teamNum}_score`];
-            // Try teamXScore
-            if (meta[`team${teamNum}Score`] !== undefined) return meta[`team${teamNum}Score`];
-            // Try teamScores array
-            if (Array.isArray(meta.team_scores)) {
-                const found = meta.team_scores.find((t: any) => t.team_number === teamNum || t.teamNumber === teamNum);
-                if (found && found.score !== undefined) return found.score;
-            }
-            return 0;
-        };
-
-        let s1 = findScore(userTeamNum);
-        let s2 = findScore(enemyTeamNum);
-
-        // FALLBACK: If scores are identical and NOT a 13-13 tie, or both 0, or team numbers are missing
-        const isSuspicious = (s1 === s2 && s1 !== 13) || (s1 === 0 && s2 === 0) || !userTeamNum;
-        
-        if (isSuspicious && currentMatch.score) {
-            const parts = currentMatch.score.split(/[^\d]+/);
-            if (parts.length >= 2) {
-                const scoreA = parseInt(parts[0]);
-                const scoreB = parseInt(parts[1]);
-                
-                const isActualWin = currentMatch.result === 'Win' || currentMatch.result === 'Victory';
-                if (isActualWin) {
-                    s1 = Math.max(scoreA, scoreB);
-                    s2 = Math.min(scoreA, scoreB);
-                } else {
-                    s1 = Math.min(scoreA, scoreB);
-                    s2 = Math.max(scoreA, scoreB);
-                }
-            }
-        }
-
-        return {
-            alliesScore: s1,
-            enemiesScore: s2,
-            win: s1 > s2 || (s1 === s2 && (currentMatch.result === 'Win' || currentMatch.result === 'Victory'))
-        };
-    };
-
-    const isAnalyzing = loading && !internalMatch;
-    const { team1, team2 } = getScoreboardData();
-    const userData = team1.find(p => p.isUser) || team2.find(p => p.isUser) || team1[0];
-    const { top5, identity } = getMatchAnalysis(userData);
-    const { alliesScore, enemiesScore, win: isWin } = getMatchResult();
-
-    const isVerified = currentMatch.source === 'Leetify' || currentMatch.source === 'Faceit' || !!currentMatch.metadata?.stats;
+    // ── RENDER ────────────────────────────────────────────────────────────────
 
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
-                    {/* Backdrop */}
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 md:p-5">
                     <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/85 backdrop-blur-md"
                     />
-
-                    {/* Modal Content */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.95, y: 16 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="relative w-full max-w-6xl max-h-[90vh] bg-[#0b0e13] border border-white/10 rounded-[40px] shadow-2xl overflow-hidden flex flex-col"
+                        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+                        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                        className="relative w-full max-w-5xl bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_80px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col"
+                        style={{ maxHeight: 'calc(100vh - 40px)' }}
                     >
-                        {/* Cinematic Header (Leetify Style) */}
-                        <div className="relative h-64 shrink-0 overflow-hidden">
-                            {/* Map Background with Dark Overlay */}
-                            <img 
-                                src={getMapImage(currentMatch?.mapName)} 
-                                className="absolute inset-0 w-full h-full object-cover scale-110 blur-[1px] opacity-60"
-                                alt="" 
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-[#0b0e13]" />
-                            
-                            {/* Close Button */}
-                            <button
-                                onClick={onClose}
-                                className="absolute top-6 right-6 z-20 w-12 h-12 rounded-2xl bg-black/60 hover:bg-red-500/80 flex items-center justify-center transition-all border border-white/10 group active:scale-95"
-                            >
-                                <X size={24} className="text-white group-hover:rotate-90 transition-transform" />
-                            </button>
+                        {/* ── HEADER ────────────────────────────────────── */}
+                        <div className="relative shrink-0">
+                            <img src={mapImg(currentMatch.mapName)} className="absolute inset-0 w-full h-full object-cover scale-110 blur-sm opacity-25" alt="" />
+                            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-[#0c0f15]/60 to-[#0c0f15]" />
 
-                            {/* Banner Content */}
-                            <div className="absolute inset-0 flex flex-col items-center justify-center pt-2">
-                                <div className="flex items-center gap-16">
-                                    {/* Map info left */}
-                                    <div className="hidden md:flex flex-col items-end gap-2">
-                                        <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-white/10 rounded-xl backdrop-blur-md">
-                                            <img src={getMapImage(currentMatch.mapName)} className="w-5 h-5 rounded-md object-cover" alt="" />
-                                            <span className="text-xs font-black uppercase tracking-[0.2em] text-white">
-                                                {currentMatch.mapName?.replace('de_', '').toUpperCase()}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Activity size={12} className="text-yellow-500" />
-                                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{displayMode}</span>
-                                        </div>
+                            <div className="relative z-10 px-5 pt-4 pb-0 flex items-center justify-between gap-3">
+                                {/* Map + mode */}
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-11 h-7 rounded-lg overflow-hidden border border-white/10 shrink-0">
+                                        <img src={mapImg(currentMatch.mapName)} alt="" className="w-full h-full object-cover" />
                                     </div>
-
-                                    {/* Main Result */}
-                                    <div className="flex flex-col items-center">
-                                        <div className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-3 border ${
-                                            isWin ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
-                                        }`}>
-                                            {isWin ? 'VITÓRIA' : 'DERROTA'}
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-xs font-black uppercase tracking-widest text-white">{mapDisplay}</span>
+                                            <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-black/40 border border-white/10 text-zinc-400">{modeLabel[mode]}</span>
                                         </div>
-                                        <div className="flex items-center justify-center gap-6">
-                                            <span className={`text-7xl font-black italic tracking-tighter drop-shadow-2xl ${isWin ? 'text-white' : 'text-zinc-400'}`}>
-                                                {alliesScore}
-                                            </span>
-                                            <div className="flex flex-col items-center justify-center -mt-2">
-                                                <span className="text-4xl font-black text-zinc-700 italic">:</span>
-                                                <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Placar</span>
-                                            </div>
-                                            <span className={`text-7xl font-black italic tracking-tighter drop-shadow-2xl ${!isWin ? 'text-white' : 'text-zinc-400'}`}>
-                                                {enemiesScore}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Date info right */}
-                                    <div className="hidden md:flex flex-col items-start gap-2">
-                                        <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-white/10 rounded-xl backdrop-blur-md text-white/80">
-                                            <Calendar size={14} className="text-yellow-500" />
-                                            <span className="text-xs font-black tracking-widest uppercase">
-                                                {new Date(currentMatch.matchDate).toLocaleDateString('pt-BR')}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${isVerified ? 'bg-yellow-500 animate-pulse' : 'bg-zinc-600'}`} />
-                                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                                                {isVerified ? 'Dados Verificados' : 'Dados Estimados'}
+                                        <div className="flex items-center gap-3 text-[9px] font-bold text-zinc-600 uppercase tracking-widest mt-0.5">
+                                            <span className="flex items-center gap-1"><Calendar size={8}/>{dateStr}</span>
+                                            <span className="flex items-center gap-1">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${isVerified ? 'bg-yellow-500 animate-pulse' : 'bg-zinc-700'}`} />
+                                                {isVerified ? 'Verificado' : 'Estimado'}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Primary Navigation (Leetify Tabs) */}
-                            <div className="absolute bottom-0 left-0 right-0 flex justify-center px-8 border-b border-white/5">
-                                <div className="flex gap-8">
-                                    {[
-                                        { id: 'seu-jogo', label: 'SEU JOGO' },
-                                        { id: 'visao-geral', label: 'VISÃO GERAL' },
-                                        { id: 'detalhes', label: 'DETALHES' },
-                                        { id: 'duelos', label: 'DUELOS' }
-                                    ].map((tab) => (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => {
-                                                setMainTab(tab.id);
-                                                if (tab.id !== 'detalhes') setSubTab('geral');
-                                            }}
-                                            className="relative py-4 px-2 group"
-                                        >
-                                            <span className={`text-[11px] font-black uppercase tracking-[0.2em] transition-colors ${
-                                                mainTab === tab.id ? 'text-yellow-500' : 'text-zinc-500 group-hover:text-white'
-                                            }`}>
-                                                {tab.label}
-                                            </span>
-                                            {mainTab === tab.id && (
-                                                <motion.div 
-                                                    layoutId="activeTab"
-                                                    className="absolute bottom-0 left-0 right-0 h-1 bg-yellow-500 rounded-t-full shadow-[0_0_15px_rgba(234,179,8,0.5)]" 
-                                                />
+                                {/* Score */}
+                                <div className="flex flex-col items-center shrink-0">
+                                    <span className={`text-[8px] font-black uppercase tracking-[0.3em] mb-0.5 px-2 py-0.5 rounded-full border ${isWin ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : 'text-red-400 border-red-500/30 bg-red-500/10'}`}>
+                                        {isWin ? 'VITÓRIA' : 'DERROTA'}
+                                    </span>
+                                    <div className="flex items-center gap-2.5">
+                                        <span className={`text-4xl font-black italic tracking-tighter leading-none ${isWin ? 'text-white' : 'text-zinc-400'}`}>{scoreA}</span>
+                                        <span className="text-xl font-black text-zinc-700 italic">—</span>
+                                        <span className={`text-4xl font-black italic tracking-tighter leading-none ${!isWin ? 'text-white' : 'text-zinc-600'}`}>{scoreE}</span>
+                                    </div>
+                                </div>
+
+                                {/* User quick stats + close */}
+                                <div className="flex items-center gap-3">
+                                    {userData && (
+                                        <div className="hidden md:flex items-center gap-2.5 bg-black/30 border border-white/5 rounded-xl px-3 py-1.5">
+                                            {[
+                                                { label: 'K', value: userData.kills, color: 'text-white' },
+                                                { label: 'D', value: userData.deaths, color: 'text-zinc-500' },
+                                                { label: 'A', value: userData.assists, color: 'text-zinc-600' },
+                                            ].map((s, i) => (
+                                                <React.Fragment key={s.label}>
+                                                    {i > 0 && <div className="w-px h-5 bg-white/5" />}
+                                                    <div className="flex flex-col items-center">
+                                                        <span className={`text-base font-black italic leading-none ${s.color}`}>{s.value}</span>
+                                                        <span className="text-[8px] font-black text-zinc-700 uppercase">{s.label}</span>
+                                                    </div>
+                                                </React.Fragment>
+                                            ))}
+                                            {currentMatch.adr && Number(currentMatch.adr) > 0 && (
+                                                <>
+                                                    <div className="w-px h-5 bg-white/5" />
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-base font-black italic leading-none text-yellow-500/80">{Math.round(Number(currentMatch.adr))}</span>
+                                                        <span className="text-[8px] font-black text-zinc-700 uppercase">ADR</span>
+                                                    </div>
+                                                </>
                                             )}
-                                        </button>
-                                    ))}
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={onClose}
+                                        className="w-8 h-8 rounded-xl bg-black/50 hover:bg-red-500/80 flex items-center justify-center border border-white/10 group active:scale-95 transition-all shrink-0"
+                                    >
+                                        <X size={14} className="text-white group-hover:rotate-90 transition-transform" />
+                                    </button>
                                 </div>
                             </div>
+
+                            {/* TABS */}
+                            <div className="relative z-10 flex items-center gap-1 px-5 mt-3 border-b border-white/[0.06]">
+                                {tabs.map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => setTab(t.id)}
+                                        className={`relative flex items-center gap-1.5 px-4 py-2.5 transition-all group text-[10px] font-black uppercase tracking-widest ${tab === t.id ? 'text-yellow-400' : 'text-zinc-600 hover:text-zinc-300'}`}
+                                    >
+                                        <span className={tab === t.id ? 'text-yellow-500' : 'text-zinc-600 group-hover:text-zinc-400'}>{t.icon}</span>
+                                        {t.label}
+                                        {!hasRichData && (t.id === 'utilitarios' || t.id === 'confrontos') && (
+                                            <span className="ml-0.5 text-[8px] text-zinc-700 normal-case font-bold tracking-normal">(limitado)</span>
+                                        )}
+                                        {tab === t.id && (
+                                            <motion.div layoutId="tab-line" className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 rounded-t-full shadow-[0_0_8px_rgba(234,179,8,0.6)]" />
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className={`h-[1px] w-full ${isWin ? 'bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent' : 'bg-gradient-to-r from-transparent via-red-500/20 to-transparent'}`} />
                         </div>
 
-                        {/* Sub-navigation for Details (Leetify Style) */}
-                        {mainTab === 'detalhes' && (
-                            <div className="bg-black/20 border-b border-white/5 px-8 pt-4 overflow-x-auto no-scrollbar">
-                                <div className="flex gap-6 pb-4">
-                                    {[
-                                        { id: 'geral', label: 'Geral' },
-                                        { id: 'timeline', label: 'Linha do Tempo' },
-                                        { id: 'mira', label: 'Mira' },
-                                        { id: 'utilitarios', label: 'Utilitários' },
-                                        { id: 'atividade', label: 'Atividade' },
-                                        { id: 'trocas', label: 'Trocas' }
-                                    ].map((tab) => (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setSubTab(tab.id)}
-                                            className={`text-[10px] font-black uppercase tracking-widest px-1 transition-colors whitespace-nowrap ${
-                                                subTab === tab.id ? 'text-rose-500' : 'text-zinc-600 hover:text-white'
-                                            }`}
-                                        >
-                                            {tab.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Body Area */}
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar text-white">
-                            {mainTab === 'seu-jogo' ? (
-                                <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                                        {/* Left Column: Identity & Highlights */}
-                                        <div className="lg:col-span-12 xl:col-span-7 space-y-8">
-                                            {/* Identity Card (Premium Style) */}
-                                            <div className="relative group overflow-hidden bg-[#0e1218] border border-white/[0.05] rounded-[40px] p-10 shadow-[0_30px_60px_rgba(0,0,0,0.6)] min-h-[420px] transition-all duration-500 hover:border-yellow-500/20">
-                                                {/* Animated Background Elements */}
-                                                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-yellow-500/[0.05] blur-[140px] -mr-80 -mt-80 group-hover:bg-yellow-500/[0.08] transition-colors duration-700" />
-                                                <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-yellow-500/[0.03] blur-[100px] group-hover:bg-yellow-500/[0.05] transition-colors duration-700" />
-                                                
-                                                <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 mb-10 relative z-10">
-                                                    {/* Avatar Section with Pulse Glow */}
-                                                    <div className="relative shrink-0">
-                                                        <div className="absolute inset-0 bg-yellow-500/10 blur-2xl rounded-full scale-75 group-hover:scale-110 transition-transform duration-700 opacity-0 group-hover:opacity-100" />
-                                                        <div className="w-32 h-32 rounded-[40px] overflow-hidden border-2 border-white/5 group-hover:border-yellow-500/40 p-1.5 bg-zinc-900 shadow-2xl transition-all duration-500 relative z-10">
-                                                            <img 
-                                                                src={userData.avatar} 
-                                                                className="w-full h-full object-cover rounded-[32px] group-hover:scale-110 transition-transform duration-1000 ease-out" 
-                                                                alt="" 
-                                                            />
-                                                        </div>
-                                                        <motion.div 
-                                                            whileHover={{ scale: 1.1, rotate: 5 }}
-                                                            className="absolute -bottom-2 -right-2 w-12 h-12 bg-[#1a1f26]/90 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.4)] z-20"
-                                                        >
-                                                            <Trophy size={20} className="text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]" />
-                                                        </motion.div>
-                                                    </div>
-
-                                                    {/* Identity Text with Stylized Typography */}
-                                                    <div className="flex-1 text-center md:text-left">
-                                                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-3">
-                                                            <span className="px-3 py-1 bg-white/[0.03] backdrop-blur-md text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] rounded-full border border-white/5">Identidade</span>
-                                                            <span className={`px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] rounded-full border shadow-lg ${
-                                                                userData.rating >= 1.2 
-                                                                ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 shadow-orange-500/5' 
-                                                                : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 shadow-yellow-500/5'
-                                                            }`}>
-                                                                {userData.rating >= 1.2 ? 'ELITE' : 'ESTÁVEL'}
-                                                            </span>
-                                                        </div>
-                                                        
-                                                        <div className="relative mb-3">
-                                                            <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tight text-white leading-tight drop-shadow-2xl">
-                                                                <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/60 group-hover:to-yellow-400 transition-all duration-700">
-                                                                    {identity}
-                                                                </span>
-                                                            </h2>
-                                                            <div className="absolute -bottom-2 left-0 w-12 h-1 bg-yellow-500 rounded-full group-hover:w-24 transition-all duration-700 opacity-40 ml-1" />
-                                                        </div>
-                                                        
-                                                        <div className="text-zinc-500 text-[8px] font-black uppercase tracking-[0.2em] mt-6 flex items-center justify-center md:justify-start gap-2 opacity-40 group-hover:opacity-80 transition-opacity">
-                                                            <div className="w-4 h-[1px] bg-zinc-800" />
-                                                            Análise Completa de Dados
-                                                            <div className="w-4 h-[1px] bg-zinc-800" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Stats Highlight Grid - Premium Cards */}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10 pt-4">
-                                                    {top5.slice(0, 3).map((stat, i) => (
-                                                        <motion.div 
-                                                            key={i}
-                                                            whileHover={{ y: -5, backgroundColor: 'rgba(255,255,255,0.04)' }}
-                                                            className="bg-white/[0.02] border border-white/[0.05] p-6 rounded-[32px] transition-all group/stat relative overflow-hidden"
-                                                        >
-                                                            <div className={`absolute top-0 left-0 w-full h-[2px] ${stat.color} opacity-0 group-hover/stat:opacity-100 transition-opacity`} />
-                                                            <div className="flex flex-col gap-4">
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover/stat:text-zinc-300 transition-colors">
-                                                                        {stat.label}
-                                                                    </span>
-                                                                    <div className={`w-2 h-2 rounded-full ${stat.color} shadow-[0_0_10px_currentColor] animate-pulse`} />
-                                                                </div>
-                                                                <div className="flex items-baseline gap-2">
-                                                                    <span className="text-4xl font-black italic text-white tracking-tighter">
-                                                                        {stat.value}
-                                                                    </span>
-                                                                    <span className="text-[10px] font-black text-zinc-600 uppercase italic">
-                                                                        {stat.tag}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="relative h-1.5 bg-zinc-900 rounded-full overflow-hidden">
-                                                                    <motion.div 
-                                                                        initial={{ width: 0 }}
-                                                                        animate={{ width: `${Math.min(100, Math.max(10, stat.raw || 50))}%` }}
-                                                                        transition={{ duration: 1.2, delay: 0.3 + (i * 0.1), ease: "circOut" }}
-                                                                        className={`absolute inset-y-0 left-0 ${stat.color} shadow-[0_0_20px_rgba(0,0,0,0.5)]`}
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        </motion.div>
-                                                    ))}
-                                                    {top5.length === 0 && (
-                                                        <div className="col-span-full py-12 flex flex-col items-center justify-center gap-4 text-zinc-600 border border-white/[0.03] border-dashed rounded-[32px]">
-                                                            <div className="w-8 h-8 rounded-full border-2 border-zinc-800 border-t-yellow-500 animate-spin" />
-                                                            <span className="text-[10px] uppercase font-black tracking-widest">Sincronizando estatísticas detalhadas...</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Right Column: Key Metrics Comparison */}
-                                        <div className="lg:col-span-12 xl:col-span-5 flex flex-col gap-6">
-                                            <div className="bg-[#12161d] border border-white/[0.08] rounded-[40px] p-8 flex-1 flex flex-col">
-                                                <div className="flex items-center justify-between mb-8 px-2">
-                                                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500">Métricas Principais</h3>
-                                                    <div className="flex items-center gap-2 text-[9px] font-black text-rose-500 uppercase tracking-widest">
-                                                        <Activity size={10} /> AO VIVO
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-1 flex-1 overflow-y-auto pr-2 no-scrollbar">
-                                                    {isAnalyzing ? (
-                                                        <div className="space-y-6">
-                                                            {[1, 2, 3, 4, 5, 6].map(i => (
-                                                                <div key={i} className="flex justify-between items-center p-4">
-                                                                    <div className="w-32 h-4 bg-white/5 rounded animate-pulse" />
-                                                                    <div className="w-16 h-6 bg-white/5 rounded-xl animate-pulse" />
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        [
-                                                            { label: 'Rating Leetify', value: userData.rating.toFixed(2), avg: '1.00', trend: userData.rating >= 1 ? 'up' : 'down', icon: <Activity size={12} /> },
-                                                            { label: 'ADR (Dano Médio)', value: userData.adr.toFixed(1), avg: '80.0', trend: userData.adr >= 80 ? 'up' : 'down', icon: <Zap size={12} /> },
-                                                            { label: 'Kills de Abertura', value: userData.fkd.toString(), avg: '2.1', trend: userData.fkd >= 2 ? 'up' : 'down', icon: <Sword size={12} /> },
-                                                            { label: 'Precisão (HS%)', value: userData.hs, avg: '35%', trend: parseInt(userData.hs) >= 35 ? 'up' : 'down', icon: <Target size={12} /> },
-                                                            { label: 'KAST %', value: userData.kast, avg: '72%', trend: parseInt(userData.kast) >= 72 ? 'up' : 'down', icon: <TrendingUp size={12} /> },
-                                                            { label: 'Trocas (Trades)', value: userData.trades.toString(), avg: '3.5', trend: userData.trades >= 3 ? 'up' : 'down', icon: <Zap size={12} className="rotate-45" /> }
-                                                        ].map((stat, i) => (
-                                                            <div key={i} className="flex items-center justify-between p-4 rounded-2xl hover:bg-white/[0.03] transition-all group border border-transparent hover:border-white/5">
-                                                                <div className="flex items-center gap-4">
-                                                                    <div className={`p-2 rounded-lg bg-zinc-800 transition-colors group-hover:bg-zinc-700 ${stat.trend === 'up' ? 'text-yellow-500' : 'text-rose-500'}`}>
-                                                                        {stat.icon}
-                                                                    </div>
-                                                                    <span className="text-[11px] font-black text-zinc-400 tracking-wide uppercase transition-colors group-hover:text-white">{stat.label}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-6">
-                                                                    <span className={`text-lg font-black italic tracking-tighter ${stat.trend === 'up' ? 'text-yellow-500' : 'text-rose-500'}`}>
-                                                                        {stat.value}
-                                                                    </span>
-                                                                    <div className="flex items-center gap-2 w-16 justify-end">
-                                                                        <span className="text-[10px] font-bold text-zinc-600 italic">{stat.avg}</span>
-                                                                        {stat.trend === 'up' ? (
-                                                                            <ChevronUp size={12} className="text-yellow-500 shrink-0" />
-                                                                        ) : (
-                                                                            <ChevronDown size={12} className="text-rose-500 shrink-0" />
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        ))
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
+                        {/* ── BODY ──────────────────────────────────────── */}
+                        <div className="flex-1 p-4 flex flex-col gap-3 min-h-0 overflow-hidden">
+                            {loading && t1.length <= 1 && t1[0]?.nickname === '[Você]' ? (
+                                <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                                    <div className="relative w-10 h-10">
+                                        <div className="absolute inset-0 border-4 border-yellow-500/10 rounded-full" />
+                                        <div className="absolute inset-0 border-4 border-t-yellow-500 rounded-full animate-spin" />
                                     </div>
-                                </div>
-                            ) : mainTab === 'visao-geral' ? (
-                                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
-                                    {/* High-Level Performance Ratings Grid (Slimmer & Clearer) */}
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between px-6">
-                                            <div className="flex items-center gap-2">
-                                                <Activity size={12} className="text-emerald-500" />
-                                                <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500">A Sua Performance Individual</h3>
-                                            </div>
-                                            <div className="px-3 py-1 bg-white/5 rounded-full border border-white/5 text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
-                                                Versus Match Average
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                                            {[
-                                                { label: 'Mira', value: currentMatch.metadata?.leetify_ratings?.aim || Math.min(99, Math.floor(parseInt(userData.hs) * 1.5 + (userData.kills / (userData.deaths || 1)) * 10)), icon: <Target size={14} className="text-rose-500" /> },
-                                                { label: 'Utilitários', value: currentMatch.metadata?.leetify_ratings?.utility || Math.min(99, Math.floor((userData.util_damage / 4) + (userData.flash_assists * 10))), icon: <Zap size={14} className="text-sky-500" /> },
-                                                { label: 'Posicionam.', value: currentMatch.metadata?.leetify_ratings?.positioning || Math.min(99, Math.floor(userData.rating * 50 + (20 - userData.deaths))), icon: <Shield size={14} className="text-emerald-500" /> },
-                                                { label: 'Clutch', value: currentMatch.metadata?.leetify_ratings?.clutching || Math.min(99, userData.onevx * 40 + (isWin ? 20 : 0)), icon: <Trophy size={14} className="text-amber-500" /> },
-                                                { label: 'Abertura', value: currentMatch.metadata?.leetify_ratings?.opening || Math.min(99, userData.fkd * 25), icon: <Sword size={14} className="text-purple-500" /> },
-                                            ].map((stat, i) => (
-                                                <div key={i} className="bg-[#12161d] border border-white/[0.06] p-4 rounded-[24px] flex flex-col items-center gap-2 shadow-sm group hover:border-emerald-500/20 transition-all">
-                                                    <div className="flex items-center gap-3 w-full px-1">
-                                                        <div className="p-1.5 bg-white/5 rounded-lg group-hover:bg-emerald-500/10 transition-colors shrink-0">
-                                                            {stat.icon}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="text-[8px] font-black uppercase text-zinc-600 tracking-wider truncate">{stat.label}</div>
-                                                            <div className="text-lg font-black italic text-white tracking-tighter -mt-0.5">{stat.value}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                                                        <motion.div 
-                                                            initial={{ width: 0 }}
-                                                            animate={{ width: `${stat.value}%` }}
-                                                            className={`h-full ${stat.value > 80 ? 'bg-emerald-500' : stat.value > 50 ? 'bg-zinc-700' : 'bg-rose-500'}`}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {[team1, team2].map((team, tIdx) => (
-                                        <div key={tIdx} className="space-y-6">
-                                            <div className="flex items-center justify-between px-6">
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border-2 ${tIdx === 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'}`}>
-                                                        <Shield size={24} className={tIdx === 0 ? 'text-emerald-500' : 'text-rose-500'} />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="text-xl font-black italic uppercase tracking-tighter text-white">
-                                                            {tIdx === 0 ? 'Time Aliado' : 'Time Inimigo'}
-                                                        </h3>
-                                                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Score Total: {tIdx === 0 ? alliesScore : enemiesScore}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-8 text-[9px] font-black uppercase tracking-widest text-zinc-600">
-                                                    <span>Rating Médio: {(team.reduce((acc, p) => acc + p.rating, 0) / team.length).toFixed(2)}</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="bg-[#12161d] border border-white/[0.08] rounded-[40px] overflow-hidden shadow-xl">
-                                                <table className="w-full text-left">
-                                                    <thead>
-                                                        <tr className="border-b border-white/5 text-[10px] text-zinc-600 font-black uppercase tracking-widest bg-white/[0.01]">
-                                                            <th className="pl-10 py-6">Jogador</th>
-                                                            <th className="py-6 text-center">K</th>
-                                                            <th className="py-6 text-center">A</th>
-                                                            <th className="py-6 text-center">D</th>
-                                                            <th className="py-6 text-center">Diff</th>
-                                                            <th className="py-6 text-center">ADR</th>
-                                                            <th className="py-6 text-center">HS%</th>
-                                                            <th className="pr-10 py-6 text-right">Rating</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-white/5">
-                                                        {team.map((p, i) => (
-                                                            <tr key={i} className={`group hover:bg-white/[0.03] transition-colors ${p.isUser ? 'bg-emerald-500/[0.03]' : ''}`}>
-                                                                <td className="pl-10 py-5">
-                                                                    <div className="flex items-center gap-4">
-                                                                        <div className="relative group/avatar">
-                                                                            <img src={p.avatar} className="w-10 h-10 rounded-xl border border-white/10 group-hover/avatar:scale-105 transition-transform" alt="" />
-                                                                            {p.isUser && <div className="absolute -top-1 -left-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#12161d] shadow-lg" />}
-                                                                        </div>
-                                                                        <div>
-                                                                            <div className="text-[13px] font-black italic uppercase text-white group-hover:text-emerald-400 transition-colors">
-                                                                                <a href={`/player/${p.steamId}`} className="hover:underline underline-offset-4 decoration-emerald-500/50">
-                                                                                    {p.nickname}
-                                                                                </a>
-                                                                            </div>
-                                                                            <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Rank {p.rank}</div>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="py-5 text-center text-[13px] font-black text-white">{p.kills}</td>
-                                                                <td className="py-5 text-center text-[13px] font-bold text-zinc-500">{p.assists}</td>
-                                                                <td className="py-5 text-center text-[13px] font-bold text-zinc-500">{p.deaths}</td>
-                                                                <td className={`py-5 text-center text-[11px] font-black italic ${p.diff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                                    {p.diff >= 0 ? '+' : ''}{p.diff}
-                                                                </td>
-                                                                <td className="py-5 text-center text-[13px] font-black text-zinc-300">{p.adr.toFixed(0)}</td>
-                                                                <td className="py-5 text-center text-[13px] font-bold text-zinc-500">{p.hs}</td>
-                                                                <td className="pr-10 py-5 text-right">
-                                                                    <span className={`px-3 py-1.5 rounded-xl text-[12px] font-black italic border ${
-                                                                        p.rating >= 1.2 ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' : 
-                                                                        p.rating >= 1.0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                                                                        'bg-zinc-800 text-zinc-500 border-white/5'
-                                                                    }`}>
-                                                                        {p.rating.toFixed(2)}
-                                                                    </span>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : mainTab === 'detalhes' ? (
-                                <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                                        {[team1, team2].map((team, tIdx) => (
-                                            <div key={tIdx} className="space-y-6">
-                                                <div className="flex items-center gap-3 px-4">
-                                                    <Zap size={16} className={tIdx === 0 ? 'text-emerald-500' : 'text-rose-500'} />
-                                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">
-                                                        {tIdx === 0 ? 'Utilidade Aliada' : 'Utilidade Inimiga'}
-                                                    </h3>
-                                                </div>
-                                                
-                                                <div className="bg-[#12161d] border border-white/[0.08] rounded-[40px] p-8 space-y-8 shadow-xl">
-                                                    <div className="h-48 flex items-end justify-around gap-3 px-4">
-                                                        {team.map((p, pIdx) => {
-                                                            const maxVal = Math.max(...[...team1, ...team2].map(px => px.util_damage + px.blind_time * 5 + 10));
-                                                            const h3 = (p.util_damage / maxVal) * 100;
-                                                            const h1 = (p.flash_assists * 10 / maxVal) * 100;
-                                                            const h2 = (p.blind_time / maxVal) * 100;
-
-                                                            return (
-                                                                <div key={pIdx} className="flex flex-col items-center gap-4 flex-1 group">
-                                                                    <div className="w-full relative flex flex-col-reverse justify-start gap-1">
-                                                                        <div className="bg-emerald-500/80 rounded-full w-full shadow-[0_0_10px_rgba(16,185,129,0.3)]" style={{ height: Math.max(8, h1) + '%' }} />
-                                                                        <div className="bg-sky-500/80 rounded-full w-full shadow-[0_0_10px_rgba(14,165,233,0.3)]" style={{ height: Math.max(8, h2) + '%' }} />
-                                                                        <div className="bg-orange-500/80 rounded-full w-full shadow-[0_0_10px_rgba(249,115,22,0.3)]" style={{ height: Math.max(8, h3) + '%' }} />
-                                                                    </div>
-                                                                    <div className="relative">
-                                                                       <img src={p.avatar} className="w-8 h-8 rounded-full border border-white/20 group-hover:scale-125 transition-transform" alt="" />
-                                                                       {p.isUser && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#12161d]" />}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-
-                                                    <div className="grid grid-cols-5 gap-2 px-2 text-[8px] font-black uppercase text-zinc-600 text-center">
-                                                        <div className="flex items-center gap-1.5 justify-center"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Flash</div>
-                                                        <div className="flex items-center gap-1.5 justify-center"><div className="w-1.5 h-1.5 rounded-full bg-sky-500" /> Blind</div>
-                                                        <div className="flex items-center gap-1.5 justify-center"><div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Dano</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="bg-[#12161d] border border-white/[0.08] rounded-[40px] overflow-hidden shadow-xl">
-                                        <table className="w-full text-left">
-                                            <thead>
-                                                <tr className="border-b border-white/5 text-[9px] text-zinc-600 font-black uppercase tracking-widest bg-white/[0.01]">
-                                                    <th className="pl-10 py-6">Jogador</th>
-                                                    <th className="py-6 text-center">Flashes Lançados</th>
-                                                    <th className="py-6 text-center">Inimigos Cegos</th>
-                                                    <th className="py-6 text-center">Tempo Médio</th>
-                                                    <th className="py-6 text-center">Dano de Util.</th>
-                                                    <th className="pr-10 py-6 text-right">Rating Util.</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-white/5">
-                                                {[...team1, ...team2].map((p, i) => (
-                                                    <tr key={i} className={`hover:bg-white/[0.03] transition-colors ${p.isUser ? 'bg-emerald-500/[0.03]' : ''}`}>
-                                                        <td className="pl-10 py-5">
-                                                            <div className="flex items-center gap-3">
-                                                                <img src={p.avatar} className="w-6 h-6 rounded-lg opacity-60" alt="" />
-                                                                <span className="text-[11px] font-black italic uppercase text-zinc-400">{p.nickname}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="py-5 text-center text-xs text-white font-bold">{p.util_thrown}</td>
-                                                        <td className="py-5 text-center text-xs text-zinc-300 font-bold">{p.flash_assists}</td>
-                                                        <td className="py-5 text-center text-xs text-emerald-500 font-black">{p.blind_time.toFixed(1)}s</td>
-                                                        <td className="py-5 text-center text-xs text-rose-500 font-black">{p.util_damage.toFixed(0)}</td>
-                                                        <td className="pr-10 py-5 text-right">
-                                                            <span className="text-[10px] font-black bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
-                                                                {Math.min(99, Math.floor(p.util_damage / 2 + p.blind_time * 3 + p.flash_assists * 15))}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest animate-pulse">Carregando dados da partida...</p>
                                 </div>
                             ) : (
-                                <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-                                    <div className="flex flex-col items-center justify-center py-32 bg-[#12161d] border border-white/[0.08] rounded-[40px] shadow-2xl">
-                                        <div className="relative mb-10">
-                                            <div className="absolute inset-0 bg-emerald-500/20 blur-[40px] animate-pulse rounded-full" />
-                                            <Sword size={80} className="text-zinc-800 relative z-10 rotate-12" />
-                                        </div>
-                                        <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-4">Relatório de Duelos</h3>
-                                        <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px] max-w-sm text-center leading-relaxed">
-                                            Visualização avançada de confrontos 1v1 em processamento para matches desta fonte
-                                        </p>
-                                        <div className="mt-10 px-6 py-2 bg-zinc-800/50 border border-white/5 rounded-full text-[9px] font-black text-rose-500 uppercase tracking-widest">
-                                            Coming Soon • Advanced Analytics
-                                        </div>
+                                <motion.div
+                                    key={tab}
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="flex gap-3 flex-1 min-h-0"
+                                >
+                                    <TeamBlock players={t1} title="Seu Time" scoreVal={scoreA} ally={true} />
+                                    <TeamBlock players={t2} title="Adversários" scoreVal={scoreE} ally={false} />
+                                </motion.div>
+                            )}
+
+                            {/* Footer summary bar */}
+                            {!loading && (
+                                <div className="flex items-center justify-between px-1 shrink-0">
+                                    <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest text-zinc-700">
+                                        <span className="flex items-center gap-1"><Target size={9} className="text-yellow-500/40" /> Kills: <span className="text-zinc-500">{t1.reduce((s,p)=>s+p.kills,0)}</span></span>
+                                        <span className="flex items-center gap-1"><Activity size={9} /> ADR: <span className="text-zinc-500">{t1.length>0?Math.round(t1.reduce((s,p)=>s+p.adr,0)/t1.length):'—'}</span></span>
+                                        {tab === 'utilitarios' && <span className="flex items-center gap-1"><Zap size={9} className="text-yellow-500/40"/> Util: <span className="text-zinc-500">{Math.round(t1.reduce((s,p)=>s+p.utilDmg,0))}</span></span>}
+                                        {tab === 'confrontos' && <span className="flex items-center gap-1"><Crosshair size={9} className="text-yellow-500/40"/> FK: <span className="text-zinc-500">{t1.reduce((s,p)=>s+p.fk,0)}</span></span>}
+                                    </div>
+                                    <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest text-zinc-700">
+                                        {tab === 'confrontos' && <span className="flex items-center gap-1"><Crosshair size={9} className="text-zinc-700"/> FK: <span className="text-zinc-500">{t2.reduce((s,p)=>s+p.fk,0)}</span></span>}
+                                        {tab === 'utilitarios' && <span className="flex items-center gap-1"><Zap size={9} className="text-zinc-700"/> Util: <span className="text-zinc-500">{Math.round(t2.reduce((s,p)=>s+p.utilDmg,0))}</span></span>}
+                                        <span className="flex items-center gap-1"><Activity size={9} /> ADR: <span className="text-zinc-500">{t2.length>0?Math.round(t2.reduce((s,p)=>s+p.adr,0)/t2.length):'—'}</span></span>
+                                        <span className="flex items-center gap-1"><Target size={9} className="text-yellow-500/40" /> Kills: <span className="text-zinc-500">{t2.reduce((s,p)=>s+p.kills,0)}</span></span>
                                     </div>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* Unified Footer */}
-                        <div className="flex items-center justify-between mt-auto pt-8 border-t border-white/5 bg-black/20 p-8">
-                            <div className="flex items-center gap-8">
-                                <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
-                                    <Calendar size={14} className="text-emerald-500" />
-                                    <span>Data: {currentMatch?.matchDate ? new Date(currentMatch.matchDate).toLocaleDateString('pt-BR') : 'N/A'}</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">
-                                    <Shield size={14} />
-                                    <span>ID: {currentMatch?.externalId || 'Local'}</span>
-                                </div>
-                            </div>
-
-                            {currentMatch?.url && (
-                                <a
-                                    href={currentMatch.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-black px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 active:scale-95 group"
-                                >
-                                    <Download size={16} className="group-hover:translate-y-0.5 transition-transform" />
-                                    Baixar Demo
-                                </a>
                             )}
                         </div>
                     </motion.div>
