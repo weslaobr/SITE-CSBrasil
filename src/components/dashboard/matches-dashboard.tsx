@@ -83,20 +83,38 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
+    // Helper to detect the platform/mode of a match
+    const detectMode = (m: Match): 'GamersClub' | 'Faceit' | 'Premier' | 'Competitive' => {
+        const src = (m.source || '').toLowerCase();
+        const mode = (m.gameMode || '').toLowerCase();
+        const meta = (m.metadata?.source || m.metadata?.data_source || '').toLowerCase();
+
+        if (src.includes('gamersclub') || src.includes('gamers_club') || src.includes('gamers-club') || src === 'gc' ||
+            mode.includes('gamersclub') || mode.includes('gamers_club') || mode.includes('gamers-club') || mode === 'gc') {
+            return 'GamersClub';
+        }
+        if (src === 'faceit' || mode.includes('faceit') || meta.includes('faceit')) {
+            return 'Faceit';
+        }
+        if (src.includes('premier') || mode.includes('premier') || meta.includes('premier') ||
+            m.metadata?.rank_type === 11 ||
+            (!isNaN(parseInt(m.rank || '')) && parseInt(m.rank || '') > 1000 && !src.includes('gamersclub'))) {
+            return 'Premier';
+        }
+        return 'Competitive';
+    };
+
     const filteredMatches = useMemo(() => {
         // 1. Initial Filtering
         const baseFiltered = matches.filter(m => {
             const mapName = m.mapName || '';
-            const source = m.source || '';
-            const gameMode = m.gameMode || '';
             const nameLower = mapName.toLowerCase();
             const searchLower = searchTerm.toLowerCase();
+            const source = m.source || '';
 
             const matchesSearch = searchTerm === '' || nameLower.includes(searchLower) || source.toLowerCase().includes(searchLower);
             const matchesMap = mapFilter === 'all' || nameLower.includes(mapFilter.toLowerCase());
-            const matchesMode = modeFilter === 'all' ||
-                source.toLowerCase() === modeFilter.toLowerCase() ||
-                gameMode.toLowerCase().includes(modeFilter.toLowerCase());
+            const matchesMode = modeFilter === 'all' || detectMode(m) === modeFilter;
                 
             return matchesSearch && matchesMap && matchesMode;
         });
@@ -442,17 +460,23 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     Filtros:
                 </div>
                 <div className="flex gap-1.5 bg-zinc-900/50 p-1 rounded-2xl border border-white/5">
-                    {['all', 'Competitive', 'Premier', 'Faceit'].map(mode => (
+                    {[
+                        { id: 'all',         label: 'Tudo',         activeClass: 'bg-white text-black shadow-lg' },
+                        { id: 'Competitive', label: '🎮 Competitivo', activeClass: 'bg-yellow-500 text-black shadow-[0_0_12px_rgba(234,179,8,0.4)]' },
+                        { id: 'Premier',     label: '⭐ Premier',     activeClass: 'bg-purple-600 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]' },
+                        { id: 'Faceit',      label: '🔴 Faceit',      activeClass: 'bg-orange-600 text-white shadow-[0_0_12px_rgba(234,88,12,0.4)]' },
+                        { id: 'GamersClub',  label: '🛡 GamersClub',  activeClass: 'bg-amber-500 text-black shadow-[0_0_12px_rgba(245,158,11,0.4)]' },
+                    ].map(({ id, label, activeClass }) => (
                         <button
-                            key={mode}
-                            onClick={() => setModeFilter(mode)}
+                            key={id}
+                            onClick={() => setModeFilter(id)}
                             className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all tracking-tight ${
-                                modeFilter === mode 
-                                ? 'bg-white text-black shadow-lg' 
+                                modeFilter === id 
+                                ? activeClass
                                 : 'text-zinc-500 hover:text-white hover:bg-white/5'
                             }`}
                         >
-                            {mode === 'all' ? 'Tudo' : mode}
+                            {label}
                         </button>
                     ))}
                 </div>
@@ -514,17 +538,10 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     const isWin = match.result === 'Win';
                                     const isLoss = match.result === 'Loss';
                                     const isDraw = match.result === 'Draw';
-                                    const isGamersClub = match.source === 'GamersClub' || 
-                                                                match.metadata?.source === 'GamersClub' || 
-                                                                match.gameMode?.toLowerCase().includes('gamersclub') ||
-                                                                match.gameMode?.toLowerCase().includes('gamers_club') ||
-                                                                match.gameMode?.toLowerCase().includes('gamers-club') ||
-                                                                match.gameMode?.toLowerCase() === 'gc';
-                                    
-                                    const isPremier = match.source?.toLowerCase().includes('premier') || 
-                                                      match.gameMode?.toLowerCase().includes('premier') ||
-                                                      match.metadata?.source?.toLowerCase().includes('premier') ||
-                                                      match.metadata?.data_source?.toLowerCase().includes('premier');
+                                    const matchMode = detectMode(match);
+                                    const isGamersClub = matchMode === 'GamersClub';
+                                    const isPremier = matchMode === 'Premier';
+                                    const isFaceit = matchMode === 'Faceit';
                                             
                                             return (
                                                 <motion.tr 
@@ -611,18 +628,24 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                              </td>
                                             <td className="px-4 py-6 text-center">
                                                 <div className="flex flex-col items-center gap-1.5">
-                                                    <div className={`relative px-4 py-1.5 rounded-xl border transition-all overflow-hidden group/source ${
-                                                        isGamersClub ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                                                        match.source === 'Faceit' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                                                        isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.15)]' :
+                                                    <div className={`relative inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl border transition-all overflow-hidden group/source ${
+                                                        isGamersClub ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.10)]' :
+                                                        isFaceit ? 'bg-orange-600/10 text-orange-400 border-orange-600/25 shadow-[0_0_12px_rgba(234,88,12,0.12)]' :
+                                                        isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/25 shadow-[0_0_20px_rgba(168,85,247,0.15)]' :
                                                         'bg-yellow-500/5 text-yellow-500 border-yellow-500/20'
                                                     }`}>
                                                         <div className="absolute inset-0 bg-white/5 opacity-0 group-hover/source:opacity-100 transition-opacity" />
-                                                        <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.15em]">
-                                                            {isGamersClub ? 'GamersClub' : 
-                                                            match.source === 'Faceit' ? 'Faceit' :
+                                                        <span className="relative z-10 text-[11px] leading-none">
+                                                            {isGamersClub ? '🛡' :
+                                                             isFaceit ? '🔴' :
+                                                             isPremier ? '⭐' :
+                                                             '🎮'}
+                                                        </span>
+                                                        <span className="relative z-10 text-[9px] font-black uppercase tracking-[0.12em] whitespace-nowrap">
+                                                            {isGamersClub ? 'Gamers Club' : 
+                                                            isFaceit ? 'Faceit' :
                                                             isPremier ? 'Premier' :
-                                                            'Competitive'}
+                                                            'Competitivo'}
                                                         </span>
                                                     </div>
                                                     {isPremier && match.metadata?.rank_delta && (
