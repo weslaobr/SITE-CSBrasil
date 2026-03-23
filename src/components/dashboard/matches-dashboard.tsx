@@ -518,19 +518,19 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="text-[10px] uppercase font-black text-zinc-500 tracking-[0.2em] border-b border-white/10 bg-white/[0.02]">
-                                    <th className="px-8 py-5">Mapa</th>
-                                    <th className="px-4 py-5 text-center">Placar</th>
-                                    <th className="px-4 py-5 text-center">Patente</th>
-                                    <th className="px-4 py-5 text-center">Tipo</th>
-                                    <th className="px-1 py-5 text-center">Código</th>
-                                    <th className="px-2 py-5 text-center">K</th>
-                                    <th className="px-2 py-5 text-center">D</th>
-                                    <th className="px-2 py-5 text-center">A</th>
-                                    <th className="px-4 py-5 text-center">ADR</th>
-                                    <th className="px-4 py-5 text-center">HS%</th>
-                                    <th className="px-4 py-5 text-center">Rating</th>
-                                    <th className="px-8 py-5 text-right">Data</th>
+                                <tr className="text-[9px] uppercase font-black text-zinc-600 tracking-widest border-b border-white/5 bg-black/30 sticky top-0 z-10">
+                                    <th className="px-6 py-3 pl-5">Mapa</th>
+                                    <th className="px-3 py-3 text-center">Placar</th>
+                                    <th className="px-3 py-3 text-center">Patente</th>
+                                    <th className="px-3 py-3 text-center">Modo</th>
+                                    <th className="px-1 py-3 text-center">ID</th>
+                                    <th className="px-3 py-3 text-center">K</th>
+                                    <th className="px-3 py-3 text-center">D</th>
+                                    <th className="px-3 py-3 text-center">A</th>
+                                    <th className="px-3 py-3 text-center">ADR</th>
+                                    <th className="px-3 py-3 text-center">HS%</th>
+                                    <th className="px-3 py-3 text-center" title="Rating Leetify (escala -1 a +1, onde 0 é a média). Quando não disponível, exibe o K/D.">Rating ⓘ</th>
+                                    <th className="px-5 py-3 text-right">Data</th>
                                 </tr>
                             </thead>
                             <tbody className="">
@@ -546,61 +546,53 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             return (
                                                 <motion.tr 
                                                     key={match.id || match.externalId || Math.random().toString()}
-                                                    initial={{ opacity: 0, scale: 0.98 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    whileHover={{ 
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                                                        scale: 1.005,
-                                                        transition: { duration: 0.2 }
-                                                    }}
-                                                    className={`group relative border-b border-white/5 transition-all cursor-pointer ${
-                                                        isWin ? 'hover:shadow-[inset_4px_0_0_0_#10b981]' : 
-                                                        isLoss ? 'hover:shadow-[inset_4px_0_0_0_#ef4444]' : 
-                                                        'hover:shadow-[inset_4px_0_0_0_#71717a]'
-                                                    }`}
+                                                    initial={{ opacity: 0, y: 4 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: i * 0.03 }}
+                                                    whileHover={{ backgroundColor: 'rgba(255,255,255,0.025)', transition: { duration: 0.15 } }}
+                                                    className="group relative border-b border-white/[0.04] transition-all cursor-pointer"
                                                     onClick={() => handleViewMatch(match)}
                                                 >
-                                            <td className="px-8 py-6 first:rounded-l-3xl">
-                                                <div className="flex items-center gap-6">
-                                                    <div className="relative w-16 h-10 overflow-hidden rounded-xl border border-white/10 shrink-0 group-hover:border-white/20 transition-colors">
+                                            {/* Result strip */}
+                                            <td className="p-0 w-[3px]">
+                                                <div className={`h-full w-[3px] rounded-r ${isWin ? 'bg-emerald-500' : isLoss ? 'bg-red-500' : 'bg-zinc-600'} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="relative w-14 h-9 overflow-hidden rounded-lg border border-white/10 shrink-0 group-hover:border-white/25 transition-all">
                                                         <img
                                                             src={getMapImage(match.mapName)}
-                                                            className="w-full h-full object-cover filter brightness-50 group-hover:brightness-90 transition-all duration-700 group-hover:scale-125"
+                                                            className="w-full h-full object-cover brightness-60 group-hover:brightness-100 transition-all duration-500 group-hover:scale-110"
                                                             alt={match.mapName}
                                                         />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                                                     </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="font-black text-sm text-white uppercase italic tracking-tighter group-hover:text-yellow-400 transition-colors">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="font-black text-[13px] text-white uppercase italic tracking-tight group-hover:text-yellow-400 transition-colors leading-none">
                                                             {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' : 
-                                                             match.mapName.replace('de_', '').replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                                             match.mapName.replace('de_', '').replace(/_/g, ' ').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                                                         </span>
-                                                        <span className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-widest rounded border ${
-                                                            isWin ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                                                            isLoss ? 'bg-red-500/10 text-red-500 border-red-500/20' : 
-                                                            'bg-zinc-800/50 text-zinc-500 border-white/5'
+                                                        <span className={`self-start px-1.5 py-0.5 text-[7px] font-black uppercase tracking-widest rounded ${
+                                                            isWin ? 'bg-emerald-500/15 text-emerald-400' : 
+                                                            isLoss ? 'bg-red-500/15 text-red-400' : 
+                                                            'bg-zinc-800/50 text-zinc-500'
                                                         }`}>
-                                                            {isWin ? 'VITÓRIA' : isLoss ? 'DERROTA' : 'EMPATE'}
+                                                            {isWin ? '✓ VITÓRIA' : isLoss ? '✗ DERROTA' : '= EMPATE'}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-6 text-center">
-                                                <div className={`inline-flex flex-col items-center px-6 py-2 rounded-2xl border transition-all ${
-                                                    isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 
-                                                    isLoss ? 'bg-red-500/10 border-red-500/20 text-red-500' : 
-                                                    'bg-zinc-800/50 border-white/5 text-zinc-500'
+                                            <td className="px-3 py-4 text-center">
+                                                <div className={`inline-flex items-center gap-1 px-4 py-1.5 rounded-xl border font-black italic text-base tracking-tighter ${
+                                                    isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 
+                                                    isLoss ? 'bg-red-500/10 border-red-500/20 text-red-400' : 
+                                                    'bg-zinc-800/30 border-white/5 text-zinc-500'
                                                 }`}>
-                                                    <span className="text-xl font-black italic tracking-tighter leading-none mb-1">
-                                                        {match.score || '0-0'}
-                                                    </span>
-                                                    <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-60">
-                                                        {isWin ? 'Vitória' : isLoss ? 'Derrota' : 'Empate'}
-                                                    </span>
+                                                    {match.score || '—'}
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-6 text-center">
-                                                 <div className="flex justify-center flex-col items-center gap-1 group/rank">
+                                            <td className="px-3 py-4 text-center">
+                                                 <div className="flex justify-center flex-col items-center gap-0.5 group/rank">
                                                      {(() => {
                                                          const rankInfo = getRankInfo(match.rank, match.source, match.gameMode, match.metadata);
                                                          return (
@@ -608,59 +600,42 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                                  {rankInfo.icon ? (
                                                                      <img 
                                                                          src={rankInfo.icon} 
-                                                                         className="w-12 h-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.15)] group-hover/rank:scale-125 transition-all duration-500" 
+                                                                         className="w-9 h-auto filter drop-shadow-[0_0_6px_rgba(255,255,255,0.12)] group-hover/rank:scale-110 transition-transform duration-300" 
                                                                          alt={rankInfo.label}
                                                                      />
                                                                  ) : rankInfo.isPremier ? (
-                                                                     <div className={`text-xl font-black italic tracking-tighter ${rankInfo.color} group-hover/rank:scale-110 transition-transform`}>
+                                                                     <div className={`text-base font-black italic tracking-tighter ${rankInfo.color}`}>
                                                                          {rankInfo.label}
                                                                      </div>
                                                                  ) : (
-                                                                     <span className="text-zinc-800 font-black italic text-[10px]">N/A</span>
+                                                                     <span className="text-zinc-700 font-black italic text-[9px]">—</span>
                                                                  )}
-                                                                 <span className={`text-[8px] font-black uppercase tracking-tighter ${rankInfo.isPremier ? 'text-zinc-500' : 'text-zinc-600'}`}>
-                                                                     {rankInfo.label}
-                                                                 </span>
+                                                                 {rankInfo.icon && <span className="text-[7px] font-black text-zinc-700 max-w-[60px] text-center leading-tight">{rankInfo.label}</span>}
                                                              </>
                                                          );
                                                      })()}
                                                  </div>
                                              </td>
-                                            <td className="px-4 py-6 text-center">
-                                                <div className="flex flex-col items-center gap-1.5">
-                                                    <div className={`relative inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl border transition-all overflow-hidden group/source ${
-                                                        isGamersClub ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.10)]' :
-                                                        isFaceit ? 'bg-orange-600/10 text-orange-400 border-orange-600/25 shadow-[0_0_12px_rgba(234,88,12,0.12)]' :
-                                                        isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/25 shadow-[0_0_20px_rgba(168,85,247,0.15)]' :
-                                                        'bg-yellow-500/5 text-yellow-500 border-yellow-500/20'
+                                            <td className="px-3 py-4 text-center">
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wide ${
+                                                        isGamersClub ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                                        isFaceit ? 'bg-orange-600/10 text-orange-400 border-orange-600/20' :
+                                                        isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                                                        'bg-yellow-500/5 text-yellow-500/70 border-yellow-500/15'
                                                     }`}>
-                                                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover/source:opacity-100 transition-opacity" />
-                                                        <span className="relative z-10 text-[11px] leading-none">
-                                                            {isGamersClub ? '🛡' :
-                                                             isFaceit ? '🔴' :
-                                                             isPremier ? '⭐' :
-                                                             '🎮'}
-                                                        </span>
-                                                        <span className="relative z-10 text-[9px] font-black uppercase tracking-[0.12em] whitespace-nowrap">
-                                                            {isGamersClub ? 'Gamers Club' : 
-                                                            isFaceit ? 'Faceit' :
-                                                            isPremier ? 'Premier' :
-                                                            'Competitivo'}
-                                                        </span>
+                                                        <span>{isGamersClub ? '🛡' : isFaceit ? '🔴' : isPremier ? '⭐' : '🎮'}</span>
+                                                        <span>{isGamersClub ? 'GC' : isFaceit ? 'Faceit' : isPremier ? 'Premier' : 'Comp'}</span>
                                                     </div>
                                                     {isPremier && match.metadata?.rank_delta && (
-                                                        <div className={`flex items-center gap-1 text-[9px] font-black italic ${match.metadata.rank_delta > 0 ? 'text-yellow-500' : 'text-red-500'}`}>
-                                                            {match.metadata.rank_delta > 0 ? (
-                                                                <ChevronUp size={10} className="fill-current" />
-                                                            ) : (
-                                                                <ChevronDown size={10} className="fill-current" />
-                                                            )}
+                                                        <div className={`flex items-center gap-0.5 text-[8px] font-black ${match.metadata.rank_delta > 0 ? 'text-yellow-500' : 'text-red-400'}`}>
+                                                            {match.metadata.rank_delta > 0 ? <ChevronUp size={9} /> : <ChevronDown size={9} />}
                                                             {Math.abs(match.metadata.rank_delta)}
                                                         </div>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-1 py-6 text-center">
+                                            <td className="px-1 py-4 text-center">
                                                  {match.externalId ? (
                                                      <button
                                                          onClick={(e) => {
@@ -668,108 +643,110 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                               const cleanId = match.externalId?.replace('leetify-', '') || '';
                                                              navigator.clipboard.writeText(cleanId);
                                                          }}
-                                                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.03] hover:bg-emerald-500 text-zinc-600 hover:text-black transition-all active:scale-90 border border-white/5"
+                                                         className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.03] hover:bg-emerald-500 text-zinc-700 hover:text-black transition-all active:scale-90 border border-white/5"
                                                          title={`Copiar ID (${match.source})`}
                                                      >
-                                                         <Copy size={12} />
+                                                         <Copy size={11} />
                                                      </button>
                                                  ) : (
-                                                     <div className="w-10 h-10 flex items-center justify-center text-zinc-800 opacity-20" title="Link Protegido/Indisponível">
-                                                         <Lock size={12} />
+                                                     <div className="w-8 h-8 flex items-center justify-center text-zinc-800" title="Sem ID">
+                                                         <Lock size={10} />
                                                      </div>
                                                  )}
                                              </td>
-                                            <td className="px-2 py-6 text-center">
-                                                <div className="flex flex-col">
-                                                    <span className={`font-black text-xl italic leading-none tracking-tighter ${match.kills > 0 ? 'text-white' : 'text-zinc-700'}`}>
+                                            {/* K */}
+                                            <td className="px-3 py-4 text-center">
+                                                <div className="flex flex-col items-center">
+                                                    <span className={`font-black text-lg italic leading-none tracking-tighter ${match.kills > 0 ? 'text-white' : 'text-zinc-700'}`}>
                                                         {match.kills > 0 ? match.kills : '—'}
                                                     </span>
-                                                    <span className="text-[7px] font-black text-zinc-600 uppercase mt-1">Abates</span>
+                                                    {((match.metadata?.quadro_kills || match.metadata?.quadroKills || 0) > 0 || (match.metadata?.penta_kills || match.metadata?.pentaKills || 0) > 0) && (
+                                                        <div className="flex gap-0.5 mt-1">
+                                                            {(match.metadata?.quadro_kills || match.metadata?.quadroKills || 0) > 0 && <span className="text-[7px] font-black text-orange-400 bg-orange-500/10 px-1 rounded">4K</span>}
+                                                            {(match.metadata?.penta_kills || match.metadata?.pentaKills || 0) > 0 && <span className="text-[7px] font-black text-purple-400 bg-purple-500/10 px-1 rounded animate-pulse">ACE</span>}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
-                                            <td className="px-2 py-6 text-center">
-                                                <div className="flex flex-col">
-                                                    <span className={`font-black text-xl italic leading-none tracking-tighter ${match.deaths > 0 ? 'text-zinc-500' : 'text-zinc-700'}`}>
-                                                        {match.deaths > 0 ? match.deaths : '—'}
-                                                    </span>
-                                                    <span className="text-[7px] font-black text-zinc-700 uppercase mt-1">Mortes</span>
-                                                </div>
+                                            {/* D */}
+                                            <td className="px-3 py-4 text-center">
+                                                <span className={`font-black text-lg italic leading-none tracking-tighter ${match.deaths > 0 ? 'text-zinc-500' : 'text-zinc-700'}`}>
+                                                    {match.deaths > 0 ? match.deaths : '—'}
+                                                </span>
                                             </td>
-                                            <td className="px-2 py-6 text-center">
-                                                <div className="flex flex-col items-center">
-                                                    <span className={`font-black text-xl italic leading-none tracking-tighter ${match.assists > 0 ? 'text-zinc-600' : 'text-zinc-700'}`}>{match.assists > 0 ? match.assists : '—'}</span>
-                                                    <div className="flex gap-1 mt-1.5">
-                                                        {(match.metadata?.quadroKills || 0) > 0 && (
-                                                            <div className="px-1 rounded bg-orange-500/20 border border-orange-500/30" title="Quadra Kill">
-                                                                <span className="text-[7px] font-black text-orange-500 italic">4k</span>
-                                                            </div>
-                                                        )}
-                                                        {(match.metadata?.pentaKills || 0) > 0 && (
-                                                            <div className="px-1 rounded bg-purple-500/20 border border-purple-500/30 animate-pulse shadow-[0_0_10px_rgba(168,85,247,0.3)]" title="ACE">
-                                                                <span className="text-[7px] font-black text-purple-400 italic">ACE</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
+                                            {/* A */}
+                                            <td className="px-3 py-4 text-center">
+                                                <span className={`font-black text-base italic leading-none tracking-tighter ${match.assists > 0 ? 'text-zinc-600' : 'text-zinc-700'}`}>
+                                                    {match.assists > 0 ? match.assists : '—'}
+                                                </span>
                                             </td>
-                                            <td className="px-4 py-6 text-center">
-                                                <div className="flex flex-col">
-                                                    <span className="font-black text-xl italic text-yellow-500/80 leading-none tracking-tighter">
-                                                        {(match.adr || match.metadata?.adr) ? Math.round(match.adr || match.metadata?.adr) : '—'}
-                                                    </span>
-                                                    <span className="text-[7px] font-black text-zinc-700 uppercase mt-1">ADR</span>
-                                                </div>
+                                            {/* ADR */}
+                                            <td className="px-3 py-4 text-center">
+                                                <span className={`font-black text-base italic tracking-tighter ${
+                                                    (match.adr || match.metadata?.adr) && Math.round(match.adr || match.metadata?.adr) >= 80 ? 'text-yellow-400' :
+                                                    (match.adr || match.metadata?.adr) ? 'text-yellow-500/60' : 'text-zinc-700'
+                                                }`}>
+                                                    {(match.adr || match.metadata?.adr) ? Math.round(match.adr || match.metadata?.adr) : '—'}
+                                                </span>
                                             </td>
-                                            <td className="px-4 py-6 text-center">
-                                                <div className="flex flex-col">
-                                                    <span className="font-black text-base italic text-zinc-500 leading-none tracking-tighter">
-                                                        {match.hsPercentage !== null && match.hsPercentage !== undefined ? `${Math.round(match.hsPercentage)}%` : 
-                                                         (match.metadata?.headshot_pct ? `${Math.round(Number(match.metadata.headshot_pct))}%` : 
-                                                          (match.metadata?.hs_percentage ? `${Math.round(Number(match.metadata.hs_percentage))}%` : '—'))}
-                                                    </span>
-                                                    <span className="text-[7px] font-black text-zinc-700 uppercase mt-1">HS%</span>
-                                                </div>
-                                            </td>
-                                             <td className="px-4 py-6 text-center">
+                                            {/* HS% */}
+                                            <td className="px-3 py-4 text-center">
                                                 {(() => {
-                                                    const rating = match.metadata?.leetify_rating || 
-                                                                   match.metadata?.rating || 
-                                                                   (match.source === 'Faceit' ? parseFloat(match.metadata?.kdRatio || '1.0') : 
-                                                                    (match.kills / (match.deaths || 1)) || 1.0);
-                                                     const isLeetify = !!match.metadata?.leetify_rating;
-                                                     
-                                                     // If it's Leetify, 0.00 is the baseline. If not (Faceit/Steam), 1.00 is the baseline.
-                                                     const isGood = isLeetify ? rating > 0 : rating >= 1.0;
-                                                     const isGreat = isLeetify ? rating >= 0.5 : rating >= 1.2;
-                                                     const isBad = isLeetify ? rating < -0.2 : rating < 0.8;
-
-                                                     return (
-                                                         <div className="flex flex-col items-center gap-1 group/rating">
-                                                             <div className={`px-4 py-1.5 rounded-2xl font-black italic text-lg tracking-tighter transition-all group-hover:scale-110 ${
-                                                                 isGreat ? 'bg-orange-500/20 text-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.1)]' :
-                                                                 isGood ? 'bg-yellow-500/10 text-yellow-500' : 
-                                                                 isBad ? 'bg-red-500/10 text-red-500' :
-                                                                 'bg-zinc-800/30 text-zinc-500'
-                                                             }`}>
-                                                                 {isLeetify && rating > 0 ? '+' : ''}{rating.toFixed(2)}
-                                                             </div>
-                                                             <div className="flex items-center gap-1 text-[7px] font-black text-zinc-700 uppercase tracking-widest">
-                                                                 <Activity size={8} className="text-zinc-600" />
-                                                                 {isLeetify ? 'LEETIFY' : 'IMPACT'}
-                                                             </div>
-                                                         </div>
-                                                     );
-                                                 })()}
+                                                    const hs = match.hsPercentage !== null && match.hsPercentage !== undefined ? Math.round(match.hsPercentage)
+                                                             : match.metadata?.headshot_pct ? Math.round(Number(match.metadata.headshot_pct))
+                                                             : match.metadata?.hs_percentage ? Math.round(Number(match.metadata.hs_percentage)) : null;
+                                                    return hs !== null ? (
+                                                        <span className={`font-bold text-sm ${ hs >= 50 ? 'text-rose-400' : hs >= 30 ? 'text-zinc-400' : 'text-zinc-600'}`}>{hs}%</span>
+                                                    ) : <span className="text-zinc-700">—</span>;
+                                                })()}
                                             </td>
-                                            <td className="px-8 py-6 text-right last:rounded-r-3xl">
-                                                <div className="flex flex-col items-end">
-                                                    <span className="text-[10px] font-black text-white hover:text-yellow-400 transition-colors uppercase tracking-widest whitespace-nowrap">
+                                            {/* Rating */}
+                                            <td className="px-3 py-4 text-center">
+                                                {(() => {
+                                                    const leetifyR = match.metadata?.leetify_rating;
+                                                    const hasLeetify = leetifyR !== undefined && leetifyR !== null;
+                                                    const kd = match.kills / (match.deaths || 1);
+
+                                                    if (hasLeetify) {
+                                                        // Leetify scale: roughly -1 to +1, 0 = average
+                                                        const r = Number(leetifyR);
+                                                        const pct = Math.min(100, Math.max(0, (r + 1) * 50)); // map -1..+1 to 0..100%
+                                                        const color = r >= 0.5 ? 'text-orange-400' : r >= 0 ? 'text-yellow-400' : r >= -0.3 ? 'text-zinc-400' : 'text-red-400';
+                                                        const barColor = r >= 0.5 ? 'bg-orange-400' : r >= 0 ? 'bg-yellow-400' : r >= -0.3 ? 'bg-zinc-500' : 'bg-red-400';
+                                                        return (
+                                                            <div className="flex flex-col items-center gap-1">
+                                                                <span className={`font-black text-base italic tracking-tight ${color}`}>
+                                                                    {r > 0 ? '+' : ''}{r.toFixed(2)}
+                                                                </span>
+                                                                <div className="relative h-1 w-12 bg-zinc-800 rounded-full overflow-hidden">
+                                                                    <div className="absolute top-0 bottom-0 left-0 right-1/2 bg-zinc-700" />
+                                                                    <div className={`absolute top-0 bottom-0 ${barColor} rounded-full`} style={{ left: '50%', width: `${Math.abs(r) * 50}%`, transform: r >= 0 ? 'none' : 'translateX(-100%)' }} />
+                                                                </div>
+                                                                <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest">Leetify</span>
+                                                            </div>
+                                                        );
+                                                    } else if (match.kills > 0) {
+                                                        // Fallback: K/D ratio
+                                                        const color = kd >= 1.2 ? 'text-emerald-400' : kd >= 1.0 ? 'text-zinc-400' : 'text-red-400';
+                                                        return (
+                                                            <div className="flex flex-col items-center gap-0.5">
+                                                                <span className={`font-black text-base italic tracking-tight ${color}`}>{kd.toFixed(2)}</span>
+                                                                <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest">K/D</span>
+                                                            </div>
+                                                        );
+                                                    } else {
+                                                        return <span className="text-zinc-700 text-xs">—</span>;
+                                                    }
+                                                })()}
+                                            </td>
+                                            <td className="px-4 py-4 text-right">
+                                                <div className="flex flex-col items-end gap-0.5">
+                                                    <span className="text-[10px] font-black text-zinc-400 group-hover:text-yellow-400 transition-colors uppercase tracking-widest whitespace-nowrap">
                                                         {formatTimeAgo(match.matchDate)}
                                                     </span>
-                                                    <div className="flex items-center gap-1.5 mt-1">
-                                                        <div className={`w-1 h-1 rounded-full ${isWin ? 'bg-yellow-500' : isLoss ? 'bg-red-500' : 'bg-zinc-500'}`} />
-                                                        <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">Analítico ✓</span>
-                                                    </div>
+                                                    <span className="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">
+                                                        {new Date(match.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short' })}
+                                                    </span>
                                                 </div>
                                             </td>
                                         </motion.tr>
