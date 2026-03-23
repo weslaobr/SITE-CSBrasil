@@ -152,6 +152,15 @@ export default function PlayerProfilePage() {
 
                     {/* MAIN DASHBOARD */}
                     <div className="lg:col-span-9 space-y-8">
+                        {/* Account Reputation Summary Section */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                        >
+                            <AccountReputation data={repData} />
+                        </motion.div>
+
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                             {/* Trust Rating Section */}
                             <motion.div
@@ -202,15 +211,6 @@ export default function PlayerProfilePage() {
                             transition={{ delay: 0.2 }}
                         >
                             <AnomaliesDetected anomalies={anomalies} />
-                        </motion.div>
-
-                        {/* Account Reputation Summary Section */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                        >
-                            <AccountReputation data={repData} />
                         </motion.div>
 
                         {/* Stats Analysis Section */}
