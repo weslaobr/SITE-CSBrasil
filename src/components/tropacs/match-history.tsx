@@ -4,13 +4,15 @@ import MatchesDashboard from '@/components/dashboard/matches-dashboard';
 interface MatchHistoryProps {
     matches: any[];
     onReview?: (id: string) => void;
+    onSync?: () => void;
+    loading?: boolean;
 }
 
-export default function MatchHistory({ matches }: MatchHistoryProps) {
+export default function MatchHistory({ matches, onSync, loading }: MatchHistoryProps) {
     // We map the various possible data shapes (Leetify raw, DB match, etc) 
     // to the unified Match format expected by MatchesDashboard
     const mappedMatches = matches.map((m: any) => ({
-        id: m.id,
+        id: m.id || m.externalId,
         externalId: m.externalId || m.id,
         source: m.source || m.data_source || 'Leetify',
         gameMode: m.gameMode || 'Competitive',
@@ -36,6 +38,8 @@ export default function MatchHistory({ matches }: MatchHistoryProps) {
             matches={mappedMatches}
             currentFaceit=""
             onUpdateFaceit={() => {}}
+            onSync={onSync}
+            loading={loading}
         />
     );
 }

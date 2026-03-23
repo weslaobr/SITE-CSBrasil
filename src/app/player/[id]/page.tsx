@@ -27,9 +27,24 @@ export default function PlayerProfilePage() {
 
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [syncing, setSyncing] = useState(false);
     const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
     const [currency, setCurrency] = useState<'BRL' | 'USD'>('BRL');
     const [exchangeRate, setExchangeRate] = useState<any>(null);
+
+    const fetchData = async () => {
+        if (!steamId) return;
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/player/${steamId}`);
+            const json = await res.json();
+            setData(json);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         fetch('/api/exchange-rate')
@@ -39,20 +54,22 @@ export default function PlayerProfilePage() {
     }, []);
 
     useEffect(() => {
-        if (steamId) {
-            setLoading(true);
-            fetch(`/api/player/${steamId}`)
-                .then(res => res.json())
-                .then(json => {
-                    setData(json);
-                    setLoading(false);
-                })
-                .catch(err => {
-                    console.error(err);
-                    setLoading(false);
-                });
-        }
+        fetchData();
     }, [steamId]);
+
+    const handleSync = async () => {
+        setSyncing(true);
+        try {
+            const res = await fetch('/api/sync/all', { method: 'POST' });
+            if (res.ok) {
+                await fetchData();
+            }
+        } catch (err) {
+            console.error("Sync error:", err);
+        } finally {
+            setSyncing(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -77,7 +94,7 @@ export default function PlayerProfilePage() {
         );
     }
 
-    const { profile, steamStats, dbUser, leetifyData, inventory, steamLevel, trustRating, trustBreakdown, anomalies, inventoryValue } = data;
+    const { profile, steamStats, dbUser, leetifyData, inventory, steamLevel, trustRating, trustBreakdown, anomalies, inventoryValue, matches } = data;
     const isOwner = (session?.user as any)?.steamId === steamId;
 
     // Filter Medals for the sidebar
@@ -215,8 +232,10 @@ export default function PlayerProfilePage() {
                 {/* Match History Section */}
                 <div className="pt-12 border-t border-white/5">
                     <MatchHistory
-                        matches={leetifyData?.recentMatches || []}
+                        matches={matches && matches.length > 0 ? matches : (leetifyData?.recentMatches || [])}
                         onReview={setSelectedMatchId}
+                        onSync={handleSync}
+                        loading={syncing}
                     />
                 </div>
 
