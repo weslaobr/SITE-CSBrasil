@@ -321,25 +321,33 @@ export const getSteamMatchHistory = async (steamId: string, authCode: string, kn
                         cumulativeHours += (6 + Math.floor(Math.random() * 12));
                         const matchTime = startTimestamp - (cumulativeHours * 3600000);
 
-                        const maps = ['Mirage', 'Inferno', 'Ancient', 'Anubis', 'Nuke', 'Vertigo', 'Dust 2'];
-                        const randomMap = maps[Math.floor(Math.random() * maps.length)];
+                        // Bate no seu bot para disparar o Leetify Tracker
+                        let botMatchData = null;
+                        try {
+                            const botUrl = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3005';
+                            console.log(`[DEBUG] Acionando BOT para parsear partida ${nextCode}`);
+                            const botRes = await axios.get(`${botUrl}/match/${nextCode}`);
+                            botMatchData = botRes.data;
+                        } catch (botErr) {
+                            console.error(`[DEBUG] Falha ao acionar bot para ${nextCode}`);
+                        }
 
                         matches.push({
                             externalId: nextCode,
                             source: 'Steam',
-                            gameMode: 'Competitive',
-                            mapName: randomMap,
-                            kills: 12 + Math.floor(Math.random() * 15),
-                            deaths: 10 + Math.floor(Math.random() * 12),
-                            assists: 2 + Math.floor(Math.random() * 6),
-                            mvps: Math.floor(Math.random() * 4),
-                            score: i % 2 === 0 ? '13-9' : '10-13',
+                            gameMode: 'Competitivo',
+                            mapName: 'CS2 Tracker', // O parser do bot vai atualizar com o mapa real depois
+                            kills: 0,
+                            deaths: 0,
+                            assists: 0,
+                            mvps: 0,
+                            score: 'Processando',
                             matchDate: new Date(matchTime).toISOString(),
-                            duration: `${35 + Math.floor(Math.random() * 15)} min`,
-                            result: i % 2 === 0 ? 'Win' : 'Loss',
-                            adr: 65 + Math.floor(Math.random() * 45),
-                            hsPercentage: 8 + Math.floor(Math.random() * 25),
-                            isMocked: true, // Flag to indicate these are not real GC stats
+                            duration: `Analisando Demo...`,
+                            result: 'Em Análise',
+                            adr: 0,
+                            hsPercentage: 0,
+                            isMocked: false,
                             url: `steam://rungame/730/76561202255233023/+csgo_download_match%20${nextCode}`
                         });
                         currentKnownCode = nextCode;
