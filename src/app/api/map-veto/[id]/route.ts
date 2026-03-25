@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma';
 
 const RPS_COUNTDOWN_MS = 10_000;
 const RPS_TIMEOUT_MS   = 15_000;
-const VETO_TIMEOUT_MS  = 20_000;
+const VETO_TIMEOUT_MS  = 60_000; // 60s for veto/pick
+const SIDE_TIMEOUT_MS  = 30_000; // 30s for side pick
 const RPS_CHOICES      = ['rock', 'paper', 'scissors'];
 
 const sequences: Record<string, any[]> = {
@@ -11,14 +12,14 @@ const sequences: Record<string, any[]> = {
     { type: 'veto', by: 'p1' }, { type: 'veto', by: 'p2' },
     { type: 'veto', by: 'p1' }, { type: 'veto', by: 'p2' },
     { type: 'veto', by: 'p1' }, { type: 'veto', by: 'p2' },
-    { type: 'auto_pick', by: 'system' }, { type: 'side_pick', by: 'p2' }
+    { type: 'auto_pick', by: 'system' }
   ],
   BO3: [
     { type: 'veto', by: 'p1' }, { type: 'veto', by: 'p2' },
     { type: 'pick', by: 'p1' }, { type: 'side_pick', by: 'p2' },
     { type: 'pick', by: 'p2' }, { type: 'side_pick', by: 'p1' },
     { type: 'veto', by: 'p1' }, { type: 'veto', by: 'p2' },
-    { type: 'auto_pick', by: 'system' }, { type: 'side_pick', by: 'p2' }
+    { type: 'auto_pick', by: 'system' }
   ],
   BO5: [
     { type: 'veto', by: 'p1' }, { type: 'veto', by: 'p2' },
@@ -26,7 +27,7 @@ const sequences: Record<string, any[]> = {
     { type: 'pick', by: 'p2' }, { type: 'side_pick', by: 'p1' },
     { type: 'pick', by: 'p1' }, { type: 'side_pick', by: 'p2' },
     { type: 'pick', by: 'p2' }, { type: 'side_pick', by: 'p1' },
-    { type: 'auto_pick', by: 'system' }, { type: 'side_pick', by: 'p2' }
+    { type: 'auto_pick', by: 'system' }
   ]
 };
 
@@ -71,7 +72,8 @@ async function autoAdvance(lobby: any): Promise<any> {
   }
 
   // VETO / SIDE_PICK timeout → auto-pick
-  if ((lobby.status === 'VETO' || lobby.status === 'SIDE_PICK') && now - timerStart >= VETO_TIMEOUT_MS) {
+  const timeout = lobby.status === 'SIDE_PICK' ? SIDE_TIMEOUT_MS : VETO_TIMEOUT_MS;
+  if ((lobby.status === 'VETO' || lobby.status === 'SIDE_PICK') && now - timerStart >= timeout) {
     const vetoHistory: any[] = Array.isArray(lobby.vetoHistory) ? [...lobby.vetoHistory] : [];
     const formatSeq  = sequences[lobby.format as string];
     const nextStep   = formatSeq[vetoHistory.length];

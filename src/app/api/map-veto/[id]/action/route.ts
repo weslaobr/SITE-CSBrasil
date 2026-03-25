@@ -6,7 +6,8 @@ import { prisma } from '@/lib/prisma';
 // Timers (ms)
 const RPS_COUNTDOWN_MS   = 10_000; // 10s before RPS starts
 const RPS_TIMEOUT_MS     = 15_000; // 15s to choose in RPS
-const VETO_TIMEOUT_MS    = 20_000; // 20s per map pick
+const VETO_TIMEOUT_MS    = 60_000; // 60s per map pick
+const SIDE_TIMEOUT_MS    = 30_000; // 30s side pick
 
 const RPS_CHOICES = ['rock', 'paper', 'scissors'];
 
@@ -15,14 +16,14 @@ const sequences: Record<string, any[]> = {
     { type: 'veto', by: 'p1' }, { type: 'veto', by: 'p2' },
     { type: 'veto', by: 'p1' }, { type: 'veto', by: 'p2' },
     { type: 'veto', by: 'p1' }, { type: 'veto', by: 'p2' },
-    { type: 'auto_pick', by: 'system' }, { type: 'side_pick', by: 'p2' }
+    { type: 'auto_pick', by: 'system' }
   ],
   BO3: [
     { type: 'veto', by: 'p1' }, { type: 'veto', by: 'p2' },
     { type: 'pick', by: 'p1' }, { type: 'side_pick', by: 'p2' },
     { type: 'pick', by: 'p2' }, { type: 'side_pick', by: 'p1' },
     { type: 'veto', by: 'p1' }, { type: 'veto', by: 'p2' },
-    { type: 'auto_pick', by: 'system' }, { type: 'side_pick', by: 'p2' }
+    { type: 'auto_pick', by: 'system' }
   ],
   BO5: [
     { type: 'veto', by: 'p1' }, { type: 'veto', by: 'p2' },
@@ -30,7 +31,7 @@ const sequences: Record<string, any[]> = {
     { type: 'pick', by: 'p2' }, { type: 'side_pick', by: 'p1' },
     { type: 'pick', by: 'p1' }, { type: 'side_pick', by: 'p2' },
     { type: 'pick', by: 'p2' }, { type: 'side_pick', by: 'p1' },
-    { type: 'auto_pick', by: 'system' }, { type: 'side_pick', by: 'p2' }
+    { type: 'auto_pick', by: 'system' }
   ]
 };
 

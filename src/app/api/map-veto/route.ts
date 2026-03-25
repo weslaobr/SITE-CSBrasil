@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid format' }, { status: 400 });
     }
 
-    const defaultMapPool = ["Mirage", "Inferno", "Nuke", "Vertigo", "Ancient", "Anubis", "Dust2"];
+    const defaultMapPool = ["Mirage", "Inferno", "Nuke", "Overpass", "Ancient", "Anubis", "Dust2"];
 
     const lobby = await (prisma as any).mapVetoLobby.create({
       data: {

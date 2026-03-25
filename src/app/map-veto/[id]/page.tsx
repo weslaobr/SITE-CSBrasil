@@ -6,13 +6,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Loader2, Link as LinkIcon, Hand, ShieldHalf, Scissors, CheckCircle2, Clock, Sword, Swords, Trophy } from 'lucide-react';
 
 const MAP_IMAGES: Record<string, string> = {
-  Mirage:  "https://static.wikia.nocookie.net/cswikia/images/d/d6/De_mirage_cs2.jpg",
-  Inferno: "https://static.wikia.nocookie.net/cswikia/images/f/fc/De_inferno_cs2.jpg",
-  Nuke:    "https://static.wikia.nocookie.net/cswikia/images/d/dd/De_nuke_cs2.jpg",
-  Vertigo: "https://static.wikia.nocookie.net/cswikia/images/6/65/De_vertigo_cs2.jpg",
-  Ancient: "https://static.wikia.nocookie.net/cswikia/images/5/54/De_ancient_cs2.jpg",
-  Anubis:  "https://static.wikia.nocookie.net/cswikia/images/c/c0/De_anubis_cs2.jpg",
-  Dust2:   "https://static.wikia.nocookie.net/cswikia/images/4/49/De_dust2_cs2.jpg",
+  Mirage:  "/img/maps/Mirage.webp",
+  Inferno: "/img/maps/Inferno.webp",
+  Nuke:    "/img/maps/Nuke.webp",
+  Vertigo: "https://map-veto.com/images/maps/vertigo.jpg",
+  Ancient: "/img/maps/Ancient.webp",
+  Anubis:  "/img/maps/Anubis.webp",
+  Dust2:   "/img/maps/Dust2.webp",
+  Overpass: "/img/maps/Overpass.webp",
+};
+
+const MAP_COLORS: Record<string, string> = {
+  Mirage:  "from-[#d4a373]/10 to-[#bc6c25]/20",
+  Inferno: "from-[#e63946]/10 to-[#a8dadc]/5",
+  Nuke:    "from-[#457b9d]/10 to-[#1d3557]/20",
+  Overpass: "from-[#606c38]/10 to-[#283618]/20",
+  Ancient: "from-[#2d6a4f]/10 to-[#1b4332]/20",
+  Anubis:  "from-[#ffb703]/10 to-[#fb8500]/20",
+  Dust2:   "from-[#f4a261]/10 to-[#e76f51]/20",
 };
 
 const RPS_ICONS: Record<string, React.ReactNode> = {
@@ -76,7 +87,7 @@ export default function MapVetoRoom({ params }: { params: Promise<{ id: string }
   const timerMs = lobby?.timerStart ? new Date(lobby.timerStart).getTime() : null;
   const rpsCountdownTarget = lobby?.status === 'RPS_COUNTDOWN' && timerMs ? timerMs + 10_000 : null;
   const rpsTarget          = lobby?.status === 'RPS'           && timerMs ? timerMs + 15_000 : null;
-  const vetoTarget         = (lobby?.status === 'VETO' || lobby?.status === 'SIDE_PICK') && timerMs ? timerMs + 20_000 : null;
+  const vetoTarget         = (lobby?.status === 'VETO' || lobby?.status === 'SIDE_PICK') && timerMs ? timerMs + (lobby.status === 'SIDE_PICK' ? 30_000 : 60_000) : null;
   const rpsCountdown       = useCountdown(rpsCountdownTarget);
   const rpsTimer           = useCountdown(rpsTarget);
   const vetoTimer          = useCountdown(vetoTarget);
@@ -105,7 +116,7 @@ export default function MapVetoRoom({ params }: { params: Promise<{ id: string }
   const myReady    = isCreator ? rpsState.creatorReady : rpsState.opponentReady;
   const oppReady   = isCreator ? rpsState.opponentReady : rpsState.creatorReady;
   const myRpsChoice = isCreator ? rpsState.creatorRps : rpsState.opponentRps;
-  const isMyTurn = lobby.turn === userId;
+  const isMyTurn = !!(userId && lobby.turn === userId);
 
   const getMapStatus = (m: string) => (lobby.vetoHistory || []).find((h: any) => h.map === m)?.type ?? 'available';
   const getMapSide   = (m: string) => (lobby.vetoHistory || []).find((h: any) => h.map === m && h.type === 'side_pick')?.side ?? null;
@@ -278,7 +289,7 @@ export default function MapVetoRoom({ params }: { params: Promise<{ id: string }
                 <div className="mb-4 bg-[#111823] border border-gray-800 rounded-xl p-4 flex items-center gap-3">
                   <Clock size={16} className={vetoTimer <= 5 ? 'text-red-500' : 'text-yellow-500'} />
                   <span className={`font-bold tabular-nums ${vetoTimer <= 5 ? 'text-red-500' : 'text-white'}`}>{vetoTimer}s</span>
-                  <div className="flex-1"><TimerBar seconds={vetoTimer} max={20} /></div>
+                  <div className="flex-1"><TimerBar seconds={vetoTimer} max={lobby.status === 'SIDE_PICK' ? 30 : 60} /></div>
                   <span className="text-gray-500 text-sm">
                     {isMyTurn
                       ? lobby.status === 'SIDE_PICK' ? 'Escolha o lado' : (nextAction === 'veto' ? '⬛ Bane um mapa' : '✅ Escolha um mapa')
@@ -316,17 +327,23 @@ export default function MapVetoRoom({ params }: { params: Promise<{ id: string }
                       key={mapName}
                       onClick={() => handleMapClick(mapName)}
                       whileHover={canClick ? { scale: 1.03 } : {}}
-                      className={`relative h-36 rounded-xl overflow-hidden border-2 transition-all ${
+                      className={`relative h-36 rounded-xl overflow-hidden border-2 transition-all bg-gray-900 bg-gradient-to-br ${MAP_COLORS[mapName] || 'from-gray-800 to-gray-900'} ${
                         isBanned ? 'border-red-900/40 cursor-not-allowed opacity-40 grayscale'
                         : isPicked ? 'border-green-500 shadow-lg shadow-green-500/20'
                         : canClick ? 'border-gray-700 hover:border-yellow-500 cursor-pointer'
                         : 'border-gray-800 cursor-default'
                       }`}
                     >
-                      <img src={MAP_IMAGES[mapName] || '/img/default-map.jpg'} alt={mapName}
-                        className="absolute inset-0 w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).src = '/img/default-map.jpg'; }} />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-3">
-                        <span className="font-bold text-lg drop-shadow">{mapName}</span>
+                      <img src={MAP_IMAGES[mapName]} alt={mapName}
+                        className="absolute inset-0 w-full h-full object-cover" 
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      
+                      <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] select-none pointer-events-none">
+                        <span className="text-5xl font-black uppercase tracking-tighter">{mapName}</span>
+                      </div>
+
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-3">
+                        <span className="font-bold text-lg drop-shadow-md">{mapName}</span>
                         {side && <span className="text-xs font-bold text-blue-400">{side === 'CT' ? '🛡 CT' : '💣 TR'}</span>}
                       </div>
 
