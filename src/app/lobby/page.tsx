@@ -52,35 +52,43 @@ export default function LobbyDashboard() {
     };
 
     return (
-        <div className="p-8 max-w-6xl mx-auto space-y-10">
-            <header className="flex justify-between items-end">
+        <div className="p-6 md:p-8 space-y-8">
+            {/* Page Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-white/5">
                 <div>
-                    <h1 className="text-4xl font-black italic uppercase tracking-tighter">Lobbies Mix 5×5</h1>
-                    <p className="text-zinc-500 font-bold uppercase text-xs tracking-widest mt-2">Forme seu time, escolha seus adversários</p>
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                            <Users size={22} />
+                        </div>
+                        <h1 className="text-4xl font-black italic uppercase tracking-tighter">Mix 5×5</h1>
+                    </div>
+                    <p className="text-zinc-500 text-sm pl-[52px]">Forme seu time e escolha seus adversários.</p>
                 </div>
-                <button onClick={() => setShowCreate(v => !v)}
-                    className="px-7 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase italic tracking-widest text-[10px] rounded-xl transition-all active:scale-95 shadow-lg shadow-yellow-500/20 flex items-center gap-2">
+                <button
+                    onClick={() => setShowCreate(v => !v)}
+                    className="px-7 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase italic tracking-widest text-[10px] rounded-xl transition-all active:scale-95 shadow-lg shadow-yellow-500/20 flex items-center gap-2"
+                >
                     <Plus size={14} /> Criar Sala
                 </button>
-            </header>
+            </div>
 
             {/* Create form */}
             <AnimatePresence>
                 {showCreate && (
                     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
-                        className="bg-zinc-900/60 border border-white/10 p-8 rounded-3xl backdrop-blur-xl space-y-6">
+                        className="bg-zinc-900/40 border border-white/5 p-8 rounded-2xl backdrop-blur-xl space-y-6">
                         <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400">Nova Sala</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="space-y-2">
                                 <label className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Nome da Sala</label>
                                 <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
-                                    className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-yellow-500 outline-none transition-all"
+                                    className="w-full bg-zinc-950 border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-yellow-500 outline-none transition-all"
                                     placeholder="Ex: Mix do Final de Semana" />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Senha (Opcional)</label>
                                 <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                                    className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-yellow-500 outline-none transition-all"
+                                    className="w-full bg-zinc-950 border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-yellow-500 outline-none transition-all"
                                     placeholder="Deixe em branco para sala pública" />
                             </div>
                         </div>
@@ -117,13 +125,13 @@ export default function LobbyDashboard() {
             {/* Lobby list */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {loading && Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-40 bg-zinc-900/40 border border-white/5 rounded-3xl animate-pulse" />
+                    <div key={i} className="h-40 bg-zinc-900/40 border border-white/5 rounded-2xl animate-pulse" />
                 ))}
 
                 {!loading && lobbies.map((lobby) => (
                     <Link key={lobby.id} href={`/lobby/${lobby.id}`}>
                         <motion.div whileHover={{ y: -2 }}
-                            className="group bg-zinc-900/40 border border-white/5 p-6 rounded-3xl hover:border-yellow-500/30 transition-all cursor-pointer relative overflow-hidden backdrop-blur-md">
+                            className="group bg-zinc-900/40 border border-white/5 p-6 rounded-2xl hover:border-yellow-500/30 transition-all cursor-pointer relative overflow-hidden backdrop-blur-md">
                             <div className="flex items-start justify-between mb-3">
                                 <div className="flex items-center gap-2">
                                     {lobby.password && <Lock size={12} className="text-zinc-600" />}
@@ -158,7 +166,7 @@ export default function LobbyDashboard() {
                 ))}
 
                 {!loading && lobbies.length === 0 && (
-                    <div className="col-span-full py-24 text-center border-2 border-dashed border-white/5 rounded-3xl space-y-3">
+                    <div className="col-span-full py-24 text-center border-2 border-dashed border-white/5 rounded-2xl space-y-3">
                         <Users className="mx-auto text-zinc-700" size={36} />
                         <p className="text-zinc-600 font-bold uppercase text-xs tracking-widest">Nenhuma sala ativa</p>
                         <p className="text-zinc-700 text-[10px]">Crie a primeira sala e convide seus amigos!</p>

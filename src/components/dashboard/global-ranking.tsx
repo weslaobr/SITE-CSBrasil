@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Trophy, ArrowUp, ArrowDown, Search, Medal } from 'lucide-react';
+import { ArrowUp, ArrowDown, Search, Medal } from 'lucide-react';
 
 interface RankUser {
     rank: number;
@@ -45,28 +45,17 @@ const GlobalRanking: React.FC = () => {
     );
 
     return (
-        <div className="p-8 bg-zinc-950 min-h-screen text-white">
-            <div className="w-full">
-                {/* Header Table */}
-                <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-6">
-                    <div>
-                        <h1 className="text-5xl font-black italic tracking-tighter flex items-center gap-4">
-                        <Trophy className="text-yellow-500 w-12 h-12" />
-                        RANKING GLOBAL
-                    </h1>
-                        <p className="text-zinc-500">Os jogadores de maior elite da Tropa do CS2.</p>
-                    </div>
-
-                    <div className="relative w-full md:w-72">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                        <input
-                            type="text"
-                            placeholder="Buscar jogador..."
-                            className="w-full bg-zinc-900 border border-white/5 rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:border-yellow-500/50"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
+        <div className="space-y-8">
+                {/* Busca */}
+                <div className="relative w-full md:w-72">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <input
+                        type="text"
+                        placeholder="Buscar jogador..."
+                        className="w-full bg-zinc-900/40 border border-white/5 rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:border-yellow-500/50"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                 </div>
 
                 {/* Podium Top 3 (Simplified for this UI) */}
@@ -169,7 +158,6 @@ const GlobalRanking: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
-            </div>
         </div>
     );
 };
