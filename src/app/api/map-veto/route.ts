@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const { format } = await req.json();
+    const { format, knifeRound } = await req.json();
 
     if (!['BO1', 'BO3', 'BO5'].includes(format)) {
       return NextResponse.json({ error: 'Invalid format' }, { status: 400 });
@@ -40,9 +40,17 @@ export async function POST(req: Request) {
       }
     });
 
+    if (knifeRound) {
+      await prisma.$executeRawUnsafe(
+        `UPDATE public."MapVetoLobby" SET "knifeRound" = true WHERE id = $1`, 
+        lobby.id
+      );
+      (lobby as any).knifeRound = true;
+    }
+
     return NextResponse.json(lobby);
   } catch (error) {
     console.error('Error creating map veto lobby:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: (error as any).message || 'Internal Server Error' }, { status: 500 });
   }
 }

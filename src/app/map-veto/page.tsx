@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
-import { MonitorPlay, Swords, ShieldAlert, Crosshair } from 'lucide-react';
+import { MonitorPlay, Swords, ShieldAlert, Crosshair, Check } from 'lucide-react';
 
 export default function MapVetoHome() {
   const { data: session } = useSession();
   const router = useRouter();
   const [format, setFormat] = useState('BO3');
+  const [knifeRound, setKnifeRound] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleCreateLobby = async () => {
@@ -22,13 +23,13 @@ export default function MapVetoHome() {
       const res = await fetch('/api/map-veto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ format })
+        body: JSON.stringify({ format, knifeRound })
       });
       const data = await res.json();
       if (data.id) {
         router.push(`/map-veto/${data.id}`);
       } else {
-        alert("Erro ao criar lobby");
+        alert("Erro ao criar lobby: " + (data.error || "Desconhecido"));
       }
     } catch (err) {
       console.error(err);
@@ -84,6 +85,25 @@ export default function MapVetoHome() {
                   Melhor de {f.replace('BO', '')}
                 </button>
               ))}
+            </div>
+
+            <div className="w-full mb-8 text-left bg-gray-900/50 p-4 rounded-xl border border-gray-800">
+              <label 
+                onClick={() => setKnifeRound(!knifeRound)}
+                className="flex items-center gap-4 cursor-pointer group select-none"
+              >
+                <div 
+                  className={`w-6 h-6 rounded flex items-center justify-center border-2 transition-all flex-shrink-0 ${
+                    knifeRound ? 'bg-yellow-500 border-yellow-500' : 'border-gray-700 bg-gray-800 group-hover:border-yellow-500/50'
+                  }`}
+                >
+                  {knifeRound && <Check size={16} className="text-black stroke-[3px]" />}
+                </div>
+                <div>
+                  <span className="font-bold text-sm block text-gray-200">Decidir lados por faca</span>
+                  <span className="text-xs text-gray-500 leading-tight">Os líderes não escolherão lados no site.</span>
+                </div>
+              </label>
             </div>
 
             <button 

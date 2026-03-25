@@ -175,7 +175,10 @@ export default function MapVetoRoom({ params }: { params: Promise<{ id: string }
 
           <div className="flex flex-col items-center w-1/3">
             <div className="text-3xl font-black italic text-yellow-500">VS</div>
-            <div className="text-xs font-bold bg-gray-900 px-3 py-1 rounded-full border border-gray-800 tracking-widest">{lobby.format}</div>
+            <div className="flex gap-2">
+              <div className="text-xs font-bold bg-gray-900 px-3 py-1 rounded-full border border-gray-800 tracking-widest">{lobby.format}</div>
+              {lobby.knifeRound && <div className="text-xs font-bold bg-gray-900 px-3 py-1 rounded-full border border-yellow-500/30 text-yellow-500 tracking-widest">Faca</div>}
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-4 w-1/3">

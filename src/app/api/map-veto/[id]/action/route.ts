@@ -58,6 +58,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const lobby = await (prisma as any).mapVetoLobby.findUnique({ where: { id } });
     if (!lobby) return NextResponse.json({ error: 'Lobby not found' }, { status: 404 });
 
+    const rawK = await prisma.$queryRawUnsafe(`SELECT "knifeRound" FROM public."MapVetoLobby" WHERE id = $1`, id);
+    if ((rawK as any)?.[0]) {
+      (lobby as any).knifeRound = (rawK as any)[0].knifeRound;
+    }
+
     const isCreator  = user.id === lobby.creatorId;
     const isOpponent = user.id === lobby.opponentId;
 
@@ -147,7 +152,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
       const vetoHistory: any[] = Array.isArray(lobby.vetoHistory) ? [...lobby.vetoHistory] : [];
       const formatSeq = sequences[lobby.format as string];
-      const nextStep  = formatSeq[vetoHistory.length];
+      const effectiveSeq = lobby.knifeRound ? formatSeq.filter(s => s.type !== 'side_pick') : formatSeq;
+      const nextStep  = effectiveSeq[vetoHistory.length];
       if (!nextStep) return NextResponse.json({ error: 'Sequence done' }, { status: 400 });
       if (payload.type !== nextStep.type) return NextResponse.json({ error: 'Wrong action type' }, { status: 400 });
 
@@ -158,12 +164,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const p2Id = rpsState.loserId;
 
       const mapPool: string[] = Array.isArray(lobby.mapPool) ? lobby.mapPool : [];
-      let checkNext = formatSeq[vetoHistory.length];
+      let checkNext = effectiveSeq[vetoHistory.length];
       if (checkNext?.type === 'auto_pick') {
         const used  = vetoHistory.map((h: any) => h.map).filter(Boolean);
         const auto  = mapPool.find(m => !used.includes(m)) ?? mapPool[0];
         vetoHistory.push({ type: 'auto_pick', map: auto, userId: 'system' });
-        checkNext = formatSeq[vetoHistory.length];
+        checkNext = effectiveSeq[vetoHistory.length];
       }
 
       let nextStatus = lobby.status as string;

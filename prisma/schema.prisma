@@ -219,7 +219,8 @@ model MapVetoLobby {
   status      String   @default("WAITING")
   turn        String?
   rpsState    Json?    @default("{}")
-  mapPool     Json?    @default("[\"Mirage\", \"Inferno\", \"Nuke\", \"Vertigo\", \"Ancient\", \"Anubis\", \"Dust2\"]")
+  mapPool     Json?    @default("[\"Mirage\", \"Inferno\", \"Nuke\", \"Overpass\", \"Ancient\", \"Anubis\", \"Dust2\"]")
+  knifeRound  Boolean  @default(false)
   vetoHistory Json?    @default("[]")
   timerStart  DateTime?
   createdAt   DateTime @default(now())
