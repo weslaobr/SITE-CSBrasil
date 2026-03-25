@@ -87,6 +87,13 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         collapsed={collapsed}
                         href="/lobby"
                     />
+                    <SidebarItem
+                        icon={<Gamepad2 size={20} />}
+                        label="Veto de Mapas"
+                        active={pathname.startsWith('/map-veto')}
+                        collapsed={collapsed}
+                        href="/map-veto"
+                    />
                 </div>
 
                 {/* Footer Sidebar */}
