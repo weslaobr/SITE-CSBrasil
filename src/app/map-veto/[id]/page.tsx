@@ -119,7 +119,17 @@ export default function MapVetoRoom({ params }: { params: Promise<{ id: string }
   const isMyTurn = !!(userId && lobby.turn === userId);
 
   const getMapStatus = (m: string) => (lobby.vetoHistory || []).find((h: any) => h.map === m)?.type ?? 'available';
-  const getMapSide   = (m: string) => (lobby.vetoHistory || []).find((h: any) => h.map === m && h.type === 'side_pick')?.side ?? null;
+  const getMapSide = (m: string) => {
+    const h = (lobby.vetoHistory || []).find((h: any) => h.map === m && h.type === 'side_pick');
+    if (!h) return null;
+    if (!userId || (userId !== lobby.creatorId && userId !== lobby.opponentId)) return h.side;
+    
+    // If the guy who picked the side is NOT me, I am the opposite side
+    if (h.userId !== userId) {
+      return h.side === 'CT' ? 'TR' : 'CT';
+    }
+    return h.side;
+  };
 
   const getNextActionType = () => {
     const seqs: Record<string, any[]> = {
@@ -322,6 +332,7 @@ export default function MapVetoRoom({ params }: { params: Promise<{ id: string }
                   const status = getMapStatus(mapName);
                   const isBanned = status === 'veto';
                   const isPicked = status === 'pick' || status === 'auto_pick';
+                  const isMyPick = (lobby.vetoHistory || []).find(h => h.map === mapName && h.type === 'pick')?.userId === userId;
                   const side = getMapSide(mapName);
                   const canClick = isMyTurn && !isBanned && !isPicked && lobby.status !== 'SIDE_PICK' && lobby.status !== 'FINISHED';
 
@@ -355,8 +366,17 @@ export default function MapVetoRoom({ params }: { params: Promise<{ id: string }
                           <div className="text-red-500 text-3xl font-black border-4 border-red-500 px-3 py-0.5 rounded rotate-[-12deg]">BAN</div>
                         </div>
                       )}
-                      {isPicked && !isBanned && (
-                        <div className="absolute top-2 right-2 bg-green-500 text-black text-xs font-black px-2 py-0.5 rounded-full">PICK</div>
+                      {status === 'pick' && (
+                        <div className={`absolute top-2 right-2 ${
+                          isMyPick ? 'bg-yellow-500' : 'bg-blue-500'
+                        } text-black text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter shadow-xl flex items-center gap-1`}>
+                          {isMyPick ? 'SEU PICK' : 'PICK OPONENTE'}
+                        </div>
+                      )}
+                      {status === 'auto_pick' && (
+                        <div className="absolute top-2 right-2 bg-gray-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter shadow-xl">
+                          SISTEMA
+                        </div>
                       )}
                     </motion.div>
                   );
@@ -378,8 +398,9 @@ export default function MapVetoRoom({ params }: { params: Promise<{ id: string }
               <div className="flex-1 space-y-2 overflow-y-auto max-h-[50vh] pr-1">
                 {(lobby.vetoHistory || []).map((h: any, i: number) => {
                   const isTimeout = h.userId === 'system_timeout';
+                  const isMe = h.userId === userId;
                   const name = h.userId === 'system' || isTimeout ? (isTimeout ? 'Auto (timeout)' : 'Sistema')
-                    : h.userId === lobby.creatorId ? lobby.creator?.name : lobby.opponent?.name;
+                    : isMe ? 'Você' : (h.userId === lobby.creatorId ? lobby.creator?.name : lobby.opponent?.name);
                   const colors: Record<string, string> = {
                     veto: 'text-red-400', pick: 'text-green-400', auto_pick: 'text-blue-400', side_pick: 'text-purple-400'
                   };
