@@ -59,6 +59,7 @@ model User {
   inventoryItems       UserInventoryItem[]
   mapVetoesCreated     MapVetoLobby[]      @relation("MapVetoCreator")
   mapVetoesParticipated MapVetoLobby[]     @relation("MapVetoOpponent")
+  globalMatchPlayers   GlobalMatchPlayer[]
 }
 
 model VerificationToken {
@@ -227,4 +228,40 @@ model MapVetoLobby {
   updatedAt   DateTime @updatedAt
   creator     User     @relation("MapVetoCreator", fields: [creatorId], references: [id])
   opponent    User?    @relation("MapVetoOpponent", fields: [opponentId], references: [id])
+}
+
+// Uma partida que ocorreu. Não pertence a apenas um User.
+model GlobalMatch {
+  id           String             @id // Ex: match_id da Valve ou Faceit
+  source       String             @default("matchmaking") // matchmaking, faceit, mix
+  mapName      String
+  duration     String?
+  matchDate    DateTime           @default(now())
+  scoreA       Int?
+  scoreB       Int?
+  metadata     Json?              @default("{}") // Demo URL, etc.
+  players      GlobalMatchPlayer[]
+}
+
+// O resultado de UM jogador dentro daquela partida (Serão 10 registros por GlobalMatch)
+model GlobalMatchPlayer {
+  id               String      @id @default(uuid())
+  globalMatchId    String
+  steamId          String      // Salvamos o SteamID, independente se ele já é um "User" do bot
+  userId           String?     // Opcional, caso ele já tenha conta logada no site/bot
+  team             String      // CT ou T, Equipe A ou B
+  kills            Int
+  deaths           Int
+  assists          Int
+  score            Int
+  mvps             Int
+  adr              Float?
+  hsPercentage     Float?
+  matchResult      String      // win, loss, tie
+  metadata         Json?       @default("{}") // Armazena fk, fd, utilDmg, flashAssists, etc.
+  
+  match            GlobalMatch @relation(fields: [globalMatchId], references: [id], onDelete: Cascade)
+  user             User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([globalMatchId, steamId])
 }
