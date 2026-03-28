@@ -419,6 +419,13 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                         </span>
                     </button>
                     <button
+                        onClick={() => window.location.href = '/settings'}
+                        className="flex items-center justify-center gap-3 px-6 py-4 bg-white/[0.02] hover:bg-white/[0.05] transition-all group border-b md:border-b-0 border-white/5 md:border-r"
+                    >
+                        <Zap className="w-4 h-4 text-zinc-400 group-hover:text-yellow-500 transition-colors" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">Configurar Sync</span>
+                    </button>
+                    <button
                         onClick={() => setIsEditing(!isEditing)}
                         className={`flex items-center justify-center gap-3 px-6 py-4 transition-all group ${isEditing ? 'bg-yellow-500 text-black' : 'bg-white/[0.02] hover:bg-white/[0.05] text-zinc-400 hover:text-white'}`}
                     >
