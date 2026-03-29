@@ -185,37 +185,46 @@ const MatchReportModal: React.FC<Props> = ({
         const kills   = p.kills ?? p.total_kills ?? parseInt(p.player_stats?.Kills ?? '0') ?? 0;
         const deaths  = p.deaths ?? p.total_deaths ?? parseInt(p.player_stats?.Deaths ?? '0') ?? 0;
         const assists = p.assists ?? p.total_assists ?? parseInt(p.player_stats?.Assists ?? '0') ?? 0;
-        const adr     = p.dpr ?? p.adr ?? parseFloat(p.player_stats?.ADR ?? '0') ?? (isUser ? currentMatch?.adr ?? 70 : 70);
-        const rating  = p.rating ?? p.leetify_rating ?? parseFloat(p.player_stats?.['K/D Ratio'] ?? '1.0') ?? 1.0;
-        const hsRaw   = p.accuracy_head !== undefined ? p.accuracy_head > 1 ? Math.round(p.accuracy_head) : Math.round(p.accuracy_head * 100)
-                      : p.hs_percent ?? p.hs_percentage ?? (isUser && currentMatch?.hsPercentage ? Math.round(Number(currentMatch.hsPercentage)) : 0);
+        // adr: bot saves as p.dpr (alias adr), Leetify uses p.dpr or p.adr
+        const adr     = p.dpr ?? p.adr ?? p.average_damage_per_round ?? parseFloat(p.player_stats?.ADR ?? '0') ?? (isUser ? currentMatch?.adr ?? 0 : 0);
+        // rating: Leetify per-player field is leetify_rating
+        const rawRating = p.rating ?? p.leetify_rating ?? p.leetifyRating ?? null;
+        const rating  = rawRating !== null ? Number(rawRating) : (kills / (deaths || 1));
+        // hs: bot saves as hsPercentage (0-100), Leetify uses accuracy_head (0-1)
+        const hsRaw   = p.accuracy_head !== undefined
+            ? (p.accuracy_head > 1 ? Math.round(p.accuracy_head) : Math.round(p.accuracy_head * 100))
+            : p.hs_percent ?? p.hs_percentage ?? p.hsPercentage
+              ?? (isUser && currentMatch?.hsPercentage ? Math.round(Number(currentMatch.hsPercentage)) : 0);
+        // kast: Leetify returns 0-1 fraction, bot may store 0-100
         const kastRaw = p.kast !== undefined
-            ? typeof p.kast === 'string' ? parseFloat(p.kast) : (p.kast > 1 ? p.kast : Math.round(p.kast * 100))
-            : (currentMatch?.result === 'Win' ? 72 : 60);
+            ? (typeof p.kast === 'string' ? parseFloat(p.kast) : (p.kast > 1 ? p.kast : Math.round(p.kast * 100)))
+            : 0;
         const avatar  = p.avatar_url || p.avatarUrl || p.avatar
-                      || (isUser ? currentMatch?.metadata?.steam_avatar ?? '' : '')
-                      || 'https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg';
+                      || (isUser ? (currentMatch?.metadata?.steam_avatar ?? currentMatch?.metadata?.avatarUrl ?? '') : '')
+                      || '';
 
         return {
-            nickname: p.name || p.nickname || (isUser ? '[Você]' : 'Jogador'),
+            nickname: p.name || p.nickname || p.playerNickname || (isUser ? '[Você]' : 'Jogador'),
             avatar, kills, deaths, assists, adr, rating,
             hs: hsRaw, kast: kastRaw,
-            fk: p.fk_count ?? p.fkd ?? 0,
-            fd: p.fd_count ?? p.fk_deaths ?? 0,
-            triples: p.triple_kills ?? 0,
-            quads: p.quadro_kills ?? p.quad_kills ?? 0,
-            aces: p.penta_kills ?? p.ace_kills ?? 0,
-            clutches: p.clutch_count ?? p.clutches ?? 0,
-            trades: p.trade_count ?? p.trades ?? 0,
-            utilDmg: p.util_damage ?? p.utility_damage ?? p.utilityDamage ?? 0,
-            flashAssists: p.flash_assists ?? p.flashbang_assists ?? 0,
-            blindTime: p.blind_time ?? p.blindTime ?? 0,
-            heThrown: p.he_thrown ?? 0,
-            flashThrown: p.flash_thrown ?? 0,
-            smokesThrown: p.smokes_thrown ?? 0,
-            molotovThrown: p.molotovs_thrown ?? p.molotov_thrown ?? 0,
+            // bot: fkd/fk_deaths | Leetify: fk_count/fd_count
+            fk: p.fk_count ?? p.fkd ?? p.firstKills ?? 0,
+            fd: p.fd_count ?? p.fk_deaths ?? p.firstDeaths ?? 0,
+            triples: p.triple_kills ?? p.tripleKills ?? 0,
+            quads: p.quadro_kills ?? p.quad_kills ?? p.quadKills ?? 0,
+            aces: p.penta_kills ?? p.ace_kills ?? p.pentaKills ?? 0,
+            clutches: p.clutch_count ?? p.clutches ?? p.clutchesWon ?? 0,
+            trades: p.trade_count ?? p.trades ?? p.tradeKills ?? 0,
+            // bot: utility_damage | Leetify: util_damage
+            utilDmg: p.util_damage ?? p.utility_damage ?? p.utilityDamage ?? p.utilDmg ?? 0,
+            flashAssists: p.flash_assists ?? p.flashbang_assists ?? p.flashAssists ?? 0,
+            blindTime: p.blind_time ?? p.blindTime ?? p.enemiesFlashedDuration ?? 0,
+            heThrown: p.he_thrown ?? p.heThrown ?? 0,
+            flashThrown: p.flash_thrown ?? p.flashThrown ?? 0,
+            smokesThrown: p.smokes_thrown ?? p.smokesThrown ?? 0,
+            molotovThrown: p.molotovs_thrown ?? p.molotov_thrown ?? p.molotovThrown ?? 0,
             isUser,
-            steamId: p.player_id || p.steamId || p.steam64_id
+            steamId: p.steam64_id || p.player_id || p.steamId || p.steam_id
         };
     };
 
@@ -351,237 +360,287 @@ const MatchReportModal: React.FC<Props> = ({
 
     // ── SUB-COMPONENTS ────────────────────────────────────────────────────────
 
+    /** Player cell with avatar + clickable profile link */
+    const PlayerCell = ({ p, wide = false }: { p: PlayerStats; wide?: boolean }) => (
+        <td className="py-2.5 px-3">
+            <div className="flex items-center gap-2">
+                <a
+                    href={p.steamId ? `/profile/${p.steamId}` : '#'}
+                    onClick={e => { if (!p.steamId) e.preventDefault(); e.stopPropagation(); }}
+                    className={`shrink-0 w-8 h-8 rounded-xl overflow-hidden border-2 block transition-opacity hover:opacity-80 ${
+                        p.isUser ? 'border-yellow-500' : 'border-white/10'
+                    }`}
+                    title={p.steamId ? `Ver perfil de ${p.nickname}` : p.nickname}
+                >
+                    {p.avatar
+                        ? <img src={p.avatar} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).src = ''; }} />
+                        : <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-[9px] text-zinc-500 font-black">{p.nickname.charAt(0)}</div>
+                    }
+                </a>
+                <a
+                    href={p.steamId ? `/profile/${p.steamId}` : '#'}
+                    onClick={e => { if (!p.steamId) e.preventDefault(); e.stopPropagation(); }}
+                    className={`text-[11px] font-bold truncate hover:underline underline-offset-2 ${
+                        wide ? 'max-w-[120px]' : 'max-w-[100px]'
+                    } ${ p.isUser ? 'text-yellow-400' : 'text-white hover:text-yellow-300' }`}
+                >
+                    {p.isUser ? '★ ' : ''}{p.nickname}
+                </a>
+            </div>
+        </td>
+    );
+
     /** Compact player row for main scoreboard */
     const ScoreRow = ({ p, isAlly }: { p: PlayerStats; isAlly: boolean }) => {
         const kd = (p.kills / (p.deaths || 1)).toFixed(2);
         const mvpKills = p.kills === Math.max(...(isAlly ? t1 : t2).map(x => x.kills));
+        const kdColor = parseFloat(kd) >= 1.5 ? 'text-emerald-300' : parseFloat(kd) >= 1 ? 'text-emerald-400' : 'text-red-400';
         return (
             <tr className={`border-b border-white/[0.04] group transition-colors ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
-                <td className="py-2 px-3">
-                    <div className="flex items-center gap-2">
-                        <div className={`w-7 h-7 rounded-lg overflow-hidden border shrink-0 ${p.isUser ? 'border-yellow-500/50' : 'border-white/10'}`}>
-                            {p.avatar ? (
-                                <img src={p.avatar} alt="" className="w-full h-full object-cover" onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}} />
-                            ) : (
-                                <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-[9px] text-zinc-500 font-black">{p.nickname.charAt(0)}</div>
-                            )}
+                <PlayerCell p={p} wide />
+                <td className="py-2.5 px-2 text-center"><span className={`text-sm font-black italic ${mvpKills ? 'text-yellow-400' : 'text-white'}`}>{p.kills}</span></td>
+                <td className="py-2.5 px-2 text-center"><span className="text-sm font-black italic text-zinc-500">{p.deaths}</span></td>
+                <td className="py-2.5 px-2 text-center"><span className="text-xs font-bold text-zinc-600">{p.assists}</span></td>
+                <td className="py-2.5 px-2 text-center"><span className={`text-xs font-black px-1.5 py-0.5 rounded-lg bg-black/30 ${kdColor}`}>{kd}</span></td>
+                <td className="py-2.5 px-2 text-center"><span className={`text-xs font-bold ${p.adr>=80?'text-yellow-400':p.adr>0?'text-yellow-500/60':'text-zinc-700'}`}>{p.adr > 0 ? Math.round(p.adr) : '—'}</span></td>
+                <td className="py-2.5 px-3 text-center">
+                    <div className="flex flex-col items-center gap-0.5">
+                        <span className={`text-[10px] font-bold ${p.hs>=50?'text-rose-400':p.hs>0?'text-zinc-400':'text-zinc-700'}`}>{p.hs}%</span>
+                        <div className="h-0.5 w-10 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-rose-500/60 rounded-full" style={{width:`${Math.min(100,p.hs)}%`}} />
                         </div>
-                        <span className={`text-[11px] font-bold truncate max-w-[110px] ${p.isUser ? 'text-yellow-400' : 'text-white'}`}>
-                            {p.isUser ? '★ ' : ''}{p.nickname}
-                        </span>
                     </div>
                 </td>
-                <td className="py-2 px-2 text-center"><span className={`text-sm font-black italic ${mvpKills ? 'text-yellow-400' : 'text-white'}`}>{p.kills}</span></td>
-                <td className="py-2 px-2 text-center"><span className="text-sm font-black italic text-zinc-500">{p.deaths}</span></td>
-                <td className="py-2 px-2 text-center"><span className="text-xs font-bold text-zinc-600">{p.assists}</span></td>
-                <td className="py-2 px-2 text-center"><span className={`text-xs font-black ${parseFloat(kd)>=1?'text-emerald-400':'text-red-400'}`}>{kd}</span></td>
-                <td className="py-2 px-2 text-center"><span className="text-xs font-bold text-yellow-500/70">{p.adr > 0 ? Math.round(p.adr) : '—'}</span></td>
-                <td className="py-2 px-3 text-center"><span className="text-xs text-zinc-600">{p.hs}%</span></td>
             </tr>
         );
     };
 
-    /** Desempenho individual - rating, kast, multi-kills */
+    /** Desempenho individual */
     const PerfRow = ({ p }: { p: PlayerStats }) => {
-        const kd = (p.kills / (p.deaths || 1)).toFixed(2);
-        const multiStr = [
-            p.triples > 0 ? `${p.triples}×3K` : null,
-            p.quads > 0 ? `${p.quads}×4K` : null,
-            p.aces > 0 ? `${p.aces}×ACE` : null,
-        ].filter(Boolean).join(' ');
+        const ratingC = p.rating >= 1.5 ? 'text-orange-400 bg-orange-500/10' : p.rating >= 1.2 ? 'text-yellow-400 bg-yellow-500/10' : p.rating >= 0.9 ? 'text-white bg-white/5' : 'text-red-400 bg-red-500/10';
+        const kastC = p.kast >= 72 ? 'text-emerald-400' : p.kast >= 55 ? 'text-zinc-300' : 'text-red-400';
         return (
             <tr className={`border-b border-white/[0.04] ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
-                <td className="py-2 px-3">
-                    <span className={`text-[11px] font-bold truncate max-w-[100px] block ${p.isUser ? 'text-yellow-400' : 'text-zinc-300'}`}>
-                        {p.isUser ? '★ ' : ''}{p.nickname}
-                    </span>
+                <PlayerCell p={p} />
+                <td className="py-2.5 px-2 text-center">
+                    <span className={`text-sm font-black italic px-1.5 py-0.5 rounded-lg ${ratingC}`}>{p.rating.toFixed(2)}</span>
                 </td>
-                <td className="py-2 px-2 text-center">
-                    <span className={`text-sm font-black italic ${p.rating >= 1.2 ? 'text-yellow-400' : p.rating >= 0.9 ? 'text-white' : 'text-red-400'}`}>
-                        {p.rating.toFixed(2)}
-                    </span>
+                <td className="py-2.5 px-2 text-center">
+                    {p.kast > 0
+                        ? <div className="flex flex-col items-center gap-0.5">
+                            <span className={`text-xs font-bold ${kastC}`}>{p.kast}%</span>
+                            <div className="h-0.5 w-12 bg-zinc-800 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${p.kast>=72?'bg-emerald-500':p.kast>=55?'bg-zinc-400':'bg-red-500'}`} style={{width:`${Math.min(100,p.kast)}%`}} />
+                            </div>
+                          </div>
+                        : <span className="text-zinc-700 text-xs">—</span>}
                 </td>
-                <td className="py-2 px-2 text-center">
-                    <span className={`text-xs font-bold ${p.kast >= 72 ? 'text-emerald-400' : p.kast >= 60 ? 'text-zinc-300' : 'text-red-400'}`}>
-                        {p.kast}%
-                    </span>
-                </td>
-                <td className="py-2 px-2 text-center">
-                    <div className="flex justify-center">
-                        <div className="relative h-1.5 w-20 bg-zinc-900 rounded-full overflow-hidden">
-                            <div className="absolute inset-y-0 left-0 bg-rose-500 rounded-full" style={{ width: `${Math.min(100, p.hs)}%` }} />
-                        </div>
+                <td className="py-2.5 px-2 text-center">
+                    <div className="flex flex-col items-center gap-0.5">
+                        <span className={`text-[10px] font-bold ${p.hs>=50?'text-rose-400':p.hs>0?'text-zinc-400':'text-zinc-700'}`}>{p.hs > 0 ? `${p.hs}%` : '—'}</span>
+                        {p.hs > 0 && <div className="h-0.5 w-12 bg-zinc-900 rounded-full overflow-hidden"><div className="h-full bg-rose-500 rounded-full" style={{width:`${Math.min(100,p.hs)}%`}} /></div>}
                     </div>
-                    <span className="text-[9px] text-zinc-600 mt-0.5 block text-center">{p.hs}%</span>
                 </td>
-                <td className="py-2 px-2 text-center">
-                    {p.clutches > 0
-                        ? <span className="text-xs font-black text-purple-400">{p.clutches}</span>
-                        : <span className="text-zinc-700">—</span>}
+                <td className="py-2.5 px-2 text-center">
+                    {p.clutches > 0 ? <span className="text-xs font-black text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-lg">{p.clutches}×</span> : <span className="text-zinc-700">—</span>}
                 </td>
-                <td className="py-2 px-2 text-center">
-                    {p.trades > 0
-                        ? <span className="text-xs font-bold text-blue-400">{p.trades}</span>
-                        : <span className="text-zinc-700">—</span>}
+                <td className="py-2.5 px-2 text-center">
+                    {p.trades > 0 ? <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-lg">{p.trades}</span> : <span className="text-zinc-700">—</span>}
                 </td>
-                <td className="py-2 px-3 text-center">
-                    {multiStr
-                        ? <span className="text-[10px] font-black text-amber-400 whitespace-nowrap">{multiStr}</span>
-                        : <span className="text-zinc-700 text-[10px]">—</span>}
+                <td className="py-2.5 px-3 text-center">
+                    <div className="flex items-center justify-center gap-1 flex-wrap">
+                        {p.triples > 0 && <span className="text-[8px] font-black text-amber-400 bg-amber-500/15 px-1 py-0.5 rounded">{p.triples}×3K</span>}
+                        {p.quads > 0 && <span className="text-[8px] font-black text-orange-400 bg-orange-500/15 px-1 py-0.5 rounded">{p.quads}×4K</span>}
+                        {p.aces > 0 && <span className="text-[8px] font-black text-purple-300 bg-purple-500/20 px-1 py-0.5 rounded animate-pulse">{p.aces}×ACE</span>}
+                        {p.triples===0 && p.quads===0 && p.aces===0 && <span className="text-zinc-700 text-[10px]">—</span>}
+                    </div>
                 </td>
             </tr>
         );
     };
 
-    /** Utilitários per player */
-    const UtilRow = ({ p }: { p: PlayerStats }) => (
-        <tr className={`border-b border-white/[0.04] ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
-            <td className="py-2 px-3">
-                <span className={`text-[11px] font-bold truncate max-w-[100px] block ${p.isUser ? 'text-yellow-400' : 'text-zinc-300'}`}>
-                    {p.isUser ? '★ ' : ''}{p.nickname}
-                </span>
-            </td>
-            <td className="py-2 px-2 text-center"><span className={`text-sm font-black italic ${p.utilDmg > 50 ? 'text-yellow-400' : 'text-zinc-400'}`}>{p.utilDmg > 0 ? Math.round(p.utilDmg) : '—'}</span></td>
-            <td className="py-2 px-2 text-center"><span className={`text-xs font-black ${p.flashAssists > 0 ? 'text-blue-400' : 'text-zinc-700'}`}>{p.flashAssists > 0 ? p.flashAssists : '—'}</span></td>
-            <td className="py-2 px-2 text-center"><span className="text-xs text-zinc-500">{p.blindTime > 0 ? `${p.blindTime.toFixed(1)}s` : '—'}</span></td>
-            <td className="py-2 px-2 text-center"><span className="text-xs text-red-400/70">{p.heThrown > 0 ? p.heThrown : '—'}</span></td>
-            <td className="py-2 px-2 text-center"><span className="text-xs text-blue-400/70">{p.flashThrown > 0 ? p.flashThrown : '—'}</span></td>
-            <td className="py-2 px-2 text-center"><span className="text-xs text-zinc-500/70">{p.smokesThrown > 0 ? p.smokesThrown : '—'}</span></td>
-            <td className="py-2 px-3 text-center"><span className="text-xs text-orange-400/70">{p.molotovThrown > 0 ? p.molotovThrown : '—'}</span></td>
-        </tr>
-    );
+    /** Utilitários per player – com barras de progresso */
+    const UtilRow = ({ p, maxUtil }: { p: PlayerStats; maxUtil: number }) => {
+        const utilPct = maxUtil > 0 ? Math.round((p.utilDmg / maxUtil) * 100) : 0;
+        const flashEff = p.flashThrown > 0 ? Math.round((p.flashAssists / p.flashThrown) * 100) : 0;
+        return (
+            <tr className={`border-b border-white/[0.04] ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
+                <PlayerCell p={p} />
+                <td className="py-3 px-2 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                        <span className={`text-sm font-black italic leading-none ${p.utilDmg>=100?'text-yellow-400':p.utilDmg>0?'text-zinc-300':'text-zinc-700'}`}>{p.utilDmg>0?Math.round(p.utilDmg):'—'}</span>
+                        {p.utilDmg>0&&<div className="h-0.5 w-14 bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-yellow-500/70 rounded-full" style={{width:`${utilPct}%`}} /></div>}
+                    </div>
+                </td>
+                <td className="py-3 px-2 text-center">
+                    <div className="flex flex-col items-center gap-0.5">
+                        <span className={`text-xs font-black leading-none ${flashEff>=50?'text-blue-400':p.flashAssists>0?'text-blue-400/60':'text-zinc-700'}`}>{p.flashAssists>0?p.flashAssists:'—'}</span>
+                        {p.flashThrown>0&&<span className={`text-[8px] font-bold ${flashEff>=50?'text-blue-500/70':'text-zinc-700'}`}>{flashEff}% ef.</span>}
+                    </div>
+                </td>
+                <td className="py-3 px-2 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                        <span className={`text-xs font-bold ${p.blindTime>5?'text-cyan-400':p.blindTime>0?'text-zinc-400':'text-zinc-700'}`}>{p.blindTime>0?`${p.blindTime.toFixed(1)}s`:'—'}</span>
+                        {p.blindTime>0&&<div className="h-0.5 w-12 bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-cyan-500/60 rounded-full" style={{width:`${Math.min(100,(p.blindTime/20)*100)}%`}} /></div>}
+                    </div>
+                </td>
+                <td className="py-3 px-2 text-center">
+                    <div className="flex items-center justify-center gap-1"><span className="text-[9px]">💣</span><span className={`text-xs font-bold ${p.heThrown>0?'text-red-400':'text-zinc-700'}`}>{p.heThrown||'0'}</span></div>
+                </td>
+                <td className="py-3 px-2 text-center">
+                    <div className="flex items-center justify-center gap-1"><span className="text-[9px]">⚡</span><span className={`text-xs font-bold ${p.flashThrown>0?'text-blue-400':'text-zinc-700'}`}>{p.flashThrown||'0'}</span></div>
+                </td>
+                <td className="py-3 px-2 text-center">
+                    <div className="flex items-center justify-center gap-1"><span className="text-[9px]">💨</span><span className={`text-xs font-bold ${p.smokesThrown>0?'text-zinc-300':'text-zinc-700'}`}>{p.smokesThrown||'0'}</span></div>
+                </td>
+                <td className="py-3 px-3 text-center">
+                    <div className="flex items-center justify-center gap-1"><span className="text-[9px]">🔥</span><span className={`text-xs font-bold ${p.molotovThrown>0?'text-orange-400':'text-zinc-700'}`}>{p.molotovThrown||'0'}</span></div>
+                </td>
+            </tr>
+        );
+    };
 
-    /** Confrontos (FK/FD) per player */
+    /** Confrontos (FK/FD) – visual duel bar */
     const DuelRow = ({ p }: { p: PlayerStats }) => {
         const total = p.fk + p.fd;
         const fkPct = total > 0 ? Math.round((p.fk / total) * 100) : 50;
+        const hasDuel = p.fk > 0 || p.fd > 0;
+        const saldo = p.fk - p.fd;
         return (
             <tr className={`border-b border-white/[0.04] ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
-                <td className="py-2 px-3">
-                    <span className={`text-[11px] font-bold truncate max-w-[100px] block ${p.isUser ? 'text-yellow-400' : 'text-zinc-300'}`}>
-                        {p.isUser ? '★ ' : ''}{p.nickname}
-                    </span>
+                <td className="py-3 px-3">
+                    <div className="flex flex-col gap-0.5">
+                        <a href={p.steamId?`/profile/${p.steamId}`:'#'} onClick={e=>{if(!p.steamId)e.preventDefault();e.stopPropagation();}} className={`text-[11px] font-bold truncate max-w-[100px] hover:underline ${p.isUser?'text-yellow-400':'text-zinc-300 hover:text-yellow-300'}`}>{p.isUser?'★ ':''}{p.nickname}</a>
+                        {hasDuel && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded self-start ${p.fk>p.fd?'text-emerald-400 bg-emerald-500/10':p.fd>p.fk?'text-red-400 bg-red-500/10':'text-zinc-500 bg-zinc-800/50'}`}>{p.fk>p.fd?'🥇 Abre Rounds':p.fd>p.fk?'💀 Vulnerável':'= Neutro'}</span>}
+                    </div>
                 </td>
-                <td className="py-2 px-2 text-center">
-                    <span className={`text-sm font-black italic ${p.fk > p.fd ? 'text-emerald-400' : p.fk === p.fd ? 'text-zinc-400' : 'text-red-400'}`}>{p.fk > 0 || p.fd > 0 ? p.fk : '—'}</span>
-                </td>
-                <td className="py-2 px-2 text-center">
-                    <span className="text-sm font-black italic text-red-500/70">{p.fk > 0 || p.fd > 0 ? p.fd : '—'}</span>
-                </td>
-                <td className="py-2 px-2 text-center">
-                    {(p.fk > 0 || p.fd > 0) ? (
-                        <div className="flex flex-col items-center gap-0.5">
-                            <div className="relative h-1.5 w-20 bg-red-900/40 rounded-full overflow-hidden">
-                                <div className="absolute inset-y-0 left-0 bg-emerald-500 rounded-full" style={{ width: `${fkPct}%` }} />
+                <td className="py-3 px-2 text-center"><span className={`text-sm font-black italic ${p.fk>p.fd?'text-emerald-400':hasDuel?'text-zinc-400':'text-zinc-700'}`}>{hasDuel?p.fk:'—'}</span></td>
+                <td className="py-3 px-2 text-center"><span className={`text-sm font-black italic ${p.fd>p.fk?'text-red-400':hasDuel?'text-zinc-500':'text-zinc-700'}`}>{hasDuel?p.fd:'—'}</span></td>
+                <td className="py-3 px-2">
+                    {hasDuel
+                        ? <div className="flex flex-col items-center gap-1">
+                            <div className="relative h-2.5 w-20 bg-zinc-900 rounded-full overflow-hidden flex">
+                                <div className="h-full bg-emerald-500/70 rounded-l-full" style={{width:`${fkPct}%`}} />
+                                <div className="h-full bg-red-500/70 rounded-r-full flex-1" />
                             </div>
-                            <span className="text-[9px] text-zinc-600">{fkPct}% ganhos</span>
-                        </div>
-                    ) : <span className="text-zinc-700">—</span>}
+                            <div className="flex justify-between w-20 text-[7px] font-black"><span className="text-emerald-600">{fkPct}%</span><span className="text-red-600">{100-fkPct}%</span></div>
+                          </div>
+                        : <span className="text-zinc-700 block text-center">—</span>}
                 </td>
-                <td className="py-2 px-2 text-center">
-                    <span className={`text-xs font-bold ${p.fk - p.fd > 0 ? 'text-emerald-400' : p.fk - p.fd === 0 ? 'text-zinc-500' : 'text-red-400'}`}>
-                        {p.fk > 0 || p.fd > 0 ? (p.fk - p.fd > 0 ? `+${p.fk - p.fd}` : p.fk - p.fd) : '—'}
-                    </span>
+                <td className="py-3 px-2 text-center">
+                    {hasDuel
+                        ? <span className={`text-xs font-black px-1.5 py-0.5 rounded-lg ${saldo>0?'text-emerald-400 bg-emerald-500/15':saldo<0?'text-red-400 bg-red-500/15':'text-zinc-500 bg-zinc-800/50'}`}>{saldo>0?`+${saldo}`:saldo}</span>
+                        : <span className="text-zinc-700">—</span>}
                 </td>
-                <td className="py-2 px-3 text-center">
-                    <span className={`text-xs font-bold ${p.trades >= 3 ? 'text-blue-400' : 'text-zinc-600'}`}>{p.trades > 0 ? p.trades : '—'}</span>
+                <td className="py-3 px-3 text-center">
+                    <span className={`text-xs font-bold ${p.trades>=3?'text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-lg':p.trades>0?'text-zinc-500':'text-zinc-700'}`}>{p.trades>0?p.trades:'—'}</span>
                 </td>
             </tr>
         );
     };
 
-    const TeamBlock = ({ players, title, scoreVal, ally }: { players: PlayerStats[]; title: string; scoreVal: number; ally: boolean }) => (
-        <div className={`flex-1 min-w-0 rounded-2xl overflow-hidden border ${ally
-            ? (isWin ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-red-500/20 bg-red-500/[0.02]')
-            : 'border-white/[0.06] bg-white/[0.01]'
-        }`}>
-            <div className={`flex items-center justify-between px-4 py-2 border-b ${ally
-                ? (isWin ? 'border-emerald-500/15 bg-emerald-500/[0.04]' : 'border-red-500/15 bg-red-500/[0.04]')
-                : 'border-white/5 bg-white/[0.02]'
+    const TeamBlock = ({ players, title, scoreVal, ally }: { players: PlayerStats[]; title: string; scoreVal: number; ally: boolean }) => {
+        const maxUtil = Math.max(...players.map(x => x.utilDmg || 0), 1);
+        const tabHasNoData = (tab === 'utilitarios' && players.every(p => p.utilDmg===0 && p.flashAssists===0 && p.flashThrown===0))
+                          || (tab === 'confrontos'   && players.every(p => p.fk===0 && p.fd===0));
+        return (
+            <div className={`flex-1 min-w-0 rounded-2xl overflow-hidden border ${ally
+                ? (isWin ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-red-500/20 bg-red-500/[0.02]')
+                : 'border-white/[0.06] bg-white/[0.01]'
             }`}>
-                <div className="flex items-center gap-2">
-                    <Shield size={11} className={ally ? (isWin ? 'text-emerald-500' : 'text-red-400') : 'text-zinc-600'} />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{title}</span>
+                <div className={`flex items-center justify-between px-5 py-3 border-b shrink-0 ${ally
+                    ? (isWin ? 'border-emerald-500/15 bg-emerald-500/[0.04]' : 'border-red-500/15 bg-red-500/[0.04]')
+                    : 'border-white/5 bg-white/[0.02]'
+                }`}>
+                    <div className="flex items-center gap-2">
+                        <Shield size={12} className={ally ? (isWin ? 'text-emerald-500' : 'text-red-400') : 'text-zinc-600'} />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{title}</span>
+                    </div>
+                    <span className={`text-3xl font-black italic ${ally ? (isWin ? 'text-emerald-400' : 'text-red-400') : 'text-zinc-500'}`}>{scoreVal}</span>
                 </div>
-                <span className={`text-2xl font-black italic ${ally ? (isWin ? 'text-emerald-400' : 'text-red-400') : 'text-zinc-500'}`}>{scoreVal}</span>
+                {tabHasNoData ? (
+                    <div className="py-8 flex flex-col items-center justify-center gap-3 p-6">
+                        <div className="w-10 h-10 rounded-2xl bg-zinc-800/50 flex items-center justify-center text-xl">📊</div>
+                        <p className="text-zinc-700 text-[10px] font-black uppercase tracking-widest text-center">
+                            Dados não disponíveis<br />
+                            <span className="text-zinc-800 normal-case font-normal">Requer demo analisada pelo bot</span>
+                        </p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="sticky top-0 z-10">
+                                <tr className="border-b border-white/[0.05] bg-[#0c0f15]/95 backdrop-blur-sm">
+                                    {tab === 'placar' && <>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600">Jogador</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">K</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">D</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">A</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">K/D</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">ADR</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center">HS%</th>
+                                    </>}
+                                    {tab === 'desempenho' && <>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600">Jogador</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">Rating</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">KAST</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">HS%</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">Clutch</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">Trade</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center">Multikills</th>
+                                    </>}
+                                    {tab === 'utilitarios' && <>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600">Jogador</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">Dano Util</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">⚡ Flash</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">👁 Cegos</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">💣 HE</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">⚡ Flas.</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">💨 Smoke</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center">🔥 Molotov</th>
+                                    </>}
+                                    {tab === 'confrontos' && <>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600">Jogador</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">🎯 1ª Kill</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">💀 1ª Morte</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">Duelos</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">Saldo</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center">Trocas</th>
+                                    </>}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {players.map((p, i) => tab === 'placar' ? <ScoreRow key={i} p={p} isAlly={ally} />
+                                    : tab === 'desempenho' ? <PerfRow key={i} p={p} />
+                                    : tab === 'utilitarios' ? <UtilRow key={i} p={p} maxUtil={maxUtil} />
+                                    : <DuelRow key={i} p={p} />
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="border-b border-white/[0.05] bg-black/20">
-                            {tab === 'placar' && <>
-                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700">Jogador</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">K</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">D</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">A</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">K/D</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">ADR</th>
-                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700 text-center">HS%</th>
-                            </>}
-                            {tab === 'desempenho' && <>
-                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700">Jogador</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Rating</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">KAST</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">HS%</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Clutch</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Trade</th>
-                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700 text-center">Multikills</th>
-                            </>}
-                            {tab === 'utilitarios' && <>
-                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700">Jogador</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Dano Util</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Flash Ast</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Cegos</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">HE</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Flash</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Smoke</th>
-                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700 text-center">Molotov</th>
-                            </>}
-                            {tab === 'confrontos' && <>
-                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700">Jogador</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">1ª Kill</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">1ª Morte</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Win Rate</th>
-                                <th className="py-1.5 px-2 text-[9px] font-black uppercase text-zinc-700 text-center">Saldo</th>
-                                <th className="py-1.5 px-3 text-[9px] font-black uppercase text-zinc-700 text-center">Trocas</th>
-                            </>}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {players.map((p, i) => tab === 'placar' ? <ScoreRow key={i} p={p} isAlly={ally} />
-                            : tab === 'desempenho' ? <PerfRow key={i} p={p} />
-                            : tab === 'utilitarios' ? <UtilRow key={i} p={p} />
-                            : <DuelRow key={i} p={p} />
-                        )}
-                        {Array.from({ length: Math.max(0, 5 - players.length) }).map((_, i) => (
-                            <tr key={`pad-${i}`} className="border-b border-white/[0.02]">
-                                <td colSpan={8} className="py-2 px-3"><span className="text-zinc-800 text-[10px]">—</span></td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
+        );
+    };
 
     // ── RENDER ────────────────────────────────────────────────────────────────
 
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 md:p-5">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-1 md:p-2">
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-black/85 backdrop-blur-md"
+                        className="absolute inset-0 bg-black/90 backdrop-blur-md"
                     />
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+                        initial={{ opacity: 0, scale: 0.96, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 16 }}
-                        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                        className="relative w-full max-w-5xl bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_80px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col"
-                        style={{ maxHeight: 'calc(100vh - 40px)' }}
+                        exit={{ opacity: 0, scale: 0.96, y: 20 }}
+                        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                        className="relative w-full max-w-[1350px] bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.85)] overflow-x-hidden overflow-y-auto flex flex-col"
+                        style={{ maxHeight: 'calc(100vh - 12px)' }}
                     >
                         {/* ── HEADER ────────────────────────────────────── */}
                         <div className="relative shrink-0">
@@ -682,7 +741,7 @@ const MatchReportModal: React.FC<Props> = ({
                         </div>
 
                         {/* ── BODY ──────────────────────────────────────── */}
-                        <div className="flex-1 p-4 flex flex-col gap-3 min-h-0 overflow-hidden">
+                        <div className="p-4 flex flex-col gap-3">
                             {loading && t1.length <= 1 && t1[0]?.nickname === '[Você]' ? (
                                 <div className="flex-1 flex flex-col items-center justify-center gap-4">
                                     <div className="relative w-10 h-10">
@@ -697,7 +756,7 @@ const MatchReportModal: React.FC<Props> = ({
                                     initial={{ opacity: 0, y: 6 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.15 }}
-                                    className="flex gap-3 flex-1 min-h-0"
+                                    className="flex gap-3 items-start"
                                 >
                                     <TeamBlock players={t1} title="Seu Time" scoreVal={scoreA} ally={true} />
                                     <TeamBlock players={t2} title="Adversários" scoreVal={scoreE} ally={false} />
