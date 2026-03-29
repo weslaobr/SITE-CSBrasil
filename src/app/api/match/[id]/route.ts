@@ -54,6 +54,7 @@ export async function GET(
             let localStats = localMatch.players.map(p => {
                 const m = (p.metadata as any) || {};
                 return {
+                    team_id: p.team,
                     steam64_id: p.steamId,
                     name: m.playerNickname || p.steamId,
                     total_kills: p.kills,
