@@ -183,22 +183,29 @@ const MatchReportModal: React.FC<Props> = ({
 
     const normalizeP = (p: any, isUser = false): PlayerStats => {
         const kills   = p.kills ?? p.total_kills ?? parseInt(p.player_stats?.Kills ?? '0') ?? 0;
-        const deaths  = p.deaths ?? p.total_deaths ?? parseInt(p.player_stats?.Deaths ?? '0') ?? 0;
+        const deaths  = p.deaths ?? p.total_deaths ?? parseInt(p.player_stats?.Deaths ?? '0') ?? 1; // avoid /0
         const assists = p.assists ?? p.total_assists ?? parseInt(p.player_stats?.Assists ?? '0') ?? 0;
+        
         // adr: bot saves as p.dpr (alias adr), Leetify uses p.dpr or p.adr
-        const adr     = p.dpr ?? p.adr ?? p.average_damage_per_round ?? parseFloat(p.player_stats?.ADR ?? '0') ?? (isUser ? currentMatch?.adr ?? 0 : 0);
-        // rating: Leetify per-player field is leetify_rating
-        const rawRating = p.rating ?? p.leetify_rating ?? p.leetifyRating ?? null;
-        const rating  = rawRating !== null ? Number(rawRating) : (kills / (deaths || 1));
+        const adr     = p.adr ?? p.dpr ?? p.average_damage_per_round ?? parseFloat(p.player_stats?.ADR ?? '0') ?? (isUser ? currentMatch?.adr ?? 0 : 0);
+        
+        // rating: Bot (advancedMeta.rating), Leetify (leetify_rating)
+        const rawRating = p.rating ?? p.leetify_rating ?? p.leetifyRating ?? p.ratingRatio ?? null;
+        const rating  = rawRating !== null ? Number(rawRating) : (kills / deaths);
+        
+        // kast: Bot (0-100), Leetify (0-1 fraction or 0-100)
+        let kast = 0;
+        const rawKast = p.kast ?? p.kastControl ?? p.kast_percent ?? p.kast_percentage;
+        if (rawKast !== undefined) {
+             kast = rawKast > 1 ? rawKast : Math.round(rawKast * 100);
+        }
+        
         // hs: bot saves as hsPercentage (0-100), Leetify uses accuracy_head (0-1)
         const hsRaw   = p.accuracy_head !== undefined
             ? (p.accuracy_head > 1 ? Math.round(p.accuracy_head) : Math.round(p.accuracy_head * 100))
             : p.hs_percent ?? p.hs_percentage ?? p.hsPercentage
               ?? (isUser && currentMatch?.hsPercentage ? Math.round(Number(currentMatch.hsPercentage)) : 0);
-        // kast: Leetify returns 0-1 fraction, bot may store 0-100
-        const kastRaw = p.kast !== undefined
-            ? (typeof p.kast === 'string' ? parseFloat(p.kast) : (p.kast > 1 ? p.kast : Math.round(p.kast * 100)))
-            : 0;
+        
         const avatar  = p.avatar_url || p.avatarUrl || p.avatar
                       || (isUser ? (currentMatch?.metadata?.steam_avatar ?? currentMatch?.metadata?.avatarUrl ?? '') : '')
                       || '';
@@ -206,23 +213,25 @@ const MatchReportModal: React.FC<Props> = ({
         return {
             nickname: p.name || p.nickname || p.playerNickname || (isUser ? '[Você]' : 'Jogador'),
             avatar, kills, deaths, assists, adr, rating,
-            hs: hsRaw, kast: kastRaw,
-            // bot: fkd/fk_deaths | Leetify: fk_count/fd_count
-            fk: p.fk_count ?? p.fkd ?? p.firstKills ?? 0,
-            fd: p.fd_count ?? p.fk_deaths ?? p.firstDeaths ?? 0,
-            triples: p.triple_kills ?? p.tripleKills ?? 0,
-            quads: p.quadro_kills ?? p.quad_kills ?? p.quadKills ?? 0,
-            aces: p.penta_kills ?? p.ace_kills ?? p.pentaKills ?? 0,
-            clutches: p.clutch_count ?? p.clutches ?? p.clutchesWon ?? 0,
-            trades: p.trade_count ?? p.trades ?? p.tradeKills ?? 0,
-            // bot: utility_damage | Leetify: util_damage
-            utilDmg: p.util_damage ?? p.utility_damage ?? p.utilityDamage ?? p.utilDmg ?? 0,
-            flashAssists: p.flash_assists ?? p.flashbang_assists ?? p.flashAssists ?? 0,
-            blindTime: p.blind_time ?? p.blindTime ?? p.enemiesFlashedDuration ?? 0,
-            heThrown: p.he_thrown ?? p.heThrown ?? 0,
-            flashThrown: p.flash_thrown ?? p.flashThrown ?? 0,
-            smokesThrown: p.smokes_thrown ?? p.smokesThrown ?? 0,
-            molotovThrown: p.molotovs_thrown ?? p.molotov_thrown ?? p.molotovThrown ?? 0,
+            hs: hsRaw, kast,
+            // First Kills / Deaths
+            fk: p.fk ?? p.fk_count ?? p.fkd ?? p.firstKills ?? p.first_kill_count ?? 0,
+            fd: p.fd ?? p.fd_count ?? p.fk_deaths ?? p.firstDeaths ?? p.first_death_count ?? 0,
+            // Multi-kills
+            triples: p.triples ?? p.triple_kills ?? p.tripleKills ?? 0,
+            quads: p.quads ?? p.quadro_kills ?? p.quad_kills ?? p.quadKills ?? 0,
+            aces: p.aces ?? p.penta_kills ?? p.ace_kills ?? p.pentaKills ?? 0,
+            // Misc
+            clutches: p.clutches ?? p.clutch_count ?? p.clutchesWon ?? 0,
+            trades: p.trades ?? p.trade_count ?? p.tradeKills ?? 0,
+            // Utilities
+            utilDmg: p.utilDmg ?? p.util_damage ?? p.utility_damage ?? p.utilityDamage ?? 0,
+            flashAssists: p.flashAssists ?? p.flash_assists ?? p.flashbang_assists ?? 0,
+            blindTime: p.blindTime ?? p.blind_time ?? p.enemiesFlashedDuration ?? 0,
+            heThrown: p.heThrown ?? p.he_thrown ?? 0,
+            flashThrown: p.flashThrown ?? p.flash_thrown ?? 0,
+            smokesThrown: p.smokesThrown ?? p.smokes_thrown ?? 0,
+            molotovThrown: p.molotovThrown ?? p.molotovs_thrown ?? p.molotov_thrown ?? 0,
             isUser,
             steamId: p.steam64_id || p.player_id || p.steamId || p.steam_id
         };

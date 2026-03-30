@@ -110,7 +110,22 @@ export async function GET(
         });
 
         let data = matchResponse.data;
+        
+        // Normalizar dados do Leetify para o formato esperado pelo frontend
         if (data.stats && Array.isArray(data.stats)) {
+            data.stats = data.stats.map((p: any) => {
+                // Se o Leetify retornar dados aninhados em 'performance' ou similar, podemos achatar ou garantir campos
+                return {
+                    ...p,
+                    // Garante que campos comuns do Leetify mapeiem para o que o frontend espera
+                    kast: p.kast !== undefined ? p.kast : (p.kast_percent || 0),
+                    utility_damage: p.utility_damage ?? p.util_damage ?? p.utilityDamage ?? 0,
+                    fkd: p.fk_count ?? p.first_kill_count ?? p.firstKills ?? 0,
+                    fk_deaths: p.fd_count ?? p.first_death_count ?? p.firstDeaths ?? 0,
+                    blind_time: p.blind_time ?? p.enemies_flashed_duration ?? p.enemiesFlashedDuration ?? 0,
+                    flash_assists: p.flash_assists ?? p.flash_assist_count ?? p.flashAssists ?? 0
+                };
+            });
             data.stats = await fetchAvatars(data.stats);
         }
 
