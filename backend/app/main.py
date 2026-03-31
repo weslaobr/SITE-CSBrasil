@@ -75,6 +75,17 @@ async def get_match_ticks(match_id: str, db: AsyncSession = Depends(get_db)):
     
     return {"ticks": ticks}
 
+@app.get("/api/match/list", tags=["Tracker"])
+async def list_matches(db: AsyncSession = Depends(get_db)):
+    from app.models.tracker import Match
+    from sqlalchemy import select, desc
+    
+    stmt = select(Match).order_by(desc(Match.parsed_at))
+    result = await db.execute(stmt)
+    matches = result.scalars().all()
+    
+    return matches
+
 # Entry point for local testing
 if __name__ == "__main__":
     import uvicorn
