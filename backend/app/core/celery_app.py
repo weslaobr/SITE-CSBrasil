@@ -18,6 +18,8 @@ celery_app.conf.update(
     timezone="America/Sao_Paulo",
     enable_utc=True,
     task_track_started=True,
+    task_always_eager=True, # For local testing without Redis
+    task_eager_propagates=True,
     # Worker settings
     worker_concurrency=4,
     worker_prefetch_multiplier=1
