@@ -62,6 +62,8 @@ export async function GET(
                     total_assists: p.assists,
                     dpr: p.adr, // alias adr
                     accuracy_head: p.hsPercentage ? (p.hsPercentage / 100) : 0, 
+                    rating: m.rating || 0,
+                    kast: m.kast || 0,
                     fkd: m.fk || 0,
                     fk_deaths: m.fd || 0,
                     triple_kills: m.triples || 0,

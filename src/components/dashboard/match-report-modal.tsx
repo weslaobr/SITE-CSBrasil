@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, Calendar, MapPin, Shield, Target, Activity,
-    Zap, TrendingUp, Crosshair, Star, Flame, Eye
+    Zap, TrendingUp, Crosshair, Star, Flame, Eye, RefreshCw
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -74,6 +74,7 @@ const MatchReportModal: React.FC<Props> = ({
 }) => {
     const [internalMatch, setInternalMatch] = useState<Match | null>(null);
     const [loading, setLoading] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
     const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos'>('placar');
 
     const match = initialMatch || internalMatch;
@@ -123,6 +124,21 @@ const MatchReportModal: React.FC<Props> = ({
     };
 
     const currentMatch = internalMatch?.metadata ? internalMatch : (initialMatch || internalMatch);
+    
+    const handleSync = async () => {
+        if (!currentMatch?.id || isSyncing) return;
+        setIsSyncing(true);
+        try {
+            await axios.post(`/api/match/${currentMatch.id}/sync`);
+            await fetchMatchData();
+        } catch (e: any) {
+            console.error(e);
+            alert("Erro ao sincronizar partida. Tente novamente mais tarde.");
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     // ── HELPERS ───────────────────────────────────────────────────────────────
@@ -691,6 +707,16 @@ const MatchReportModal: React.FC<Props> = ({
 
                                 {/* User quick stats + close */}
                                 <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={handleSync}
+                                        disabled={isSyncing}
+                                        className="h-8 px-3 rounded-xl bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 flex items-center gap-2 border border-yellow-500/20 group active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Puxar dados detalhados direto do Leetify"
+                                    >
+                                        <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
+                                        <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+                                    </button>
+                                    
                                     {userData && (
                                         <div className="hidden md:flex items-center gap-2.5 bg-black/30 border border-white/5 rounded-xl px-3 py-1.5">
                                             {[
