@@ -33,6 +33,7 @@ export default function DemoViewer2D({ matchId, mapName, ticks, players = [] }: 
   // Load Map Background
   useEffect(() => {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.src = mapMeta.image;
     img.onload = () => setBgImage(img);
   }, [mapMeta]);
@@ -83,12 +84,10 @@ export default function DemoViewer2D({ matchId, mapName, ticks, players = [] }: 
         ctx.lineWidth = 3;
         ctx.stroke();
       });
-
-      if (isPlaying) requestAnimationFrame(render);
     };
 
     render();
-  }, [currentTick, isPlaying, bgImage, mapMeta, players]);
+  }, [currentTick, bgImage, mapMeta, players, getPlayerPositions]);
 
   return (
     <div className="bg-zinc-900/40 border border-white/5 rounded-[40px] overflow-hidden backdrop-blur-3xl shadow-2xl">

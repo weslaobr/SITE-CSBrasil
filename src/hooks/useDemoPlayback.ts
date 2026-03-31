@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 export interface TickEntry {
   tick: number;
@@ -17,14 +17,14 @@ export function useDemoPlayback({ ticks, onTickChange }: PlaybackOptions) {
   const [currentTick, setCurrentTick] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const requestRef = useRef<number>();
-  const lastTimeRef = useRef<number>();
+  const requestRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number | null>(null);
 
   const minTick = useMemo(() => (ticks.length > 0 ? ticks[0].tick : 0), [ticks]);
   const maxTick = useMemo(() => (ticks.length > 0 ? ticks[ticks.length - 1].tick : 0), [ticks]);
 
   const animate = (time: number) => {
-    if (lastTimeRef.current !== undefined) {
+    if (lastTimeRef.current !== null) {
       const deltaTime = time - lastTimeRef.current;
       
       // Calculate how many ticks passed in this frame
@@ -47,7 +47,7 @@ export function useDemoPlayback({ ticks, onTickChange }: PlaybackOptions) {
 
   useEffect(() => {
     if (isPlaying) {
-      lastTimeRef.current = undefined;
+      lastTimeRef.current = null;
       requestRef.current = requestAnimationFrame(animate);
     } else {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
@@ -62,7 +62,7 @@ export function useDemoPlayback({ ticks, onTickChange }: PlaybackOptions) {
   }, [currentTick, onTickChange]);
 
   // Linear Interpolation between sampled ticks
-  const getPlayerPositions = (targetTick: number) => {
+  const getPlayerPositions = useCallback((targetTick: number) => {
     // 1. Group ticks by steamid64
     const players: Record<string, any[]> = {};
     ticks.forEach((t) => {
@@ -102,7 +102,7 @@ export function useDemoPlayback({ ticks, onTickChange }: PlaybackOptions) {
     });
 
     return result;
-  };
+  }, [ticks]);
 
   return {
     currentTick,
