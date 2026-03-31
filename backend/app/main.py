@@ -1,0 +1,81 @@
+from fastapi import FastAPI, Depends, HTTPException, Body
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.session import get_db
+from app.schemas.importer import ImportMatchRequest
+from app.tasks.match_tasks import process_match_task
+from app.services.downloader import DownloaderService
+from app.core.config import settings
+
+app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
+
+# CORS (Frontend Next.js)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # In production, restrict this
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+def read_root():
+    return {"message": "TropaCS Tracker API v1"}
+
+@app.post("/api/importer/import-match", tags=["Importer"])
+async def import_match(request: ImportMatchRequest):
+    """
+    Receives SteamID and Auth Code, fetches match history and starts background processing.
+    """
+    matches = DownloaderService.get_match_history(request.steamid, request.auth_code)
+    
+    if not matches:
+        raise HTTPException(status_code=404, detail="No matches found or invalid Auth Code.")
+
+    # Trigger tasks for each match
+    for match in matches:
+        process_match_task.delay(
+            match_id=match["sharing_code"],
+            steamid=request.steamid,
+            demo_url=match["demo_url"]
+        )
+    
+    return {
+        "status": "processing",
+        "message": f"Queued {len(matches)} matches for processing.",
+        "matches": matches
+    }
+
+@app.get("/api/match/{match_id}/stats", tags=["Tracker"])
+async def get_match_stats(match_id: str, db: AsyncSession = Depends(get_db)):
+    from app.models.tracker import Match, MatchPlayer
+    from sqlalchemy import select
+    
+    match = await db.get(Match, match_id)
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+        
+    stmt = select(MatchPlayer).where(MatchPlayer.match_id == match_id)
+    result = await db.execute(stmt)
+    players = result.scalars().all()
+    
+    return {
+        "match": match,
+        "players": players
+    }
+
+@app.get("/api/match/{match_id}/ticks", tags=["Tracker"])
+async def get_match_ticks(match_id: str, db: AsyncSession = Depends(get_db)):
+    from app.models.tracker import TickData
+    from sqlalchemy import select
+    
+    stmt = select(TickData).where(TickData.match_id == match_id).order_by(TickData.tick.asc())
+    result = await db.execute(stmt)
+    ticks = result.scalars().all()
+    
+    return {"ticks": ticks}
+
+# Entry point for local testing
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
