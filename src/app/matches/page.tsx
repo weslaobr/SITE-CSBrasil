@@ -24,11 +24,57 @@ export default function MatchesPage() {
     const fetchMatches = async () => {
         setLoading(true);
         try {
-            const res  = await fetch('/api/matches');
-            const data = await res.json();
-            setMatches(data.matches || []);
-        } catch (e) { console.error(e); }
-        finally     { setLoading(false); }
+            // 1. Fetch from Local Legacy API
+            const resLocal = await fetch('/api/matches');
+            const dataLocal = await resLocal.json();
+            const legacyMatches = dataLocal.matches || [];
+
+            // 2. Fetch from New Tracker API (FastAPI)
+            let trackerMatches = [];
+            try {
+                const resTracker = await fetch('http://localhost:8000/api/match/list');
+                if (resTracker.ok) {
+                    const rawTracker = await resTracker.json();
+                    trackerMatches = rawTracker.map((m: any) => ({
+                        ...m,
+                        id: m.id, // match_id
+                        result: m.result === 'Win' ? 'Win' : m.result === 'Loss' ? 'Loss' : 'Tie',
+                        mapName: m.map_name,
+                        matchDate: m.parsed_at, // Use parse date as proxy if match date missing
+                        kills: m.kills || 0,
+                        deaths: m.deaths || 0,
+                        assists: m.assists || 0,
+                        adr: m.adr,
+                        kast: m.kast,
+                        rating2: m.rating,
+                        isTracker: true
+                    }));
+                }
+            } catch (err) {
+                console.warn("Tracker API not available:", err);
+            }
+
+            // 3. Merge & Deduplicate
+            // Map legacy matches into a map by ID
+            const matchesMap = new Map();
+            legacyMatches.forEach((m: any) => matchesMap.set(m.id, m));
+
+            // Overwrite with Tracker matches (or add if new)
+            trackerMatches.forEach((m: any) => {
+                const existing = matchesMap.get(m.id);
+                matchesMap.set(m.id, { ...existing, ...m });
+            });
+
+            const merged = Array.from(matchesMap.values()).sort((a, b) => 
+                new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime()
+            );
+
+            setMatches(merged);
+        } catch (e) {
+            console.error("Match fetch error:", e);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleSync = async () => {
@@ -36,8 +82,11 @@ export default function MatchesPage() {
         try {
             await fetch('/api/sync/all', { method: 'POST' });
             await fetchMatches();
-        } catch (e) { console.error(e); }
-        finally     { setLoading(false); }
+        } catch (e) {
+            console.error("Sync error:", e);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleUpdateFaceit = async (nickname: string) => {

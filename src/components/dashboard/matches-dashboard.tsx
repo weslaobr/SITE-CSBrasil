@@ -21,9 +21,12 @@ import {
     Activity,
     Zap,
     TrendingUp,
-    Check
+    Check,
+    Shield,
+    Play
 } from 'lucide-react';
 import MatchReportModal from './match-report-modal';
+import Link from 'next/link';
 
 interface Match {
     id: string;
@@ -36,6 +39,9 @@ interface Match {
     assists: number;
     mvps?: number;
     adr?: number;
+    kast?: number;
+    impact?: number;
+    rating2?: number;
     hsPercentage?: number;
     rank?: string;
     matchDate: string;
@@ -159,44 +165,35 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         const totalKills = filteredMatches.reduce((acc, m) => acc + (m.kills || 0), 0);
         const totalDeaths = filteredMatches.reduce((acc, m) => acc + (m.deaths || 0), 0);
 
-        // Only average matches with real ADR data
-        const adrMatches = filteredMatches.filter(m => m.adr != null && m.adr > 0);
-        const totalAdr = adrMatches.reduce((acc, m) => acc + (m.adr ?? 0), 0);
+        // Advanced metrics
+        const adrMatches = filteredMatches.filter(m => (m.adr || (m as any).metadata?.adr) != null);
+        const totalAdr = adrMatches.reduce((acc, m) => acc + (m.adr || (m as any).metadata?.adr || 0), 0);
 
-        // Average HS% from matches that have it
+        const kastMatches = filteredMatches.filter(m => (m.kast || (m as any).metadata?.kast) != null);
+        const totalKast = kastMatches.reduce((acc, m) => acc + (m.kast || (m as any).metadata?.kast || 0), 0);
+
         const hsMatches = filteredMatches.filter(m => m.hsPercentage != null && m.hsPercentage > 0);
         const totalHs = hsMatches.reduce((acc, m) => acc + (m.hsPercentage ?? 0), 0);
 
-        // Helper: extract Leetify rating from a match's metadata
-        // The sync saves it as: metadata.leetify_rating (flat) OR metadata.leetify_ratings (object from detail.ratings)
-        // The Leetify v2 detail.ratings object has a top-level `leetify` field  
         const getLeetifyRating = (m: Match): number | null => {
             const meta = m.metadata;
-            if (!meta) return null;
-            // Direct flat field (set by some sync paths)
-            if (meta.leetify_rating !== undefined && meta.leetify_rating !== null) return Number(meta.leetify_rating);
-            // Nested object from detail.ratings
-            if (meta.leetify_ratings?.leetify !== undefined) return Number(meta.leetify_ratings.leetify);
-            if (meta.leetify_ratings?.leetifyRating !== undefined) return Number(meta.leetify_ratings.leetifyRating);
-            // Sometimes stored at the match root in recent_matches response
-            if (meta.leetify !== undefined && meta.leetify !== null) return Number(meta.leetify);
+            if (!meta) return (m as any).rating2 || (m as any).rating || null;
+            if (meta.leetify_rating !== undefined) return Number(meta.leetify_rating);
+            if (meta.rating2 !== undefined) return Number(meta.rating2);
             return null;
         };
 
         const ratingMatches = filteredMatches.map(m => ({ m, r: getLeetifyRating(m) })).filter(x => x.r !== null);
-        const totalRating = ratingMatches.reduce((acc, x) => acc + x.r!, 0);
-
-        // If no Leetify ratings at all, fall back to K/D as a proxy
         const kd = totalKills / (totalDeaths || 1);
         const ratingDisplay = ratingMatches.length > 0
             ? (ratingMatches.reduce((acc, x) => acc + x.r!, 0) / ratingMatches.length).toFixed(2)
             : kd.toFixed(2);
-        const ratingLabel = ratingMatches.length > 0 ? ratingDisplay : ratingDisplay; // same, label shown in card
 
         return {
             wr: Math.round((wins / total) * 100),
             kills: totalKills,
             adr: adrMatches.length > 0 ? (totalAdr / adrMatches.length).toFixed(1) : '—',
+            kast: kastMatches.length > 0 ? (totalKast / kastMatches.length).toFixed(1) : '—',
             kd: kd.toFixed(2),
             hs: hsMatches.length > 0 ? Math.round(totalHs / hsMatches.length).toString() : '—',
             rating: ratingDisplay,
@@ -387,12 +384,13 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     {/* Header Section */}
                     <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                         <div>
-                            <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter flex items-center gap-4">
-                                <Swords className="text-yellow-500 w-10 h-10 md:w-12 md:h-12" />
-                                Minhas Partidas
+                            <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter flex items-center gap-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-500">
+                                <Swords className="text-yellow-500 w-12 h-12 md:w-16 md:h-16 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]" />
+                                Histórico <span className="text-white">Combate</span>
                             </h1>
-                            <p className="text-zinc-500 text-xs font-bold uppercase mt-2 tracking-[0.2em] px-1 flex items-center gap-2">
-                                Histórico Competitivo <span className="w-1 h-1 rounded-full bg-yellow-500" /> {matches.length} Registradas
+                            <p className="text-zinc-500 text-[10px] font-black uppercase mt-3 tracking-[0.4em] px-1 flex items-center gap-3">
+                                <span className="w-8 h-px bg-yellow-500/50" />
+                                Elite Performance Dashboard <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" /> {matches.length} Partidas
                             </p>
                         </div>
 
@@ -483,31 +481,35 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             {variant === 'full' && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
-                    { label: 'Taxa de Vitória', value: `${stats.wr}%`, sub: null, icon: <Trophy className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-                    { label: 'ADR Médio', value: stats.adr, sub: null, icon: <Zap className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-                    { label: 'Ratio K/D', value: stats.kd, sub: null, icon: <TrendingUp className="text-amber-500" />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                    { label: 'Total de Abates', value: stats.kills, sub: null, icon: <Target className="text-red-500" />, color: 'text-red-500', bg: 'bg-red-500/10' },
-                    { label: 'Média HS%', value: stats.hs !== '—' ? `${stats.hs}%` : '—', sub: null, icon: <Activity className="text-rose-500" />, color: 'text-rose-500', bg: 'bg-rose-500/10' },
-                    { label: 'Média Rating', value: stats.rating, sub: (stats as any).ratingIsLeetify ? 'Leetify' : 'K/D', icon: <Zap className="text-purple-500" />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                    { label: 'Win Rate', value: `${stats.wr}%`, sub: null, icon: <Trophy className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                    { label: 'KAST Médio', value: stats.kast !== '—' ? `${stats.kast}%` : '—', sub: 'Utility / Support', icon: <Shield className="text-blue-500" />, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                    { label: 'ADR Médio', value: stats.adr, sub: 'Dano p/ Round', icon: <Zap className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+                    { label: 'Ratio K/D', value: stats.kd, sub: 'Sobrevivência', icon: <TrendingUp className="text-amber-500" />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                    { label: 'Headshot %', value: stats.hs !== '—' ? `${stats.hs}%` : '—', sub: 'Precisão Letal', icon: <Activity className="text-rose-500" />, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+                    { label: 'Rating Médio', value: stats.rating, sub: (stats as any).ratingIsLeetify ? 'Rating HLTV' : 'Proxy K/D', icon: <Target className="text-purple-500" />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
                 ].map((stat, i) => (
                     <motion.div
                         key={i}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        className="bg-zinc-900/40 border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl flex flex-col gap-2 group hover:border-white/10 transition-all"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.05, type: 'spring', stiffness: 100 }}
+                        whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                        className="bg-zinc-900/40 border border-white/5 p-6 rounded-[2.5rem] backdrop-blur-3xl flex flex-col gap-2 group hover:border-white/20 transition-all relative overflow-hidden shadow-2xl"
                     >
-                        <div className="flex items-center justify-between">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-current opacity-[0.02] -mr-8 -mt-8 rounded-full blur-2xl group-hover:opacity-[0.05] transition-opacity" />
+                        <div className="flex items-center justify-between relative z-10">
                             <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">{stat.label}</span>
-                            <div className={`p-2 rounded-xl ${stat.bg} group-hover:scale-110 transition-transform`}>
+                            <div className={`p-2 rounded-2xl ${stat.bg} group-hover:scale-110 transition-transform duration-500 shadow-inner`}>
                                 {stat.icon}
                             </div>
                         </div>
-                        <div className={`text-3xl font-black italic tracking-tighter ${stat.color}`}>
+                        <div className={`text-3xl font-black italic tracking-tighter ${stat.color} relative z-10 drop-shadow-sm`}>
                             {stat.value}
                         </div>
-                        {(stat as any).sub && (
-                            <span className="text-[8px] font-black uppercase tracking-widest text-zinc-700 -mt-1">{(stat as any).sub}</span>
+                        {stat.sub && (
+                            <span className="text-[8px] font-black uppercase tracking-widest text-zinc-700 group-hover:text-zinc-500 transition-colors relative z-10">
+                                {stat.sub}
+                            </span>
                         )}
                     </motion.div>
                 ))}
@@ -592,6 +594,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     <th className="px-3 py-3 text-center">ADR</th>
                                     <th className="px-3 py-3 text-center">HS%</th>
                                     <th className="px-3 py-3 text-center" title="Rating Leetify (escala -1 a +1, onde 0 é a média). Quando não disponível, exibe o K/D.">Rating ⓘ</th>
+                                    <th className="px-3 py-3 text-center">Analytics 2D</th>
                                     <th className="px-5 py-3 text-right">Data</th>
                                 </tr>
                             </thead>
@@ -766,40 +769,49 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             <td className="px-3 py-4 text-center">
                                                 {(() => {
                                                     const leetifyR = match.metadata?.leetify_rating;
-                                                    const hasLeetify = leetifyR !== undefined && leetifyR !== null;
+                                                    const rating2 = match.rating2 || (match as any).metadata?.rating2;
+                                                    const impact = match.impact || (match as any).metadata?.impact;
+                                                    
                                                     const kd = match.kills / (match.deaths || 1);
 
-                                                    if (hasLeetify) {
-                                                        // Leetify scale: roughly -1 to +1, 0 = average
+                                                    if (rating2) {
+                                                        const r = Number(rating2);
+                                                        const color = r >= 1.2 ? 'text-emerald-400' : r >= 1.0 ? 'text-yellow-400' : 'text-rose-400';
+                                                        return (
+                                                            <div className="flex flex-col items-center gap-0.5" title={`Impacto: ${impact?.toFixed(2) || '—'}`}>
+                                                                <span className={`font-black text-base italic tracking-tight ${color}`}>{r.toFixed(2)}</span>
+                                                                <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest">Rating 2.0</span>
+                                                            </div>
+                                                        );
+                                                    } else if (leetifyR !== undefined && leetifyR !== null) {
                                                         const r = Number(leetifyR);
-                                                        const pct = Math.min(100, Math.max(0, (r + 1) * 50)); // map -1..+1 to 0..100%
                                                         const color = r >= 0.5 ? 'text-orange-400' : r >= 0 ? 'text-yellow-400' : r >= -0.3 ? 'text-zinc-400' : 'text-red-400';
-                                                        const barColor = r >= 0.5 ? 'bg-orange-400' : r >= 0 ? 'bg-yellow-400' : r >= -0.3 ? 'bg-zinc-500' : 'bg-red-400';
                                                         return (
                                                             <div className="flex flex-col items-center gap-1">
                                                                 <span className={`font-black text-base italic tracking-tight ${color}`}>
                                                                     {r > 0 ? '+' : ''}{r.toFixed(2)}
                                                                 </span>
-                                                                <div className="relative h-1 w-12 bg-zinc-800 rounded-full overflow-hidden">
-                                                                    <div className="absolute top-0 bottom-0 left-0 right-1/2 bg-zinc-700" />
-                                                                    <div className={`absolute top-0 bottom-0 ${barColor} rounded-full`} style={{ left: '50%', width: `${Math.abs(r) * 50}%`, transform: r >= 0 ? 'none' : 'translateX(-100%)' }} />
-                                                                </div>
                                                                 <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest">Leetify</span>
                                                             </div>
                                                         );
-                                                    } else if (match.kills > 0) {
-                                                        // Fallback: K/D ratio
-                                                        const color = kd >= 1.2 ? 'text-emerald-400' : kd >= 1.0 ? 'text-zinc-400' : 'text-red-400';
+                                                    } else {
+                                                        const color = kd >= 1.2 ? 'text-emerald-400' : kd >= 1.0 ? 'text-zinc-400' : 'text-rose-400';
                                                         return (
                                                             <div className="flex flex-col items-center gap-0.5">
                                                                 <span className={`font-black text-base italic tracking-tight ${color}`}>{kd.toFixed(2)}</span>
-                                                                <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest">K/D</span>
+                                                                <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest">Ratio K/D</span>
                                                             </div>
                                                         );
-                                                    } else {
-                                                        return <span className="text-zinc-700 text-xs">—</span>;
                                                     }
                                                 })()}
+                                            </td>
+                                            {/* Replay 2D */}
+                                            <td className="px-3 py-4 text-center">
+                                                <Link href={`/dashboard/match/${match.id}/viewer`} onClick={(e) => e.stopPropagation()}>
+                                                    <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-yellow-500/10 hover:bg-yellow-500 text-yellow-500 hover:text-black transition-all group/replay shadow-lg shadow-yellow-500/5 active:scale-90 border border-yellow-500/10 hover:border-yellow-500">
+                                                        <Play size={16} className="fill-current ml-0.5" />
+                                                    </button>
+                                                </Link>
                                             </td>
                                             <td className="px-4 py-4 text-right">
                                                 <div className="flex flex-col items-end gap-0.5">
