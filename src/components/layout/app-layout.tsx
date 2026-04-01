@@ -88,6 +88,13 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         href="/lobby"
                     />
                     <SidebarItem
+                        icon={<Users size={20} />}
+                        label="Gerador de Times"
+                        active={pathname.startsWith('/team-builder')}
+                        collapsed={collapsed}
+                        href="/team-builder"
+                    />
+                    <SidebarItem
                         icon={<Gamepad2 size={20} />}
                         label="Veto de Mapas"
                         active={pathname.startsWith('/map-veto')}
