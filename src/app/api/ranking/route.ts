@@ -73,25 +73,28 @@ export async function GET() {
         const userMap = new Map(users.map(u => [u.steamId, u]));
 
         // 4. Mapear para o formato do frontend
-        const rankedUsers = players.map(p => {
-            const userData = userMap.get(p.steamId);
-            const stats = p.Stats;
-            const rating = stats?.premierRating || stats?.faceitElo || 0;
+        const rankedUsers = players
+            .map(p => {
+                const userData = userMap.get(p.steamId);
+                const stats = p.Stats;
+                const rating = stats?.premierRating || stats?.faceitElo || 0;
 
-            return {
-                steamId: p.steamId,
-                // Prioridade: Nome do Site > Nome da Steam > Placeholder
-                nickname: userData?.name || (p as any).steamName || p.faceitName || `Player #${p.steamId.slice(-4)}`,
-                // Prioridade: Foto do Site > Foto da Steam > Placeholder
-                avatar: userData?.image || (p as any).steamAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.steamId}`,
-                rating: rating,
-                winRate: userData?.winRate ? `${Math.round(userData.winRate)}%` : "N/A",
-                adr: userData?.adr || 0,
-                trend: 'neutral' as const,
-                gcLevel: stats?.gcLevel || 0,
-                faceitLevel: stats?.faceitLevel || 0
-            };
-        });
+                return {
+                    steamId: p.steamId,
+                    // Prioridade: Nome do Site > Nome da Steam > Placeholder
+                    nickname: userData?.name || (p as any).steamName || p.faceitName || `Player #${p.steamId.slice(-4)}`,
+                    // Prioridade: Foto do Site > Foto da Steam > Placeholder
+                    avatar: userData?.image || (p as any).steamAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.steamId}`,
+                    rating: rating,
+                    winRate: userData?.winRate ? `${Math.round(userData.winRate)}%` : "N/A",
+                    adr: userData?.adr || 0,
+                    trend: 'neutral' as const,
+                    gcLevel: stats?.gcLevel || 0,
+                    faceitLevel: stats?.faceitLevel || 0
+                };
+            })
+            // FILTRO: Remover jogadores temporários ou sem pontuação
+            .filter(user => !user.steamId.endsWith('_temp') && user.rating > 0);
 
         // Ordenar por rating decrescente
         rankedUsers.sort((a, b) => b.rating - a.rating);
