@@ -52,58 +52,26 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
 
     const handleDeepSync = async () => {
         setIsSyncing(true);
-        setSyncResult({ steam: 0, faceit: 0 });
-        let currentSteamCode = '';
-        let hasMoreMatches = true;
+        setSyncResult(null);
+        setMessage({ type: '', text: '' });
 
         try {
-            // First pass for Faceit and initial Steam
-            while (hasMoreMatches) {
-                const res = await fetch('/api/matches/sync', {
-                    method: 'POST',
-                    body: JSON.stringify({ steamStartCode: currentSteamCode }),
-                    headers: { 'Content-Type': 'application/json' }
-                });
+            const res = await fetch('/api/sync/all', { method: 'POST' });
+            const data = await res.json();
 
-                const data = await res.json();
-
-                if (res.ok) {
-                    const newSteamCount = data.results?.steam || 0;
-                    const newFaceitCount = data.results?.faceit || 0;
-
-                    setSyncResult((prev: any) => ({
-                        steam: (prev?.steam || 0) + newSteamCount,
-                        faceit: (prev?.faceit || 0) + newFaceitCount
-                    }));
-
-                    currentSteamCode = data.nextSteamCode;
-                    hasMoreMatches = data.hasMore && currentSteamCode;
-
-                    if (newSteamCount > 0) {
-                        setMessage({ type: 'success', text: `Sincronizando... Encontradas ${newSteamCount} novas partidas Steam.` });
-                    }
-
-                    if (!hasMoreMatches) {
-                        setMessage({ type: 'success', text: 'Histórico completo sincronizado com sucesso!' });
-                    }
-                } else {
-                    setMessage({ type: 'error', text: data.error || 'Falha na sincronização profunda.' });
-                    hasMoreMatches = false;
-                }
-
-                // If onSync provided, update the UI (e.g. reload parent match list)
-                if (onSync) onSync();
-
-                // Add a 3-second delay between batches to avoid overloading Steam API
-                if (hasMoreMatches) {
-                    setMessage({ type: 'success', text: 'Pausando brevemente para evitar bloqueio da Steam...' });
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                }
+            if (res.ok) {
+                setSyncResult({ total: data.count || 0 });
+                setMessage({ type: 'success', text: `Histórico atualizado! ${data.count || 0} partidas sincronizadas.` });
+            } else {
+                setMessage({ type: 'error', text: data.error || 'Falha na sincronização.' });
             }
+
+            if (onSync) onSync();
         } catch (err) {
             setMessage({ type: 'error', text: 'Erro ao conectar ao servidor.' });
         } finally {
             setIsSyncing(false);
+            setTimeout(() => setMessage({ type: '', text: '' }), 5000);
         }
     };
 
@@ -147,8 +115,7 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                 <div className="flex items-center gap-4">
                     {syncResult && (
                         <div className="text-[10px] font-bold uppercase space-x-3 text-zinc-400">
-                            <span>Steam: <span className="text-white">{syncResult.steam || 0}</span></span>
-                            <span>Faceit: <span className="text-white">{syncResult.faceit || 0}</span></span>
+                            <span>Partidas: <span className="text-white">{syncResult.total ?? 0}</span></span>
                         </div>
                     )}
                     <button

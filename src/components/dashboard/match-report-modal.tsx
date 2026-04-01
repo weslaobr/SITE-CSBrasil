@@ -126,14 +126,15 @@ const MatchReportModal: React.FC<Props> = ({
     const currentMatch = internalMatch?.metadata ? internalMatch : (initialMatch || internalMatch);
     
     const handleSync = async () => {
-        if (!currentMatch?.id || isSyncing) return;
+        if (isSyncing) return;
         setIsSyncing(true);
         try {
-            await axios.post(`/api/match/${currentMatch.id}/sync`);
+            // Sync all recent matches via the unified endpoint
+            await axios.post('/api/sync/all');
+            // Then refresh this match's detail
             await fetchMatchData();
         } catch (e: any) {
             console.error(e);
-            alert("Erro ao sincronizar partida. Tente novamente mais tarde.");
         } finally {
             setIsSyncing(false);
         }
@@ -710,11 +711,11 @@ const MatchReportModal: React.FC<Props> = ({
                                     <button
                                         onClick={handleSync}
                                         disabled={isSyncing}
-                                        className="h-8 px-3 rounded-xl bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 flex items-center gap-2 border border-yellow-500/20 group active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
-                                        title="Puxar dados detalhados direto do Leetify"
+                                        className="h-8 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center gap-2 border border-white/10 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Atualizar partidas e recarregar dados"
                                     >
-                                        <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
-                                        <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+                                        <RefreshCw size={12} className={isSyncing ? "animate-spin text-yellow-500" : ""} />
+                                        <span className="hidden sm:inline">{isSyncing ? 'Atualizando...' : 'Atualizar'}</span>
                                     </button>
                                     
                                     {userData && (
