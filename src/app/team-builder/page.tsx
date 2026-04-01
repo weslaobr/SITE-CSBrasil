@@ -353,29 +353,6 @@ export default function TeamBuilderPage() {
                             </div>
                         </div>
 
-                        {unassigned.length > 0 && (
-                            <div className="flex flex-1 items-center justify-start xl:justify-center overflow-x-auto gap-3 py-3 px-4 border border-dashed border-white/10 rounded-xl bg-black/20 scrollbar-thin scrollbar-thumb-white/10 mx-0 lg:mx-4">
-                                {unassigned.map(p => (
-                                    <div key={p.steamId} className="group relative hover:z-50 shrink-0 flex items-center bg-zinc-950 border border-white/5 p-2 pr-6 rounded-2xl hover:border-purple-500/50 transition-all shadow-md">
-                                        <img src={p.avatar} title={p.nickname} className="w-10 h-10 rounded-full border border-white/10 shadow-sm shrink-0 group-hover:opacity-20 transition-all" />
-                                        <div className="flex flex-col ml-3 group-hover:opacity-20 transition-all">
-                                            <p className="font-bold text-sm text-white max-w-[120px] truncate">{p.nickname}</p>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <p className="text-xs font-mono font-bold text-yellow-500/90">{p.rating} <span className="text-zinc-500 text-[10px]">SR</span></p>
-                                                {(p.gcLevel ?? 0) > 0 && <span className="text-[10px] bg-black/40 text-purple-400 font-bold px-1.5 py-0.5 rounded border border-purple-500/20">Lvl {p.gcLevel}</span>}
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="absolute inset-0 flex items-stretch justify-center opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 transition-all z-50 bg-black/80 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10">
-                                            <button onClick={() => handleAssign(p.steamId, "A")} className="flex-1 bg-yellow-500/90 text-black hover:bg-yellow-400 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-colors" title="Para Time A"><ArrowLeft size={16} /> Time A</button>
-                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="px-4 bg-red-500/90 text-white hover:bg-red-400 border-x border-red-600/50 transition-colors flex items-center justify-center" title="Remover"><X size={16} /></button>
-                                            <button onClick={() => handleAssign(p.steamId, "B")} className="flex-1 bg-blue-500/90 text-white hover:bg-blue-400 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-colors" title="Para Time B">Time B <ArrowRight size={16} /></button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
                         <div className="flex items-center gap-2 shrink-0">
                             <button 
                                 onClick={handleResetTeams}
@@ -394,6 +371,38 @@ export default function TeamBuilderPage() {
                             </button>
                         </div>
                     </div>
+
+                    {/* Unassigned Grid */}
+                    {unassigned.length > 0 && (
+                        <div className="bg-zinc-900/20 p-5 rounded-2xl border border-dashed border-white/5 backdrop-blur-sm">
+                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-4 flex items-center gap-2">
+                                <Users size={14} className="text-zinc-600"/>
+                                Jogadores no Saguão
+                                <span className="ml-auto bg-black/40 px-2 py-1 rounded text-zinc-400">{unassigned.length} aguardando alocação</span>
+                            </h3>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
+                                {unassigned.map(p => (
+                                    <div key={p.steamId} className="group relative hover:z-50 flex items-center bg-zinc-950 border border-white/5 p-2 pr-4 rounded-2xl hover:border-purple-500/50 transition-all shadow-md">
+                                        <img src={p.avatar} title={p.nickname} className="w-10 h-10 rounded-full border border-white/10 shadow-sm shrink-0 group-hover:opacity-20 transition-all" />
+                                        <div className="flex flex-col ml-3 group-hover:opacity-20 transition-all min-w-0">
+                                            <p className="font-bold text-sm text-white truncate">{p.nickname}</p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <p className="text-xs font-mono font-bold text-yellow-500/90">{p.rating} <span className="text-zinc-500 text-[10px]">SR</span></p>
+                                                {(p.gcLevel ?? 0) > 0 && <span className="text-[10px] bg-black/40 text-purple-400 font-bold px-1.5 py-0.5 rounded border border-purple-500/20">Lvl {p.gcLevel}</span>}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="absolute inset-0 flex items-stretch justify-center opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 transition-all z-50 bg-zinc-900/95 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10">
+                                            <button onClick={() => handleAssign(p.steamId, "A")} className="flex-1 bg-yellow-500 text-black hover:bg-yellow-400 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-colors" title="Para Time A"><ArrowLeft size={16} /> A</button>
+                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="px-5 bg-red-500 text-white hover:bg-red-400 border-x border-red-600/50 transition-colors flex items-center justify-center" title="Remover"><X size={16} /></button>
+                                            <button onClick={() => handleAssign(p.steamId, "B")} className="flex-1 bg-blue-500 text-white hover:bg-blue-400 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-colors" title="Para Time B">B <ArrowRight size={16} /></button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Veto Arena / Time A vs Time B */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative">
