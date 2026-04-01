@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Swords, 
@@ -80,6 +80,36 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Last sync timestamp (persisted to localStorage)
+    const SYNC_KEY = 'tropacs_last_sync';
+    const [lastSync, setLastSync] = useState<Date | null>(null);
+
+    useEffect(() => {
+        const saved = localStorage.getItem(SYNC_KEY);
+        if (saved) setLastSync(new Date(saved));
+    }, []);
+
+    const handleSyncWithTimestamp = useCallback(() => {
+        if (onSync) {
+            onSync();
+            const now = new Date();
+            setLastSync(now);
+            localStorage.setItem(SYNC_KEY, now.toISOString());
+        }
+    }, [onSync]);
+
+    const formatLastSync = (date: Date | null): string => {
+        if (!date) return 'Nunca atualizado';
+        const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+        if (diff < 10) return 'Agora mesmo';
+        if (diff < 60) return `${diff}s atrás`;
+        const m = Math.floor(diff / 60);
+        if (m < 60) return `${m} min atrás`;
+        const h = Math.floor(m / 60);
+        if (h < 24) return `${h}h atrás`;
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    };
 
     // Filters
     const [mapFilter, setMapFilter] = useState('all');
@@ -419,16 +449,21 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
-                            <button
-                                onClick={onSync}
-                                disabled={loading}
-                                className="flex items-center justify-center gap-2.5 px-5 py-3.5 bg-white/[0.03] hover:bg-yellow-500/10 hover:text-yellow-400 transition-all disabled:opacity-40 group border-b md:border-b-0 md:border-r border-white/[0.06]"
-                            >
-                                <RefreshCw className={`w-4 h-4 text-yellow-500 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-yellow-400 transition-colors">
-                                    {loading ? 'Atualizando' : 'Atualizar'}
+                            <div className="flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-white/[0.06]">
+                                <button
+                                    onClick={handleSyncWithTimestamp}
+                                    disabled={loading}
+                                    className="flex items-center justify-center gap-2.5 px-5 py-2.5 w-full bg-white/[0.03] hover:bg-yellow-500/10 hover:text-yellow-400 transition-all disabled:opacity-40 group"
+                                >
+                                    <RefreshCw className={`w-4 h-4 text-yellow-500 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-yellow-400 transition-colors">
+                                        {loading ? 'Atualizando' : 'Atualizar'}
+                                    </span>
+                                </button>
+                                <span className="text-[8px] font-bold text-zinc-700 uppercase tracking-widest pb-1 leading-none">
+                                    {formatLastSync(lastSync)}
                                 </span>
-                            </button>
+                            </div>
                             <button
                                 onClick={() => window.location.href = '/settings'}
                                 className="flex items-center justify-center gap-2.5 px-5 py-3.5 bg-white/[0.03] hover:bg-white/[0.06] transition-all group border-b md:border-b-0 border-white/[0.06] md:border-r"
