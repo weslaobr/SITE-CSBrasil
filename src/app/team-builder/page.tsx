@@ -153,6 +153,10 @@ export default function TeamBuilderPage() {
         ));
     };
 
+    const handleResetTeams = () => {
+        setSelectedPlayers(prev => prev.map(p => ({ ...p, assignment: "unassigned" })));
+    };
+
     const handleAutoBalance = () => {
         if (selectedPlayers.length !== 10) {
             alert("Selecione exatamente 10 jogadores para balancear os times automaticamente.");
@@ -273,7 +277,7 @@ export default function TeamBuilderPage() {
                             />
                         </div>
 
-                        <div className="h-[450px] overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/10">
+                        <div className="h-[calc(100vh-280px)] min-h-[450px] pb-6 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/10">
                             {loading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <div key={i} className="h-16 animate-pulse bg-white/5 rounded-xl" />
@@ -307,47 +311,88 @@ export default function TeamBuilderPage() {
                     
                     {/* Status Bar */}
                     <div className="flex flex-col sm:flex-row items-center justify-between bg-zinc-900/40 p-5 rounded-2xl border border-white/5 backdrop-blur-xl gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="relative w-16 h-16 rounded-full flex items-center justify-center bg-zinc-950 border border-white/10">
-                                <span className={`text-2xl font-black ${selectedPlayers.length === 10 ? 'text-green-500' : 'text-zinc-400'}`}>
-                                    {selectedPlayers.length}
-                                </span>
-                                <span className="absolute -bottom-1 text-[8px] font-black uppercase text-zinc-500 tracking-widest bg-zinc-900 px-1">/10</span>
+                        <div className="flex items-center gap-5 shrink-0">
+                            {/* SVG Circular Progress */}
+                            <div className="relative flex items-center justify-center w-16 h-16">
+                                <svg className="absolute inset-0 -rotate-90 w-full h-full drop-shadow-lg" viewBox="0 0 36 36">
+                                    <path
+                                        className="text-black/50"
+                                        strokeWidth="3"
+                                        stroke="currentColor"
+                                        fill="none"
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    />
+                                    <path
+                                        className={`${selectedPlayers.length === 10 ? 'text-green-500' : 'text-purple-500'} transition-all duration-500`}
+                                        strokeWidth="3"
+                                        strokeDasharray={`${(selectedPlayers.length / 10) * 100}, 100`}
+                                        strokeLinecap="round"
+                                        stroke="currentColor"
+                                        fill="none"
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    />
+                                </svg>
+                                
+                                <div className="absolute inset-0 flex items-center justify-center mt-0.5">
+                                    <span className={`text-xl font-black ${selectedPlayers.length === 10 ? 'text-green-400' : 'text-white'}`}>
+                                        {selectedPlayers.length}
+                                    </span>
+                                </div>
                             </div>
-                            <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest max-w-[120px]">
-                                Jogadores<br/><span className="text-white">Selecionados</span>
+                            
+                            <div className="flex flex-col justify-center">
+                                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-none mb-1">
+                                    Plantel
+                                </span>
+                                <span className="text-sm text-white font-black uppercase tracking-wider leading-none">
+                                    Selecionados
+                                </span>
+                                <span className={`text-[10px] font-mono mt-1 ${selectedPlayers.length === 10 ? 'text-green-500/80 font-bold' : 'text-zinc-600'}`}>
+                                    {selectedPlayers.length === 10 ? 'Lobby Completo' : `${10 - selectedPlayers.length} vaga(s) restante(s)`}
+                                </span>
                             </div>
                         </div>
 
                         {unassigned.length > 0 && (
                             <div className="flex flex-1 items-center justify-start xl:justify-center overflow-x-auto gap-3 py-3 px-4 border border-dashed border-white/10 rounded-xl bg-black/20 scrollbar-thin scrollbar-thumb-white/10 mx-0 lg:mx-4">
                                 {unassigned.map(p => (
-                                    <div key={p.steamId} className="group relative hover:z-50 shrink-0 flex items-center bg-zinc-950 border border-white/5 p-2 pr-5 rounded-2xl hover:border-purple-500/50 transition-all shadow-md">
-                                        <img src={p.avatar} title={p.nickname} className="w-10 h-10 rounded-full border shadow-sm shrink-0 group-hover:border-purple-500 transition-all" />
-                                        <div className="flex flex-col ml-3">
-                                            <p className="font-bold text-xs text-white max-w-[100px] truncate">{p.nickname}</p>
-                                            <p className="text-[10px] font-mono text-zinc-500 mt-0.5">
-                                                {p.rating} SR {(p.gcLevel ?? 0) > 0 && <span className="ml-1 text-zinc-600">Lvl {p.gcLevel}</span>}
-                                            </p>
+                                    <div key={p.steamId} className="group relative hover:z-50 shrink-0 flex items-center bg-zinc-950 border border-white/5 p-2 pr-6 rounded-2xl hover:border-purple-500/50 transition-all shadow-md">
+                                        <img src={p.avatar} title={p.nickname} className="w-10 h-10 rounded-full border border-white/10 shadow-sm shrink-0 group-hover:opacity-20 transition-all" />
+                                        <div className="flex flex-col ml-3 group-hover:opacity-20 transition-all">
+                                            <p className="font-bold text-sm text-white max-w-[120px] truncate">{p.nickname}</p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <p className="text-xs font-mono font-bold text-yellow-500/90">{p.rating} <span className="text-zinc-500 text-[10px]">SR</span></p>
+                                                {(p.gcLevel ?? 0) > 0 && <span className="text-[10px] bg-black/40 text-purple-400 font-bold px-1.5 py-0.5 rounded border border-purple-500/20">Lvl {p.gcLevel}</span>}
+                                            </div>
                                         </div>
                                         
-                                        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 flex opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 transition-all z-50 shadow-2xl bg-zinc-900 border border-white/10 rounded-xl overflow-hidden">
-                                            <button onClick={() => handleAssign(p.steamId, "A")} className="bg-yellow-500 text-black hover:bg-yellow-400 px-3 py-2 flex items-center justify-center gap-1 text-[10px] font-bold uppercase transition-colors min-w-[60px]" title="Para Time A"><ArrowLeft size={14} /> Time A</button>
-                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="bg-red-500 text-white hover:bg-red-400 px-3 py-2 border-x border-red-600/50 transition-colors" title="Remover"><X size={14} /></button>
-                                            <button onClick={() => handleAssign(p.steamId, "B")} className="bg-blue-500 text-white hover:bg-blue-400 px-3 py-2 flex items-center justify-center gap-1 text-[10px] font-bold uppercase transition-colors min-w-[60px]" title="Para Time B">Time B <ArrowRight size={14} /></button>
+                                        <div className="absolute inset-0 flex items-stretch justify-center opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 transition-all z-50 bg-black/80 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10">
+                                            <button onClick={() => handleAssign(p.steamId, "A")} className="flex-1 bg-yellow-500/90 text-black hover:bg-yellow-400 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-colors" title="Para Time A"><ArrowLeft size={16} /> Time A</button>
+                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="px-4 bg-red-500/90 text-white hover:bg-red-400 border-x border-red-600/50 transition-colors flex items-center justify-center" title="Remover"><X size={16} /></button>
+                                            <button onClick={() => handleAssign(p.steamId, "B")} className="flex-1 bg-blue-500/90 text-white hover:bg-blue-400 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-colors" title="Para Time B">Time B <ArrowRight size={16} /></button>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
 
-                        <button 
-                            onClick={handleAutoBalance}
-                            disabled={selectedPlayers.length !== 10}
-                            className={`flex items-center gap-2 px-6 py-4 rounded-xl font-black uppercase text-xs transition-all shadow-lg shrink-0 ${selectedPlayers.length === 10 ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/20 active:scale-95' : 'bg-white/5 text-zinc-500 cursor-not-allowed border border-white/5'}`}
-                        >
-                            <Shuffle size={16} /> Auto-Balance
-                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button 
+                                onClick={handleResetTeams}
+                                disabled={selectedPlayers.every(p => p.assignment === "unassigned")}
+                                className={`flex items-center justify-center p-4 rounded-xl font-black transition-all shrink-0 border ${!selectedPlayers.every(p => p.assignment === "unassigned") ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white border-white/10 hover:border-white/30 active:scale-95 shadow-md' : 'bg-white/5 text-zinc-700 border-white/5 cursor-not-allowed'}`}
+                                title="Voltar times para o Saguão"
+                            >
+                                <Users size={16} />
+                            </button>
+                            <button 
+                                onClick={handleAutoBalance}
+                                disabled={selectedPlayers.length !== 10}
+                                className={`flex items-center gap-2 px-6 py-4 rounded-xl font-black uppercase text-xs transition-all shadow-lg shrink-0 ${selectedPlayers.length === 10 ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/20 active:scale-95 border border-purple-400/50' : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'}`}
+                            >
+                                <Shuffle size={16} /> Auto-Balance
+                            </button>
+                        </div>
                     </div>
 
                     {/* Veto Arena / Time A vs Time B */}
