@@ -322,12 +322,12 @@ export default function TeamBuilderPage() {
                         {unassigned.length > 0 && (
                             <div className="flex flex-1 items-center justify-center mx-4 overflow-x-visible gap-4 py-3 px-4 border border-dashed border-white/10 rounded-xl bg-black/20">
                                 {unassigned.map(p => (
-                                    <div key={p.steamId} className="group relative">
-                                        <img src={p.avatar} title={p.nickname} className="w-12 h-12 rounded-full border-2 border-zinc-500 shadow-sm shrink-0 hover:border-purple-500 transition-all cursor-pointer" />
-                                        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 flex opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all z-20 shadow-xl bg-zinc-900 border border-white/10 rounded-full overflow-hidden">
-                                            <button onClick={() => handleAssign(p.steamId, "A")} className="bg-yellow-500 text-black hover:bg-yellow-400 px-2 py-1.5" title="Para Time A"><ArrowLeft size={14} /></button>
-                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="bg-red-500 text-white hover:bg-red-400 px-2 py-1.5 border-x border-black/20" title="Remover"><X size={14} /></button>
-                                            <button onClick={() => handleAssign(p.steamId, "B")} className="bg-blue-500 text-white hover:bg-blue-400 px-2 py-1.5" title="Para Time B"><ArrowRight size={14} /></button>
+                                    <div key={p.steamId} className="group relative hover:z-50">
+                                        <img src={p.avatar} title={p.nickname} className="w-12 h-12 rounded-full border-2 border-zinc-500 shadow-sm shrink-0 group-hover:border-purple-500 transition-all cursor-pointer" />
+                                        <div className="absolute top-12 mt-1 left-1/2 -translate-x-1/2 flex opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-hover:-translate-y-1 transition-all z-50 shadow-2xl bg-zinc-900 border border-white/10 rounded-full overflow-hidden">
+                                            <button onClick={() => handleAssign(p.steamId, "A")} className="bg-yellow-500 text-black hover:bg-yellow-400 px-3 py-2" title="Para Time A"><ArrowLeft size={16} /></button>
+                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="bg-red-500 text-white hover:bg-red-400 px-3 py-2 border-x border-black/20" title="Remover"><X size={16} /></button>
+                                            <button onClick={() => handleAssign(p.steamId, "B")} className="bg-blue-500 text-white hover:bg-blue-400 px-3 py-2" title="Para Time B"><ArrowRight size={16} /></button>
                                         </div>
                                     </div>
                                 ))}
