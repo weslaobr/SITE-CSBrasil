@@ -39,22 +39,22 @@ function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMo
                 </>
             )}
 
-            <div className={`absolute ${side === "left" ? "right-2" : "left-2"} top-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all`}>
-                <button onClick={onRemove} className="p-1 bg-black/60 rounded text-zinc-500 hover:text-red-500 mx-auto" title="Remover dos selecionados">
-                    <X size={10} />
+            <div className={`absolute ${side === "left" ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all`}>
+                <button onClick={onRemove} className="p-1.5 bg-zinc-900 border border-white/10 rounded-md text-zinc-500 hover:text-red-500 hover:border-red-500/30 mx-auto shadow-lg" title="Remover dos selecionados">
+                    <X size={14} />
                 </button>
-                <div className="flex bg-black/60 rounded overflow-hidden mt-0.5" title="Mover">
+                <div className="flex bg-zinc-900 border border-white/10 rounded-md overflow-hidden shadow-lg" title="Mover">
                     {onMoveLeft && (
-                        <button onClick={onMoveLeft} className="p-1 text-zinc-400 hover:bg-blue-500/20 hover:text-blue-400 border-r border-white/5">
-                            <ArrowLeft size={10} />
+                        <button onClick={onMoveLeft} className="p-2 text-zinc-400 hover:bg-blue-500 hover:text-white border-r border-white/5 transition-colors">
+                            <ArrowLeft size={14} />
                         </button>
                     )}
-                    <button onClick={onMoveUnassigned} className="p-1 text-zinc-400 hover:bg-white/10 hover:text-white" title="Mover para Reserva">
-                        <Users size={10} />
+                    <button onClick={onMoveUnassigned} className="p-2 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors" title="Mover para Reserva">
+                        <Users size={14} />
                     </button>
                     {onMoveRight && (
-                        <button onClick={onMoveRight} className="p-1 text-zinc-400 hover:bg-yellow-500/20 hover:text-yellow-500 border-l border-white/5">
-                            <ArrowRight size={10} />
+                        <button onClick={onMoveRight} className="p-2 text-zinc-400 hover:bg-yellow-500 hover:text-black border-l border-white/5 transition-colors">
+                            <ArrowRight size={14} />
                         </button>
                     )}
                 </div>
@@ -289,7 +289,7 @@ export default function TeamBuilderPage() {
                                             <p className="font-bold text-sm truncate group-hover:text-purple-400 transition-colors">{p.nickname}</p>
                                             <div className="flex gap-2 mt-1">
                                                 <span className="text-[10px] bg-black/50 text-yellow-500 px-1.5 py-0.5 rounded font-mono font-bold">{p.rating} SR</span>
-                                                {p.gcLevel > 0 && <span className="text-[10px] bg-black/50 text-zinc-400 px-1.5 py-0.5 rounded font-bold">Lvl {p.gcLevel}</span>}
+                                                {(p.gcLevel ?? 0) > 0 && <span className="text-[10px] bg-black/50 text-zinc-400 px-1.5 py-0.5 rounded font-bold">Lvl {p.gcLevel}</span>}
                                             </div>
                                         </div>
                                         <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 group-hover:bg-purple-500 group-hover:text-black transition-all">
@@ -320,14 +320,14 @@ export default function TeamBuilderPage() {
                         </div>
 
                         {unassigned.length > 0 && (
-                            <div className="flex flex-1 items-center justify-center mx-4 overflow-x-auto gap-2 py-2 px-4 border border-dashed border-white/10 rounded-xl bg-black/20">
+                            <div className="flex flex-1 items-center justify-center mx-4 overflow-x-visible gap-4 py-3 px-4 border border-dashed border-white/10 rounded-xl bg-black/20">
                                 {unassigned.map(p => (
                                     <div key={p.steamId} className="group relative">
-                                        <img src={p.avatar} title={p.nickname} className="w-10 h-10 rounded-full border-2 border-zinc-500 shadow-sm shrink-0 hover:border-purple-500 transition-all cursor-pointer" />
-                                        <div className="absolute -bottom-1 -right-1 flex opacity-0 group-hover:opacity-100 transition-all z-10 scale-75 shadow-lg bg-black rounded-full overflow-hidden">
-                                            <button onClick={() => handleAssign(p.steamId, "A")} className="bg-yellow-500 text-black hover:bg-yellow-400 p-1"><ArrowLeft size={10} /></button>
-                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="bg-red-500 text-black hover:bg-red-400 p-1"><X size={10} /></button>
-                                            <button onClick={() => handleAssign(p.steamId, "B")} className="bg-blue-500 text-black hover:bg-blue-400 p-1"><ArrowRight size={10} /></button>
+                                        <img src={p.avatar} title={p.nickname} className="w-12 h-12 rounded-full border-2 border-zinc-500 shadow-sm shrink-0 hover:border-purple-500 transition-all cursor-pointer" />
+                                        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 flex opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all z-20 shadow-xl bg-zinc-900 border border-white/10 rounded-full overflow-hidden">
+                                            <button onClick={() => handleAssign(p.steamId, "A")} className="bg-yellow-500 text-black hover:bg-yellow-400 px-2 py-1.5" title="Para Time A"><ArrowLeft size={14} /></button>
+                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="bg-red-500 text-white hover:bg-red-400 px-2 py-1.5 border-x border-black/20" title="Remover"><X size={14} /></button>
+                                            <button onClick={() => handleAssign(p.steamId, "B")} className="bg-blue-500 text-white hover:bg-blue-400 px-2 py-1.5" title="Para Time B"><ArrowRight size={14} /></button>
                                         </div>
                                     </div>
                                 ))}
