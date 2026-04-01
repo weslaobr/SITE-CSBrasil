@@ -52,31 +52,43 @@ export default function LobbyDashboard() {
     };
 
     return (
-        <div className="p-6 md:p-8 space-y-8">
-            {/* Page Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-white/5">
-                <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
-                            <Users size={22} />
+        <div className="p-4 md:p-8 space-y-8 min-h-screen pb-24">
+
+            {/* ── HERO HEADER ── */}
+            <header className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4 overflow-hidden">
+                <div className="pointer-events-none absolute -top-16 -left-16 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl" />
+                <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center shadow-inner">
+                            <Users className="text-yellow-500 w-7 h-7 drop-shadow-[0_0_8px_rgba(246,203,2,0.6)]" />
                         </div>
-                        <h1 className="text-4xl font-black italic uppercase tracking-tighter">Mix 5×5</h1>
+                        <div>
+                            <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter leading-none">
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-500">Mix</span>
+                                <span className="text-yellow-500"> 5×5</span>
+                            </h1>
+                            <p className="text-zinc-600 text-[9px] font-black uppercase tracking-[0.5em] mt-1 flex items-center gap-2">
+                                <span className="w-4 h-px bg-yellow-500/40" />
+                                Lobbies Ativos
+                                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                                <span className="text-zinc-500">Forme seu time e escolha seus adversários</span>
+                            </p>
+                        </div>
                     </div>
-                    <p className="text-zinc-500 text-sm pl-[52px]">Forme seu time e escolha seus adversários.</p>
                 </div>
                 <button
                     onClick={() => setShowCreate(v => !v)}
-                    className="px-7 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase italic tracking-widest text-[10px] rounded-xl transition-all active:scale-95 shadow-lg shadow-yellow-500/20 flex items-center gap-2"
+                    className="relative z-10 px-7 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase italic tracking-widest text-[10px] rounded-xl transition-all active:scale-95 shadow-lg shadow-yellow-500/20 flex items-center gap-2"
                 >
                     <Plus size={14} /> Criar Sala
                 </button>
-            </div>
+            </header>
 
             {/* Create form */}
             <AnimatePresence>
                 {showCreate && (
                     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
-                        className="bg-zinc-900/40 border border-white/5 p-8 rounded-2xl backdrop-blur-xl space-y-6">
+                        className="bg-zinc-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-xl space-y-6">
                         <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400">Nova Sala</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="space-y-2">
@@ -93,7 +105,6 @@ export default function LobbyDashboard() {
                             </div>
                         </div>
 
-                        {/* RPS Toggle */}
                         <button onClick={() => setRpsEnabled(v => !v)}
                             className={`flex items-center gap-3 px-5 py-3 rounded-2xl border transition-all ${rpsEnabled ? 'bg-purple-500/15 border-purple-500/30 text-purple-300' : 'bg-white/5 border-white/10 text-zinc-500 hover:border-purple-500/20'}`}>
                             <span className="text-xl">🪨</span>
@@ -166,7 +177,7 @@ export default function LobbyDashboard() {
                 ))}
 
                 {!loading && lobbies.length === 0 && (
-                    <div className="col-span-full py-24 text-center border-2 border-dashed border-white/5 rounded-2xl space-y-3">
+                    <div className="col-span-full py-24 text-center border-2 border-dashed border-white/5 rounded-3xl space-y-3">
                         <Users className="mx-auto text-zinc-700" size={36} />
                         <p className="text-zinc-600 font-bold uppercase text-xs tracking-widest">Nenhuma sala ativa</p>
                         <p className="text-zinc-700 text-[10px]">Crie a primeira sala e convide seus amigos!</p>

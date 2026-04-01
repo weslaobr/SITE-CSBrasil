@@ -3,7 +3,7 @@
 import InventoryDashboard from "@/components/dashboard/inventory-dashboard";
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useRef } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Package } from "lucide-react";
 
 export default function InventoryPage() {
     const { data: session } = useSession();
@@ -144,31 +144,56 @@ export default function InventoryPage() {
     }
 
     return (
-        <div className="p-0 md:p-8 relative">
-            {/* Indicador discreto de atualização em segundo plano */}
-            {(isRefreshing || pricingProgress) && (
-                <div className="absolute top-4 right-8 z-50 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-2">
-                    <div className="w-12 h-12 border-4 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin mx-auto" />
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                        {pricingProgress
-                            ? `Buscando preços... ${pricingProgress.current}/${pricingProgress.total}`
-                            : 'Atualizando...'}
-                    </span>
+        <div className="p-4 md:p-8 pb-24 space-y-8">
+
+            {/* ── HERO HEADER ── */}
+            <header className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4 overflow-hidden">
+                <div className="pointer-events-none absolute -top-16 -left-16 w-96 h-96 bg-green-500/5 rounded-full blur-3xl" />
+                <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center shadow-inner">
+                            <Package className="text-green-400 w-7 h-7 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+                        </div>
+                        <div>
+                            <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter leading-none">
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-500">Meu</span>
+                                <span className="text-green-400"> Inventário</span>
+                            </h1>
+                            <p className="text-zinc-600 text-[9px] font-black uppercase tracking-[0.5em] mt-1 flex items-center gap-2">
+                                <span className="w-4 h-px bg-green-500/40" />
+                                Steam Inventory
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                <span className="text-zinc-500">Skins, preços e valor total do inventário</span>
+                            </p>
+                        </div>
+                    </div>
                 </div>
-            )}
+
+                {/* Indicador discreto de atualização em segundo plano */}
+                {(isRefreshing || pricingProgress) && (
+                    <div className="relative z-10 flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 shadow-2xl">
+                        <div className="w-3.5 h-3.5 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin" />
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                            {pricingProgress
+                                ? `Preços ${pricingProgress.current}/${pricingProgress.total}`
+                                : 'Atualizando...'}
+                        </span>
+                    </div>
+                )}
+            </header>
 
             {loading && items.length === 0 ? (
-                <div className="p-20 text-center flex flex-col items-center justify-center gap-4">
+                <div className="py-32 text-center flex flex-col items-center justify-center gap-4">
                     <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
-                    <div className="text-zinc-500 font-black uppercase tracking-widest animate-pulse">
+                    <div className="text-zinc-500 font-black uppercase tracking-widest animate-pulse text-xs">
                         Buscando suas skins...
                     </div>
                 </div>
             ) : (
-                <InventoryDashboard 
-                    items={items} 
-                    currency={currency} 
-                    setCurrency={setCurrency} 
+                <InventoryDashboard
+                    items={items}
+                    currency={currency}
+                    setCurrency={setCurrency}
                     exchangeRate={exchangeRate}
                 />
             )}

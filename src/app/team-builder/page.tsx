@@ -197,19 +197,30 @@ export default function TeamBuilderPage() {
     const filteredDbPool = availableDbPlayers.filter(p => p.nickname.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
-        <div className="p-6 md:p-8 space-y-8 pb-32">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-white/5">
-                <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-                            <Users size={22} />
+        <div className="p-4 md:p-8 space-y-8 pb-32">
+            {/* ── HERO HEADER ── */}
+            <header className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4 overflow-hidden">
+                <div className="pointer-events-none absolute -top-16 -left-16 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+                <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shadow-inner">
+                            <Users className="text-purple-400 w-7 h-7 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]" />
                         </div>
-                        <h1 className="text-4xl font-black italic uppercase tracking-tighter">Sorteador de Times</h1>
+                        <div>
+                            <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter leading-none">
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-500">Sorteador de</span>
+                                <span className="text-purple-400"> Times</span>
+                            </h1>
+                            <p className="text-zinc-600 text-[9px] font-black uppercase tracking-[0.5em] mt-1 flex items-center gap-2">
+                                <span className="w-4 h-px bg-purple-500/40" />
+                                Auto-Balance
+                                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                                <span className="text-zinc-500">Selecione 10 jogadores para o mix mais equilibrado</span>
+                            </p>
+                        </div>
                     </div>
-                    <p className="text-zinc-500 text-sm pl-[52px]">Selecione 10 jogadores e deixe o sistema organizar o Mix mais equilibrado.</p>
                 </div>
-            </div>
+            </header>
 
             <div className="flex flex-col lg:flex-row gap-8">
                 
