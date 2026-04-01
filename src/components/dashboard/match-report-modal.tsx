@@ -391,7 +391,7 @@ const MatchReportModal: React.FC<Props> = ({
         <td className="py-2.5 px-3">
             <div className="flex items-center gap-2">
                 <a
-                    href={p.steamId ? `/profile/${p.steamId}` : '#'}
+                    href={p.steamId ? `/player/${p.steamId}` : '#'}
                     onClick={e => { if (!p.steamId) e.preventDefault(); e.stopPropagation(); }}
                     className={`shrink-0 w-8 h-8 rounded-xl overflow-hidden border-2 block transition-opacity hover:opacity-80 ${
                         p.isUser ? 'border-yellow-500' : 'border-white/10'
@@ -404,7 +404,7 @@ const MatchReportModal: React.FC<Props> = ({
                     }
                 </a>
                 <a
-                    href={p.steamId ? `/profile/${p.steamId}` : '#'}
+                    href={p.steamId ? `/player/${p.steamId}` : '#'}
                     onClick={e => { if (!p.steamId) e.preventDefault(); e.stopPropagation(); }}
                     className={`text-[11px] font-bold truncate hover:underline underline-offset-2 ${
                         wide ? 'max-w-[120px]' : 'max-w-[100px]'
@@ -536,7 +536,7 @@ const MatchReportModal: React.FC<Props> = ({
             <tr className={`border-b border-white/[0.04] ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
                 <td className="py-3 px-3">
                     <div className="flex flex-col gap-0.5">
-                        <a href={p.steamId?`/profile/${p.steamId}`:'#'} onClick={e=>{if(!p.steamId)e.preventDefault();e.stopPropagation();}} className={`text-[11px] font-bold truncate max-w-[100px] hover:underline ${p.isUser?'text-yellow-400':'text-zinc-300 hover:text-yellow-300'}`}>{p.isUser?'★ ':''}{p.nickname}</a>
+                        <a href={p.steamId?`/player/${p.steamId}`:'#'} onClick={e=>{if(!p.steamId)e.preventDefault();e.stopPropagation();}} className={`text-[11px] font-bold truncate max-w-[100px] hover:underline ${p.isUser?'text-yellow-400':'text-zinc-300 hover:text-yellow-300'}`}>{p.isUser?'★ ':''}{p.nickname}</a>
                         {hasDuel && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded self-start ${p.fk>p.fd?'text-emerald-400 bg-emerald-500/10':p.fd>p.fk?'text-red-400 bg-red-500/10':'text-zinc-500 bg-zinc-800/50'}`}>{p.fk>p.fd?'🥇 Abre Rounds':p.fd>p.fk?'💀 Vulnerável':'= Neutro'}</span>}
                     </div>
                 </td>
