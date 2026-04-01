@@ -320,14 +320,21 @@ export default function TeamBuilderPage() {
                         </div>
 
                         {unassigned.length > 0 && (
-                            <div className="flex flex-1 items-center justify-center mx-4 overflow-x-visible gap-4 py-3 px-4 border border-dashed border-white/10 rounded-xl bg-black/20">
+                            <div className="flex flex-1 items-center justify-start xl:justify-center overflow-x-auto gap-3 py-3 px-4 border border-dashed border-white/10 rounded-xl bg-black/20 scrollbar-thin scrollbar-thumb-white/10 mx-0 lg:mx-4">
                                 {unassigned.map(p => (
-                                    <div key={p.steamId} className="group relative hover:z-50">
-                                        <img src={p.avatar} title={p.nickname} className="w-12 h-12 rounded-full border-2 border-zinc-500 shadow-sm shrink-0 group-hover:border-purple-500 transition-all cursor-pointer" />
-                                        <div className="absolute top-12 mt-1 left-1/2 -translate-x-1/2 flex opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-hover:-translate-y-1 transition-all z-50 shadow-2xl bg-zinc-900 border border-white/10 rounded-full overflow-hidden">
-                                            <button onClick={() => handleAssign(p.steamId, "A")} className="bg-yellow-500 text-black hover:bg-yellow-400 px-3 py-2" title="Para Time A"><ArrowLeft size={16} /></button>
-                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="bg-red-500 text-white hover:bg-red-400 px-3 py-2 border-x border-black/20" title="Remover"><X size={16} /></button>
-                                            <button onClick={() => handleAssign(p.steamId, "B")} className="bg-blue-500 text-white hover:bg-blue-400 px-3 py-2" title="Para Time B"><ArrowRight size={16} /></button>
+                                    <div key={p.steamId} className="group relative hover:z-50 shrink-0 flex items-center bg-zinc-950 border border-white/5 p-2 pr-5 rounded-2xl hover:border-purple-500/50 transition-all shadow-md">
+                                        <img src={p.avatar} title={p.nickname} className="w-10 h-10 rounded-full border shadow-sm shrink-0 group-hover:border-purple-500 transition-all" />
+                                        <div className="flex flex-col ml-3">
+                                            <p className="font-bold text-xs text-white max-w-[100px] truncate">{p.nickname}</p>
+                                            <p className="text-[10px] font-mono text-zinc-500 mt-0.5">
+                                                {p.rating} SR {(p.gcLevel ?? 0) > 0 && <span className="ml-1 text-zinc-600">Lvl {p.gcLevel}</span>}
+                                            </p>
+                                        </div>
+                                        
+                                        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 flex opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 transition-all z-50 shadow-2xl bg-zinc-900 border border-white/10 rounded-xl overflow-hidden">
+                                            <button onClick={() => handleAssign(p.steamId, "A")} className="bg-yellow-500 text-black hover:bg-yellow-400 px-3 py-2 flex items-center justify-center gap-1 text-[10px] font-bold uppercase transition-colors min-w-[60px]" title="Para Time A"><ArrowLeft size={14} /> Time A</button>
+                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="bg-red-500 text-white hover:bg-red-400 px-3 py-2 border-x border-red-600/50 transition-colors" title="Remover"><X size={14} /></button>
+                                            <button onClick={() => handleAssign(p.steamId, "B")} className="bg-blue-500 text-white hover:bg-blue-400 px-3 py-2 flex items-center justify-center gap-1 text-[10px] font-bold uppercase transition-colors min-w-[60px]" title="Para Time B">Time B <ArrowRight size={14} /></button>
                                         </div>
                                     </div>
                                 ))}
