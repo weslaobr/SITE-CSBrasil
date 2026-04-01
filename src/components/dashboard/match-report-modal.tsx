@@ -231,23 +231,23 @@ const MatchReportModal: React.FC<Props> = ({
             avatar, kills, deaths, assists, adr, rating,
             hs: hsRaw, kast,
             // First Kills / Deaths
-            fk: p.fk ?? p.fk_count ?? p.fkd ?? p.firstKills ?? p.first_kill_count ?? 0,
-            fd: p.fd ?? p.fd_count ?? p.fk_deaths ?? p.firstDeaths ?? p.first_death_count ?? 0,
+            fk: Number(p.fk ?? p.fk_count ?? p.fkd ?? p.firstKills ?? p.first_kill_count ?? 0),
+            fd: Number(p.fd ?? p.fd_count ?? p.fk_deaths ?? p.firstDeaths ?? p.first_death_count ?? 0),
             // Multi-kills
-            triples: p.triples ?? p.triple_kills ?? p.tripleKills ?? 0,
-            quads: p.quads ?? p.quadro_kills ?? p.quad_kills ?? p.quadKills ?? 0,
-            aces: p.aces ?? p.penta_kills ?? p.ace_kills ?? p.pentaKills ?? 0,
+            triples: Number(p.triples ?? p.triple_kills ?? p.tripleKills ?? 0),
+            quads: Number(p.quads ?? p.quadro_kills ?? p.quad_kills ?? p.quadKills ?? 0),
+            aces: Number(p.aces ?? p.penta_kills ?? p.ace_kills ?? p.pentaKills ?? 0),
             // Misc
-            clutches: p.clutches ?? p.clutch_count ?? p.clutchesWon ?? 0,
-            trades: p.trades ?? p.trade_count ?? p.tradeKills ?? 0,
+            clutches: Number(p.clutches ?? p.clutch_count ?? p.clutchesWon ?? 0),
+            trades: Number(p.trades ?? p.trade_count ?? p.tradeKills ?? 0),
             // Utilities
-            utilDmg: p.utilDmg ?? p.util_damage ?? p.utility_damage ?? p.utilityDamage ?? 0,
-            flashAssists: p.flashAssists ?? p.flash_assists ?? p.flashbang_assists ?? 0,
-            blindTime: p.blindTime ?? p.blind_time ?? p.enemiesFlashedDuration ?? 0,
-            heThrown: p.heThrown ?? p.he_thrown ?? 0,
-            flashThrown: p.flashThrown ?? p.flash_thrown ?? 0,
-            smokesThrown: p.smokesThrown ?? p.smokes_thrown ?? 0,
-            molotovThrown: p.molotovThrown ?? p.molotovs_thrown ?? p.molotov_thrown ?? 0,
+            utilDmg: Number(p.utilDmg ?? p.util_damage ?? p.utility_damage ?? p.utilityDamage ?? 0),
+            flashAssists: Number(p.flashAssists ?? p.flash_assists ?? p.flashbang_assists ?? 0),
+            blindTime: Number(p.blindTime ?? p.blind_time ?? p.enemiesFlashedDuration ?? 0),
+            heThrown: Number(p.heThrown ?? p.he_thrown ?? 0),
+            flashThrown: Number(p.flashThrown ?? p.flash_thrown ?? 0),
+            smokesThrown: Number(p.smokesThrown ?? p.smokes_thrown ?? 0),
+            molotovThrown: Number(p.molotovThrown ?? p.molotovs_thrown ?? p.molotov_thrown ?? 0),
             isUser,
             steamId: p.steam64_id || p.player_id || p.steamId || p.steam_id
         };
