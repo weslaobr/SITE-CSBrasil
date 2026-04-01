@@ -381,57 +381,70 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
 
             {variant === 'full' && (
                 <>
-                    {/* Header Section */}
-                    <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                        <div>
-                            <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter flex items-center gap-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-500">
-                                <Swords className="text-yellow-500 w-12 h-12 md:w-16 md:h-16 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]" />
-                                Histórico <span className="text-white">Combate</span>
-                            </h1>
-                            <p className="text-zinc-500 text-[10px] font-black uppercase mt-3 tracking-[0.4em] px-1 flex items-center gap-3">
-                                <span className="w-8 h-px bg-yellow-500/50" />
-                                Elite Performance Dashboard <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" /> {matches.length} Partidas
-                            </p>
+                    {/* ── HERO HEADER ─────────────────────────────────────────────────── */}
+                    <header className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6 overflow-hidden">
+                        {/* Background glow */}
+                        <div className="pointer-events-none absolute -top-16 -left-16 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl" />
+                        <div className="pointer-events-none absolute -top-8 left-32 w-64 h-64 bg-yellow-500/[0.03] rounded-full blur-2xl" />
+
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-4 mb-3">
+                                <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center shadow-inner">
+                                    <Swords className="text-yellow-500 w-7 h-7 drop-shadow-[0_0_8px_rgba(246,203,2,0.6)]" />
+                                </div>
+                                <div>
+                                    <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter leading-none">
+                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-500">Histórico</span>
+                                        <span className="text-yellow-500"> Combate</span>
+                                    </h1>
+                                    <p className="text-zinc-600 text-[9px] font-black uppercase tracking-[0.5em] mt-1 flex items-center gap-2">
+                                        <span className="w-4 h-px bg-yellow-500/40" />
+                                        Elite Analytics
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="text-zinc-500">{matches.length} partidas sincronizadas</span>
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Toolbar Unificada */}
-                        <div className="w-full md:w-auto flex flex-col md:flex-row items-stretch gap-0 bg-zinc-950/80 border border-white/10 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-2xl">
-                    <div className="relative flex-grow flex items-center border-b md:border-b-0 md:border-r border-white/5">
-                        <Search className="absolute left-5 w-4 h-4 text-zinc-500" />
-                        <input
-                            type="text"
-                            placeholder="Filtrar por mapa ou fonte..."
-                            className="bg-transparent py-4 pl-14 pr-5 focus:outline-none text-sm w-full md:w-64 placeholder:text-zinc-600 transition-all focus:bg-white/[0.02]"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <button
-                        onClick={onSync}
-                        disabled={loading}
-                        className="flex items-center justify-center gap-3 px-6 py-4 bg-white/[0.02] hover:bg-white/[0.05] transition-all disabled:opacity-50 group border-b md:border-b-0 md:border-r border-white/5"
-                    >
-                        <RefreshCw className={`w-4 h-4 text-yellow-500 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">
-                            {loading ? 'Sincronizando' : 'Sincronizar'}
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => window.location.href = '/settings'}
-                        className="flex items-center justify-center gap-3 px-6 py-4 bg-white/[0.02] hover:bg-white/[0.05] transition-all group border-b md:border-b-0 border-white/5 md:border-r"
-                    >
-                        <Zap className="w-4 h-4 text-zinc-400 group-hover:text-yellow-500 transition-colors" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">Configurar Sync</span>
-                    </button>
-                    <button
-                        onClick={() => setIsEditing(!isEditing)}
-                        className={`flex items-center justify-center gap-3 px-6 py-4 transition-all group ${isEditing ? 'bg-yellow-500 text-black' : 'bg-white/[0.02] hover:bg-white/[0.05] text-zinc-400 hover:text-white'}`}
-                    >
-                        <Users className="w-4 h-4" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Contas</span>
-                    </button>
-                </div>
-            </header>
+                        {/* Toolbar */}
+                        <div className="relative z-10 w-full md:w-auto flex flex-col md:flex-row items-stretch gap-0 bg-zinc-950/90 border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl shadow-black/50 backdrop-blur-2xl">
+                            <div className="relative flex-grow flex items-center border-b md:border-b-0 md:border-r border-white/[0.06]">
+                                <Search className="absolute left-4 w-4 h-4 text-zinc-600" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar mapa ou modo..."
+                                    className="bg-transparent py-3.5 pl-12 pr-5 focus:outline-none text-sm w-full md:w-56 placeholder:text-zinc-700 transition-all"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <button
+                                onClick={onSync}
+                                disabled={loading}
+                                className="flex items-center justify-center gap-2.5 px-5 py-3.5 bg-white/[0.03] hover:bg-yellow-500/10 hover:text-yellow-400 transition-all disabled:opacity-40 group border-b md:border-b-0 md:border-r border-white/[0.06]"
+                            >
+                                <RefreshCw className={`w-4 h-4 text-yellow-500 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-yellow-400 transition-colors">
+                                    {loading ? 'Atualizando' : 'Atualizar'}
+                                </span>
+                            </button>
+                            <button
+                                onClick={() => window.location.href = '/settings'}
+                                className="flex items-center justify-center gap-2.5 px-5 py-3.5 bg-white/[0.03] hover:bg-white/[0.06] transition-all group border-b md:border-b-0 border-white/[0.06] md:border-r"
+                            >
+                                <Zap className="w-4 h-4 text-zinc-600 group-hover:text-yellow-500 transition-colors" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-white transition-colors">Configurar</span>
+                            </button>
+                            <button
+                                onClick={() => setIsEditing(!isEditing)}
+                                className={`flex items-center justify-center gap-2.5 px-5 py-3.5 transition-all group ${isEditing ? 'bg-yellow-500 text-black' : 'bg-white/[0.03] hover:bg-white/[0.06] text-zinc-600 hover:text-white'}`}
+                            >
+                                <Users className="w-4 h-4" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Contas</span>
+                            </button>
+                        </div>
+                    </header>
 
             <AnimatePresence>
                 {isEditing && variant === 'full' && (
@@ -477,87 +490,128 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 )}
             </AnimatePresence>
 
-            {/* Summary Stat Cards */}
+            {/* ── STAT CARDS ────────────────────────────────────────────────── */}
             {variant === 'full' && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                {[
-                    { label: 'Win Rate', value: `${stats.wr}%`, sub: null, icon: <Trophy className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-                    { label: 'KAST Médio', value: stats.kast !== '—' ? `${stats.kast}%` : '—', sub: 'Utility / Support', icon: <Shield className="text-blue-500" />, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                    { label: 'ADR Médio', value: stats.adr, sub: 'Dano p/ Round', icon: <Zap className="text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-                    { label: 'Ratio K/D', value: stats.kd, sub: 'Sobrevivência', icon: <TrendingUp className="text-amber-500" />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                    { label: 'Headshot %', value: stats.hs !== '—' ? `${stats.hs}%` : '—', sub: 'Precisão Letal', icon: <Activity className="text-rose-500" />, color: 'text-rose-500', bg: 'bg-rose-500/10' },
-                    { label: 'Rating Médio', value: stats.rating, sub: (stats as any).ratingIsLeetify ? 'Rating HLTV' : 'Proxy K/D', icon: <Target className="text-purple-500" />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-                ].map((stat, i) => (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                {([
+                    {
+                        label: 'Win Rate', value: `${stats.wr}%`,
+                        bar: stats.wr, barMax: 100,
+                        icon: <Trophy size={14} className="text-yellow-500" />,
+                        color: 'text-yellow-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/10',
+                        glow: 'from-yellow-500/10'
+                    },
+                    {
+                        label: 'KAST', value: stats.kast !== '—' ? `${stats.kast}%` : '—',
+                        bar: stats.kast !== '—' ? parseFloat(stats.kast as string) : 0, barMax: 100,
+                        icon: <Shield size={14} className="text-blue-400" />,
+                        color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/10',
+                        glow: 'from-blue-500/10'
+                    },
+                    {
+                        label: 'ADR', value: stats.adr,
+                        bar: stats.adr !== '—' ? parseFloat(stats.adr as string) : 0, barMax: 150,
+                        icon: <Zap size={14} className="text-amber-400" />,
+                        color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/10',
+                        glow: 'from-amber-500/10'
+                    },
+                    {
+                        label: 'K/D', value: stats.kd,
+                        bar: parseFloat(stats.kd) * 50, barMax: 100,
+                        icon: <TrendingUp size={14} className="text-emerald-400" />,
+                        color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/10',
+                        glow: 'from-emerald-500/10'
+                    },
+                    {
+                        label: 'Headshot', value: stats.hs !== '—' ? `${stats.hs}%` : '—',
+                        bar: stats.hs !== '—' ? parseFloat(stats.hs as string) : 0, barMax: 100,
+                        icon: <Activity size={14} className="text-rose-400" />,
+                        color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/10',
+                        glow: 'from-rose-500/10'
+                    },
+                    {
+                        label: 'Rating', value: stats.rating,
+                        bar: Math.min(100, parseFloat(stats.rating) * 50), barMax: 100,
+                        icon: <Target size={14} className="text-purple-400" />,
+                        color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/10',
+                        glow: 'from-purple-500/10'
+                    },
+                ] as any[]).map((stat, i) => (
                     <motion.div
                         key={i}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.05, type: 'spring', stiffness: 100 }}
-                        whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                        className="bg-zinc-900/40 border border-white/5 p-6 rounded-[2.5rem] backdrop-blur-3xl flex flex-col gap-2 group hover:border-white/20 transition-all relative overflow-hidden shadow-2xl"
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.06, type: 'spring', stiffness: 120, damping: 14 }}
+                        whileHover={{ y: -4, transition: { duration: 0.18 } }}
+                        className={`relative bg-zinc-950/70 border ${stat.border} p-5 rounded-2xl flex flex-col gap-3 group hover:border-white/15 transition-all overflow-hidden shadow-xl`}
                     >
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-current opacity-[0.02] -mr-8 -mt-8 rounded-full blur-2xl group-hover:opacity-[0.05] transition-opacity" />
+                        {/* top-right glow */}
+                        <div className={`absolute -top-6 -right-6 w-20 h-20 bg-gradient-to-br ${stat.glow} to-transparent rounded-full blur-2xl opacity-60 group-hover:opacity-100 transition-opacity`} />
+                        {/* label + icon */}
                         <div className="flex items-center justify-between relative z-10">
-                            <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">{stat.label}</span>
-                            <div className={`p-2 rounded-2xl ${stat.bg} group-hover:scale-110 transition-transform duration-500 shadow-inner`}>
+                            <span className="text-[9px] font-black uppercase text-zinc-600 tracking-widest">{stat.label}</span>
+                            <div className={`w-7 h-7 rounded-xl ${stat.bg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
                                 {stat.icon}
                             </div>
                         </div>
-                        <div className={`text-3xl font-black italic tracking-tighter ${stat.color} relative z-10 drop-shadow-sm`}>
+                        {/* value */}
+                        <div className={`text-2xl font-black italic tracking-tighter ${stat.color} relative z-10`}>
                             {stat.value}
                         </div>
-                        {stat.sub && (
-                            <span className="text-[8px] font-black uppercase tracking-widest text-zinc-700 group-hover:text-zinc-500 transition-colors relative z-10">
-                                {stat.sub}
-                            </span>
-                        )}
+                        {/* progress bar */}
+                        <div className="h-[3px] w-full bg-white/[0.04] rounded-full overflow-hidden relative z-10">
+                            <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${Math.min(100, (stat.bar / stat.barMax) * 100)}%` }}
+                                transition={{ delay: 0.3 + i * 0.06, duration: 0.8, ease: 'easeOut' }}
+                                className={`h-full rounded-full ${stat.bg.replace('/10', '/60')}`}
+                            />
+                        </div>
                     </motion.div>
                 ))}
             </div>
             )}
 
-            {/* Quick Filters Row */}
+            {/* ── FILTROS ───────────────────────────────────────────────────── */}
             <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 mr-2">
-                    <Filter size={14} className="text-yellow-500/50" />
-                    Filtros:
-                </div>
-                <div className="flex gap-1.5 bg-zinc-900/50 p-1 rounded-2xl border border-white/5">
+                {/* modo */}
+                <div className="flex items-center gap-1 bg-zinc-950/60 border border-white/[0.06] p-1 rounded-xl">
                     {[
-                        { id: 'all',         label: 'Tudo',         activeClass: 'bg-white text-black shadow-lg' },
-                        { id: 'Competitive', label: '🎮 Competitivo', activeClass: 'bg-yellow-500 text-black shadow-[0_0_12px_rgba(234,179,8,0.4)]' },
-                        { id: 'Premier',     label: '⭐ Premier',     activeClass: 'bg-purple-600 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]' },
-                        { id: 'Faceit',      label: '🔴 Faceit',      activeClass: 'bg-orange-600 text-white shadow-[0_0_12px_rgba(234,88,12,0.4)]' },
-                        { id: 'GamersClub',  label: '🛡 GamersClub',  activeClass: 'bg-amber-500 text-black shadow-[0_0_12px_rgba(245,158,11,0.4)]' },
-                    ].map(({ id, label, activeClass }) => (
+                        { id: 'all',         label: 'Todos' },
+                        { id: 'Competitive', label: '🎮 Comp' },
+                        { id: 'Premier',     label: '⭐ Premier' },
+                        { id: 'Faceit',      label: '🔴 Faceit' },
+                        { id: 'GamersClub',  label: '🛡 GC' },
+                    ].map(({ id, label }) => (
                         <button
                             key={id}
                             onClick={() => setModeFilter(id)}
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all tracking-tight ${
-                                modeFilter === id 
-                                ? activeClass
-                                : 'text-zinc-500 hover:text-white hover:bg-white/5'
+                            className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all tracking-tight ${
+                                modeFilter === id
+                                ? 'bg-yellow-500 text-black shadow-[0_0_12px_rgba(246,203,2,0.3)]'
+                                : 'text-zinc-600 hover:text-zinc-300'
                             }`}
                         >
                             {label}
                         </button>
                     ))}
                 </div>
-                
-                <div className="h-6 w-px bg-white/5 mx-2" />
 
-                <div className="flex flex-wrap gap-2">
+                <div className="w-px h-5 bg-white/[0.06]" />
+
+                {/* mapa */}
+                <div className="flex flex-wrap gap-1.5">
                     {['all', 'mirage', 'inferno', 'ancient', 'nuke', 'dust', 'anubis', 'vertigo'].map(map => (
                         <button
                             key={map}
                             onClick={() => setMapFilter(map)}
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${
-                                mapFilter === map 
-                                ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30' 
-                                : 'bg-transparent text-zinc-600 border-transparent hover:text-zinc-400'
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${
+                                mapFilter === map
+                                ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                                : 'bg-transparent text-zinc-700 border-transparent hover:text-zinc-400 hover:border-white/5'
                             }`}
                         >
-                            {map === 'all' ? 'Todos os Mapas' : map}
+                            {map === 'all' ? 'Todos Mapas' : map}
                         </button>
                     ))}
                 </div>
@@ -566,36 +620,36 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             )}
 
             {/* Main Content Area */}
-            <main className={`overflow-hidden flex-grow ${variant === 'full' ? 'bg-zinc-900/30 border border-white/5 shadow-2xl backdrop-blur-md rounded-[3rem]' : 'rounded-[20px]'}`}>
+            <main className={`overflow-hidden flex-grow ${variant === 'full' ? 'bg-zinc-950/60 border border-white/[0.07] shadow-2xl shadow-black/50 backdrop-blur-xl rounded-3xl' : 'rounded-[20px]'}`}>
                 {loading && filteredMatches.length === 0 ? (
                     <div className="py-48 flex flex-col items-center justify-center text-center">
                         <div className="relative w-20 h-20 mb-10">
-                            <div className="absolute inset-0 border-4 border-yellow-500/10 rounded-full" />
-                            <div className="absolute inset-0 border-4 border-t-yellow-500 rounded-full animate-spin shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
-                            <Activity className="absolute inset-0 m-auto w-8 h-8 text-yellow-500/50" />
+                            <div className="absolute inset-0 border-2 border-yellow-500/10 rounded-full" />
+                            <div className="absolute inset-0 border-2 border-t-yellow-500 rounded-full animate-spin shadow-[0_0_20px_rgba(246,203,2,0.4)]" />
+                            <Swords className="absolute inset-0 m-auto w-7 h-7 text-yellow-500/40" />
                         </div>
-                        <h3 className="text-xl font-black uppercase italic tracking-tighter mb-2">Buscando Partidas</h3>
-                        <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest animate-pulse">Aguarde enquanto sincronizamos com a Valve e Faceit...</p>
+                        <h3 className="text-2xl font-black uppercase italic tracking-tighter mb-2">Buscando Partidas</h3>
+                        <p className="text-zinc-700 text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Sincronizando com Valve & Faceit...</p>
                     </div>
                 ) : filteredMatches.length > 0 ? (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="text-[9px] uppercase font-black text-zinc-600 tracking-widest border-b border-white/5 bg-black/30 sticky top-0 z-10">
-                                    <th className="w-[3px] p-0" />
-                                    <th className="px-4 py-3 pl-2">Mapa</th>
-                                    <th className="px-3 py-3 text-center">Placar</th>
-                                    <th className="px-3 py-3 text-center">Patente</th>
-                                    <th className="px-3 py-3 text-center">Modo</th>
-                                    <th className="px-1 py-3 text-center">ID</th>
-                                    <th className="px-3 py-3 text-center">K</th>
-                                    <th className="px-3 py-3 text-center">D</th>
-                                    <th className="px-3 py-3 text-center">A</th>
-                                    <th className="px-3 py-3 text-center">ADR</th>
-                                    <th className="px-3 py-3 text-center">HS%</th>
-                                    <th className="px-3 py-3 text-center" title="Rating Leetify (escala -1 a +1, onde 0 é a média). Quando não disponível, exibe o K/D.">Rating ⓘ</th>
-                                    <th className="px-3 py-3 text-center">Analytics 2D</th>
-                                    <th className="px-5 py-3 text-right">Data</th>
+                                <tr className="text-[9px] uppercase font-black text-zinc-600 tracking-[0.15em] border-b border-white/[0.05] bg-black/50 sticky top-0 z-10 backdrop-blur-md">
+                                    <th className="w-1 p-0" />
+                                    <th className="px-5 py-3.5">Mapa</th>
+                                    <th className="px-3 py-3.5 text-center">Placar</th>
+                                    <th className="px-3 py-3.5 text-center">Patente</th>
+                                    <th className="px-3 py-3.5 text-center">Modo</th>
+                                    <th className="px-2 py-3.5 text-center">ID</th>
+                                    <th className="px-3 py-3.5 text-center">K</th>
+                                    <th className="px-3 py-3.5 text-center">D</th>
+                                    <th className="px-3 py-3.5 text-center">A</th>
+                                    <th className="px-3 py-3.5 text-center">ADR</th>
+                                    <th className="px-3 py-3.5 text-center">HS%</th>
+                                    <th className="px-3 py-3.5 text-center">Rating</th>
+                                    <th className="px-3 py-3.5 text-center">Replay</th>
+                                    <th className="px-5 py-3.5 text-right">Data</th>
                                 </tr>
                             </thead>
                             <tbody className="">
@@ -609,40 +663,48 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     const isFaceit = matchMode === 'Faceit';
                                             
                                             return (
-                                                <motion.tr 
+                                                <motion.tr
                                                     key={match.id || match.externalId || Math.random().toString()}
-                                                    initial={{ opacity: 0, y: 4 }}
+                                                    initial={{ opacity: 0, y: 6 }}
                                                     animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: i * 0.03 }}
-                                                    whileHover={{ backgroundColor: 'rgba(255,255,255,0.025)', transition: { duration: 0.15 } }}
-                                                    className="group relative border-b border-white/[0.04] transition-all cursor-pointer"
+                                                    transition={{ delay: i * 0.025, type: 'spring', stiffness: 200, damping: 24 }}
+                                                    className="group relative border-b border-white/[0.04] transition-colors cursor-pointer hover:bg-white/[0.02]"
                                                     onClick={() => handleViewMatch(match)}
                                                 >
-                                            {/* Result strip */}
-                                            <td className="p-0 w-[3px]">
-                                                <div className={`h-full w-[3px] rounded-r ${isWin ? 'bg-emerald-500' : isLoss ? 'bg-red-500' : 'bg-zinc-600'} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                                            {/* Result accent strip */}
+                                            <td className="p-0 w-1">
+                                                <div className={`h-full w-[3px] rounded-r transition-all duration-300 ${
+                                                    isWin ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' :
+                                                    isLoss ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
+                                                    'bg-zinc-700'
+                                                } opacity-0 group-hover:opacity-100`} />
                                             </td>
-                                            <td className="px-4 py-4">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="relative w-14 h-9 overflow-hidden rounded-lg border border-white/10 shrink-0 group-hover:border-white/25 transition-all">
+                                            {/* Mapa */}
+                                            <td className="px-5 py-3.5">
+                                                <div className="flex items-center gap-3.5">
+                                                    <div className="relative w-16 h-10 overflow-hidden rounded-xl border border-white/[0.08] shrink-0 group-hover:border-white/20 transition-all shadow-lg">
                                                         <img
                                                             src={getMapImage(match.mapName)}
-                                                            className="w-full h-full object-cover brightness-60 group-hover:brightness-100 transition-all duration-500 group-hover:scale-110"
+                                                            className="w-full h-full object-cover brightness-50 group-hover:brightness-90 transition-all duration-500 group-hover:scale-110"
                                                             alt={match.mapName}
                                                         />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                                                        <div className={`absolute inset-0 ${
+                                                            isWin ? 'bg-gradient-to-t from-emerald-900/60 to-transparent' :
+                                                            isLoss ? 'bg-gradient-to-t from-red-900/60 to-transparent' :
+                                                            'bg-gradient-to-t from-black/60 to-transparent'
+                                                        }`} />
                                                     </div>
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <span className="font-black text-[13px] text-white uppercase italic tracking-tight group-hover:text-yellow-400 transition-colors leading-none">
-                                                            {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' : 
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="font-black text-[13px] text-zinc-200 uppercase italic tracking-tight group-hover:text-yellow-400 transition-colors leading-none">
+                                                            {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' :
                                                              match.mapName.replace('de_', '').replace(/_/g, ' ').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                                                         </span>
-                                                        <span className={`self-start px-1.5 py-0.5 text-[7px] font-black uppercase tracking-widest rounded ${
-                                                            isWin ? 'bg-emerald-500/15 text-emerald-400' : 
-                                                            isLoss ? 'bg-red-500/15 text-red-400' : 
-                                                            'bg-zinc-800/50 text-zinc-500'
+                                                        <span className={`self-start px-2 py-0.5 text-[7px] font-black uppercase tracking-[0.15em] rounded-md ${
+                                                            isWin ? 'bg-emerald-500/15 text-emerald-400' :
+                                                            isLoss ? 'bg-red-500/15 text-red-400' :
+                                                            'bg-zinc-800/60 text-zinc-500'
                                                         }`}>
-                                                            {isWin ? '✓ VITÓRIA' : isLoss ? '✗ DERROTA' : '= EMPATE'}
+                                                            {isWin ? '✓ Vitória' : isLoss ? '✗ Derrota' : '= Empate'}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -894,22 +956,20 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     </div>
                 )}
 
-                {/* Pagination (Premium Style) */}
+                {/* ── PAGINAÇÃO ─────────────────────────────────────────────── */}
                 {filteredMatches.length > itemsPerPage && !loading && (
-                    <footer className="footer bg-black/40 p-10 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-8">
+                    <footer className="bg-black/30 px-6 py-5 border-t border-white/[0.05] flex flex-col md:flex-row items-center justify-between gap-5">
+                        {/* items per page */}
                         <div className="flex items-center gap-2">
-                            <span className="text-zinc-600 text-[10px] font-black uppercase tracking-widest mr-3">Exibir:</span>
+                            <span className="text-zinc-700 text-[9px] font-black uppercase tracking-widest mr-1">Exibir:</span>
                             {[10, 25, 50].map(n => (
                                 <button
                                     key={n}
-                                    onClick={() => {
-                                        setItemsPerPage(n);
-                                        setCurrentPage(1);
-                                    }}
-                                    className={`w-12 h-12 rounded-2xl text-[10px] font-black transition-all border ${
-                                        itemsPerPage === n 
-                                        ? 'bg-white text-black border-white shadow-xl' 
-                                        : 'bg-zinc-900/50 text-zinc-600 border-white/5 hover:border-white/10 hover:text-white'
+                                    onClick={() => { setItemsPerPage(n); setCurrentPage(1); }}
+                                    className={`w-9 h-9 rounded-xl text-[10px] font-black transition-all ${
+                                        itemsPerPage === n
+                                        ? 'bg-yellow-500 text-black shadow-[0_0_12px_rgba(246,203,2,0.3)]'
+                                        : 'bg-white/5 text-zinc-600 hover:bg-white/10 hover:text-white'
                                     }`}
                                 >
                                     {n}
@@ -917,31 +977,32 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                             ))}
                         </div>
 
-                        <div className="flex items-center gap-3 bg-black/40 p-2 rounded-3xl border border-white/5">
+                        {/* page indicator */}
+                        <div className="flex items-center gap-2 bg-black/40 px-2 py-1.5 rounded-2xl border border-white/[0.06]">
                             <button
                                 disabled={currentPage === 1}
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white/5 text-zinc-500 disabled:opacity-20 hover:text-white transition-all active:scale-90"
+                                className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-zinc-500 disabled:opacity-20 hover:text-white hover:bg-white/10 transition-all active:scale-90"
                             >
-                                <ChevronDown className="rotate-90" size={18} />
+                                <ChevronDown className="rotate-90" size={16} />
                             </button>
-                            <div className="px-8 py-2 text-[10px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-3">
+                            <div className="px-4 text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2">
                                 <span className="text-yellow-500">{currentPage}</span>
                                 <span className="text-zinc-800">/</span>
-                                <span className="text-zinc-500">{Math.ceil(filteredMatches.length / itemsPerPage)}</span>
+                                <span className="text-zinc-600">{Math.ceil(filteredMatches.length / itemsPerPage)}</span>
                             </div>
                             <button
                                 disabled={currentPage >= Math.ceil(filteredMatches.length / itemsPerPage)}
                                 onClick={() => setCurrentPage(p => p + 1)}
-                                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white/5 text-zinc-500 disabled:opacity-20 hover:text-white transition-all active:scale-90"
+                                className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-zinc-500 disabled:opacity-20 hover:text-white hover:bg-white/10 transition-all active:scale-90"
                             >
-                                <ChevronDown className="-rotate-90" size={18} />
+                                <ChevronDown className="-rotate-90" size={16} />
                             </button>
                         </div>
 
-                        <div className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.3em]">
-                            Total {filteredMatches.length} <span className="text-zinc-800">Partidas</span>
-                        </div>
+                        <span className="text-zinc-700 text-[9px] font-black uppercase tracking-[0.3em]">
+                            {filteredMatches.length} <span className="text-zinc-800">partidas</span>
+                        </span>
                     </footer>
                 )}
             </main>
