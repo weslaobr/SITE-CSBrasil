@@ -69,18 +69,29 @@ export async function GET(
                     triple_kills: m.triples || 0,
                     quad_kills: m.quads || 0,
                     penta_kills: m.aces || 0,
+                    // Alias para MatchReviewModal
+                    multi3k: m.triples || 0,
+                    multi4k: m.quads || 0,
+                    multi5k: m.aces || 0,
+
                     utility_damage: m.utilDmg || 0,
                     blind_time: m.blindTime || 0,
                     he_thrown: m.heThrown || 0,
                     flash_thrown: m.flashThrown || 0,
                     smokes_thrown: m.smokesThrown || 0,
                     molotovs_thrown: m.molotovThrown || 0,
+                    
                     trades: m.trades || 0,
+                    trade_kill_count: m.trades || 0, // Alias para MatchReviewModal
+                    
                     clutches: m.clutches || 0,
+                    clutches_won: m.clutches || 0, // Alias para MatchReviewModal
+                    
                     flash_assists: m.flashAssists || 0,
                     is_user: false // será conferido no cliente via SteamID
                 };
             });
+
 
             // Tentar puxar avatares
             localStats = await fetchAvatars(localStats);
@@ -122,14 +133,24 @@ export async function GET(
                     // Garante que campos comuns do Leetify mapeiem para o que o frontend espera
                     kast: p.kast !== undefined ? p.kast : (p.kast_percent || 0),
                     utility_damage: p.utility_damage ?? p.util_damage ?? p.utilityDamage ?? 0,
-                    fkd: p.fk_count ?? p.first_kill_count ?? p.firstKills ?? 0,
-                    fk_deaths: p.fd_count ?? p.first_death_count ?? p.firstDeaths ?? 0,
                     blind_time: p.blind_time ?? p.enemies_flashed_duration ?? p.enemiesFlashedDuration ?? 0,
-                    flash_assists: p.flash_assists ?? p.flash_assist_count ?? p.flashAssists ?? 0
+                    flash_assists: p.flash_assists ?? p.flash_assist_count ?? p.flashAssists ?? 0,
+                    // Garante que campos de desempenho sejam retornados para o frontend
+
+                    triples: p.triple_kills ?? p.tripleKills ?? 0,
+                    quads: p.quad_kills ?? p.quadKills ?? 0,
+                    aces: p.penta_kills ?? p.pentaKills ?? p.ace_kills ?? 0,
+                    clutches: p.clutch_count ?? p.clutches_won ?? p.clutchesWon ?? 0,
+                    trades: p.trade_count ?? p.tradeKills ?? p.trades ?? 0,
+                    fk: p.fk_count ?? p.first_kill_count ?? p.firstKills ?? 0,
+                    fd: p.fd_count ?? p.first_death_count ?? p.firstDeaths ?? 0,
+                    entry_kill_count: p.fk_count ?? p.first_kill_count ?? p.firstKills ?? 0,
+                    entry_death_count: p.fd_count ?? p.first_death_count ?? p.firstDeaths ?? 0
                 };
             });
             data.stats = await fetchAvatars(data.stats);
         }
+
 
         return NextResponse.json(data);
     } catch (error: any) {

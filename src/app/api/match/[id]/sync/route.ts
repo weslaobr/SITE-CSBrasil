@@ -88,8 +88,8 @@ export async function POST(
                 triples: p.triple_kills ?? p.tripleKills ?? 0,
                 quads: p.quad_kills ?? p.quadro_kills ?? p.quadKills ?? 0,
                 aces: p.penta_kills ?? p.ace_kills ?? p.pentaKills ?? 0,
-                clutches: p.clutch_count ?? p.clutches_won ?? 0,
-                trades: p.trade_count ?? p.tradeKills ?? 0,
+                clutches: p.clutch_count ?? p.clutches_won ?? p.clutchesWon ?? 0,
+                trades: p.trade_count ?? p.tradeKills ?? p.trades ?? 0,
                 utilDmg: p.utility_damage ?? p.util_damage ?? p.utilityDamage ?? 0,
                 flashAssists: p.flash_assists ?? p.flash_assist_count ?? p.flashAssists ?? 0,
                 blindTime: p.blind_time ?? p.enemies_flashed_duration ?? p.enemiesFlashedDuration ?? 0,
@@ -98,6 +98,7 @@ export async function POST(
                 smokesThrown: p.smokes_thrown ?? p.smokesThrown ?? 0,
                 molotovThrown: p.molotovs_thrown ?? p.molotov_thrown ?? 0,
             };
+
 
             return prisma.globalMatchPlayer.upsert({
                 where: {

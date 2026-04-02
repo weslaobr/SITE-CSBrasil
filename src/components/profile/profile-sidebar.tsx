@@ -158,7 +158,6 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                              </div>
                         </div>
                     </div>
-                    </div>
                 </div>
             </div>
 

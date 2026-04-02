@@ -45,6 +45,16 @@ class MatchPlayer(Base):
     hs_count = Column(Integer, default=0)
     utility_damage = Column(Integer, default=0)
     flash_assists = Column(Integer, default=0)
+    
+    # Adicionado para preencher o guia de desempenho
+    fk = Column(Integer, default=0)
+    fd = Column(Integer, default=0)
+    triples = Column(Integer, default=0)
+    quads = Column(Integer, default=0)
+    aces = Column(Integer, default=0)
+    clutches = Column(Integer, default=0)
+    trades = Column(Integer, default=0)
+
 
 class Round(Base):
     __tablename__ = "tracker_rounds"

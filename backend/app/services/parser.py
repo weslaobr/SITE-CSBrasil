@@ -71,9 +71,18 @@ class ParserService:
                 rating=float(row["rating"]),
                 hs_count=int(row["headshot_kills"]),
                 utility_damage=int(row["utility_damage"]),
-                flash_assists=int(row["flash_assists"])
+                flash_assists=int(row["flash_assists"]),
+                # Novas estatísticas para o guia de desempenho
+                fk=int(row.get("first_kills", row.get("fk", 0))),
+                fd=int(row.get("first_deaths", row.get("fd", 0))),
+                triples=int(row.get("triple_kills", row.get("3k", 0))),
+                quads=int(row.get("quad_kills", row.get("4k", 0))),
+                aces=int(row.get("ace_kills", row.get("5k", 0))),
+                clutches=int(row.get("clutch_wins", row.get("clutches", 0))),
+                trades=int(row.get("trade_kills", row.get("trades", 0)))
             )
             db.add(mp_stats)
+
 
         # 3. Rounds (With deep mapping)
         rounds_df = self.dem.rounds
