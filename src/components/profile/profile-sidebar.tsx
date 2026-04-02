@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, Award, Shield, MessageCircle } from 'lucide-react';
+import { LayoutGrid, Award, Shield, MessageCircle, Trophy } from 'lucide-react';
 
 interface ProfileSidebarProps {
     profile: any;
@@ -113,26 +113,51 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-emerald-500/10 p-3 rounded-2xl border border-emerald-500/10 text-center flex flex-col justify-center">
-                            <p className="text-[9px] text-emerald-500/60 uppercase font-black italic tracking-widest mb-1">Premier</p>
-                            <p className="text-base font-black text-emerald-500 italic uppercase">{playerStats?.premierRating || steamStats?.premier_rating || leetifyData?.ranks?.premier || 'N/A'}</p>
+                        <div className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20 text-center flex flex-col justify-center group hover:bg-emerald-500/15 transition-all">
+                            <p className="text-[9px] text-emerald-500/80 uppercase font-black italic tracking-widest mb-1 leading-none">Premier Rating</p>
+                             <div className="flex items-center justify-center gap-1.5 mt-1">
+                                <Trophy className="text-emerald-500 w-4 h-4" />
+                                <p className="text-lg font-black text-emerald-500 italic uppercase leading-none">
+                                    {(playerStats?.premierRating || steamStats?.premier_rating || leetifyData?.ranks?.premier || 0).toLocaleString()}
+                                </p>
+                             </div>
                         </div>
-                        <div className="bg-sky-500/10 p-3 rounded-2xl border border-sky-500/10 text-center flex flex-col items-center justify-center">
-                            <p className="text-[9px] text-sky-500/60 uppercase font-black italic tracking-widest mb-1">Competitivo</p>
+
+                        <div className="bg-sky-500/10 p-4 rounded-2xl border border-sky-500/10 text-center flex flex-col items-center justify-center group hover:bg-sky-500/15 transition-all">
+                            <p className="text-[9px] text-sky-500/60 uppercase font-black italic tracking-widest mb-1 leading-none">Competitivo</p>
                             {mmRank.icon ? (
-                                <img src={mmRank.icon} alt={mmRank.name} className="h-6 mt-1 object-contain drop-shadow-lg" title={mmRank.name} />
+                                <img src={mmRank.icon} alt={mmRank.name} className="h-7 mt-1 object-contain drop-shadow-lg scale-110 group-hover:scale-125 transition-transform" title={mmRank.name} />
                             ) : (
                                 <p className="text-[10px] mt-1 font-black text-sky-500 italic uppercase">Unranked</p>
                             )}
                         </div>
-                        <div className="bg-yellow-500/10 p-3 rounded-2xl border border-yellow-500/10 text-center flex flex-col justify-center">
-                            <p className="text-[9px] text-yellow-500/60 uppercase font-black italic tracking-widest mb-1">Nível GC</p>
-                            <p className="text-base font-black text-yellow-500 italic uppercase">{playerStats?.gcLevel || 'N/A'}</p>
+
+                        <div className="bg-[#FFCC00]/10 p-4 rounded-2xl border border-[#FFCC00]/10 text-center flex flex-col justify-center group hover:bg-[#FFCC00]/15 transition-all">
+                            <p className="text-[9px] text-[#FFCC00]/60 uppercase font-black italic tracking-widest mb-1 leading-none">GamersClub</p>
+                            <div className="flex items-center justify-center gap-1.5 mt-1">
+                                <img src="/img/icone-gamersclub.png" className="w-4 h-4 object-contain brightness-125" alt="GC" />
+                                <p className="text-lg font-black text-[#FFCC00] italic uppercase leading-none">{playerStats?.gcLevel || 'N/A'}</p>
+                            </div>
                         </div>
-                        <div className="bg-[#ff5500]/10 p-3 rounded-2xl border border-[#ff5500]/20 text-center flex flex-col justify-center">
-                            <p className="text-[9px] text-[#ff5500]/60 uppercase font-black italic tracking-widest mb-1">Nível Faceit</p>
-                            <p className="text-base font-black text-[#ff5500] italic uppercase">{playerStats?.faceitLevel || leetifyData?.ranks?.faceitLevel || 'N/A'}</p>
+
+                        <div className="bg-[#ff5500]/10 p-4 rounded-2xl border border-[#ff5500]/20 text-center flex flex-col justify-center group hover:bg-[#ff5500]/15 transition-all">
+                             <p className="text-[9px] text-[#ff5500]/60 uppercase font-black italic tracking-widest mb-1 leading-none">Nível Faceit</p>
+                             <div className="flex items-center justify-center gap-1.5 mt-1">
+                                {leetifyData?.ranks?.faceitLevel > 0 ? (
+                                    <>
+                                        <img 
+                                            src={`https://faceit-ranking.eu/img/levels/${leetifyData.ranks.faceitLevel}.png`} 
+                                            className="w-6 h-6 object-contain drop-shadow-md group-hover:scale-125 transition-transform" 
+                                            alt={`Faceit ${leetifyData.ranks.faceitLevel}`} 
+                                        />
+                                        <p className="text-xl font-black text-white italic tracking-tighter leading-none">{leetifyData.ranks.faceitElo || ''}</p>
+                                    </>
+                                ) : (
+                                    <p className="text-base font-black text-[#ff5500] italic uppercase">{playerStats?.faceitLevel || 'N/A'}</p>
+                                )}
+                             </div>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>

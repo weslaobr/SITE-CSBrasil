@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPlayerProfile, getCS2Stats, getPlayerInventory, getSteamLevel, getPlayerBans } from "@/services/steam-service";
 import { prisma } from "@/lib/prisma";
 import { getLeetifyPlayerData } from "@/services/leetify-tropacs";
+import { getCS2SpacePlayerInfo } from "@/services/cs2space-service";
 
 export async function GET(
     req: NextRequest,
@@ -26,7 +27,8 @@ export async function GET(
             getLeetifyPlayerData(steamId).catch(() => null),
             getPlayerInventory(steamId).catch(() => []),
             getSteamLevel(steamId).catch(() => 0),
-            getPlayerBans(steamId).catch(() => null)
+            getPlayerBans(steamId).catch(() => null),
+            getCS2SpacePlayerInfo(steamId).catch(() => null)
         ]);
 
         const dbUser = results[0] as any;
@@ -37,6 +39,7 @@ export async function GET(
         const inventory = results[5] as any;
         const steamLevel = results[6] as any;
         const bans = results[7] as any;
+        const cs2space = results[8] as any;
 
         if (!profile) {
             return NextResponse.json({ error: "Player not found" }, { status: 404 });
@@ -47,6 +50,27 @@ export async function GET(
         // Ensure ratings object exists, fallback to derived stats from Steam if missing
         if (!leetifyData) {
             leetifyData = { ratings: null, recentMatches: [], ranks: {} };
+        }
+        
+        // Enrichment from CS2.space (PREMIUM DATA)
+        if (cs2space) {
+            if (cs2space.leetify) {
+                leetifyData.ratings = {
+                    ...leetifyData.ratings,
+                    ...cs2space.leetify,
+                    leetifyRating: cs2space.leetify.rating
+                };
+            }
+            if (cs2space.faceit) {
+                leetifyData.ranks = {
+                    ...leetifyData.ranks,
+                    faceitLevel: cs2space.faceit.level,
+                    faceitElo: cs2space.faceit.elo
+                };
+            }
+            if (cs2space.ranks?.premier) {
+                leetifyData.ranks.premier = cs2space.ranks.premier;
+            }
         }
         
         if (!leetifyData.ratings) {
