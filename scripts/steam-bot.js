@@ -29,26 +29,77 @@ if (!STEAM_USERNAME || !STEAM_PASSWORD) {
     process.exit(1);
 }
 
-console.log('🚀 Iniciando Bot da Steam...');
+let reconnectTimeout = null;
+let retryCount = 0;
+const MAX_RETRIES = 5;
 
-user.logOn({
-    accountName: STEAM_USERNAME,
-    password: STEAM_PASSWORD,
-    twoFactorCode: SHARED_SECRET ? SteamTotp.getAuthCode(SHARED_SECRET) : undefined
-});
+function login() {
+    if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+    }
+
+    console.log('🚀 Iniciando/Reiniciando Bot da Steam...');
+    user.logOn({
+        accountName: STEAM_USERNAME,
+        password: STEAM_PASSWORD,
+        twoFactorCode: SHARED_SECRET ? SteamTotp.getAuthCode(SHARED_SECRET) : undefined
+    });
+}
+
+login();
 
 user.on('loggedOn', () => {
     console.log('✅ Logado na Steam com sucesso!');
+    retryCount = 0; // Reset retry count upon success
     user.setPersona(SteamUser.EPersonaState.Online);
     user.gamesPlayed([730]); // CS2 appid
 });
 
 user.on('error', (err) => {
     console.error('❌ Erro de login na Steam:', err.message);
+    
+    // Se for erro de login em outro lugar, esperamos um pouco antes de tentar novamente
+    // para evitar "guerra de login" com o usuário se ele estiver jogando.
+    if (err.message === 'LoggedInElsewhere' || err.eresult === 6) {
+        console.warn('⚠️ O bot foi desconectado porque a conta foi logada em outro lugar (ex: você abriu a Steam/CS2 no PC).');
+        handleReconnect(30000); // Espera 30 segundos antes de tentar de novo
+    } else if (err.message === 'RateLimitExceeded' || err.eresult === 84) {
+        console.warn('⚠️ Limite de taxa excedido. Aguardando para tentar novamente...');
+        handleReconnect(60000); // 60 segundos
+    }
 });
+
+user.on('disconnected', (eresult, msg) => {
+    console.warn(`⚠️ Bot desconectado da Steam (EResult: ${eresult}, Mensagem: ${msg})`);
+    
+    // Se o motivo for LoggedInElsewhere, lidamos com isso
+    if (eresult === 6) {
+        console.warn('⚠️ Motivo: Logado em outro lugar. Tentando reconectar em breve...');
+        handleReconnect(30000);
+    } else {
+        handleReconnect(5000); // Reconexão padrão rápida
+    }
+});
+
+function handleReconnect(delay) {
+    if (retryCount >= MAX_RETRIES) {
+        console.error('❌ Limite máximo de tentativas de reconexão atingido. Verifique se a conta está sendo usada em outro lugar.');
+        return;
+    }
+
+    if (!reconnectTimeout) {
+        retryCount++;
+        console.log(`🔄 Tentando reconectar em ${delay / 1000} segundos... (Tentativa ${retryCount}/${MAX_RETRIES})`);
+        reconnectTimeout = setTimeout(() => {
+            login();
+        }, delay);
+    }
+}
 
 cs2.on('connectedToGC', () => {
     console.log('🎮 Conectado ao Game Coordinator do CS2!');
+    retryCount = 0; // Se conectou ao GC, resetamos retries também
 });
 
 cs2.on('disconnectedFromGC', (reason) => {
@@ -108,27 +159,34 @@ app.get('/match/:sharingCode', (req, res) => {
         // Nota: O node-cs2 retorna um objeto que pode variar dependendo da versão do protobuf
         // Tentamos extrair o máximo possível.
 
-        let kills = 0;
-        let deaths = 0;
-        let assists = 0;
-        let score = '0-0';
-        let result = 'Loss';
-
-        // Se houver estatísticas de round, podemos tentar inferir kills/placar
-        // Mas o mais comum é vir em match.match_details ou algo similar
-        // Para CS2 via GC, as infos detalhadas às vezes estão em sub-objetos.
+        // Extrair estatísticas reais do objeto da Valve
+        // Em CS2 via GC, o placar final costuma estar no último round_stats
+        const lastRound = match.round_stats && match.round_stats.length > 0 
+            ? match.round_stats[match.round_stats.length - 1] 
+            : null;
+            
+        const score = lastRound && lastRound.team_scores 
+            ? `${lastRound.team_scores[0]}-${lastRound.team_scores[1]}` 
+            : 'N/A';
+        
+        // Tentar encontrar o link da demo (ESSENCIAL para o seu analisador Python)
+        let demoUrl = null;
+        if (match.round_stats && match.round_stats.length > 0) {
+            // O link da demo geralmente vem no campo 'map' ou 'reservation' do primeiro round_stats
+            demoUrl = match.round_stats[0].map || match.round_stats[0].reservation?.url || null;
+        }
 
         const resData = {
+            success: true,
             match_id: match.matchid?.toString(),
             match_time: match.matchtime,
             map_name: mapNames[match.map_name] || match.map_name || 'Desconhecido',
-            kills: kills,
-            deaths: deaths,
-            assists: assists,
             score: score,
-            result: result,
-            duration: '40 min',
-            raw_time: match.matchtime ? new Date(match.matchtime * 1000).toISOString() : null
+            demo_url: demoUrl, // Link real para o Python baixar (.dem.bz2)
+            duration: '40-50 min',
+            raw_time: match.matchtime ? new Date(match.matchtime * 1000).toISOString() : null,
+            // Info bruta para debug se necessário
+            stats_found: !!lastRound
         };
 
         res.json(resData);

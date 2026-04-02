@@ -39,5 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-scripts/temp-leetify-scraper/
-scripts/temp-muijf-leetify/
+# CS2 Demos & Backend
+/backend/demos/
+/backend/__pycache__/
+/backend/app/__pycache__/
+*.dem
+*.dem.bz2

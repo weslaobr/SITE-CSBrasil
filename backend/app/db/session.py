@@ -2,8 +2,8 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import declarative_base
 from app.core.config import settings
 
-# For psycopg (v3), we need to ensure the dialect is correctly specified
-DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+psycopg://")
+# For asyncpg, we need to ensure the dialect is correctly specified
+DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
 
 engine = create_async_engine(DATABASE_URL, echo=settings.DEBUG, future=True)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)

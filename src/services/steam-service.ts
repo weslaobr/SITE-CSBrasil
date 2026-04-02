@@ -321,34 +321,48 @@ export const getSteamMatchHistory = async (steamId: string, authCode: string, kn
                         cumulativeHours += (6 + Math.floor(Math.random() * 12));
                         const matchTime = startTimestamp - (cumulativeHours * 3600000);
 
-                        // Bate no seu bot para disparar o Leetify Tracker
+                        // 1. Bate no BOT para obter o link real da demo e placar
                         let botMatchData = null;
                         try {
                             const botUrl = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3005';
-                            console.log(`[DEBUG] Acionando BOT para parsear partida ${nextCode}`);
+                            console.log(`[Sync] Consultando BOT para partida ${nextCode}`);
                             const botRes = await axios.get(`${botUrl}/match/${nextCode}`);
                             botMatchData = botRes.data;
-                        } catch (botErr) {
-                            console.error(`[DEBUG] Falha ao acionar bot para ${nextCode}`);
+
+                            // 2. DISPARO PARA O ANALISADOR PYTHON
+                            // Se o bot encontrou o link da demo (.dem.bz2), enviamos para o Python processar tudo!
+                            if (botMatchData?.demo_url) {
+                                const pythonUrl = process.env.PYTHON_API_URL || 'http://localhost:8000';
+                                console.log(`[Tracker] Solicitando análise da demo ao Python: ${nextCode}`);
+                                
+                                // Chamada assíncrona (não travamos o sync esperando o parser que é lento)
+                                axios.post(`${pythonUrl}/api/importer/import-match`, {
+                                    steamid: steamId,
+                                    auth_code: "auto-sync",
+                                    share_code: botMatchData.demo_url
+                                }).catch(err => console.warn(`[Tracker] Erro ao acionar Python para ${nextCode}:`, err.message));
+                            }
+                        } catch (botErr: any) {
+                            console.error(`[Sync] Falha ao acionar bot/python para ${nextCode}:`, botErr.message);
                         }
 
                         matches.push({
                             externalId: nextCode,
                             source: 'Steam',
                             gameMode: 'Competitivo',
-                            mapName: 'CS2 Tracker', // O parser do bot vai atualizar com o mapa real depois
-                            kills: 0,
+                            mapName: botMatchData?.map_name || 'CS2 Tracker',
+                            kills: 0, 
                             deaths: 0,
                             assists: 0,
                             mvps: 0,
-                            score: 'Processando',
+                            score: botMatchData?.score || 'Processando',
                             matchDate: new Date(matchTime).toISOString(),
                             duration: `Analisando Demo...`,
                             result: 'Em Análise',
                             adr: 0,
                             hsPercentage: 0,
                             isMocked: false,
-                            url: `steam://rungame/730/76561202255233023/+csgo_download_match%20${nextCode}`
+                            url: botMatchData?.demo_url || `steam://rungame/730/76561202255233023/+csgo_download_match%20${nextCode}`
                         });
                         currentKnownCode = nextCode;
                         success = true;
