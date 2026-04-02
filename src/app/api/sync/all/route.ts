@@ -133,6 +133,37 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // Salvar snapshot do rating para histórico de evolução
+        if (user.steamId) {
+            try {
+                const playerRecord = await (prisma as any).player.findUnique({
+                    where: { steamId: user.steamId },
+                    select: { premierRating: true },
+                });
+
+                if (playerRecord?.premierRating && playerRecord.premierRating > 0) {
+                    // Verificar último snapshot — só salvar se mudou
+                    const lastSnap = await (prisma as any).ratingSnapshot.findFirst({
+                        where: { steamId: user.steamId, source: 'premier' },
+                        orderBy: { createdAt: 'desc' },
+                    });
+
+                    if (!lastSnap || lastSnap.rating !== playerRecord.premierRating) {
+                        await (prisma as any).ratingSnapshot.create({
+                            data: {
+                                steamId: user.steamId,
+                                rating: playerRecord.premierRating,
+                                source: 'premier',
+                            },
+                        });
+                        console.log(`[Sync] Saved rating snapshot: ${user.steamId} = ${playerRecord.premierRating}`);
+                    }
+                }
+            } catch (snapErr: any) {
+                console.warn('[Sync] Could not save rating snapshot:', snapErr.message);
+            }
+        }
+
         return NextResponse.json({ success: true, count: syncedCount });
     } catch (error) {
         console.error("Critical Sync Error:", error);

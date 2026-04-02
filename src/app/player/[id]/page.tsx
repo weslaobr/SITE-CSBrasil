@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Package, ShieldCheck, Trophy, Target, Zap } from 'lucide-react';
+import { getBadges, RARITY_COLORS, RARITY_LABELS } from '@/lib/badges';
 
 // New Components
 import ProfileSidebar from "@/components/profile/profile-sidebar";
@@ -191,6 +192,58 @@ export default function PlayerProfilePage() {
                                 </div>
                             </motion.div>
                         )}
+
+                        {/* Badges / Conquistas */}
+                        {playerStats && (() => {
+                            const badges = getBadges({
+                                rating: playerStats.premierRating || playerStats.faceitElo || 0,
+                                kdr: playerStats.kdr || 0,
+                                adr: playerStats.adr || dbUser?.adr || 0,
+                                hsPercentage: playerStats.hsPercentage || dbUser?.hsPercentage || 0,
+                                matchesPlayed: playerStats.matchesPlayed || dbUser?.matchesPlayed || 0,
+                                winRate: dbUser?.winRate ? `${Math.round(dbUser.winRate)}%` : 'N/A',
+                                gcLevel: playerStats.gcLevel || 0,
+                                faceitLevel: playerStats.faceitLevel || 0,
+                            });
+                            if (badges.length === 0) return null;
+                            return (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="bg-zinc-900/40 rounded-[2rem] border border-white/5 p-6 backdrop-blur-xl"
+                                >
+                                    <h3 className="text-sm font-black italic uppercase tracking-tighter mb-4 flex items-center gap-2">
+                                        <span className="w-1.5 h-5 bg-yellow-500 rounded-full" />
+                                        Conquistas
+                                        <span className="ml-auto text-[9px] text-zinc-600 font-black uppercase tracking-widest">{badges.length} desbloqueada{badges.length !== 1 ? 's' : ''}</span>
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {badges.map(badge => (
+                                            <div
+                                                key={badge.id}
+                                                className="group relative flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-black cursor-default transition-all hover:scale-105"
+                                                style={{
+                                                    background: `${badge.color}15`,
+                                                    borderColor: `${badge.color}40`,
+                                                    color: badge.color,
+                                                }}
+                                                title={badge.description}
+                                            >
+                                                <span>{badge.icon}</span>
+                                                <span className="text-[10px] uppercase tracking-widest">{badge.name}</span>
+                                                {/* Tooltip rarity */}
+                                                <div
+                                                    className="absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-900 border border-white/10 rounded-lg px-2 py-1 text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none"
+                                                    style={{ color: RARITY_COLORS[badge.rarity] }}
+                                                >
+                                                    {RARITY_LABELS[badge.rarity]}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            );
+                        })()}
 
                         {/* Account Reputation Summary Section */}
                         <motion.div

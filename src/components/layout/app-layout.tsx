@@ -18,7 +18,10 @@ import {
     Package,
     Gamepad2,
     RefreshCw,
-    Users
+    Users,
+    Map,
+    Swords,
+    Medal
 } from 'lucide-react';
 
 const SidebarItem = ({ icon, label, active, collapsed, href }: { icon: any, label: string, active?: boolean, collapsed: boolean, href: string }) => (
@@ -100,6 +103,27 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         active={pathname.startsWith('/map-veto')}
                         collapsed={collapsed}
                         href="/map-veto"
+                    />
+                    <SidebarItem
+                        icon={<Map size={20} />}
+                        label="Stats de Mapas"
+                        active={pathname === '/maps'}
+                        collapsed={collapsed}
+                        href="/maps"
+                    />
+                    <SidebarItem
+                        icon={<Swords size={20} />}
+                        label="Head to Head"
+                        active={pathname === '/compare'}
+                        collapsed={collapsed}
+                        href="/compare"
+                    />
+                    <SidebarItem
+                        icon={<Medal size={20} />}
+                        label="Torneios"
+                        active={pathname.startsWith('/tournaments')}
+                        collapsed={collapsed}
+                        href="/tournaments"
                     />
                 </div>
 

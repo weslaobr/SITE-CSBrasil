@@ -265,3 +265,58 @@ model GlobalMatchPlayer {
 
   @@unique([globalMatchId, steamId])
 }
+
+// Snapshot de rating de um jogador para histórico de evolução
+model RatingSnapshot {
+  id        Int      @id @default(autoincrement())
+  steamId   String
+  rating    Int
+  source    String   @default("premier") // premier | faceit
+  createdAt DateTime @default(now())
+
+  @@index([steamId, createdAt])
+}
+
+// Sistema de Torneios Internos
+model Tournament {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  format      String           @default("BO1")   // BO1 | BO3 | BO5
+  status      String           @default("OPEN")   // OPEN | RUNNING | FINISHED
+  creatorId   String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  teams       TournamentTeam[]
+  matches     TournamentMatch[]
+}
+
+model TournamentTeam {
+  id           String            @id @default(cuid())
+  tournamentId String
+  name         String
+  playerIds    Json              @default("[]")
+  createdAt    DateTime          @default(now())
+  tournament   Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matchesA     TournamentMatch[] @relation("TeamA")
+  matchesB     TournamentMatch[] @relation("TeamB")
+  wins         TournamentMatch[] @relation("Winner")
+}
+
+model TournamentMatch {
+  id           String          @id @default(cuid())
+  tournamentId String
+  teamAId      String
+  teamBId      String
+  winnerId     String?
+  scoreA       Int?
+  scoreB       Int?
+  round        Int             @default(1)
+  status       String          @default("PENDING") // PENDING | RUNNING | DONE
+  mapName      String?
+  createdAt    DateTime        @default(now())
+  tournament   Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamA        TournamentTeam  @relation("TeamA", fields: [teamAId], references: [id])
+  teamB        TournamentTeam  @relation("TeamB", fields: [teamBId], references: [id])
+  winner       TournamentTeam? @relation("Winner", fields: [winnerId], references: [id])
+}

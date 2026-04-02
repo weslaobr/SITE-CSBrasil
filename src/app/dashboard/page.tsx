@@ -12,7 +12,10 @@ import {
     Zap,
     RefreshCw,
     Users,
-    ArrowRight
+    ArrowRight,
+    Activity,
+    Map,
+    Wifi
 } from "lucide-react";
 import Link from "next/link";
 
@@ -21,6 +24,8 @@ export default function DashboardPage() {
     const [playerData, setPlayerData] = useState<any>(null);
     const [matches, setMatches] = useState<any[]>([]);
     const [lobbies, setLobbies] = useState<any[]>([]);
+    const [activity, setActivity] = useState<any[]>([]);
+    const [liveNow, setLiveNow] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
     const [inventoryCount, setInventoryCount] = useState(0);
@@ -29,24 +34,30 @@ export default function DashboardPage() {
         if (!session) return;
         setSyncing(true);
         try {
-            const [playerRes, matchesRes, lobbiesRes, inventoryRes] = await Promise.all([
+        const [playerRes, matchesRes, lobbiesRes, inventoryRes, activityRes] = await Promise.all([
                 fetch('/api/player'),
                 fetch('/api/matches'),
                 fetch('/api/lobby'),
-                fetch('/api/inventory')
+                fetch('/api/inventory'),
+                fetch('/api/activity'),
             ]);
 
-            const [player, matchesData, lobbiesData, inventoryData] = await Promise.all([
+            const [player, matchesData, lobbiesData, inventoryData, activityData] = await Promise.all([
                 playerRes.json(),
                 matchesRes.json(),
                 lobbiesRes.json(),
-                inventoryRes.json()
+                inventoryRes.json(),
+                activityRes.json(),
             ]);
 
             if (player.profile) setPlayerData(player);
             if (matchesData.matches) setMatches(matchesData.matches.slice(0, 5));
             if (lobbiesData) setLobbies(lobbiesData.slice(0, 3));
             if (inventoryData.items) setInventoryCount(inventoryData.items.length);
+            if (activityData.events) setActivity(activityData.events.slice(0, 8));
+
+            // Fetch live status separately (not blocking)
+            fetch('/api/live').then(r => r.json()).then(d => { if (d.live) setLiveNow(d.live); }).catch(() => {});
         } catch (e) {
             console.error("Error fetching dashboard data:", e);
         } finally {
@@ -156,6 +167,27 @@ export default function DashboardPage() {
                         <StatCard icon={<History className="text-purple-400" />} label="Matches" value={matches.length} color="purple" />
                     </motion.div>
 
+                    {/* Live Now */}
+                    {liveNow.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-zinc-900/40 border border-red-500/20 rounded-[32px] p-5 backdrop-blur-xl flex flex-wrap gap-3 items-center"
+                        >
+                            <div className="flex items-center gap-2 mr-2">
+                                <Wifi size={14} className="text-red-400" />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-red-400">🔴 Ao Vivo Agora</span>
+                            </div>
+                            {liveNow.map((p: any) => (
+                                <div key={p.steamId} className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                                    <img src={p.playerAvatar} alt={p.playerName} className="w-6 h-6 rounded-full" />
+                                    <span className="text-[10px] font-black text-zinc-300">{p.playerName}</span>
+                                    <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
+                                </div>
+                            ))}
+                        </motion.div>
+                    )}
+
                     {/* Active Lobbies Quick Access */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -187,7 +219,7 @@ export default function DashboardPage() {
                 </div>
             </section>
 
-            {/* Recent Matches Table-ish Section */}
+            {/* Activity Feed + Sidebar */}
             <section className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
@@ -245,6 +277,53 @@ export default function DashboardPage() {
                             </div>
                         )}
                     </div>
+
+                    {/* Activity Feed */}
+                    {activity.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-2xl font-black italic uppercase tracking-tighter flex items-center gap-3">
+                                    <Activity className="text-emerald-400" /> Atividade da Tropa
+                                </h2>
+                                <Link href="/ranking" className="text-[10px] font-bold uppercase text-yellow-500 hover:text-yellow-400">Ver ranking</Link>
+                            </div>
+                            <div className="bg-zinc-900/40 border border-white/5 rounded-[32px] p-4 backdrop-blur-xl space-y-1">
+                                {activity.map((ev, i) => (
+                                    <motion.div
+                                        key={i}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: i * 0.04 }}
+                                        className="flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-white/[0.03] transition-colors group"
+                                    >
+                                        <img src={ev.playerAvatar} alt={ev.playerName} className="w-7 h-7 rounded-full flex-shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-bold text-zinc-300 truncate">
+                                                <span className="text-white font-black">{ev.playerName}</span>
+                                                {' '}
+                                                <span className={ev.isWin ? 'text-emerald-400' : 'text-red-400'}>
+                                                    {ev.isWin ? '✓ venceu' : '✗ perdeu'}
+                                                </span>
+                                                {' em '}
+                                                <span className="text-zinc-400 font-bold flex-shrink-0">
+                                                    <Map size={10} className="inline mr-0.5" />{ev.mapName}
+                                                </span>
+                                            </p>
+                                            <p className="text-[9px] text-zinc-600 font-bold">{ev.kda}{ev.adr ? ` • ${ev.adr} ADR` : ''}</p>
+                                        </div>
+                                        <span className={`text-[8px] font-black px-2 py-0.5 rounded-md flex-shrink-0 ${
+                                            ev.isWin ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                                        }`}>
+                                            {ev.isWin ? 'WIN' : 'LOSS'}
+                                        </span>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
                 </motion.div>
 
                 {/* Sidebar Achievements/News */}
