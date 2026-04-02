@@ -17,64 +17,75 @@ export function useDemoPlayback({ ticks, onTickChange }: PlaybackOptions) {
   const [currentTick, setCurrentTick] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+
   const requestRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
+  // Refs para evitar stale closure no loop de animação
+  const playbackSpeedRef = useRef(playbackSpeed);
+  const isPlayingRef = useRef(isPlaying);
 
   const minTick = useMemo(() => (ticks.length > 0 ? ticks[0].tick : 0), [ticks]);
   const maxTick = useMemo(() => (ticks.length > 0 ? ticks[ticks.length - 1].tick : 0), [ticks]);
+  const maxTickRef = useRef(maxTick);
 
-  const animate = (time: number) => {
+  useEffect(() => { playbackSpeedRef.current = playbackSpeed; }, [playbackSpeed]);
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+  useEffect(() => { maxTickRef.current = maxTick; }, [maxTick]);
+
+  const animateRef = useRef<FrameRequestCallback | null>(null);
+
+  animateRef.current = (time: number) => {
     if (lastTimeRef.current !== null) {
       const deltaTime = time - lastTimeRef.current;
-      
-      // Calculate how many ticks passed in this frame
-      // Standard CS2 tickrate is 64 (logic units per second)
-      const ticksPerMs = (64 * playbackSpeed) / 1000;
+      // CS2 tickrate padrão: 64 ticks/s
+      const ticksPerMs = (64 * playbackSpeedRef.current) / 1000;
       const ticksToAdd = deltaTime * ticksPerMs;
 
       setCurrentTick((prev) => {
-        const next = Math.min(prev + ticksToAdd, maxTick);
-        if (next >= maxTick) {
+        const next = Math.min(prev + ticksToAdd, maxTickRef.current);
+        if (next >= maxTickRef.current) {
           setIsPlaying(false);
-          return maxTick;
+          return maxTickRef.current;
         }
         return next;
       });
     }
     lastTimeRef.current = time;
-    requestRef.current = requestAnimationFrame(animate);
+    if (animateRef.current) {
+      requestRef.current = requestAnimationFrame(animateRef.current);
+    }
   };
 
   useEffect(() => {
     if (isPlaying) {
       lastTimeRef.current = null;
-      requestRef.current = requestAnimationFrame(animate);
+      if (animateRef.current) {
+        requestRef.current = requestAnimationFrame(animateRef.current);
+      }
     } else {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
     }
     return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
-  }, [isPlaying, playbackSpeed, maxTick]);
+  }, [isPlaying]);
 
   useEffect(() => {
     onTickChange?.(Math.floor(currentTick));
   }, [currentTick, onTickChange]);
 
-  // Linear Interpolation between sampled ticks
+  // Interpolação linear entre os ticks amostrados
   const getPlayerPositions = useCallback((targetTick: number) => {
-    // 1. Group ticks by steamid64
-    const players: Record<string, any[]> = {};
+    const playerMap: Record<string, TickEntry[]> = {};
     ticks.forEach((t) => {
-      if (!players[t.steamid64]) players[t.steamid64] = [];
-      players[t.steamid64].push(t);
+      if (!playerMap[t.steamid64]) playerMap[t.steamid64] = [];
+      playerMap[t.steamid64].push(t);
     });
 
-    const result: Record<string, any> = {};
+    const result: Record<string, TickEntry> = {};
 
-    Object.keys(players).forEach((steamid) => {
-      const pTicks = players[steamid];
-      // Find the two surrounding ticks for this player
+    Object.keys(playerMap).forEach((steamid) => {
+      const pTicks = playerMap[steamid];
       let before = pTicks[0];
       let after = pTicks[pTicks.length - 1];
 
@@ -86,14 +97,14 @@ export function useDemoPlayback({ ticks, onTickChange }: PlaybackOptions) {
         }
       }
 
-      if (before === after) {
+      if (before === after || before.tick === after.tick) {
         result[steamid] = before;
       } else {
         const span = after.tick - before.tick;
         const progress = (targetTick - before.tick) / span;
-
         result[steamid] = {
           steamid64: steamid,
+          tick: targetTick,
           pos_x: before.pos_x + (after.pos_x - before.pos_x) * progress,
           pos_y: before.pos_y + (after.pos_y - before.pos_y) * progress,
           angle: before.angle + (after.angle - before.angle) * progress,
