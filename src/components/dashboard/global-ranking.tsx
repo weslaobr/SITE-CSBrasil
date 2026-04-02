@@ -1,8 +1,12 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ArrowDown, Search, Trophy, Crown, Minus, Star, ExternalLink, Shield } from 'lucide-react';
+import { motion } from 'framer-motion';
+import {
+    Search, Trophy, Crown,
+    Star, ExternalLink, Shield, Users, Zap, Target, Crosshair,
+    SortAsc, Filter, TrendingUp, Flame
+} from 'lucide-react';
 
 interface RankUser {
     rank: number;
@@ -12,69 +16,114 @@ interface RankUser {
     rating: number;
     winRate: string;
     adr: number;
+    hsPercentage: number;
+    kdr: number;
+    matchesPlayed: number;
     trend: 'up' | 'down' | 'neutral';
     gcLevel: number;
     faceitLevel: number;
+    faceitElo: number;
 }
+
+interface CommunityStats {
+    totalPlayers: number;
+    avgRating: number;
+    topRating: number;
+    topPlayer: string;
+    mostActiveName: string;
+    mostActiveMatches: number;
+}
+
+type SortKey = 'rating' | 'kdr' | 'adr' | 'hsPercentage' | 'faceitElo' | 'gcLevel' | 'matchesPlayed';
+type PlatformFilter = 'all' | 'premier' | 'faceit' | 'gc';
+
+const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
+    { key: 'rating',       label: 'SR Premier',  icon: <Trophy size={11} /> },
+    { key: 'faceitElo',    label: 'Faceit ELO',  icon: <Star size={11} /> },
+    { key: 'gcLevel',      label: 'GC Level',    icon: <Shield size={11} /> },
+    { key: 'kdr',          label: 'KDR',         icon: <Crosshair size={11} /> },
+    { key: 'adr',          label: 'ADR',         icon: <Target size={11} /> },
+    { key: 'hsPercentage', label: 'Headshot %',  icon: <Flame size={11} /> },
+    { key: 'matchesPlayed',label: 'Partidas',    icon: <Zap size={11} /> },
+];
+
+const PLATFORM_FILTERS: { key: PlatformFilter; label: string }[] = [
+    { key: 'all',     label: 'Todos' },
+    { key: 'premier', label: 'Premier' },
+    { key: 'faceit',  label: 'Faceit' },
+    { key: 'gc',      label: 'GC' },
+];
 
 const PODIUM_CONFIG = [
     {
-        pos: 0,
-        label: '1º',
-        crown: true,
-        size: 'w-24 h-24',
+        pos: 0, label: '1º', crown: true, size: 'w-24 h-24',
         borderColor: 'border-yellow-500',
         cardBg: 'from-yellow-500/15 to-yellow-500/5',
         cardBorder: 'border-yellow-500/30',
         glow: 'shadow-[0_0_60px_rgba(246,203,2,0.2)]',
         glowRing: 'shadow-[0_0_0_3px_rgba(246,203,2,0.3)]',
         textColor: 'text-yellow-400',
-        badgeBg: 'bg-yellow-500',
-        badgeText: 'text-black',
-        order: 'md:order-2',
-        scale: 'md:scale-110',
-        zIndex: 'z-10',
+        badgeBg: 'bg-yellow-500', badgeText: 'text-black',
+        order: 'md:order-2', scale: 'md:scale-110', zIndex: 'z-10',
     },
     {
-        pos: 1,
-        label: '2º',
-        crown: false,
-        size: 'w-20 h-20',
+        pos: 1, label: '2º', crown: false, size: 'w-20 h-20',
         borderColor: 'border-zinc-400',
         cardBg: 'from-zinc-500/10 to-zinc-500/5',
         cardBorder: 'border-zinc-500/20',
         glow: 'shadow-[0_0_40px_rgba(160,160,160,0.1)]',
         glowRing: 'shadow-[0_0_0_2px_rgba(160,160,160,0.2)]',
         textColor: 'text-zinc-300',
-        badgeBg: 'bg-zinc-400',
-        badgeText: 'text-black',
-        order: 'md:order-1',
-        scale: '',
-        zIndex: 'z-0',
+        badgeBg: 'bg-zinc-400', badgeText: 'text-black',
+        order: 'md:order-1', scale: '', zIndex: 'z-0',
     },
     {
-        pos: 2,
-        label: '3º',
-        crown: false,
-        size: 'w-20 h-20',
+        pos: 2, label: '3º', crown: false, size: 'w-20 h-20',
         borderColor: 'border-amber-700',
         cardBg: 'from-amber-700/10 to-amber-700/5',
         cardBorder: 'border-amber-700/20',
         glow: 'shadow-[0_0_40px_rgba(180,100,20,0.1)]',
         glowRing: '',
         textColor: 'text-amber-600',
-        badgeBg: 'bg-amber-700',
-        badgeText: 'text-white',
-        order: 'md:order-3',
-        scale: '',
-        zIndex: 'z-0',
+        badgeBg: 'bg-amber-700', badgeText: 'text-white',
+        order: 'md:order-3', scale: '', zIndex: 'z-0',
     },
 ];
+
+function getRatingTierColor(rating: number, max: number) {
+    const pct = max > 0 ? rating / max : 0;
+    if (pct >= 0.9) return { bar: 'bg-yellow-500 shadow-[0_0_6px_rgba(246,203,2,0.5)]', text: 'text-yellow-400' };
+    if (pct >= 0.75) return { bar: 'bg-orange-400', text: 'text-orange-400' };
+    if (pct >= 0.5) return { bar: 'bg-emerald-500', text: 'text-emerald-400' };
+    if (pct >= 0.25) return { bar: 'bg-sky-500', text: 'text-sky-400' };
+    return { bar: 'bg-zinc-600', text: 'text-zinc-400' };
+}
+
+function AnimatedNumber({ value, duration = 1.2 }: { value: number; duration?: number }) {
+    const [display, setDisplay] = useState(0);
+    useEffect(() => {
+        let start = 0;
+        const end = value;
+        if (end === 0) return;
+        const step = end / (duration * 60);
+        const timer = setInterval(() => {
+            start += step;
+            if (start >= end) { setDisplay(end); clearInterval(timer); }
+            else setDisplay(Math.floor(start));
+        }, 1000 / 60);
+        return () => clearInterval(timer);
+    }, [value, duration]);
+    return <>{display.toLocaleString()}</>;
+}
 
 const GlobalRanking: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [users, setUsers] = useState<RankUser[]>([]);
+    const [community, setCommunity] = useState<CommunityStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [sortKey, setSortKey] = useState<SortKey>('rating');
+    const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
+
     const maxRating = users.length > 0 ? Math.max(...users.map(u => u.rating)) : 30000;
 
     useEffect(() => {
@@ -82,7 +131,13 @@ const GlobalRanking: React.FC = () => {
             try {
                 const res = await fetch('/api/ranking');
                 const data = await res.json();
-                if (Array.isArray(data)) setUsers(data);
+                if (data.players && Array.isArray(data.players)) {
+                    setUsers(data.players);
+                    setCommunity(data.community || null);
+                } else if (Array.isArray(data)) {
+                    // Fallback legado
+                    setUsers(data);
+                }
             } catch (error) {
                 console.error("Failed to fetch rankings:", error);
             } finally {
@@ -92,21 +147,90 @@ const GlobalRanking: React.FC = () => {
         fetchRankings();
     }, []);
 
-    const filteredUsers = users.filter(user =>
-        user.nickname.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredAndSorted = useMemo(() => {
+        let result = users.filter(user =>
+            user.nickname.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
-    const top3 = filteredUsers.slice(0, 3);
-    const rest = filteredUsers.slice(3);
+        if (platformFilter === 'premier') result = result.filter(u => u.rating > 0 && u.faceitElo === 0);
+        else if (platformFilter === 'faceit') result = result.filter(u => u.faceitLevel > 0);
+        else if (platformFilter === 'gc') result = result.filter(u => u.gcLevel > 0);
+
+        return [...result].sort((a, b) => b[sortKey] - a[sortKey]);
+    }, [users, searchTerm, sortKey, platformFilter]);
+
+    const top3 = filteredAndSorted.slice(0, 3);
+    const rest = filteredAndSorted.slice(3);
 
     return (
-        <div className="space-y-10">
+        <div className="space-y-8">
+
+            {/* ── COMMUNITY STATS ─────────────────────────────────────────── */}
+            {loading ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[0,1,2,3].map(i => (
+                        <div key={i} className="h-24 bg-zinc-900/50 rounded-2xl border border-white/5 animate-pulse" />
+                    ))}
+                </div>
+            ) : community && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="grid grid-cols-2 md:grid-cols-4 gap-3"
+                >
+                    {[
+                        {
+                            icon: <Users size={16} className="text-yellow-500" />,
+                            label: 'Jogadores',
+                            value: community.totalPlayers.toLocaleString(),
+                            sub: 'no ranking',
+                            accent: 'border-yellow-500/20 bg-yellow-500/5',
+                        },
+                        {
+                            icon: <TrendingUp size={16} className="text-sky-400" />,
+                            label: 'SR Médio',
+                            value: community.avgRating.toLocaleString(),
+                            sub: 'da tropa',
+                            accent: 'border-sky-500/20 bg-sky-500/5',
+                        },
+                        {
+                            icon: <Crown size={16} className="text-yellow-500" />,
+                            label: 'Maior SR',
+                            value: community.topRating.toLocaleString(),
+                            sub: community.topPlayer,
+                            accent: 'border-yellow-500/20 bg-yellow-500/5',
+                        },
+                        {
+                            icon: <Zap size={16} className="text-emerald-400" />,
+                            label: 'Mais Ativo',
+                            value: `${community.mostActiveMatches}`,
+                            sub: community.mostActiveName || 'partidas',
+                            accent: 'border-emerald-500/20 bg-emerald-500/5',
+                        },
+                    ].map((card, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: i * 0.07 }}
+                            className={`relative rounded-2xl border p-4 flex flex-col gap-1 overflow-hidden ${card.accent}`}
+                        >
+                            <div className="flex items-center gap-2 mb-1">
+                                {card.icon}
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">{card.label}</span>
+                            </div>
+                            <span className="text-2xl font-black italic tracking-tighter text-white">{card.value}</span>
+                            <span className="text-[10px] text-zinc-600 truncate">{card.sub}</span>
+                        </motion.div>
+                    ))}
+                </motion.div>
+            )}
 
             {/* ── PÓDIO ──────────────────────────────────────────────────── */}
             <div className="flex flex-col md:flex-row items-end justify-center gap-4 md:gap-3 px-4">
                 {loading ? (
                     [0, 1, 2].map(i => (
-                        <div key={i} className="flex-1 max-w-xs h-52 bg-zinc-900/50 rounded-3xl border border-white/5 animate-pulse" />
+                        <div key={i} className="flex-1 max-w-xs h-56 bg-zinc-900/50 rounded-3xl border border-white/5 animate-pulse" />
                     ))
                 ) : top3.length === 0 ? (
                     <div className="text-zinc-600 font-black uppercase tracking-widest text-sm py-16">
@@ -124,12 +248,11 @@ const GlobalRanking: React.FC = () => {
                                 transition={{ delay: cfg.pos * 0.12, type: 'spring', stiffness: 100 }}
                                 className={`flex-1 max-w-sm relative bg-gradient-to-b ${cfg.cardBg} border ${cfg.cardBorder} rounded-3xl p-6 flex flex-col items-center text-center ${cfg.glow} ${cfg.order} ${cfg.scale} transition-transform`}
                             >
-                                {/* Posição badge */}
+                                {/* Badge posição */}
                                 <div className={`absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full ${cfg.badgeBg} ${cfg.badgeText} flex items-center justify-center text-[11px] font-black shadow-lg`}>
                                     {cfg.pos === 0 ? <Crown size={14} /> : cfg.label}
                                 </div>
 
-                                {/* Coroa para 1º */}
                                 {cfg.crown && (
                                     <div className="mb-1">
                                         <Crown className="text-yellow-500 w-6 h-6 drop-shadow-[0_0_8px_rgba(246,203,2,0.8)]" />
@@ -155,15 +278,33 @@ const GlobalRanking: React.FC = () => {
                                     </h3>
                                 </Link>
 
-                                {/* Rating */}
+                                {/* Rating animado */}
                                 <div className="mt-3 flex flex-col items-center gap-1">
                                     <span className={`text-3xl font-black italic tracking-tighter ${cfg.textColor}`}>
-                                        {user.rating.toLocaleString()}
+                                        <AnimatedNumber value={user.rating} />
                                     </span>
-                                    <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.3em]">Premier SR</span>
+                                    <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.3em]">
+                                        {sortKey === 'faceitElo' ? 'Faceit ELO' : sortKey === 'gcLevel' ? 'GC Level' : 'Premier SR'}
+                                    </span>
                                 </div>
 
-                                {/* Mini badges */}
+                                {/* Mini-stats do pódio */}
+                                <div className="grid grid-cols-3 gap-2 mt-4 w-full">
+                                    <div className="flex flex-col items-center bg-black/20 rounded-xl p-2">
+                                        <span className="text-[9px] text-zinc-600 uppercase font-black tracking-wider">Partidas</span>
+                                        <span className="text-sm font-black text-zinc-300">{user.matchesPlayed || '—'}</span>
+                                    </div>
+                                    <div className="flex flex-col items-center bg-black/20 rounded-xl p-2">
+                                        <span className="text-[9px] text-zinc-600 uppercase font-black tracking-wider">KDR</span>
+                                        <span className="text-sm font-black text-zinc-300">{user.kdr > 0 ? user.kdr.toFixed(2) : '—'}</span>
+                                    </div>
+                                    <div className="flex flex-col items-center bg-black/20 rounded-xl p-2">
+                                        <span className="text-[9px] text-zinc-600 uppercase font-black tracking-wider">ADR</span>
+                                        <span className="text-sm font-black text-zinc-300">{user.adr > 0 ? user.adr : '—'}</span>
+                                    </div>
+                                </div>
+
+                                {/* Badges GC / Faceit */}
                                 <div className="flex gap-2 mt-3">
                                     {user.gcLevel > 0 && (
                                         <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-md bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 tracking-widest">
@@ -182,21 +323,70 @@ const GlobalRanking: React.FC = () => {
                 )}
             </div>
 
-            {/* ── BUSCA ──────────────────────────────────────────────────── */}
-            <div className="flex items-center justify-between gap-4">
-                <div className="relative w-full md:w-72">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                    <input
-                        type="text"
-                        placeholder="Buscar jogador..."
-                        className="w-full bg-zinc-950/70 border border-white/[0.07] rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:border-yellow-500/40 placeholder:text-zinc-700 transition-all"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+            {/* ── CONTROLES: BUSCA + SORT + FILTRO ───────────────────────── */}
+            <div className="flex flex-col gap-3">
+                {/* Linha 1: busca + contador */}
+                <div className="flex items-center justify-between gap-4">
+                    <div className="relative w-full md:w-72">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                        <input
+                            type="text"
+                            placeholder="Buscar jogador..."
+                            className="w-full bg-zinc-950/70 border border-white/[0.07] rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:border-yellow-500/40 placeholder:text-zinc-700 transition-all"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest whitespace-nowrap">
+                        {filteredAndSorted.length} jogadores
+                    </span>
                 </div>
-                <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest whitespace-nowrap">
-                    {filteredUsers.length} jogadores
-                </span>
+
+                {/* Linha 2: Ordenação */}
+                <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 text-zinc-700">
+                        <SortAsc size={12} />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Ordenar</span>
+                    </div>
+                    <div className="flex gap-1.5 flex-wrap">
+                        {SORT_OPTIONS.map(opt => (
+                            <button
+                                key={opt.key}
+                                onClick={() => setSortKey(opt.key)}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${
+                                    sortKey === opt.key
+                                        ? 'bg-yellow-500 text-black border-yellow-500 shadow-[0_0_10px_rgba(246,203,2,0.3)]'
+                                        : 'bg-white/[0.03] text-zinc-500 border-white/[0.05] hover:border-white/[0.1] hover:text-zinc-300'
+                                }`}
+                            >
+                                {opt.icon} {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Linha 3: Filtro por plataforma */}
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 text-zinc-700">
+                        <Filter size={12} />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Plataforma</span>
+                    </div>
+                    <div className="flex gap-1.5">
+                        {PLATFORM_FILTERS.map(pf => (
+                            <button
+                                key={pf.key}
+                                onClick={() => setPlatformFilter(pf.key)}
+                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${
+                                    platformFilter === pf.key
+                                        ? 'bg-zinc-200 text-black border-zinc-200'
+                                        : 'bg-white/[0.03] text-zinc-500 border-white/[0.05] hover:border-white/[0.1] hover:text-zinc-300'
+                                }`}
+                            >
+                                {pf.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             {/* ── TABELA ─────────────────────────────────────────────────── */}
@@ -206,10 +396,15 @@ const GlobalRanking: React.FC = () => {
                         <tr className="text-[9px] uppercase font-black text-zinc-600 tracking-[0.15em] border-b border-white/[0.05] bg-black/40 backdrop-blur-md">
                             <th className="px-5 py-3.5 w-16">#</th>
                             <th className="px-4 py-3.5">Jogador</th>
-                            <th className="px-4 py-3.5">SR Premier</th>
-                            <th className="px-4 py-3.5 text-center hidden md:table-cell">Gamers Club</th>
+                            <th className="px-4 py-3.5">
+                                {sortKey === 'faceitElo' ? 'Faceit ELO' : sortKey === 'gcLevel' ? 'GC Level' : 'SR Premier'}
+                            </th>
+                            <th className="px-4 py-3.5 text-center hidden lg:table-cell">Partidas</th>
+                            <th className="px-4 py-3.5 text-center hidden lg:table-cell">KDR</th>
+                            <th className="px-4 py-3.5 text-center hidden md:table-cell">ADR</th>
+                            <th className="px-4 py-3.5 text-center hidden md:table-cell">HS%</th>
+                            <th className="px-4 py-3.5 text-center hidden md:table-cell">GC</th>
                             <th className="px-4 py-3.5 text-center hidden md:table-cell">Faceit</th>
-                            <th className="px-4 py-3.5 text-center">Trend</th>
                             <th className="px-4 py-3.5 text-right"></th>
                         </tr>
                     </thead>
@@ -217,14 +412,14 @@ const GlobalRanking: React.FC = () => {
                         {loading ? (
                             [1, 2, 3, 4, 5].map(i => (
                                 <tr key={i} className="border-b border-white/[0.04] animate-pulse">
-                                    <td colSpan={7} className="px-5 py-4">
+                                    <td colSpan={10} className="px-5 py-4">
                                         <div className="h-8 bg-white/[0.03] rounded-xl" />
                                     </td>
                                 </tr>
                             ))
-                        ) : filteredUsers.length === 0 ? (
+                        ) : filteredAndSorted.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="px-6 py-16 text-center">
+                                <td colSpan={10} className="px-6 py-16 text-center">
                                     <div className="flex flex-col items-center gap-3">
                                         <Trophy className="w-10 h-10 text-zinc-800" />
                                         <span className="text-zinc-600 font-black uppercase text-[10px] tracking-widest">
@@ -234,21 +429,27 @@ const GlobalRanking: React.FC = () => {
                                 </td>
                             </tr>
                         ) : (
-                            filteredUsers.map((user, idx) => {
+                            filteredAndSorted.map((user, idx) => {
                                 const isTop1 = user.rank === 1;
                                 const isTop3 = user.rank <= 3;
-                                const pct = Math.min((user.rating / (maxRating || 30000)) * 100, 100);
+                                const sortVal = user[sortKey] as number;
+                                const maxSortVal = Math.max(...filteredAndSorted.map(u => u[sortKey] as number));
+                                const pct = Math.min(maxSortVal > 0 ? (sortVal / maxSortVal) * 100 : 0, 100);
+                                const tierColor = getRatingTierColor(user.rating, maxRating);
 
                                 return (
                                     <motion.tr
                                         key={user.steamId}
                                         initial={{ opacity: 0, x: -8 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: idx * 0.03, type: 'spring', stiffness: 200 }}
-                                        className={`group border-b border-white/[0.04] transition-colors cursor-pointer hover:bg-white/[0.02] ${isTop1 ? 'bg-yellow-500/[0.04]' : ''}`}
+                                        transition={{ delay: idx * 0.025, type: 'spring', stiffness: 200 }}
+                                        className={`group border-b border-white/[0.04] transition-all cursor-pointer
+                                            hover:bg-gradient-to-r hover:from-yellow-500/[0.03] hover:to-transparent
+                                            ${isTop1 ? 'bg-yellow-500/[0.04]' : ''}
+                                        `}
                                     >
                                         {/* Posição */}
-                                        <td className="px-5 py-4">
+                                        <td className="px-5 py-3.5">
                                             <div className={`flex items-center justify-center w-8 h-8 rounded-xl text-[11px] font-black ${
                                                 isTop1 ? 'bg-yellow-500 text-black shadow-[0_0_12px_rgba(246,203,2,0.4)]' :
                                                 user.rank === 2 ? 'bg-zinc-400 text-black' :
@@ -260,7 +461,7 @@ const GlobalRanking: React.FC = () => {
                                         </td>
 
                                         {/* Jogador */}
-                                        <td className="px-4 py-4">
+                                        <td className="px-4 py-3.5">
                                             <Link href={`/player/${user.steamId}`} className="flex items-center gap-3">
                                                 <div className="relative">
                                                     <img
@@ -278,40 +479,80 @@ const GlobalRanking: React.FC = () => {
                                                         </div>
                                                     )}
                                                 </div>
-                                                <span className={`font-black text-sm italic tracking-tight group-hover:text-yellow-400 transition-colors truncate max-w-[140px] ${
-                                                    isTop1 ? 'text-yellow-400' : 'text-zinc-200'
-                                                }`}>
-                                                    {user.nickname}
-                                                </span>
+                                                <div className="flex flex-col">
+                                                    <span className={`font-black text-sm italic tracking-tight group-hover:text-yellow-400 transition-colors truncate max-w-[140px] ${
+                                                        isTop1 ? 'text-yellow-400' : 'text-zinc-200'
+                                                    }`}>
+                                                        {user.nickname}
+                                                    </span>
+                                                    {user.winRate !== 'N/A' && (
+                                                        <span className="text-[9px] text-zinc-600 font-bold">WR {user.winRate}</span>
+                                                    )}
+                                                </div>
                                             </Link>
                                         </td>
 
-                                        {/* SR + barra */}
-                                        <td className="px-4 py-4">
+                                        {/* Rating / Sort value + barra de tier */}
+                                        <td className="px-4 py-3.5">
                                             <div className="flex items-center gap-3">
-                                                <span className={`font-black text-base italic tracking-tighter ${
-                                                    isTop1 ? 'text-yellow-400' : 'text-zinc-200'
-                                                }`}>
-                                                    {user.rating.toLocaleString()}
+                                                <span className={`font-black text-base italic tracking-tighter ${tierColor.text}`}>
+                                                    {sortKey === 'kdr' ? sortVal.toFixed(2) :
+                                                     sortKey === 'hsPercentage' ? `${sortVal}%` :
+                                                     sortVal.toLocaleString()}
                                                 </span>
-                                                <div className="w-20 h-1.5 bg-white/[0.04] rounded-full overflow-hidden hidden sm:block">
+                                                <div className="w-16 h-1.5 bg-white/[0.04] rounded-full overflow-hidden hidden sm:block">
                                                     <motion.div
                                                         initial={{ width: 0 }}
                                                         animate={{ width: `${pct}%` }}
-                                                        transition={{ delay: 0.3 + idx * 0.03, duration: 0.7, ease: 'easeOut' }}
-                                                        className={`h-full rounded-full ${
-                                                            isTop1 ? 'bg-yellow-500 shadow-[0_0_6px_rgba(246,203,2,0.5)]' :
-                                                            user.rank === 2 ? 'bg-zinc-400' :
-                                                            user.rank === 3 ? 'bg-amber-700' :
-                                                            'bg-zinc-600'
-                                                        }`}
+                                                        transition={{ delay: 0.3 + idx * 0.02, duration: 0.6, ease: 'easeOut' }}
+                                                        className={`h-full rounded-full ${tierColor.bar}`}
                                                     />
                                                 </div>
                                             </div>
                                         </td>
 
+                                        {/* Partidas */}
+                                        <td className="px-4 py-3.5 text-center hidden lg:table-cell">
+                                            <span className="text-[11px] font-black text-zinc-400">
+                                                {user.matchesPlayed > 0 ? user.matchesPlayed : <span className="text-zinc-800">—</span>}
+                                            </span>
+                                        </td>
+
+                                        {/* KDR */}
+                                        <td className="px-4 py-3.5 text-center hidden lg:table-cell">
+                                            <span className={`text-[11px] font-black ${
+                                                user.kdr >= 1.5 ? 'text-emerald-400' :
+                                                user.kdr >= 1.0 ? 'text-zinc-300' :
+                                                user.kdr > 0 ? 'text-red-400' : 'text-zinc-800'
+                                            }`}>
+                                                {user.kdr > 0 ? user.kdr.toFixed(2) : '—'}
+                                            </span>
+                                        </td>
+
+                                        {/* ADR */}
+                                        <td className="px-4 py-3.5 text-center hidden md:table-cell">
+                                            <span className={`text-[11px] font-black ${
+                                                user.adr >= 90 ? 'text-emerald-400' :
+                                                user.adr >= 70 ? 'text-zinc-300' :
+                                                user.adr > 0 ? 'text-zinc-500' : 'text-zinc-800'
+                                            }`}>
+                                                {user.adr > 0 ? user.adr : '—'}
+                                            </span>
+                                        </td>
+
+                                        {/* HS% */}
+                                        <td className="px-4 py-3.5 text-center hidden md:table-cell">
+                                            <span className={`text-[11px] font-black ${
+                                                user.hsPercentage >= 60 ? 'text-orange-400' :
+                                                user.hsPercentage >= 40 ? 'text-zinc-300' :
+                                                user.hsPercentage > 0 ? 'text-zinc-500' : 'text-zinc-800'
+                                            }`}>
+                                                {user.hsPercentage > 0 ? `${user.hsPercentage}%` : '—'}
+                                            </span>
+                                        </td>
+
                                         {/* GC */}
-                                        <td className="px-4 py-4 text-center hidden md:table-cell">
+                                        <td className="px-4 py-3.5 text-center hidden md:table-cell">
                                             {user.gcLevel > 0 ? (
                                                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 text-[10px] font-black uppercase tracking-wide">
                                                     <Shield size={9} /> {user.gcLevel}
@@ -320,7 +561,7 @@ const GlobalRanking: React.FC = () => {
                                         </td>
 
                                         {/* Faceit */}
-                                        <td className="px-4 py-4 text-center hidden md:table-cell">
+                                        <td className="px-4 py-3.5 text-center hidden md:table-cell">
                                             {user.faceitLevel > 0 ? (
                                                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] font-black uppercase tracking-wide">
                                                     <Star size={9} /> {user.faceitLevel}
@@ -328,25 +569,8 @@ const GlobalRanking: React.FC = () => {
                                             ) : <span className="text-zinc-800">—</span>}
                                         </td>
 
-                                        {/* Trend */}
-                                        <td className="px-4 py-4 text-center">
-                                            {user.trend === 'up' && (
-                                                <span className="inline-flex items-center gap-1 text-emerald-400 text-[10px] font-black">
-                                                    <ArrowUp size={14} className="drop-shadow-[0_0_4px_rgba(52,211,153,0.7)]" />
-                                                </span>
-                                            )}
-                                            {user.trend === 'down' && (
-                                                <span className="inline-flex items-center gap-1 text-red-400 text-[10px] font-black">
-                                                    <ArrowDown size={14} />
-                                                </span>
-                                            )}
-                                            {user.trend === 'neutral' && (
-                                                <Minus size={14} className="text-zinc-700 mx-auto" />
-                                            )}
-                                        </td>
-
                                         {/* Link */}
-                                        <td className="px-4 py-4 text-right">
+                                        <td className="px-4 py-3.5 text-right">
                                             <Link href={`/player/${user.steamId}`}>
                                                 <ExternalLink size={13} className="text-zinc-700 group-hover:text-yellow-500 transition-colors" />
                                             </Link>
