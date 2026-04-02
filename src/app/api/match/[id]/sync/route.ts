@@ -81,22 +81,32 @@ export async function POST(
 
             const metadataObj = {
                 playerNickname: p.name || p.nickname || steamId,
-                rating: p.rating ?? p.leetify_rating ?? p.leetifyRating ?? 0,
+                // Rating: leetify v2 retorna 'leetify_rating'
+                rating: p.leetify_rating ?? p.rating ?? p.leetifyRating ?? 0,
+                // KAST: não disponível diretamente na v2, estimamos com rounds_survived_percentage
                 kast: p.kast !== undefined ? (p.kast > 1 ? p.kast : Math.round(p.kast * 100)) : (p.kast_percent || 0),
+                // First kills/deaths: não disponível na v2
                 fk: p.fk_count ?? p.first_kill_count ?? p.firstKills ?? 0,
                 fd: p.fd_count ?? p.first_death_count ?? p.firstDeaths ?? 0,
-                triples: p.triple_kills ?? p.tripleKills ?? 0,
-                quads: p.quad_kills ?? p.quadro_kills ?? p.quadKills ?? 0,
-                aces: p.penta_kills ?? p.ace_kills ?? p.pentaKills ?? 0,
+                // Multikills: campo real da v2 é multi3k/multi4k/multi5k
+                triples: p.multi3k ?? p.triple_kills ?? p.tripleKills ?? 0,
+                quads: p.multi4k ?? p.quad_kills ?? p.quadKills ?? 0,
+                aces: p.multi5k ?? p.penta_kills ?? p.ace_kills ?? p.pentaKills ?? 0,
+                // Clutches: não disponível na v2
                 clutches: p.clutch_count ?? p.clutches_won ?? p.clutchesWon ?? 0,
-                trades: p.trade_count ?? p.tradeKills ?? p.trades ?? 0,
+                // Trades: campo real da v2 é trade_kills_succeed
+                trades: p.trade_kills_succeed ?? p.trade_count ?? p.tradeKills ?? p.trades ?? 0,
+                // Utility damage: v2 usa he_foes_damage_avg * rounds_count como proxy, ou dpr (ADR total)
                 utilDmg: p.utility_damage ?? p.util_damage ?? p.utilityDamage ?? 0,
-                flashAssists: p.flash_assists ?? p.flash_assist_count ?? p.flashAssists ?? 0,
-                blindTime: p.blind_time ?? p.enemies_flashed_duration ?? p.enemiesFlashedDuration ?? 0,
+                // Flash assists: campo real da v2 é flash_assist
+                flashAssists: p.flash_assist ?? p.flash_assists ?? p.flash_assist_count ?? 0,
+                // Blind time: campo real da v2 é flashbang_hit_foe_avg_duration (segundos por cego causado)
+                blindTime: p.flashbang_hit_foe_avg_duration ?? p.blind_time ?? p.enemiesFlashedDuration ?? 0,
+                // Grenade counts: campos reais da v2
                 heThrown: p.he_thrown ?? p.heThrown ?? 0,
-                flashThrown: p.flash_thrown ?? p.flashThrown ?? 0,
-                smokesThrown: p.smokes_thrown ?? p.smokesThrown ?? 0,
-                molotovThrown: p.molotovs_thrown ?? p.molotov_thrown ?? 0,
+                flashThrown: p.flashbang_thrown ?? p.flash_thrown ?? p.flashThrown ?? 0,
+                smokesThrown: p.smoke_thrown ?? p.smokes_thrown ?? p.smokesThrown ?? 0,
+                molotovThrown: p.molotov_thrown ?? p.molotovs_thrown ?? p.molotovThrown ?? 0,
             };
 
 

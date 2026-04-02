@@ -127,25 +127,41 @@ export async function GET(
         // Normalizar dados do Leetify para o formato esperado pelo frontend
         if (data.stats && Array.isArray(data.stats)) {
             data.stats = data.stats.map((p: any) => {
-                // Se o Leetify retornar dados aninhados em 'performance' ou similar, podemos achatar ou garantir campos
                 return {
                     ...p,
-                    // Garante que campos comuns do Leetify mapeiem para o que o frontend espera
+                    // Campos de alias para normalizeP no frontend
+                    // Rating: leetify v2 usa leetify_rating
+                    rating: p.leetify_rating ?? p.rating ?? 0,
+                    // ADR: leetify v2 usa dpr
+                    adr: p.dpr ?? p.adr ?? p.average_damage_per_round ?? 0,
+                    // Kills/Deaths/Assists: leetify v2 usa total_kills etc
+                    kills: p.total_kills ?? p.kills ?? 0,
+                    deaths: p.total_deaths ?? p.deaths ?? 0,
+                    assists: p.total_assists ?? p.assists ?? 0,
+                    // KAST: não disponível na v2
                     kast: p.kast !== undefined ? p.kast : (p.kast_percent || 0),
-                    utility_damage: p.utility_damage ?? p.util_damage ?? p.utilityDamage ?? 0,
-                    blind_time: p.blind_time ?? p.enemies_flashed_duration ?? p.enemiesFlashedDuration ?? 0,
-                    flash_assists: p.flash_assists ?? p.flash_assist_count ?? p.flashAssists ?? 0,
-                    // Garante que campos de desempenho sejam retornados para o frontend
-
-                    triples: p.triple_kills ?? p.tripleKills ?? 0,
-                    quads: p.quad_kills ?? p.quadKills ?? 0,
-                    aces: p.penta_kills ?? p.pentaKills ?? p.ace_kills ?? 0,
+                    // Multikills: campos reais da v2
+                    triples: p.multi3k ?? p.triple_kills ?? p.tripleKills ?? 0,
+                    quads: p.multi4k ?? p.quad_kills ?? p.quadKills ?? 0,
+                    aces: p.multi5k ?? p.penta_kills ?? p.pentaKills ?? p.ace_kills ?? 0,
+                    // Trades: campo real da v2
+                    trades: p.trade_kills_succeed ?? p.trade_count ?? p.tradeKills ?? p.trades ?? 0,
+                    // Clutches: não disponível na v2
                     clutches: p.clutch_count ?? p.clutches_won ?? p.clutchesWon ?? 0,
-                    trades: p.trade_count ?? p.tradeKills ?? p.trades ?? 0,
+                    // FK/FD: não disponível na v2
                     fk: p.fk_count ?? p.first_kill_count ?? p.firstKills ?? 0,
                     fd: p.fd_count ?? p.first_death_count ?? p.firstDeaths ?? 0,
-                    entry_kill_count: p.fk_count ?? p.first_kill_count ?? p.firstKills ?? 0,
-                    entry_death_count: p.fd_count ?? p.first_death_count ?? p.firstDeaths ?? 0
+                    // Utility: campos reais da v2
+                    utility_damage: p.utility_damage ?? p.util_damage ?? p.utilityDamage ?? 0,
+                    // Flash assists: campo real da v2 é flash_assist
+                    flash_assists: p.flash_assist ?? p.flash_assists ?? p.flashAssists ?? 0,
+                    // Blind time: campo real da v2 é flashbang_hit_foe_avg_duration
+                    blind_time: p.flashbang_hit_foe_avg_duration ?? p.blind_time ?? p.enemiesFlashedDuration ?? 0,
+                    // Grenade counts: campos reais da v2
+                    he_thrown: p.he_thrown ?? p.heThrown ?? 0,
+                    flash_thrown: p.flashbang_thrown ?? p.flash_thrown ?? p.flashThrown ?? 0,
+                    smokes_thrown: p.smoke_thrown ?? p.smokes_thrown ?? p.smokesThrown ?? 0,
+                    molotovs_thrown: p.molotov_thrown ?? p.molotovs_thrown ?? p.molotovThrown ?? 0,
                 };
             });
             data.stats = await fetchAvatars(data.stats);

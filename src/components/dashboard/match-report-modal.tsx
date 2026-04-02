@@ -231,23 +231,24 @@ const MatchReportModal: React.FC<Props> = ({
             nickname: p.name || p.nickname || p.playerNickname || (isUser ? '[Você]' : 'Jogador'),
             avatar, kills, deaths, assists, adr, rating,
             hs: hsRaw, kast,
-            // First Kills / Deaths
+            // First Kills / Deaths — não disponível na Leetify v2, será 0
             fk: Number(p.fk ?? p.fk_count ?? p.fkd ?? p.firstKills ?? p.first_kill_count ?? 0),
             fd: Number(p.fd ?? p.fd_count ?? p.fk_deaths ?? p.firstDeaths ?? p.first_death_count ?? 0),
-            // Multi-kills
-            triples: Number(p.triples ?? p.triple_kills ?? p.tripleKills ?? 0),
-            quads: Number(p.quads ?? p.quadro_kills ?? p.quad_kills ?? p.quadKills ?? 0),
-            aces: Number(p.aces ?? p.penta_kills ?? p.ace_kills ?? p.pentaKills ?? 0),
+            // Multi-kills: Leetify v2 usa multi3k/multi4k/multi5k
+            triples: Number(p.triples ?? p.multi3k ?? p.triple_kills ?? p.tripleKills ?? 0),
+            quads: Number(p.quads ?? p.multi4k ?? p.quadro_kills ?? p.quad_kills ?? p.quadKills ?? 0),
+            aces: Number(p.aces ?? p.multi5k ?? p.penta_kills ?? p.ace_kills ?? p.pentaKills ?? 0),
             // Misc
             clutches: Number(p.clutches ?? p.clutch_count ?? p.clutchesWon ?? 0),
-            trades: Number(p.trades ?? p.trade_count ?? p.tradeKills ?? 0),
-            // Utilities
+            // Trades: Leetify v2 usa trade_kills_succeed
+            trades: Number(p.trades ?? p.trade_kills_succeed ?? p.trade_count ?? p.tradeKills ?? 0),
+            // Utilities: Leetify v2 usa flash_assist (singular), flashbang_thrown, smoke_thrown, molotov_thrown
             utilDmg: Number(p.utilDmg ?? p.util_damage ?? p.utility_damage ?? p.utilityDamage ?? 0),
-            flashAssists: Number(p.flashAssists ?? p.flash_assists ?? p.flashbang_assists ?? 0),
-            blindTime: Number(p.blindTime ?? p.blind_time ?? p.enemiesFlashedDuration ?? 0),
+            flashAssists: Number(p.flashAssists ?? p.flash_assist ?? p.flash_assists ?? p.flashbang_assists ?? 0),
+            blindTime: Number(p.blindTime ?? p.blind_time ?? p.flashbang_hit_foe_avg_duration ?? p.enemiesFlashedDuration ?? 0),
             heThrown: Number(p.heThrown ?? p.he_thrown ?? 0),
-            flashThrown: Number(p.flashThrown ?? p.flash_thrown ?? 0),
-            smokesThrown: Number(p.smokesThrown ?? p.smokes_thrown ?? 0),
+            flashThrown: Number(p.flashThrown ?? p.flash_thrown ?? p.flashbang_thrown ?? 0),
+            smokesThrown: Number(p.smokesThrown ?? p.smokes_thrown ?? p.smoke_thrown ?? 0),
             molotovThrown: Number(p.molotovThrown ?? p.molotovs_thrown ?? p.molotov_thrown ?? 0),
             isUser,
             steamId: p.steam64_id || p.player_id || p.steamId || p.steam_id
@@ -374,7 +375,8 @@ const MatchReportModal: React.FC<Props> = ({
     const userData = t1.find(p=>p.isUser) || t2.find(p=>p.isUser) || t1[0];
     const allPlayers = [...t1, ...t2];
     const isVerified = !!currentMatch.metadata?.stats || currentMatch.source === 'Faceit';
-    const hasRichData = allPlayers.some(p => p.utilDmg > 0 || p.flashAssists > 0 || p.fk > 0 || p.triples > 0);
+    const hasRichData = allPlayers.some(p => p.utilDmg > 0 || p.flashAssists > 0 || p.fk > 0 || p.triples > 0 || p.smokesThrown > 0 || p.flashThrown > 0 || p.molotovThrown > 0 || p.trades > 0);
+
 
     // ── TABS CONFIG ───────────────────────────────────────────────────────────
     const tabs: { id: 'placar'|'desempenho'|'utilitarios'|'confrontos'; label: string; icon: React.ReactNode }[] = [
@@ -567,8 +569,11 @@ const MatchReportModal: React.FC<Props> = ({
 
     const TeamBlock = ({ players, title, scoreVal, ally }: { players: PlayerStats[]; title: string; scoreVal: number; ally: boolean }) => {
         const maxUtil = Math.max(...players.map(x => x.utilDmg || 0), 1);
-        const tabHasNoData = (tab === 'utilitarios' && players.every(p => p.utilDmg===0 && p.flashAssists===0 && p.flashThrown===0))
-                          || (tab === 'confrontos'   && players.every(p => p.fk===0 && p.fd===0));
+        const maxGrenades = Math.max(...players.map(x => (x.heThrown || 0) + (x.flashThrown || 0) + (x.smokesThrown || 0) + (x.molotovThrown || 0)), 1);
+
+        const tabHasNoData = (tab === 'utilitarios' && players.every(p => p.utilDmg===0 && p.flashAssists===0 && p.flashThrown===0 && p.smokesThrown===0 && p.heThrown===0 && p.molotovThrown===0))
+                          || (tab === 'confrontos'   && players.every(p => p.fk===0 && p.fd===0 && p.triples===0 && p.quads===0 && p.aces===0 && p.trades===0));
+
         return (
             <div className={`flex-1 min-w-0 rounded-2xl overflow-hidden border ${ally
                 ? (isWin ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : 'border-red-500/20 bg-red-500/[0.02]')
