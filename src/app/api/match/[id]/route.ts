@@ -157,8 +157,14 @@ export async function GET(
                     // FK/FD: não disponível na v2
                     fk: p.fk_count ?? p.first_kill_count ?? p.firstKills ?? 0,
                     fd: p.fd_count ?? p.first_death_count ?? p.firstDeaths ?? 0,
-                    // Utility: campos reais da v2
-                    utility_damage: p.utility_damage ?? p.util_damage ?? p.utilityDamage ?? 0,
+                    // Utility damage: Leetify v2 NÃO tem utility_damage direto.
+                    // Calcula: he_foes_damage_avg (dano médio de HE por round) × rounds_count
+                    // Isso dá o total de dano de HE causado no jogo (proxy de utility damage)
+                    utility_damage: p.utility_damage ?? p.util_damage ?? p.utilityDamage ??
+                        (p.he_foes_damage_avg != null && p.rounds_count
+                            ? Math.round(p.he_foes_damage_avg * p.rounds_count)
+                            : 0),
+
                     // Flash assists: campo real da v2 é flash_assist
                     flash_assists: p.flash_assist ?? p.flash_assists ?? p.flashAssists ?? 0,
                     // Blind time: campo real da v2 é flashbang_hit_foe_avg_duration
