@@ -90,13 +90,125 @@ const PODIUM_CONFIG = [
     },
 ];
 
-function getRatingTierColor(rating: number, max: number) {
-    const pct = max > 0 ? rating / max : 0;
-    if (pct >= 0.9) return { bar: 'bg-yellow-500 shadow-[0_0_6px_rgba(246,203,2,0.5)]', text: 'text-yellow-400' };
-    if (pct >= 0.75) return { bar: 'bg-orange-400', text: 'text-orange-400' };
-    if (pct >= 0.5) return { bar: 'bg-emerald-500', text: 'text-emerald-400' };
-    if (pct >= 0.25) return { bar: 'bg-sky-500', text: 'text-sky-400' };
-    return { bar: 'bg-zinc-600', text: 'text-zinc-400' };
+// ── CS2 PREMIER TIER SYSTEM ─────────────────────────────────────────────────
+const PREMIER_TIERS = [
+    {
+        name: 'Gray',
+        min: 0, max: 4999,
+        color: '#8a9ba8',
+        text: 'text-[#8a9ba8]',
+        bar: 'bg-[#8a9ba8]',
+        glow: 'shadow-[0_0_12px_rgba(138,155,168,0.4)]',
+        border: 'border-[#8a9ba8]/40',
+        bg: 'bg-[#8a9ba8]/10',
+        badge: 'bg-[#8a9ba8]/20 text-[#8a9ba8] border-[#8a9ba8]/30',
+        shimmer: 'from-[#8a9ba8]/20',
+    },
+    {
+        name: 'Light Blue',
+        min: 5000, max: 9999,
+        color: '#4fc3f7',
+        text: 'text-[#4fc3f7]',
+        bar: 'bg-[#4fc3f7]',
+        glow: 'shadow-[0_0_12px_rgba(79,195,247,0.5)]',
+        border: 'border-[#4fc3f7]/40',
+        bg: 'bg-[#4fc3f7]/10',
+        badge: 'bg-[#4fc3f7]/20 text-[#4fc3f7] border-[#4fc3f7]/30',
+        shimmer: 'from-[#4fc3f7]/20',
+    },
+    {
+        name: 'Blue',
+        min: 10000, max: 14999,
+        color: '#2962ff',
+        text: 'text-[#6b8fff]',
+        bar: 'bg-[#2962ff]',
+        glow: 'shadow-[0_0_14px_rgba(41,98,255,0.5)]',
+        border: 'border-[#2962ff]/40',
+        bg: 'bg-[#2962ff]/10',
+        badge: 'bg-[#2962ff]/20 text-[#6b8fff] border-[#2962ff]/30',
+        shimmer: 'from-[#2962ff]/20',
+    },
+    {
+        name: 'Purple',
+        min: 15000, max: 19999,
+        color: '#9c27b0',
+        text: 'text-[#ce93d8]',
+        bar: 'bg-[#9c27b0]',
+        glow: 'shadow-[0_0_14px_rgba(156,39,176,0.5)]',
+        border: 'border-[#9c27b0]/40',
+        bg: 'bg-[#9c27b0]/10',
+        badge: 'bg-[#9c27b0]/20 text-[#ce93d8] border-[#9c27b0]/30',
+        shimmer: 'from-[#9c27b0]/20',
+    },
+    {
+        name: 'Pink',
+        min: 20000, max: 24999,
+        color: '#e91e8c',
+        text: 'text-[#f06292]',
+        bar: 'bg-[#e91e8c]',
+        glow: 'shadow-[0_0_16px_rgba(233,30,140,0.5)]',
+        border: 'border-[#e91e8c]/40',
+        bg: 'bg-[#e91e8c]/10',
+        badge: 'bg-[#e91e8c]/20 text-[#f06292] border-[#e91e8c]/30',
+        shimmer: 'from-[#e91e8c]/20',
+    },
+    {
+        name: 'Red',
+        min: 25000, max: 29999,
+        color: '#d32f2f',
+        text: 'text-[#ef9a9a]',
+        bar: 'bg-[#d32f2f]',
+        glow: 'shadow-[0_0_16px_rgba(211,47,47,0.5)]',
+        border: 'border-[#d32f2f]/40',
+        bg: 'bg-[#d32f2f]/10',
+        badge: 'bg-[#d32f2f]/20 text-[#ef9a9a] border-[#d32f2f]/30',
+        shimmer: 'from-[#d32f2f]/20',
+    },
+    {
+        name: 'Gold',
+        min: 30000, max: Infinity,
+        color: '#f5c518',
+        text: 'text-[#f5c518]',
+        bar: 'bg-gradient-to-r from-[#f5c518] to-[#ff9800] shadow-[0_0_16px_rgba(245,197,24,0.7)]',
+        glow: 'shadow-[0_0_24px_rgba(245,197,24,0.6)]',
+        border: 'border-[#f5c518]/50',
+        bg: 'bg-[#f5c518]/10',
+        badge: 'bg-[#f5c518]/20 text-[#f5c518] border-[#f5c518]/40',
+        shimmer: 'from-[#f5c518]/25',
+    },
+] as const;
+
+function getPremierTier(rating: number) {
+    if (rating <= 0) return PREMIER_TIERS[0];
+    return PREMIER_TIERS.find(t => rating >= t.min && rating <= t.max) ?? PREMIER_TIERS[PREMIER_TIERS.length - 1];
+}
+
+// Legacy helper (kept for sortKey bars outside of premier)
+function getRatingTierColor(rating: number) {
+    const tier = getPremierTier(rating);
+    return { bar: tier.bar, text: tier.text, glow: tier.glow };
+}
+
+function PremierBadge({ rating, size = 'sm' }: { rating: number; size?: 'xs' | 'sm' | 'lg' }) {
+    if (rating <= 0) return null;
+    const tier = getPremierTier(rating);
+    const sizeClass = size === 'xs'
+        ? 'text-[8px] px-1.5 py-px'
+        : size === 'lg'
+        ? 'text-[11px] px-3 py-1'
+        : 'text-[9px] px-2 py-0.5';
+    return (
+        <span
+            className={`inline-flex items-center gap-1 font-black uppercase tracking-widest rounded-md border ${tier.badge} ${sizeClass}`}
+            style={{ textShadow: `0 0 8px ${tier.color}60` }}
+        >
+            <span
+                className="inline-block w-1.5 h-1.5 rounded-full"
+                style={{ background: tier.color, boxShadow: `0 0 4px ${tier.color}` }}
+            />
+            {tier.name}
+        </span>
+    );
 }
 
 function AnimatedNumber({ value, duration = 1.2 }: { value: number; duration?: number }) {
@@ -240,22 +352,31 @@ const GlobalRanking: React.FC = () => {
                     PODIUM_CONFIG.slice(0, top3.length).map((cfg) => {
                         const user = top3[cfg.pos];
                         if (!user) return null;
+                        const podiumTier = getPremierTier(user.rating);
                         return (
                             <motion.div
                                 key={user.steamId}
                                 initial={{ opacity: 0, y: 30 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: cfg.pos * 0.12, type: 'spring', stiffness: 100 }}
-                                className={`flex-1 max-w-sm relative bg-gradient-to-b ${cfg.cardBg} border ${cfg.cardBorder} rounded-3xl p-6 flex flex-col items-center text-center ${cfg.glow} ${cfg.order} ${cfg.scale} transition-transform`}
+                                className={`flex-1 max-w-sm relative rounded-3xl p-6 flex flex-col items-center text-center ${cfg.order} ${cfg.scale} transition-transform`}
+                                style={{
+                                    background: `linear-gradient(to bottom, ${podiumTier.color}18, ${podiumTier.color}06)`,
+                                    border: `1px solid ${podiumTier.color}40`,
+                                    boxShadow: `0 0 ${cfg.pos === 0 ? 60 : 30}px ${podiumTier.color}25`,
+                                }}
                             >
                                 {/* Badge posição */}
-                                <div className={`absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full ${cfg.badgeBg} ${cfg.badgeText} flex items-center justify-center text-[11px] font-black shadow-lg`}>
+                                <div
+                                    className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black shadow-lg"
+                                    style={{ background: podiumTier.color, color: '#000', boxShadow: `0 0 10px ${podiumTier.color}80` }}
+                                >
                                     {cfg.pos === 0 ? <Crown size={14} /> : cfg.label}
                                 </div>
 
                                 {cfg.crown && (
                                     <div className="mb-1">
-                                        <Crown className="text-yellow-500 w-6 h-6 drop-shadow-[0_0_8px_rgba(246,203,2,0.8)]" />
+                                        <Crown className="w-6 h-6" style={{ color: podiumTier.color, filter: `drop-shadow(0 0 8px ${podiumTier.color})` }} />
                                     </div>
                                 )}
 
@@ -263,42 +384,50 @@ const GlobalRanking: React.FC = () => {
                                 <div className={`relative mb-4 ${cfg.crown ? 'mt-0' : 'mt-4'}`}>
                                     <img
                                         src={user.avatar}
-                                        className={`${cfg.size} rounded-full border-2 ${cfg.borderColor} object-cover ${cfg.glowRing} transition-all`}
+                                        className={`${cfg.size} rounded-full object-cover transition-all`}
+                                        style={{
+                                            border: `2px solid ${podiumTier.color}`,
+                                            boxShadow: cfg.pos === 0 ? `0 0 0 3px ${podiumTier.color}40, 0 0 20px ${podiumTier.color}30` : `0 0 0 2px ${podiumTier.color}30`,
+                                        }}
                                         alt={user.nickname}
                                     />
                                     {cfg.crown && (
-                                        <div className="absolute inset-0 rounded-full bg-yellow-500/10 animate-pulse" />
+                                        <div className="absolute inset-0 rounded-full animate-pulse" style={{ background: `${podiumTier.color}15` }} />
                                     )}
                                 </div>
 
                                 {/* Nome */}
                                 <Link href={`/player/${user.steamId}`} className="group">
-                                    <h3 className={`text-base font-black italic uppercase tracking-tight ${cfg.textColor} group-hover:underline truncate max-w-[180px]`}>
+                                    <h3
+                                        className="text-base font-black italic uppercase tracking-tight group-hover:underline truncate max-w-[180px]"
+                                        style={{ color: podiumTier.color }}
+                                    >
                                         {user.nickname}
                                     </h3>
                                 </Link>
 
-                                {/* Rating animado */}
-                                <div className="mt-3 flex flex-col items-center gap-1">
-                                    <span className={`text-3xl font-black italic tracking-tighter ${cfg.textColor}`}>
+                                {/* Rating animado + badge tier */}
+                                <div className="mt-3 flex flex-col items-center gap-2">
+                                    <span
+                                        className="text-3xl font-black italic tracking-tighter"
+                                        style={{ color: podiumTier.color, textShadow: `0 0 20px ${podiumTier.color}80` }}
+                                    >
                                         <AnimatedNumber value={user.rating} />
                                     </span>
-                                    <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.3em]">
-                                        {sortKey === 'faceitElo' ? 'Faceit ELO' : sortKey === 'gcLevel' ? 'GC Level' : 'Premier SR'}
-                                    </span>
+                                    <PremierBadge rating={user.rating} size="sm" />
                                 </div>
 
                                 {/* Mini-stats do pódio */}
                                 <div className="grid grid-cols-3 gap-2 mt-4 w-full">
-                                    <div className="flex flex-col items-center bg-black/20 rounded-xl p-2">
+                                    <div className="flex flex-col items-center rounded-xl p-2" style={{ background: `${podiumTier.color}12` }}>
                                         <span className="text-[9px] text-zinc-600 uppercase font-black tracking-wider">Partidas</span>
                                         <span className="text-sm font-black text-zinc-300">{user.matchesPlayed || '—'}</span>
                                     </div>
-                                    <div className="flex flex-col items-center bg-black/20 rounded-xl p-2">
+                                    <div className="flex flex-col items-center rounded-xl p-2" style={{ background: `${podiumTier.color}12` }}>
                                         <span className="text-[9px] text-zinc-600 uppercase font-black tracking-wider">KDR</span>
                                         <span className="text-sm font-black text-zinc-300">{user.kdr > 0 ? user.kdr.toFixed(2) : '—'}</span>
                                     </div>
-                                    <div className="flex flex-col items-center bg-black/20 rounded-xl p-2">
+                                    <div className="flex flex-col items-center rounded-xl p-2" style={{ background: `${podiumTier.color}12` }}>
                                         <span className="text-[9px] text-zinc-600 uppercase font-black tracking-wider">ADR</span>
                                         <span className="text-sm font-black text-zinc-300">{user.adr > 0 ? user.adr : '—'}</span>
                                     </div>
@@ -435,7 +564,8 @@ const GlobalRanking: React.FC = () => {
                                 const sortVal = user[sortKey] as number;
                                 const maxSortVal = Math.max(...filteredAndSorted.map(u => u[sortKey] as number));
                                 const pct = Math.min(maxSortVal > 0 ? (sortVal / maxSortVal) * 100 : 0, 100);
-                                const tierColor = getRatingTierColor(user.rating, maxRating);
+                                const tier = getPremierTier(user.rating);
+                                const tierColor = getRatingTierColor(user.rating);
 
                                 return (
                                     <motion.tr
@@ -444,18 +574,20 @@ const GlobalRanking: React.FC = () => {
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: idx * 0.025, type: 'spring', stiffness: 200 }}
                                         className={`group border-b border-white/[0.04] transition-all cursor-pointer
-                                            hover:bg-gradient-to-r hover:from-yellow-500/[0.03] hover:to-transparent
-                                            ${isTop1 ? 'bg-yellow-500/[0.04]' : ''}
+                                            hover:bg-gradient-to-r hover:${tier.shimmer} hover:to-transparent
+                                            ${isTop1 ? tier.bg : ''}
                                         `}
                                     >
                                         {/* Posição */}
                                         <td className="px-5 py-3.5">
-                                            <div className={`flex items-center justify-center w-8 h-8 rounded-xl text-[11px] font-black ${
-                                                isTop1 ? 'bg-yellow-500 text-black shadow-[0_0_12px_rgba(246,203,2,0.4)]' :
-                                                user.rank === 2 ? 'bg-zinc-400 text-black' :
-                                                user.rank === 3 ? 'bg-amber-700 text-white' :
-                                                'bg-white/5 text-zinc-500'
-                                            }`}>
+                                            <div
+                                                className="flex items-center justify-center w-8 h-8 rounded-xl text-[11px] font-black"
+                                                style={user.rank <= 3 ? {
+                                                    background: user.rank === 1 ? tier.color : user.rank === 2 ? '#9ca3af' : '#92400e',
+                                                    color: '#000',
+                                                    boxShadow: user.rank === 1 ? `0 0 12px ${tier.color}60` : 'none',
+                                                } : { background: 'rgba(255,255,255,0.05)', color: '#71717a' }}
+                                            >
                                                 {isTop1 ? <Crown size={13} /> : user.rank < 10 ? `0${user.rank}` : user.rank}
                                             </div>
                                         </td>
@@ -466,23 +598,27 @@ const GlobalRanking: React.FC = () => {
                                                 <div className="relative">
                                                     <img
                                                         src={user.avatar}
-                                                        className={`w-9 h-9 rounded-full object-cover border ${
-                                                            isTop1 ? 'border-yellow-500/60' :
-                                                            isTop3 ? 'border-white/20' :
-                                                            'border-white/[0.07]'
-                                                        } group-hover:border-yellow-500/50 transition-all`}
+                                                        className="w-9 h-9 rounded-full object-cover transition-all"
+                                                        style={{
+                                                            border: `2px solid ${isTop1 ? tier.color : isTop3 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.07)'}`,
+                                                            boxShadow: isTop1 ? `0 0 8px ${tier.color}60` : 'none',
+                                                        }}
                                                         alt={user.nickname}
                                                     />
                                                     {isTop1 && (
-                                                        <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-yellow-500 rounded-full flex items-center justify-center shadow-[0_0_6px_rgba(246,203,2,0.6)]">
+                                                        <div
+                                                            className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                                                            style={{ background: tier.color, boxShadow: `0 0 6px ${tier.color}` }}
+                                                        >
                                                             <Crown size={7} className="text-black" />
                                                         </div>
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className={`font-black text-sm italic tracking-tight group-hover:text-yellow-400 transition-colors truncate max-w-[140px] ${
-                                                        isTop1 ? 'text-yellow-400' : 'text-zinc-200'
-                                                    }`}>
+                                                    <span
+                                                        className="font-black text-sm italic tracking-tight transition-colors truncate max-w-[140px]"
+                                                        style={{ color: isTop1 ? tier.color : '#e4e4e7' }}
+                                                    >
                                                         {user.nickname}
                                                     </span>
                                                     {user.winRate !== 'N/A' && (
@@ -492,22 +628,35 @@ const GlobalRanking: React.FC = () => {
                                             </Link>
                                         </td>
 
-                                        {/* Rating / Sort value + barra de tier */}
+                                        {/* Rating / Sort value + barra de tier + badge */}
                                         <td className="px-4 py-3.5">
-                                            <div className="flex items-center gap-3">
-                                                <span className={`font-black text-base italic tracking-tighter ${tierColor.text}`}>
-                                                    {sortKey === 'kdr' ? sortVal.toFixed(2) :
-                                                     sortKey === 'hsPercentage' ? `${sortVal}%` :
-                                                     sortVal.toLocaleString()}
-                                                </span>
-                                                <div className="w-16 h-1.5 bg-white/[0.04] rounded-full overflow-hidden hidden sm:block">
-                                                    <motion.div
-                                                        initial={{ width: 0 }}
-                                                        animate={{ width: `${pct}%` }}
-                                                        transition={{ delay: 0.3 + idx * 0.02, duration: 0.6, ease: 'easeOut' }}
-                                                        className={`h-full rounded-full ${tierColor.bar}`}
-                                                    />
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span
+                                                        className="font-black text-base italic tracking-tighter"
+                                                        style={{ color: tier.color, textShadow: `0 0 10px ${tier.color}60` }}
+                                                    >
+                                                        {sortKey === 'kdr' ? sortVal.toFixed(2) :
+                                                         sortKey === 'hsPercentage' ? `${sortVal}%` :
+                                                         sortVal.toLocaleString()}
+                                                    </span>
+                                                    {sortKey === 'rating' && user.rating > 0 && (
+                                                        <span
+                                                            className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                                                            style={{ background: tier.color, boxShadow: `0 0 4px ${tier.color}` }}
+                                                        />
+                                                    )}
                                                 </div>
+                                                {sortKey === 'rating' && (
+                                                    <div className="w-20 h-1 bg-white/[0.04] rounded-full overflow-hidden">
+                                                        <motion.div
+                                                            initial={{ width: 0 }}
+                                                            animate={{ width: `${pct}%` }}
+                                                            transition={{ delay: 0.3 + idx * 0.02, duration: 0.6, ease: 'easeOut' }}
+                                                            className={`h-full rounded-full ${tierColor.bar}`}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
 
