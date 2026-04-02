@@ -25,8 +25,26 @@ def read_root():
 @app.post("/api/importer/import-match", tags=["Importer"])
 async def import_match(request: ImportMatchRequest):
     """
-    Receives SteamID and Auth Code, fetches match history and starts background processing.
+    Receives SteamID and Auth Code, fetches match history OR accepts a direct share_code / link for manual import.
     """
+    # 1. Manual Demo Import (if share_code or url is provided)
+    if request.share_code:
+        import uuid
+        is_url = "http" in request.share_code
+        match_id_mock = request.share_code.split("/")[-1].split(".")[0][:15] if is_url else request.share_code
+
+        process_match_task.delay(
+            match_id=match_id_mock,
+            steamid=request.steamid,
+            demo_url=request.share_code if is_url else None
+        )
+        return {
+            "status": "processing",
+            "message": "Queued manual match import.",
+            "matches": [{"sharing_code": request.share_code}]
+        }
+
+    # 2. Automated Official Import
     matches = DownloaderService.get_match_history(request.steamid, request.auth_code)
     
     if not matches:

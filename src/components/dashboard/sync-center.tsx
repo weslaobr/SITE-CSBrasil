@@ -21,6 +21,8 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
     const [botOnline, setBotOnline] = useState(false);
     const [syncResult, setSyncResult] = useState<any>(null);
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [manualDemoUrl, setManualDemoUrl] = useState('');
+    const [syncingManual, setSyncingManual] = useState(false);
 
     useEffect(() => {
         const botUrl = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3005';
@@ -97,6 +99,34 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
         } finally {
             setSaving(false);
             setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+        }
+    };
+
+    const handleManualDemoSync = async () => {
+        if (!manualDemoUrl) return;
+        setSyncingManual(true);
+        setMessage({ type: '', text: '' });
+
+        try {
+            const res = await fetch('/api/sync/manual-demo', {
+                method: 'POST',
+                body: JSON.stringify({ url: manualDemoUrl }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                setMessage({ type: 'success', text: 'Demo enviada para análise com sucesso!' });
+                setManualDemoUrl('');
+                if (onSync) onSync();
+            } else {
+                setMessage({ type: 'error', text: data.error || 'Erro ao enviar demo.' });
+            }
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Erro de conexão.' });
+        } finally {
+            setSyncingManual(false);
+            setTimeout(() => setMessage({ type: '', text: '' }), 5000);
         }
     };
 
@@ -294,6 +324,39 @@ const SyncCenter: React.FC<SyncCenterProps> = ({ onSync }) => {
                         className="w-full bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 text-xs font-bold py-2 rounded-xl transition-all"
                     >
                         Atualizar Gamers Club
+                    </button>
+                </div>
+
+                {/* Manual Demo Import - Zona Neutra */}
+                <div className="bg-white/5 p-6 rounded-2xl border border-white/5 space-y-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                            <Gamepad2 className="text-purple-500 w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="font-bold text-sm">Demo Manual / Zona Neutra</p>
+                            <p className="text-[10px] text-zinc-500 uppercase font-bold text-purple-500">Análise Direta</p>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label className="text-[10px] text-zinc-500 uppercase font-bold">Link da Demo</label>
+                            <span className="text-[9px] text-zinc-600 font-bold uppercase">.dem.bz2 ou Sharecode</span>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="http://replay...dem.bz2"
+                            className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-purple-500 transition-all font-mono"
+                            value={manualDemoUrl}
+                            onChange={(e) => setManualDemoUrl(e.target.value)}
+                        />
+                    </div>
+                    <button
+                        onClick={handleManualDemoSync}
+                        disabled={syncingManual}
+                        className="w-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 text-xs font-bold py-2 rounded-xl transition-all"
+                    >
+                        {syncingManual ? 'Importando...' : 'Analisar Partida'}
                     </button>
                 </div>
             </div>
