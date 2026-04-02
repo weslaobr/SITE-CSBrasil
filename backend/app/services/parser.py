@@ -83,9 +83,44 @@ class ParserService:
             )
             db.add(mp_stats)
 
+        # 2b. Calcular FK/FD por round a partir dos kill events
+        kills_df_early = self.dem.kills.copy() if not self.dem.kills.empty else pd.DataFrame()
+        if not kills_df_early.empty and 'round' in kills_df_early.columns:
+            # Para cada round, encontre o primeiro kill (menor tick)
+            fk_counts = {}  # steamid -> count de rounds onde foi o abridor
+            fd_counts = {}  # steamid -> count de rounds onde foi a primeira morte
+
+            for round_num, round_kills in kills_df_early.groupby('round'):
+                # A primeira kill do round = kill com menor tick
+                first_kill_row = round_kills.nsmallest(1, 'tick').iloc[0]
+                attacker = str(int(first_kill_row['attacker_steamid'])) if first_kill_row.get('attacker_steamid') else None
+                victim = str(int(first_kill_row['victim_steamid'])) if first_kill_row.get('victim_steamid') else None
+                if attacker:
+                    fk_counts[attacker] = fk_counts.get(attacker, 0) + 1
+                if victim:
+                    fd_counts[victim] = fd_counts.get(victim, 0) + 1
+
+            # Atualizar os registros MatchPlayer com os valores calculados
+            for _, row in player_stats.iterrows():
+                steamid_str = str(int(row['steamid']))
+                fk_val = fk_counts.get(steamid_str, 0)
+                fd_val = fd_counts.get(steamid_str, 0)
+                if fk_val > 0 or fd_val > 0:
+                    # Atualizar o registro via query
+                    from sqlalchemy import update
+                    from app.models.tracker import MatchPlayer as MP
+                    await db.execute(
+                        update(MP).where(
+                            MP.match_id == match_id,
+                            MP.steamid64 == int(row['steamid'])
+                        ).values(fk=fk_val, fd=fd_val)
+                    )
+
+
 
         # 3. Rounds (With deep mapping)
         rounds_df = self.dem.rounds
+
         round_map = {} # tick -> round_id for mapping events
         for idx, row in rounds_df.iterrows():
             new_round = Round(

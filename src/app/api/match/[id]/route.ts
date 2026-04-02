@@ -53,6 +53,9 @@ export async function GET(
             const localMeta = (localMatch.metadata as any) || {};
             let localStats = localMatch.players.map(p => {
                 const m = (p.metadata as any) || {};
+                // FK/FD: vem ou das colunas diretas (parser Python) ou do metadata (sync Leetify)
+                const fkVal = (p as any).fk ?? m.fk ?? 0;
+                const fdVal = (p as any).fd ?? m.fd ?? 0;
                 return {
                     team_id: p.team,
                     steam64_id: p.steamId,
@@ -64,33 +67,36 @@ export async function GET(
                     accuracy_head: p.hsPercentage ? (p.hsPercentage / 100) : 0, 
                     rating: m.rating || 0,
                     kast: m.kast || 0,
-                    fkd: m.fk || 0,
-                    fk_deaths: m.fd || 0,
+                    // FK/FD com nomes diretos que o normalizeP lê
+                    fk: fkVal,
+                    fd: fdVal,
+                    fkd: fkVal,       // alias legado
+                    fk_deaths: fdVal, // alias legado
+                    // Multikills
                     triple_kills: m.triples || 0,
                     quad_kills: m.quads || 0,
                     penta_kills: m.aces || 0,
-                    // Alias para MatchReviewModal
                     multi3k: m.triples || 0,
                     multi4k: m.quads || 0,
                     multi5k: m.aces || 0,
-
+                    // Utility
                     utility_damage: m.utilDmg || 0,
                     blind_time: m.blindTime || 0,
                     he_thrown: m.heThrown || 0,
                     flash_thrown: m.flashThrown || 0,
                     smokes_thrown: m.smokesThrown || 0,
                     molotovs_thrown: m.molotovThrown || 0,
-                    
+                    // Confrontos
                     trades: m.trades || 0,
-                    trade_kill_count: m.trades || 0, // Alias para MatchReviewModal
-                    
+                    trade_kill_count: m.trades || 0,
                     clutches: m.clutches || 0,
-                    clutches_won: m.clutches || 0, // Alias para MatchReviewModal
-                    
+                    clutches_won: m.clutches || 0,
+                    // Flash
                     flash_assists: m.flashAssists || 0,
                     is_user: false // será conferido no cliente via SteamID
                 };
             });
+
 
 
             // Tentar puxar avatares
@@ -162,6 +168,12 @@ export async function GET(
                     flash_thrown: p.flashbang_thrown ?? p.flash_thrown ?? p.flashThrown ?? 0,
                     smokes_thrown: p.smoke_thrown ?? p.smokes_thrown ?? p.smokesThrown ?? 0,
                     molotovs_thrown: p.molotov_thrown ?? p.molotovs_thrown ?? p.molotovThrown ?? 0,
+                    // Confrontos - oportunidades de trade (Leetify v2)
+                    trade_kill_opportunities: p.trade_kill_opportunities ?? 0,
+                    traded_death_opportunities: p.traded_death_opportunities ?? 0,
+                    trade_kills_succeed: p.trade_kills_succeed ?? 0,
+                    traded_deaths_succeed: p.traded_deaths_succeed ?? 0,
+
                 };
             });
             data.stats = await fetchAvatars(data.stats);

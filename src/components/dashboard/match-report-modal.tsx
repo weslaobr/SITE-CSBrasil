@@ -27,6 +27,11 @@ interface PlayerStats {
     aces: number;
     clutches: number;
     trades: number;
+    // Campos extras do Leetify v2 para aba Confrontos
+    tradeKillOpp: number;    // trade_kill_opportunities (oportunidades de abrir round com trade)
+    tradedDeathOpp: number;  // traded_death_opportunities (oportunidades de morrer trocado)
+    tradeKillSucc: number;   // trade_kills_succeed
+    tradedDeathSucc: number; // traded_deaths_succeed
     utilDmg: number;
     flashAssists: number;
     blindTime: number;   // seconds
@@ -37,6 +42,7 @@ interface PlayerStats {
     isUser?: boolean;
     steamId?: string;
 }
+
 
 interface Match {
     id: string;
@@ -242,6 +248,11 @@ const MatchReportModal: React.FC<Props> = ({
             clutches: Number(p.clutches ?? p.clutch_count ?? p.clutchesWon ?? 0),
             // Trades: Leetify v2 usa trade_kills_succeed
             trades: Number(p.trades ?? p.trade_kills_succeed ?? p.trade_count ?? p.tradeKills ?? 0),
+            // Campos extra do Leetify v2 para aba Confrontos
+            tradeKillOpp: Number(p.tradeKillOpp ?? p.trade_kill_opportunities ?? 0),
+            tradedDeathOpp: Number(p.tradedDeathOpp ?? p.traded_death_opportunities ?? 0),
+            tradeKillSucc: Number(p.tradeKillSucc ?? p.trade_kills_succeed ?? p.trades ?? 0),
+            tradedDeathSucc: Number(p.tradedDeathSucc ?? p.traded_deaths_succeed ?? 0),
             // Utilities: Leetify v2 usa flash_assist (singular), flashbang_thrown, smoke_thrown, molotov_thrown
             utilDmg: Number(p.utilDmg ?? p.util_damage ?? p.utility_damage ?? p.utilityDamage ?? 0),
             flashAssists: Number(p.flashAssists ?? p.flash_assist ?? p.flash_assists ?? p.flashbang_assists ?? 0),
@@ -530,20 +541,56 @@ const MatchReportModal: React.FC<Props> = ({
 
     /** Confrontos (FK/FD) – visual duel bar */
     const DuelRow = ({ p }: { p: PlayerStats }) => {
-        const total = p.fk + p.fd;
-        const fkPct = total > 0 ? Math.round((p.fk / total) * 100) : 50;
-        const hasDuel = p.fk > 0 || p.fd > 0;
-        const saldo = p.fk - p.fd;
+        // FK/FD direto (parser Python) ou via oportunidades de abertura (Leetify v2)
+        const hasFKFD = p.fk > 0 || p.fd > 0;
+        // Quando não temos FK/FD, usamos oportunidades de trade do Leetify como proxy de agressividade
+        const hasTradeData = p.tradeKillOpp > 0 || p.tradedDeathOpp > 0;
+        const hasDuel = hasFKFD || hasTradeData;
+        
+        // Calcula duelo bar: FK vs FD, ou Trade Kills vs Traded Deaths como fallback
+        const duelFk = hasFKFD ? p.fk : p.tradeKillSucc;
+        const duelFd = hasFKFD ? p.fd : p.tradedDeathSucc;
+        const total = duelFk + duelFd;
+        const fkPct = total > 0 ? Math.round((duelFk / total) * 100) : 50;
+        const saldo = duelFk - duelFd;
+        
+        // Badge de estilo
+        const badge = hasFKFD
+            ? (p.fk > p.fd ? '🥇 Abre Rounds' : p.fd > p.fk ? '💀 Vulnerável' : '= Neutro')
+            : (p.tradeKillOpp > p.tradedDeathOpp ? '⚡ Agressivo' : p.tradedDeathOpp > p.tradeKillOpp ? '🛡 Reativo' : '= Neutro');
+        const badgeColor = (saldo > 0 ? 'text-emerald-400 bg-emerald-500/10' : saldo < 0 ? 'text-red-400 bg-red-500/10' : 'text-zinc-500 bg-zinc-800/50');
+        
         return (
             <tr className={`border-b border-white/[0.04] ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
                 <td className="py-3 px-3">
                     <div className="flex flex-col gap-0.5">
                         <a href={p.steamId?`/player/${p.steamId}`:'#'} onClick={e=>{if(!p.steamId)e.preventDefault();e.stopPropagation();}} className={`text-[11px] font-bold truncate max-w-[100px] hover:underline ${p.isUser?'text-yellow-400':'text-zinc-300 hover:text-yellow-300'}`}>{p.isUser?'★ ':''}{p.nickname}</a>
-                        {hasDuel && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded self-start ${p.fk>p.fd?'text-emerald-400 bg-emerald-500/10':p.fd>p.fk?'text-red-400 bg-red-500/10':'text-zinc-500 bg-zinc-800/50'}`}>{p.fk>p.fd?'🥇 Abre Rounds':p.fd>p.fk?'💀 Vulnerável':'= Neutro'}</span>}
+                        {hasDuel && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded self-start ${badgeColor}`}>{badge}</span>}
                     </div>
                 </td>
-                <td className="py-3 px-2 text-center"><span className={`text-sm font-black italic ${p.fk>p.fd?'text-emerald-400':hasDuel?'text-zinc-400':'text-zinc-700'}`}>{hasDuel?p.fk:'—'}</span></td>
-                <td className="py-3 px-2 text-center"><span className={`text-sm font-black italic ${p.fd>p.fk?'text-red-400':hasDuel?'text-zinc-500':'text-zinc-700'}`}>{hasDuel?p.fd:'—'}</span></td>
+                {/* 1ª Kill */}
+                <td className="py-3 px-2 text-center">
+                    {hasFKFD
+                        ? <span className={`text-sm font-black italic ${p.fk > p.fd ? 'text-emerald-400' : 'text-zinc-400'}`}>{p.fk}</span>
+                        : hasTradeData
+                            ? <div className="flex flex-col items-center">
+                                <span className="text-xs font-black text-emerald-400/70">{p.tradeKillOpp}</span>
+                                <span className="text-[7px] text-zinc-700 font-bold">oport.</span>
+                              </div>
+                            : <span className="text-zinc-700">—</span>}
+                </td>
+                {/* 1ª Morte */}
+                <td className="py-3 px-2 text-center">
+                    {hasFKFD
+                        ? <span className={`text-sm font-black italic ${p.fd > p.fk ? 'text-red-400' : 'text-zinc-500'}`}>{p.fd}</span>
+                        : hasTradeData
+                            ? <div className="flex flex-col items-center">
+                                <span className="text-xs font-black text-red-400/70">{p.tradedDeathOpp}</span>
+                                <span className="text-[7px] text-zinc-700 font-bold">oport.</span>
+                              </div>
+                            : <span className="text-zinc-700">—</span>}
+                </td>
+                {/* Duelos bar */}
                 <td className="py-3 px-2">
                     {hasDuel
                         ? <div className="flex flex-col items-center gap-1">
@@ -555,17 +602,24 @@ const MatchReportModal: React.FC<Props> = ({
                           </div>
                         : <span className="text-zinc-700 block text-center">—</span>}
                 </td>
+                {/* Saldo */}
                 <td className="py-3 px-2 text-center">
                     {hasDuel
                         ? <span className={`text-xs font-black px-1.5 py-0.5 rounded-lg ${saldo>0?'text-emerald-400 bg-emerald-500/15':saldo<0?'text-red-400 bg-red-500/15':'text-zinc-500 bg-zinc-800/50'}`}>{saldo>0?`+${saldo}`:saldo}</span>
                         : <span className="text-zinc-700">—</span>}
                 </td>
+                {/* Trocas */}
                 <td className="py-3 px-3 text-center">
-                    <span className={`text-xs font-bold ${p.trades>=3?'text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-lg':p.trades>0?'text-zinc-500':'text-zinc-700'}`}>{p.trades>0?p.trades:'—'}</span>
+                    {p.trades > 0
+                        ? <div className="flex flex-col items-center">
+                            <span className={`text-xs font-bold ${p.trades>=3?'text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-lg':'text-zinc-500'}`}>{p.trades}</span>
+                          </div>
+                        : <span className="text-zinc-700">—</span>}
                 </td>
             </tr>
         );
     };
+
 
     const TeamBlock = ({ players, title, scoreVal, ally }: { players: PlayerStats[]; title: string; scoreVal: number; ally: boolean }) => {
         const maxUtil = Math.max(...players.map(x => x.utilDmg || 0), 1);
