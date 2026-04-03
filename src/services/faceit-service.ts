@@ -41,6 +41,28 @@ export const getFaceitPlayer = async (nickname: string): Promise<FaceitProfile |
     }
 };
 
+/**
+ * Busca um player do Faceit pelo SteamID64 (sem precisar saber o nickname)
+ * Usa o endpoint /players?game=cs2&game_player_id=STEAMID64
+ */
+export const getFaceitPlayerBySteamId = async (steamId64: string): Promise<FaceitProfile | null> => {
+    if (!FACEIT_API_KEY) return null;
+
+    try {
+        const response = await axios.get(`${FACEIT_BASE_URL}/players`, {
+            params: { game: 'cs2', game_player_id: steamId64 },
+            headers: { Authorization: `Bearer ${FACEIT_API_KEY}` },
+            timeout: 6000,
+        });
+        return response.data;
+    } catch (error: any) {
+        if (error?.response?.status !== 404) {
+            console.error(`[Faceit] Error fetching player by steamId ${steamId64}:`, error?.response?.data || error.message);
+        }
+        return null;
+    }
+};
+
 export const getFaceitMatchDetails = async (matchId: string): Promise<any | null> => {
     if (!FACEIT_API_KEY) return null;
     try {
