@@ -176,11 +176,33 @@ export async function GET(
             anomalies.push({ id: 'vac-ban', title: 'VAC Ban Detected', status: 'Critical', description: 'This account has active VAC bans.' });
         }
 
+        // Montar playerStats enriquecido com dados do Player + Stats + CS2Space
+        const playerStatsEnriched = dbPlayer?.Stats ? {
+            ...dbPlayer.Stats,
+            // Dados de identidade do Player
+            faceitName: dbPlayer.faceitName || cs2space?.faceit?.nickname || null,
+            faceitId:   dbPlayer.faceitId   || cs2space?.faceit?.id       || null,
+            gcNickname: dbPlayer.steamId    || null, // GC usa steamId64 na URL
+            // Fallback de FACEIT vindo do CS2.space
+            faceitLevel: dbPlayer.Stats.faceitLevel || cs2space?.faceit?.level || null,
+            faceitElo:   dbPlayer.Stats.faceitElo   || cs2space?.faceit?.elo   || null,
+            // Premier máximo vindo do CS2.space se DB não tiver
+            premierRating: dbPlayer.Stats.premierRating || cs2space?.ranks?.premier || null,
+        } : cs2space ? {
+            faceitName:    cs2space.faceit?.nickname || null,
+            faceitId:      cs2space.faceit?.id       || null,
+            faceitLevel:   cs2space.faceit?.level    || null,
+            faceitElo:     cs2space.faceit?.elo      || null,
+            premierRating: cs2space.ranks?.premier   || null,
+            gcLevel:       null,
+            gcNickname:    steamId,
+        } : null;
+
         return NextResponse.json({
             profile,
             steamStats,
             dbUser,
-            playerStats: dbPlayer?.Stats || null,
+            playerStats: playerStatsEnriched,
             leetifyData,
             inventory,
             steamLevel,

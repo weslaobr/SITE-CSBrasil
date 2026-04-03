@@ -136,27 +136,29 @@ export async function POST(req: NextRequest) {
         // Salvar snapshot do rating para histórico de evolução
         if (user.steamId) {
             try {
-                const playerRecord = await (prisma as any).player.findUnique({
+                const playerRecord = await prisma.player.findUnique({
                     where: { steamId: user.steamId },
-                    select: { premierRating: true },
+                    include: { Stats: true },
                 });
 
-                if (playerRecord?.premierRating && playerRecord.premierRating > 0) {
+                const premierRating = playerRecord?.Stats?.premierRating ?? 0;
+
+                if (premierRating > 0) {
                     // Verificar último snapshot — só salvar se mudou
                     const lastSnap = await (prisma as any).ratingSnapshot.findFirst({
                         where: { steamId: user.steamId, source: 'premier' },
                         orderBy: { createdAt: 'desc' },
                     });
 
-                    if (!lastSnap || lastSnap.rating !== playerRecord.premierRating) {
+                    if (!lastSnap || lastSnap.rating !== premierRating) {
                         await (prisma as any).ratingSnapshot.create({
                             data: {
                                 steamId: user.steamId,
-                                rating: playerRecord.premierRating,
+                                rating: premierRating,
                                 source: 'premier',
                             },
                         });
-                        console.log(`[Sync] Saved rating snapshot: ${user.steamId} = ${playerRecord.premierRating}`);
+                        console.log(`[Sync] Saved rating snapshot: ${user.steamId} = ${premierRating}`);
                     }
                 }
             } catch (snapErr: any) {

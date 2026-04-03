@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, Award, Shield, MessageCircle, Trophy } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 
 interface ProfileSidebarProps {
     profile: any;
@@ -32,12 +32,48 @@ const getMMRank = (rankId: number) => {
     };
 };
 
+/**
+ * Retorna a cor e o nome do tier do Premier Rating, igual ao jogo
+ */
+function getPremierColor(rating: number): { color: string; bg: string; border: string; tier: string } {
+    if (!rating || rating === 0) return { color: '#71717a', bg: 'rgba(113,113,122,0.1)', border: 'rgba(113,113,122,0.25)', tier: 'Sem Rating' };
+    if (rating < 5000)   return { color: '#a1a1aa',  bg: 'rgba(161,161,170,0.10)', border: 'rgba(161,161,170,0.25)', tier: 'Cinza'    };
+    if (rating < 10000)  return { color: '#60a5fa',  bg: 'rgba(96,165,250,0.10)',  border: 'rgba(96,165,250,0.25)',  tier: 'Azul'     };
+    if (rating < 15000)  return { color: '#a78bfa',  bg: 'rgba(167,139,250,0.10)', border: 'rgba(167,139,250,0.25)', tier: 'Roxo'     };
+    if (rating < 20000)  return { color: '#fb923c',  bg: 'rgba(251,146,60,0.10)',  border: 'rgba(251,146,60,0.25)',  tier: 'Laranja'  };
+    if (rating < 25000)  return { color: '#f43f5e',  bg: 'rgba(244,63,94,0.10)',   border: 'rgba(244,63,94,0.25)',   tier: 'Vermelho' };
+    if (rating < 30000)  return { color: '#facc15',  bg: 'rgba(250,204,21,0.10)',  border: 'rgba(250,204,21,0.25)',  tier: 'Ouro'     };
+    return                      { color: '#818cf8',  bg: 'rgba(129,140,248,0.10)', border: 'rgba(129,140,248,0.25)', tier: 'Elite'    };
+}
+
 const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, inventoryValueStr, steamLevel, medals, leetifyData, playerStats }) => {
     const joinedDate = profile.timecreated 
-        ? new Date(profile.timecreated * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        ? new Date(profile.timecreated * 1000).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })
         : 'N/A';
 
     const mmRank = getMMRank(leetifyData?.ranks?.matchmaking || 0);
+
+    // Premier Rating — prioridade: DB > cs2space (já dentro de playerStats) > leetifyData
+    const premierRating = playerStats?.premierRating
+        || steamStats?.premier_rating
+        || leetifyData?.ranks?.premier
+        || 0;
+
+    const premierStyle = getPremierColor(premierRating);
+
+    // FACEIT: usa nickname real do DB/CS2Space, com fallback para personaname
+    const faceitNickname = playerStats?.faceitName || null;
+    const faceitLink = faceitNickname
+        ? `https://www.faceit.com/en/players/${faceitNickname}`
+        : `https://www.faceit.com/en/players/${profile.personaname}`;
+
+    // GamersClub: URL usa steamId64
+    const gcSteamId = playerStats?.gcNickname || profile.steamid;
+    const gcLink = `https://gamersclub.gg/jogador/${gcSteamId}`;
+
+    // FACEIT level/elo — prioridade: DB (playerStats) > leetifyData?.ranks
+    const faceitLevel = playerStats?.faceitLevel || leetifyData?.ranks?.faceitLevel || 0;
+    const faceitElo   = playerStats?.faceitElo   || leetifyData?.ranks?.faceitElo   || 0;
 
     return (
         <div className="space-y-8 h-full flex flex-col">
@@ -66,41 +102,52 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                     <div className="text-center space-y-1">
                         <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">{profile.personaname}</h2>
                         <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Entrou na Steam: {joinedDate}</p>
-                        <p className="text-[10px] font-black text-sky-500 uppercase tracking-widest mt-2">{profile.personaState === 1 ? 'Online' : 'Offline'}</p>
+                        <p className="text-[10px] font-black text-sky-500 uppercase tracking-widest mt-2">
+                            {profile.personaState === 1 ? 'Online' : 'Offline'}
+                        </p>
                     </div>
 
+                    {/* Profile links */}
                     <div className="flex items-center justify-center gap-2 pt-6 pb-2 border-t border-white/5 flex-wrap">
                         {/* Steam */}
-                        <a href={`https://steamcommunity.com/profiles/${profile.steamid}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-zinc-950/80 rounded-[12px] flex items-center justify-center border border-white/5 hover:bg-zinc-800 transition-colors" title="Steam Community">
+                        <a href={`https://steamcommunity.com/profiles/${profile.steamid}`} target="_blank" rel="noopener noreferrer"
+                           className="w-9 h-9 bg-zinc-950/80 rounded-[12px] flex items-center justify-center border border-white/5 hover:bg-zinc-800 transition-colors" title="Steam Community">
                              <img src="/img/icone-steam.png" className="w-5 h-5 object-contain opacity-80" alt="Steam" />
                         </a>
 
                         {/* CS-Stats */}
-                        <a href={`https://csstats.gg/player/${profile.steamid}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-blue-600/10 rounded-[12px] flex items-center justify-center border border-blue-500/20 hover:border-blue-500/50 transition-colors" title="CS-Stats">
+                        <a href={`https://csstats.gg/player/${profile.steamid}`} target="_blank" rel="noopener noreferrer"
+                           className="w-9 h-9 bg-blue-600/10 rounded-[12px] flex items-center justify-center border border-blue-500/20 hover:border-blue-500/50 transition-colors" title="CS-Stats">
                             <img src="/img/icone-csstats.png" className="w-5 h-5 object-contain" alt="CS-Stats" />
                         </a>
 
                         {/* Leetify */}
-                        <a href={`https://leetify.com/app/profile/${profile.steamid}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-[#FF5500]/10 rounded-[12px] flex items-center justify-center border border-[#FF5500]/20 hover:border-[#FF5500]/50 transition-colors" title="Leetify">
+                        <a href={`https://leetify.com/app/profile/${profile.steamid}`} target="_blank" rel="noopener noreferrer"
+                           className="w-9 h-9 bg-[#FF5500]/10 rounded-[12px] flex items-center justify-center border border-[#FF5500]/20 hover:border-[#FF5500]/50 transition-colors" title="Leetify">
                             <img src="/img/icone-leetify.png" className="w-5 h-5 object-contain" alt="Leetify" />
                         </a>
 
-                        {/* FACEIT */}
-                        <a href={`https://www.faceit.com/en/players/${profile.personaname}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-[#FF5500]/10 rounded-[12px] flex items-center justify-center border border-[#FF5500]/20 hover:border-[#FF5500]/50 transition-colors" title="FACEIT">
+                        {/* FACEIT — link usa nick real do DB */}
+                        <a href={faceitLink} target="_blank" rel="noopener noreferrer"
+                           className="w-9 h-9 bg-[#FF5500]/10 rounded-[12px] flex items-center justify-center border border-[#FF5500]/20 hover:border-[#FF5500]/50 transition-colors"
+                           title={faceitNickname ? `FACEIT: ${faceitNickname}` : 'FACEIT'}>
                             <img src="/img/icone-faceit.png" className="w-5 h-5 object-contain" alt="FACEIT" />
                         </a>
 
-                        {/* Gamers Club */}
-                        <a href={`https://gamersclub.com.br/jogador/${profile.steamid}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-cyan-600/10 rounded-[12px] flex items-center justify-center border border-cyan-500/20 hover:border-cyan-500/50 transition-colors" title="Gamers Club">
+                        {/* Gamers Club — link usa steamId64 */}
+                        <a href={gcLink} target="_blank" rel="noopener noreferrer"
+                           className="w-9 h-9 bg-cyan-600/10 rounded-[12px] flex items-center justify-center border border-cyan-500/20 hover:border-cyan-500/50 transition-colors" title="Gamers Club">
                             <img src="/img/icone-gamersclub.png" className="w-5 h-5 object-contain" alt="Gamers Club" />
                         </a>
 
                         {/* CS-Rep */}
-                        <a href={`https://csrep.gg/player/${profile.steamid}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-yellow-600/10 rounded-[12px] flex items-center justify-center border border-yellow-500/20 hover:border-yellow-500/50 transition-colors" title="CS-Rep">
+                        <a href={`https://csrep.gg/player/${profile.steamid}`} target="_blank" rel="noopener noreferrer"
+                           className="w-9 h-9 bg-yellow-600/10 rounded-[12px] flex items-center justify-center border border-yellow-500/20 hover:border-yellow-500/50 transition-colors" title="CS-Rep">
                             <img src="/img/icone-csrep.png" className="w-5 h-5 object-contain font-black" alt="CS-Rep" />
                         </a>
                     </div>
 
+                    {/* Stats grid */}
                     <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/5">
                         <div className="bg-zinc-950/80 p-4 rounded-2xl border border-white/5 text-center flex flex-col items-center justify-center hover:bg-zinc-900 transition-colors">
                             <p className="text-[9px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Tempo de Jogo</p>
@@ -113,16 +160,50 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20 text-center flex flex-col justify-center group hover:bg-emerald-500/15 transition-all">
-                            <p className="text-[9px] text-emerald-500/80 uppercase font-black italic tracking-widest mb-1 leading-none">Premier Rating</p>
-                             <div className="flex items-center justify-center gap-1.5 mt-1">
-                                <Trophy className="text-emerald-500 w-4 h-4" />
-                                <p className="text-lg font-black text-emerald-500 italic uppercase leading-none">
-                                    {(playerStats?.premierRating || steamStats?.premier_rating || leetifyData?.ranks?.premier || 0).toLocaleString()}
+                        {/* Premier Rating — com sistema de cores por faixa */}
+                        <div
+                            className="p-4 rounded-2xl border text-center flex flex-col justify-center group transition-all col-span-2"
+                            style={{ background: premierStyle.bg, borderColor: premierStyle.border }}
+                        >
+                            <div className="flex items-center justify-between mb-1">
+                                <p
+                                    className="text-[9px] uppercase font-black italic tracking-widest leading-none"
+                                    style={{ color: premierStyle.color }}
+                                >
+                                    Premier Rating
                                 </p>
-                             </div>
+                                {/* Indicador de Rating Máximo */}
+                                <span
+                                    className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border"
+                                    style={{
+                                        color: premierStyle.color,
+                                        borderColor: premierStyle.border,
+                                        background: premierStyle.bg,
+                                    }}
+                                >
+                                    Máximo
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-center gap-2 mt-1">
+                                <Trophy className="w-4 h-4" style={{ color: premierStyle.color }} />
+                                <p
+                                    className="text-2xl font-black italic uppercase leading-none tracking-tighter"
+                                    style={{ color: premierStyle.color }}
+                                >
+                                    {premierRating > 0 ? premierRating.toLocaleString('pt-BR') : '—'}
+                                </p>
+                                {premierRating > 0 && (
+                                    <span
+                                        className="text-[9px] font-black uppercase tracking-widest self-center"
+                                        style={{ color: premierStyle.color, opacity: 0.7 }}
+                                    >
+                                        {premierStyle.tier}
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
+                        {/* Competitivo clássico */}
                         <div className="bg-sky-500/10 p-4 rounded-2xl border border-sky-500/10 text-center flex flex-col items-center justify-center group hover:bg-sky-500/15 transition-all">
                             <p className="text-[9px] text-sky-500/60 uppercase font-black italic tracking-widest mb-1 leading-none">Competitivo</p>
                             {mmRank.icon ? (
@@ -132,30 +213,43 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                             )}
                         </div>
 
+                        {/* GamersClub */}
                         <div className="bg-[#FFCC00]/10 p-4 rounded-2xl border border-[#FFCC00]/10 text-center flex flex-col justify-center group hover:bg-[#FFCC00]/15 transition-all">
                             <p className="text-[9px] text-[#FFCC00]/60 uppercase font-black italic tracking-widest mb-1 leading-none">GamersClub</p>
                             <div className="flex items-center justify-center gap-1.5 mt-1">
                                 <img src="/img/icone-gamersclub.png" className="w-4 h-4 object-contain brightness-125" alt="GC" />
-                                <p className="text-lg font-black text-[#FFCC00] italic uppercase leading-none">{playerStats?.gcLevel || 'N/A'}</p>
+                                <p className="text-lg font-black text-[#FFCC00] italic uppercase leading-none">
+                                    {playerStats?.gcLevel || 'N/A'}
+                                </p>
                             </div>
                         </div>
 
-                        <div className="bg-[#ff5500]/10 p-4 rounded-2xl border border-[#ff5500]/20 text-center flex flex-col justify-center group hover:bg-[#ff5500]/15 transition-all">
-                             <p className="text-[9px] text-[#ff5500]/60 uppercase font-black italic tracking-widest mb-1 leading-none">Nível Faceit</p>
-                             <div className="flex items-center justify-center gap-1.5 mt-1">
-                                {leetifyData?.ranks?.faceitLevel > 0 ? (
+                        {/* FACEIT */}
+                        <div className="bg-[#ff5500]/10 p-4 rounded-2xl border border-[#ff5500]/20 text-center flex flex-col justify-center group hover:bg-[#ff5500]/15 transition-all col-span-2">
+                            <div className="flex items-center justify-between mb-1">
+                                <p className="text-[9px] text-[#ff5500]/60 uppercase font-black italic tracking-widest leading-none">Nível Faceit</p>
+                                {faceitNickname && (
+                                    <span className="text-[8px] text-[#ff5500]/50 font-black tracking-widest truncate max-w-[100px]">
+                                        @{faceitNickname}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center justify-center gap-1.5 mt-1">
+                                {faceitLevel > 0 ? (
                                     <>
                                         <img 
-                                            src={`https://faceit-ranking.eu/img/levels/${leetifyData.ranks.faceitLevel}.png`} 
+                                            src={`https://faceit-ranking.eu/img/levels/${faceitLevel}.png`} 
                                             className="w-6 h-6 object-contain drop-shadow-md group-hover:scale-125 transition-transform" 
-                                            alt={`Faceit ${leetifyData.ranks.faceitLevel}`} 
+                                            alt={`Faceit ${faceitLevel}`} 
                                         />
-                                        <p className="text-xl font-black text-white italic tracking-tighter leading-none">{leetifyData.ranks.faceitElo || ''}</p>
+                                        <p className="text-xl font-black text-white italic tracking-tighter leading-none">
+                                            {faceitElo > 0 ? faceitElo.toLocaleString() : `Nível ${faceitLevel}`}
+                                        </p>
                                     </>
                                 ) : (
-                                    <p className="text-base font-black text-[#ff5500] italic uppercase">{playerStats?.faceitLevel || 'N/A'}</p>
+                                    <p className="text-base font-black text-[#ff5500] italic uppercase">N/A</p>
                                 )}
-                             </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -169,7 +263,7 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                 </div>
                 
                 <div className="grid grid-cols-4 gap-3">
-                    {medals.length > 0 ? medals.slice(0, 12).map((medal, i) => (
+                    {medals.length > 0 ? medals.slice(0, 12).map((medal: any, i: number) => (
                         <div key={i} className="aspect-square bg-zinc-950/50 rounded-xl border border-white/5 p-2 flex items-center justify-center group hover:border-yellow-500/30 transition-all cursor-help relative" title={medal.name}>
                             <img src={medal.icon_url} className="w-full h-full object-contain group-hover:scale-110 transition-transform" alt={medal.name} />
                         </div>
@@ -182,14 +276,12 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                 </div>
 
                 <div className="mt-6 flex flex-col gap-4">
-                    {/* Commendations and Reputation removed because they cannot be reliably fetched via standard Steam web APIs */}
-                    
                     <button className="w-full mt-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-red-500/20 transition-all active:scale-95 shadow-sm shadow-red-500/5">
                         <span className="flex items-center justify-center gap-2">Reportar Jogador</span>
                     </button>
                     
                     <p className="text-[8px] text-zinc-600 font-bold uppercase tracking-widest text-center mt-4 flex items-center justify-center gap-2 italic">
-                        Dados atualizados via Steam & Leetify
+                        Dados atualizados via Steam &amp; Leetify
                     </p>
                 </div>
             </div>
