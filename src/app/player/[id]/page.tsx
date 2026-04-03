@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Package, ShieldCheck, Trophy, Target, Zap } from 'lucide-react';
-import { getBadges, RARITY_COLORS, RARITY_LABELS } from '@/lib/badges';
+import { getAllBadges, RARITY_COLORS, RARITY_LABELS } from '@/lib/badges';
 
 // New Components
 import ProfileSidebar from "@/components/profile/profile-sidebar";
@@ -194,53 +194,110 @@ export default function PlayerProfilePage() {
                         )}
 
                         {/* Badges / Conquistas */}
-                        {playerStats && (() => {
-                            const badges = getBadges({
-                                rating: playerStats.premierRating || playerStats.faceitElo || 0,
-                                kdr: playerStats.kdr || 0,
-                                adr: playerStats.adr || dbUser?.adr || 0,
-                                hsPercentage: playerStats.hsPercentage || dbUser?.hsPercentage || 0,
-                                matchesPlayed: playerStats.matchesPlayed || dbUser?.matchesPlayed || 0,
-                                winRate: dbUser?.winRate ? `${Math.round(dbUser.winRate)}%` : 'N/A',
-                                gcLevel: playerStats.gcLevel || 0,
-                                faceitLevel: playerStats.faceitLevel || 0,
+                        {(() => {
+                            // Calcular idade da conta
+                            const accountAgeYears = profile.timecreated
+                                ? (Date.now() / 1000 - profile.timecreated) / (365 * 24 * 3600)
+                                : 0;
+
+                            // % de kills com AWP (vem do metadata das partidas ou steamStats)
+                            const awpKillPercentage = steamStats?.awp_kills && steamStats?.total_kills
+                                ? Math.round((steamStats.awp_kills / steamStats.total_kills) * 100)
+                                : 0;
+
+                            const allBadges = getAllBadges({
+                                rating:             playerStats?.premierRating || 0,
+                                premierRating:      playerStats?.premierRating || 0,
+                                kdr:                playerStats?.kdr || 0,
+                                adr:                playerStats?.adr || dbUser?.adr || 0,
+                                hsPercentage:       playerStats?.hsPercentage || dbUser?.hsPercentage || 0,
+                                awpKillPercentage,
+                                matchesPlayed:      playerStats?.matchesPlayed || dbUser?.matchesPlayed || 0,
+                                winRate:            dbUser?.winRate ? `${Math.round(dbUser.winRate)}%` : 'N/A',
+                                gcLevel:            playerStats?.gcLevel || 0,
+                                faceitLevel:        playerStats?.faceitLevel || 0,
+                                faceitElo:          playerStats?.faceitElo || 0,
+                                accountAgeYears,
+                                isPro:              (profile as any)?.isPro || false,
+                                rank:               playerStats?.rank,
                             });
-                            if (badges.length === 0) return null;
+
+                            const unlocked = allBadges.filter(b => !b.locked);
+                            const locked   = allBadges.filter(b => b.locked);
+
                             return (
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     className="bg-zinc-900/40 rounded-[2rem] border border-white/5 p-6 backdrop-blur-xl"
                                 >
-                                    <h3 className="text-sm font-black italic uppercase tracking-tighter mb-4 flex items-center gap-2">
+                                    <h3 className="text-sm font-black italic uppercase tracking-tighter mb-5 flex items-center gap-2">
                                         <span className="w-1.5 h-5 bg-yellow-500 rounded-full" />
                                         Conquistas
-                                        <span className="ml-auto text-[9px] text-zinc-600 font-black uppercase tracking-widest">{badges.length} desbloqueada{badges.length !== 1 ? 's' : ''}</span>
+                                        <span className="ml-auto text-[9px] text-zinc-600 font-black uppercase tracking-widest">
+                                            {unlocked.length}/{allBadges.length} desbloqueada{unlocked.length !== 1 ? 's' : ''}
+                                        </span>
                                     </h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {badges.map(badge => (
-                                            <div
-                                                key={badge.id}
-                                                className="group relative flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-black cursor-default transition-all hover:scale-105"
-                                                style={{
-                                                    background: `${badge.color}15`,
-                                                    borderColor: `${badge.color}40`,
-                                                    color: badge.color,
-                                                }}
-                                                title={badge.description}
-                                            >
-                                                <span>{badge.icon}</span>
-                                                <span className="text-[10px] uppercase tracking-widest">{badge.name}</span>
-                                                {/* Tooltip rarity */}
+
+                                    {/* Desbloqueadas */}
+                                    {unlocked.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mb-5">
+                                            {unlocked.map(badge => (
                                                 <div
-                                                    className="absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-900 border border-white/10 rounded-lg px-2 py-1 text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none"
-                                                    style={{ color: RARITY_COLORS[badge.rarity] }}
+                                                    key={badge.id}
+                                                    className="group relative flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-black cursor-default transition-all hover:scale-105"
+                                                    style={{
+                                                        background: `${badge.color}18`,
+                                                        borderColor: `${badge.color}50`,
+                                                        color: badge.color,
+                                                        boxShadow: `0 0 10px ${badge.color}20`,
+                                                    }}
+                                                    title={badge.description}
                                                 >
-                                                    {RARITY_LABELS[badge.rarity]}
+                                                    <span>{badge.icon}</span>
+                                                    <span className="text-[10px] uppercase tracking-widest">{badge.name}</span>
+                                                    <div
+                                                        className="absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-900 border border-white/10 rounded-lg px-2 py-1 text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10"
+                                                        style={{ color: RARITY_COLORS[badge.rarity] }}
+                                                    >
+                                                        {RARITY_LABELS[badge.rarity]}
+                                                    </div>
                                                 </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Separador "Disponíveis" */}
+                                    {locked.length > 0 && (
+                                        <>
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <div className="flex-1 h-px bg-white/5" />
+                                                <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Disponíveis para desbloquear</span>
+                                                <div className="flex-1 h-px bg-white/5" />
                                             </div>
-                                        ))}
-                                    </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {locked.map(badge => (
+                                                    <div
+                                                        key={badge.id}
+                                                        className="group relative flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-black cursor-default transition-all opacity-30 grayscale hover:opacity-50 hover:grayscale-0"
+                                                        style={{
+                                                            background: 'rgba(255,255,255,0.03)',
+                                                            borderColor: 'rgba(255,255,255,0.07)',
+                                                            color: '#71717a',
+                                                        }}
+                                                        title={`🔒 ${badge.lockedHint || badge.description}`}
+                                                    >
+                                                        <span className="grayscale opacity-60">{badge.icon}</span>
+                                                        <span className="text-[10px] uppercase tracking-widest">{badge.name}</span>
+                                                        {/* Tooltip com dica de como desbloquear */}
+                                                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-zinc-950 border border-white/10 rounded-lg px-3 py-1.5 text-[8px] font-bold uppercase tracking-wide opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 max-w-[200px] text-center text-zinc-400">
+                                                            🔒 {badge.lockedHint || badge.description}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
                                 </motion.div>
                             );
                         })()}
