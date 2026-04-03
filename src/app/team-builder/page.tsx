@@ -89,8 +89,11 @@ export default function TeamBuilderPage() {
             try {
                 const res = await fetch("/api/ranking");
                 const data = await res.json();
-                if (Array.isArray(data)) {
-                    const formatted = data.map(p => ({
+                
+                const playersList = data.players || data;
+                
+                if (Array.isArray(playersList)) {
+                    const formatted = playersList.map(p => ({
                         ...p,
                         assignment: "unassigned" as const
                     }));
