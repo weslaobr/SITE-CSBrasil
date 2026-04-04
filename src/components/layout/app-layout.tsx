@@ -21,7 +21,8 @@ import {
     Users,
     Map,
     Swords,
-    Medal
+    Medal,
+    MessageSquareQuote
 } from 'lucide-react';
 
 const SidebarItem = ({ icon, label, active, collapsed, href }: { icon: any, label: string, active?: boolean, collapsed: boolean, href: string }) => (
@@ -103,6 +104,13 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         active={pathname.startsWith('/map-veto')}
                         collapsed={collapsed}
                         href="/map-veto"
+                    />
+                    <SidebarItem
+                        icon={<MessageSquareQuote size={20} />}
+                        label="Resenha"
+                        active={pathname.startsWith('/resenha')}
+                        collapsed={collapsed}
+                        href="/resenha"
                     />
                     <SidebarItem
                         icon={<Map size={20} />}
