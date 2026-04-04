@@ -34,17 +34,19 @@ function PlayerEvaluationCard({ evalData, isOwner, onDelete }: { evalData: any; 
         </button>
       )}
 
-      <div className="p-4 border-b border-white/5 flex items-center justify-between bg-zinc-950/30">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center font-black text-yellow-500 text-lg border border-white/5">
+      <div className="p-4 border-b border-white/5 flex items-center justify-between gap-4 bg-zinc-950/30">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 shrink-0 rounded-full bg-zinc-800 flex items-center justify-center font-black text-yellow-500 text-lg border border-white/5">
             {evalData.evaluatedPlayerName.charAt(0).toUpperCase()}
           </div>
-          <div>
-            <h3 className="font-black text-white uppercase truncate max-w-[150px] sm:max-w-xs">{evalData.evaluatedPlayerName}</h3>
-            {evalData.evaluatedSteamId && <p className="text-[10px] bg-black/40 px-1.5 py-0.5 rounded text-zinc-500 font-mono inline-block">Steam vinculada</p>}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-black text-white uppercase truncate" title={evalData.evaluatedPlayerName}>
+              {evalData.evaluatedPlayerName}
+            </h3>
+            {evalData.evaluatedSteamId && <p className="text-[10px] bg-black/40 px-1.5 py-0.5 rounded text-zinc-500 font-mono inline-block mt-0.5">Steam vinculada</p>}
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-right shrink-0">
           <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Geral</p>
           <p className="text-2xl font-black italic text-yellow-400">{Number(evalData.overallScore).toFixed(1)}</p>
         </div>
