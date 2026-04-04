@@ -231,16 +231,12 @@ export default function ResenhaViewerPage({ params }: { params: Promise<{ id: st
             </div>
 
             <div className="flex items-center gap-4 bg-black/40 p-2 pr-6 rounded-full w-fit border border-white/5">
-              {list.creator?.image ? (
-                <img src={list.creator.image} className="w-8 h-8 rounded-full border border-white/10" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center">
-                  <Star size={12} className="text-zinc-500" />
-                </div>
-              )}
+              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10">
+                <Star size={12} className="text-zinc-500" />
+              </div>
               <div>
                 <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-none">Criado por</p>
-                <p className="text-xs text-white font-black">{list.creator?.name || "Usuário"}</p>
+                <p className="text-xs text-white font-black">Anônimo</p>
               </div>
             </div>
           </div>

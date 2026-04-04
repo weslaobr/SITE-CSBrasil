@@ -126,20 +126,12 @@ export default function ResenhaHubPage() {
                 </p>
 
                 <div className="flex items-center gap-3 pt-4 border-t border-white/5">
-                  {list.creator?.image ? (
-                    <img
-                      src={list.creator.image}
-                      alt="Creator Avatar"
-                      className="w-8 h-8 rounded-full border border-white/10"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center">
-                      <Star size={14} className="text-zinc-500" />
-                    </div>
-                  )}
+                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10">
+                    <Star size={14} className="text-zinc-500" />
+                  </div>
                   <div className="flex-1">
                     <p className="text-xs font-bold text-white">
-                      {list.creator?.name || "Usuário"}
+                      Anônimo
                     </p>
                     <p className="text-[10px] text-zinc-600 font-mono">
                       {new Date(list.createdAt).toLocaleDateString()}
