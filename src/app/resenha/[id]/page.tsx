@@ -88,10 +88,27 @@ export default function ResenhaViewerPage({ params }: { params: Promise<{ id: st
   const [scores, setScores] = useState({ aim: 5, utility: 5, pos: 5, duel: 5, clutch: 5, decision: 5 });
   const [notes, setNotes] = useState("");
   const [addingPlayer, setAddingPlayer] = useState(false);
+  const [dbPlayers, setDbPlayers] = useState<any[]>([]);
 
   useEffect(() => {
     fetchList();
+    fetchPlayers();
   }, [unwrappedParams.id]);
+
+  const fetchPlayers = async () => {
+    try {
+      const res = await fetch("/api/ranking");
+      if (res.ok) {
+        const data = await res.json();
+        const playersList = data.players || data;
+        if (Array.isArray(playersList)) {
+          setDbPlayers(playersList);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchList = async () => {
     try {
@@ -282,17 +299,22 @@ export default function ResenhaViewerPage({ params }: { params: Promise<{ id: st
               <form onSubmit={handleAddPlayer} className="space-y-6">
                 <div className="space-y-2">
                   <label className="text-xs font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                    <Search size={14} /> Steam ID do Jogador (Na plataforma) <span className="text-red-500">*</span>
+                    <Search size={14} /> Selecione o Jogador <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
+                  <select
                     required
                     value={steamId}
                     onChange={(e) => setSteamId(e.target.value)}
-                    placeholder="SteamID64"
-                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-yellow-500/50 transition-all font-mono"
-                  />
-                  <p className="text-[10px] text-zinc-500">O jogador precisa existir no banco de dados.</p>
+                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-yellow-500/50 transition-all font-mono appearance-none"
+                  >
+                    <option value="" disabled>Escolha um jogador da lista...</option>
+                    {dbPlayers.map(p => (
+                      <option key={p.steamId} value={p.steamId}>
+                        {p.nickname} (Steam: {p.steamId})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-zinc-500">A lista exibe jogadores cadastrados e analisados pelo site.</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
