@@ -61,6 +61,11 @@ export default function ResenhaHubPage() {
           </div>
 
           <div className="flex items-center gap-4 z-20 mt-4 sm:mt-0">
+            <Link href="/resenha/ranking">
+              <button className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold uppercase text-xs transition-all text-white bg-zinc-900 border border-white/10 hover:border-white/30 hover:bg-zinc-800">
+                <Star size={16} className="text-yellow-500" /> Ranking Global
+              </button>
+            </Link>
             {session ? (
               <Link href="/resenha/create">
                 <button className="flex items-center gap-2 px-6 py-3 rounded-xl font-black uppercase text-xs transition-all shadow-lg bg-yellow-500 hover:bg-yellow-400 text-black shadow-yellow-500/20 active:scale-95 border border-yellow-400/50">
