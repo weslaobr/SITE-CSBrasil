@@ -103,7 +103,7 @@ export default function ResenhaRankingPage() {
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           {player.steamId ? (
-                            <Link href={`/perfil/${player.steamId}`} className={`w-8 h-8 rounded-full border flex items-center justify-center font-black text-xs overflow-hidden group-hover:scale-110 transition-transform hover:border-yellow-500 ${isTop3 ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500' : 'bg-zinc-800 border-white/5 text-zinc-400'}`}>
+                            <Link href={`/player/${player.steamId}`} className={`w-8 h-8 rounded-full border flex items-center justify-center font-black text-xs overflow-hidden group-hover:scale-110 transition-transform hover:border-yellow-500 ${isTop3 ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500' : 'bg-zinc-800 border-white/5 text-zinc-400'}`}>
                               {player.avatar ? (
                                 <img src={player.avatar} alt={player.playerName} className="w-full h-full object-cover" />
                               ) : (
@@ -117,7 +117,7 @@ export default function ResenhaRankingPage() {
                           )}
                           <div>
                             {player.steamId ? (
-                              <Link href={`/perfil/${player.steamId}`} className="hover:text-yellow-500 transition-colors">
+                              <Link href={`/player/${player.steamId}`} className="hover:text-yellow-500 transition-colors">
                                 <p className="font-bold text-white text-sm transition-colors">{player.playerName}</p>
                               </Link>
                             ) : (

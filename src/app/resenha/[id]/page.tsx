@@ -49,7 +49,7 @@ function PlayerEvaluationCard({ evalData, isOwner, onDelete, onEdit, dbPlayers }
       <div className="p-4 border-b border-white/5 flex items-center justify-between gap-4 bg-zinc-950/30">
         <div className="flex items-center gap-3 min-w-0">
           {evalData.evaluatedSteamId ? (
-            <Link href={`/perfil/${evalData.evaluatedSteamId}`} className="w-10 h-10 shrink-0 rounded-full bg-zinc-800 flex items-center justify-center font-black text-yellow-500 text-lg border border-white/5 overflow-hidden group-hover:border-yellow-500/50 transition-all">
+            <Link href={`/player/${evalData.evaluatedSteamId}`} className="w-10 h-10 shrink-0 rounded-full bg-zinc-800 flex items-center justify-center font-black text-yellow-500 text-lg border border-white/5 overflow-hidden group-hover:border-yellow-500/50 transition-all">
               {avatarUrl ? (
                 <img src={avatarUrl} alt={evalData.evaluatedPlayerName} className="w-full h-full object-cover" />
               ) : (
@@ -63,7 +63,7 @@ function PlayerEvaluationCard({ evalData, isOwner, onDelete, onEdit, dbPlayers }
           )}
           <div className="flex-1 min-w-0">
             {evalData.evaluatedSteamId ? (
-              <Link href={`/perfil/${evalData.evaluatedSteamId}`} className="hover:text-yellow-500 transition-colors">
+              <Link href={`/player/${evalData.evaluatedSteamId}`} className="hover:text-yellow-500 transition-colors">
                 <h3 className="font-black text-white uppercase truncate" title={evalData.evaluatedPlayerName}>
                   {evalData.evaluatedPlayerName}
                 </h3>
