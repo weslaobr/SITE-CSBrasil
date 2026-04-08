@@ -26,6 +26,25 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    const steamIds = grouped.map(g => g.evaluatedSteamId).filter(Boolean) as string[];
+
+    const players = await prisma.player.findMany({
+      where: { steamId: { in: steamIds } },
+      select: { steamId: true, steamAvatar: true },
+    });
+
+    const users = await prisma.user.findMany({
+      where: { steamId: { in: steamIds } },
+      select: { steamId: true, image: true },
+    });
+
+    const avatarMap = new Map();
+    steamIds.forEach(sid => {
+      const user = users.find(u => u.steamId === sid);
+      const player = players.find(p => p.steamId === sid);
+      avatarMap.set(sid, user?.image || player?.steamAvatar || null);
+    });
+
     const ranking = grouped.map((item: any) => ({
       steamId: item.evaluatedSteamId,
       playerName: item.evaluatedPlayerName,
@@ -37,6 +56,7 @@ export async function GET(req: NextRequest) {
       avgClutch: item._avg.clutchScore,
       avgDecision: item._avg.decisionScore,
       avgOverall: item._avg.overallScore,
+      avatar: item.evaluatedSteamId ? avatarMap.get(item.evaluatedSteamId) : null,
     }));
 
     // Filter out edge cases (though null scores shouldn't happen)
