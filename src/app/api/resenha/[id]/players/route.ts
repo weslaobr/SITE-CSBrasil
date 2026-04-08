@@ -143,3 +143,79 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: "Erro ao deletar avaliação." }, { status: 500 });
   }
 }
+
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await getServerSession(getAuthOptions(req));
+    if (!session || !(session.user as any)?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = (session.user as any).id;
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const p = await params;
+    const data = await req.json();
+    const {
+      evaluationId,
+      aimScore,
+      utilityScore,
+      positioningScore,
+      duelScore,
+      clutchScore,
+      decisionScore,
+      notes,
+    } = data;
+
+    if (!evaluationId) {
+      return NextResponse.json({ error: "Missing evaluation ID" }, { status: 400 });
+    }
+
+    const evaluation = await prisma.playerEvaluation.findUnique({
+      where: { id: evaluationId },
+      include: { list: true },
+    });
+
+    if (!evaluation || evaluation.listId !== p.id) {
+       return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
+    }
+
+    if (evaluation.list.creatorId !== currentUser.id) {
+       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const overallScore = (
+      Number(aimScore) +
+      Number(utilityScore) +
+      Number(positioningScore) +
+      Number(duelScore) +
+      Number(clutchScore) +
+      Number(decisionScore)
+    ) / 6;
+
+    const updatedEvaluation = await prisma.playerEvaluation.update({
+      where: { id: evaluationId },
+      data: {
+        aimScore: Number(aimScore),
+        utilityScore: Number(utilityScore),
+        positioningScore: Number(positioningScore),
+        duelScore: Number(duelScore),
+        clutchScore: Number(clutchScore),
+        decisionScore: Number(decisionScore),
+        overallScore,
+        notes,
+      },
+    });
+
+    return NextResponse.json(updatedEvaluation);
+  } catch (error) {
+    console.error("[RESENHA_PLAYERS_PUT]", error);
+    return NextResponse.json({ error: "Erro ao atualizar avaliação." }, { status: 500 });
+  }
+}

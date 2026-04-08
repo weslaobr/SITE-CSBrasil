@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Loader2, Star, Trash, Search, Shield, Target, Brain, Crosshair, Zap, Activity } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Star, Trash, Pencil, Search, Shield, Target, Brain, Crosshair, Zap, Activity } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from "recharts";
 
-function PlayerEvaluationCard({ evalData, isOwner, onDelete }: { evalData: any; isOwner: boolean; onDelete: (id: string) => void }) {
+function PlayerEvaluationCard({ evalData, isOwner, onDelete, onEdit }: { evalData: any; isOwner: boolean; onDelete: (id: string) => void; onEdit: (evalData: any) => void }) {
   const chartData = [
     { subject: "Mira", A: evalData.aimScore, fullMark: 10 },
     { subject: "Util", A: evalData.utilityScore, fullMark: 10 },
@@ -25,13 +25,22 @@ function PlayerEvaluationCard({ evalData, isOwner, onDelete }: { evalData: any; 
       className="bg-zinc-900/40 rounded-2xl border border-white/5 overflow-hidden flex flex-col group hover:border-yellow-500/30 transition-all backdrop-blur-md relative"
     >
       {isOwner && (
-        <button 
-          onClick={() => onDelete(evalData.id)}
-          className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all z-10 opacity-0 group-hover:opacity-100"
-          title="Remover Avaliação"
-        >
-          <Trash size={14} />
-        </button>
+        <div className="absolute top-4 right-4 flex items-center gap-2 z-10 opacity-0 group-hover:opacity-100 transition-all">
+          <button 
+            onClick={() => onEdit(evalData)}
+            className="p-2 bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-black rounded-lg transition-all"
+            title="Editar Avaliação"
+          >
+            <Pencil size={14} />
+          </button>
+          <button 
+            onClick={() => onDelete(evalData.id)}
+            className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all"
+            title="Remover Avaliação"
+          >
+            <Trash size={14} />
+          </button>
+        </div>
       )}
 
       <div className="p-4 border-b border-white/5 flex items-center justify-between gap-4 bg-zinc-950/30">
@@ -84,13 +93,37 @@ export default function ResenhaViewerPage({ params }: { params: Promise<{ id: st
   const [list, setList] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // Add dialog state
+  // Add/Edit dialog state
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingEvalId, setEditingEvalId] = useState<string | null>(null);
   const [steamId, setSteamId] = useState("");
   const [scores, setScores] = useState({ aim: 5, utility: 5, pos: 5, duel: 5, clutch: 5, decision: 5 });
   const [notes, setNotes] = useState("");
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [dbPlayers, setDbPlayers] = useState<any[]>([]);
+
+  const handleOpenAdd = () => {
+    setEditingEvalId(null);
+    setSteamId("");
+    setScores({ aim: 5, utility: 5, pos: 5, duel: 5, clutch: 5, decision: 5 });
+    setNotes("");
+    setShowAddModal(true);
+  };
+
+  const handleOpenEdit = (evalData: any) => {
+    setEditingEvalId(evalData.id);
+    setSteamId(evalData.evaluatedSteamId);
+    setScores({
+      aim: evalData.aimScore,
+      utility: evalData.utilityScore,
+      pos: evalData.positioningScore,
+      duel: evalData.duelScore,
+      clutch: evalData.clutchScore,
+      decision: evalData.decisionScore,
+    });
+    setNotes(evalData.notes || "");
+    setShowAddModal(true);
+  };
 
   useEffect(() => {
     fetchList();
@@ -129,25 +162,30 @@ export default function ResenhaViewerPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const handleAddPlayer = async (e: React.FormEvent) => {
+  const handleSavePlayer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!steamId.trim()) return;
 
     setAddingPlayer(true);
     try {
+      const isEditing = !!editingEvalId;
+      const method = isEditing ? "PUT" : "POST";
+      const payload = {
+        evaluationId: editingEvalId,
+        evaluatedSteamId: steamId,
+        aimScore: scores.aim,
+        utilityScore: scores.utility,
+        positioningScore: scores.pos,
+        duelScore: scores.duel,
+        clutchScore: scores.clutch,
+        decisionScore: scores.decision,
+        notes,
+      };
+
       const res = await fetch(`/api/resenha/${unwrappedParams.id}/players`, {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          evaluatedSteamId: steamId,
-          aimScore: scores.aim,
-          utilityScore: scores.utility,
-          positioningScore: scores.pos,
-          duelScore: scores.duel,
-          clutchScore: scores.clutch,
-          decisionScore: scores.decision,
-          notes,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -245,7 +283,7 @@ export default function ResenhaViewerPage({ params }: { params: Promise<{ id: st
             {canEdit && (
               <>
                 <button 
-                  onClick={() => setShowAddModal(true)}
+                  onClick={handleOpenAdd}
                   className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black px-6 py-3 rounded-xl font-black uppercase text-xs transition-all shadow-lg shadow-yellow-500/20 active:scale-95"
                 >
                   <Plus size={16} /> Avaliar Jogador
@@ -275,7 +313,7 @@ export default function ResenhaViewerPage({ params }: { params: Promise<{ id: st
           </div>
         ) : (
           list.evaluations.map((ev: any) => (
-             <PlayerEvaluationCard key={ev.id} evalData={ev} isOwner={canEdit} onDelete={handleDeletePlayer} />
+             <PlayerEvaluationCard key={ev.id} evalData={ev} isOwner={canEdit} onDelete={handleDeletePlayer} onEdit={handleOpenEdit} />
           ))
         )}
       </div>
@@ -291,19 +329,20 @@ export default function ResenhaViewerPage({ params }: { params: Promise<{ id: st
               className="bg-zinc-900 border border-white/10 p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto"
             >
               <h2 className="text-2xl font-black italic uppercase text-white mb-6">
-                Nova <span className="text-yellow-500">Avaliação</span>
+                {editingEvalId ? "Editar " : "Nova "}<span className="text-yellow-500">Avaliação</span>
               </h2>
 
-              <form onSubmit={handleAddPlayer} className="space-y-6">
+              <form onSubmit={handleSavePlayer} className="space-y-6">
                 <div className="space-y-2">
                   <label className="text-xs font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                     <Search size={14} /> Selecione o Jogador <span className="text-red-500">*</span>
                   </label>
                   <select
                     required
+                    disabled={!!editingEvalId}
                     value={steamId}
                     onChange={(e) => setSteamId(e.target.value)}
-                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-yellow-500/50 transition-all font-mono appearance-none"
+                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-yellow-500/50 transition-all font-mono appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="" disabled>Escolha um jogador da lista...</option>
                     {dbPlayers.map(p => (
