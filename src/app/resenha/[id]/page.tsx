@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from "recharts";
 
-function PlayerEvaluationCard({ evalData, isOwner, onDelete, onEdit }: { evalData: any; isOwner: boolean; onDelete: (id: string) => void; onEdit: (evalData: any) => void }) {
+function PlayerEvaluationCard({ evalData, isOwner, onDelete, onEdit, dbPlayers }: { evalData: any; isOwner: boolean; onDelete: (id: string) => void; onEdit: (evalData: any) => void; dbPlayers: any[] }) {
   const chartData = [
     { subject: "Mira", A: evalData.aimScore, fullMark: 10 },
     { subject: "Util", A: evalData.utilityScore, fullMark: 10 },
@@ -17,6 +17,9 @@ function PlayerEvaluationCard({ evalData, isOwner, onDelete, onEdit }: { evalDat
     { subject: "Clutch", A: evalData.clutchScore, fullMark: 10 },
     { subject: "Decisão", A: evalData.decisionScore, fullMark: 10 },
   ];
+
+  const playerInfo = dbPlayers.find(p => p.steamId === evalData.evaluatedSteamId);
+  const avatarUrl = playerInfo?.avatar;
 
   return (
     <motion.div 
@@ -45,13 +48,31 @@ function PlayerEvaluationCard({ evalData, isOwner, onDelete, onEdit }: { evalDat
 
       <div className="p-4 border-b border-white/5 flex items-center justify-between gap-4 bg-zinc-950/30">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 shrink-0 rounded-full bg-zinc-800 flex items-center justify-center font-black text-yellow-500 text-lg border border-white/5">
-            {evalData.evaluatedPlayerName.charAt(0).toUpperCase()}
-          </div>
+          {evalData.evaluatedSteamId ? (
+            <Link href={`/perfil/${evalData.evaluatedSteamId}`} className="w-10 h-10 shrink-0 rounded-full bg-zinc-800 flex items-center justify-center font-black text-yellow-500 text-lg border border-white/5 overflow-hidden group-hover:border-yellow-500/50 transition-all">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={evalData.evaluatedPlayerName} className="w-full h-full object-cover" />
+              ) : (
+                evalData.evaluatedPlayerName.charAt(0).toUpperCase()
+              )}
+            </Link>
+          ) : (
+            <div className="w-10 h-10 shrink-0 rounded-full bg-zinc-800 flex items-center justify-center font-black text-yellow-500 text-lg border border-white/5 overflow-hidden">
+              {evalData.evaluatedPlayerName.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
-            <h3 className="font-black text-white uppercase truncate" title={evalData.evaluatedPlayerName}>
-              {evalData.evaluatedPlayerName}
-            </h3>
+            {evalData.evaluatedSteamId ? (
+              <Link href={`/perfil/${evalData.evaluatedSteamId}`} className="hover:text-yellow-500 transition-colors">
+                <h3 className="font-black text-white uppercase truncate" title={evalData.evaluatedPlayerName}>
+                  {evalData.evaluatedPlayerName}
+                </h3>
+              </Link>
+            ) : (
+              <h3 className="font-black text-white uppercase truncate" title={evalData.evaluatedPlayerName}>
+                {evalData.evaluatedPlayerName}
+              </h3>
+            )}
             {evalData.evaluatedSteamId && <p className="text-[10px] bg-black/40 px-1.5 py-0.5 rounded text-zinc-500 font-mono inline-block mt-0.5">Steam vinculada</p>}
           </div>
         </div>
@@ -313,7 +334,7 @@ export default function ResenhaViewerPage({ params }: { params: Promise<{ id: st
           </div>
         ) : (
           list.evaluations.map((ev: any) => (
-             <PlayerEvaluationCard key={ev.id} evalData={ev} isOwner={canEdit} onDelete={handleDeletePlayer} onEdit={handleOpenEdit} />
+             <PlayerEvaluationCard key={ev.id} evalData={ev} isOwner={canEdit} onDelete={handleDeletePlayer} onEdit={handleOpenEdit} dbPlayers={dbPlayers} />
           ))
         )}
       </div>
