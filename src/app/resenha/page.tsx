@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Users, Search, Star, MessageSquareQuote } from "lucide-react";
+import { Plus, Users, Search, Star, MessageSquareQuote, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -111,39 +111,52 @@ export default function ResenhaHubPage() {
           </div>
         ) : (
           filteredLists.map((list) => (
-            <Link key={list.id} href={`/resenha/${list.id}`}>
-              <motion.div
-                whileHover={{ y: -4 }}
-                className="bg-zinc-900/40 p-6 rounded-2xl border border-white/5 hover:border-yellow-500/30 transition-all cursor-pointer backdrop-blur-xl group"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-black uppercase text-white tracking-wider group-hover:text-yellow-400 transition-colors">
-                    {list.title}
-                  </h3>
-                  <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded text-xs text-zinc-400 font-bold border border-white/5">
-                    <Users size={12} className="text-yellow-500" />
-                    {list._count.evaluations} <span className="hidden sm:inline">Avaliados</span>
+            <Link key={list.id} href={`/resenha/${list.id}`} className="group outline-none">
+              <div className="relative p-[1px] rounded-[24px] bg-gradient-to-b from-white/10 to-transparent hover:from-yellow-500/50 hover:to-yellow-500/0 transition-all duration-500 shadow-xl shadow-black/40 hover:shadow-yellow-500/10 active:scale-95">
+                <div className="h-full bg-zinc-900/90 backdrop-blur-xl p-6 rounded-[23px] flex flex-col relative overflow-hidden">
+                  
+                  {/* Subtle Background Glow */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/20 transition-colors pointer-events-none" />
+
+                  <div className="flex justify-between items-start mb-4 relative z-10">
+                    <h3 className="text-xl font-black uppercase italic tracking-tighter text-white group-hover:text-yellow-400 transition-colors drop-shadow-md pr-2">
+                      {list.title}
+                    </h3>
+                    <div className="flex items-center gap-1.5 bg-yellow-500/10 px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs text-yellow-500 font-black border border-yellow-500/20 shadow-inner shrink-0">
+                      <Users size={12} className="text-yellow-400 shrink-0" />
+                      {list._count?.evaluations || 0} <span className="hidden xl:inline">Avaliados</span>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-zinc-400 line-clamp-2 mb-6 min-h-[40px] font-medium leading-relaxed relative z-10">
+                    {list.description || "Esta lista não possui uma descrição detalhada, mas aguarda a sua resenha."}
+                  </p>
+
+                  <div className="mt-auto flex items-center justify-between pt-5 border-t border-white/5 relative z-10">
+                    <div className="flex items-center gap-3">
+                      {list.creator?.image ? (
+                        <img src={list.creator.image} className="w-9 h-9 rounded-full border-2 border-white/10" alt={list.creator.name} />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center border-2 border-white/10">
+                          <Star size={14} className="text-zinc-500" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-[11px] font-black uppercase text-white truncate max-w-[120px]">
+                          {list.creator?.name || "Anônimo"}
+                        </p>
+                        <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">
+                          {new Date(list.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="w-9 h-9 rounded-[10px] bg-white/5 flex items-center justify-center text-zinc-500 group-hover:bg-yellow-500 group-hover:text-black transition-all group-hover:shadow-[0_0_15px_rgba(234,179,8,0.4)]">
+                      <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                    </div>
                   </div>
                 </div>
-
-                <p className="text-sm text-zinc-500 line-clamp-2 mb-6 min-h-[40px]">
-                  {list.description || "Nenhuma descrição."}
-                </p>
-
-                <div className="flex items-center gap-3 pt-4 border-t border-white/5">
-                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10">
-                    <Star size={14} className="text-zinc-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-bold text-white">
-                      Anônimo
-                    </p>
-                    <p className="text-[10px] text-zinc-600 font-mono">
-                      {new Date(list.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
+              </div>
             </Link>
           ))
         )}
