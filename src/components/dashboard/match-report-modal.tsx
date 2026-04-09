@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, Calendar, MapPin, Shield, Target, Activity,
-    Zap, TrendingUp, Crosshair, Star, Flame, Eye, RefreshCw
+    Zap, TrendingUp, Crosshair, Star, Flame, Eye, RefreshCw, AlertCircle
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -82,6 +82,7 @@ const MatchReportModal: React.FC<Props> = ({
     const [loading, setLoading] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos'>('placar');
+    const [fetchError, setFetchError] = useState(false);
 
     const match = initialMatch || internalMatch;
 
@@ -89,11 +90,13 @@ const MatchReportModal: React.FC<Props> = ({
         if (isOpen && matchId) {
             if (!match || !match.metadata || match.id !== matchId) {
                 setInternalMatch(null);
+                setFetchError(false);
                 setTab('placar');
                 fetchMatchData();
             }
         } else if (!isOpen) {
             setInternalMatch(null);
+            setFetchError(false);
             setTab('placar');
         }
     }, [isOpen, matchId]);
@@ -125,7 +128,10 @@ const MatchReportModal: React.FC<Props> = ({
                 adr: data.stats?.find((p: any) => p.is_user)?.dpr || data.stats?.find((p: any) => p.is_user)?.adr || initialMatch?.adr,
                 hsPercentage: (data.stats?.find((p: any) => p.is_user)?.accuracy_head * 100) || initialMatch?.hsPercentage
             });
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error(e); 
+            setFetchError(true);
+        }
         finally { setLoading(false); }
     };
 
@@ -837,7 +843,17 @@ const MatchReportModal: React.FC<Props> = ({
 
                         {/* ── BODY ──────────────────────────────────────── */}
                         <div className="p-4 flex flex-col gap-3">
-                            {loading && t1.length <= 1 && t1[0]?.nickname === '[Você]' ? (
+                            {fetchError ? (
+                                <div className="flex-1 flex flex-col items-center justify-center p-12 bg-red-500/[0.03] border border-red-500/10 rounded-3xl gap-4">
+                                    <div className="w-16 h-16 rounded-3xl bg-red-500/10 flex items-center justify-center text-red-500 mb-2 shadow-inner">
+                                        <AlertCircle size={32} />
+                                    </div>
+                                    <h4 className="text-xl font-black uppercase italic tracking-tighter text-red-400">Falha ao Carregar Jogadores</h4>
+                                    <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center max-w-lg leading-relaxed">
+                                        Não foi possível obter os dados da partida. A API do provedor externo pode estar indisponível no momento, ou a partida expirou e não pôde ser recuperada.
+                                    </p>
+                                </div>
+                            ) : loading && t1.length <= 1 && t1[0]?.nickname === '[Você]' ? (
                                 <div className="flex-1 flex flex-col items-center justify-center gap-4">
                                     <div className="relative w-10 h-10">
                                         <div className="absolute inset-0 border-4 border-yellow-500/10 rounded-full" />
@@ -859,7 +875,7 @@ const MatchReportModal: React.FC<Props> = ({
                             )}
 
                             {/* Footer summary bar */}
-                            {!loading && (
+                            {!loading && !fetchError && (
                                 <div className="flex items-center justify-between px-1 shrink-0">
                                     <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest text-zinc-700">
                                         <span className="flex items-center gap-1"><Target size={9} className="text-yellow-500/40" /> Kills: <span className="text-zinc-500">{t1.reduce((s,p)=>s+p.kills,0)}</span></span>

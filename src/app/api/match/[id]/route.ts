@@ -54,45 +54,49 @@ export async function GET(
             let localStats = localMatch.players.map(p => {
                 const m = (p.metadata as any) || {};
                 // FK/FD: vem ou das colunas diretas (parser Python) ou do metadata (sync Leetify)
-                const fkVal = (p as any).fk ?? m.fk ?? 0;
-                const fdVal = (p as any).fd ?? m.fd ?? 0;
+                const fkVal = (p as any).fk ?? m.fk ?? m.fk_count ?? m.first_kill_count ?? m.firstKills ?? 0;
+                const fdVal = (p as any).fd ?? m.fd ?? m.fd_count ?? m.first_death_count ?? m.firstDeaths ?? 0;
                 return {
                     team_id: p.team,
                     steam64_id: p.steamId,
-                    name: m.playerNickname || p.steamId,
+                    name: m.name ?? m.nickname ?? m.playerNickname ?? p.steamId,
                     total_kills: p.kills,
                     total_deaths: p.deaths,
                     total_assists: p.assists,
                     dpr: p.adr, // alias adr
                     accuracy_head: p.hsPercentage ? (p.hsPercentage / 100) : 0, 
-                    rating: m.rating || 0,
-                    kast: m.kast || 0,
+                    rating: m.rating ?? m.leetify_rating ?? 0,
+                    kast: m.kast ?? m.kast_percent ?? 0,
                     // FK/FD com nomes diretos que o normalizeP lê
                     fk: fkVal,
                     fd: fdVal,
                     fkd: fkVal,       // alias legado
                     fk_deaths: fdVal, // alias legado
                     // Multikills
-                    triple_kills: m.triples || 0,
-                    quad_kills: m.quads || 0,
-                    penta_kills: m.aces || 0,
-                    multi3k: m.triples || 0,
-                    multi4k: m.quads || 0,
-                    multi5k: m.aces || 0,
+                    triple_kills: m.triples ?? m.multi3k ?? m.triple_kills ?? m.tripleKills ?? 0,
+                    quad_kills: m.quads ?? m.multi4k ?? m.quad_kills ?? m.quadKills ?? 0,
+                    penta_kills: m.aces ?? m.multi5k ?? m.penta_kills ?? m.pentaKills ?? m.ace_kills ?? 0,
+                    multi3k: m.triples ?? m.multi3k ?? m.triple_kills ?? m.tripleKills ?? 0,
+                    multi4k: m.quads ?? m.multi4k ?? m.quad_kills ?? m.quadKills ?? 0,
+                    multi5k: m.aces ?? m.multi5k ?? m.penta_kills ?? m.pentaKills ?? m.ace_kills ?? 0,
                     // Utility
-                    utility_damage: m.utilDmg || 0,
-                    blind_time: m.blindTime || 0,
-                    he_thrown: m.heThrown || 0,
-                    flash_thrown: m.flashThrown || 0,
-                    smokes_thrown: m.smokesThrown || 0,
-                    molotovs_thrown: m.molotovThrown || 0,
+                    utility_damage: m.utilDmg ?? m.utility_damage ?? m.util_damage ?? (m.he_foes_damage_avg != null && m.rounds_count ? Math.round(m.he_foes_damage_avg * m.rounds_count) : 0),
+                    blind_time: m.blindTime ?? m.flashbang_hit_foe_avg_duration ?? m.blind_time ?? m.enemiesFlashedDuration ?? 0,
+                    he_thrown: m.heThrown ?? m.he_thrown ?? 0,
+                    flash_thrown: m.flashThrown ?? m.flashbang_thrown ?? m.flash_thrown ?? 0,
+                    smokes_thrown: m.smokesThrown ?? m.smoke_thrown ?? m.smokes_thrown ?? 0,
+                    molotovs_thrown: m.molotovThrown ?? m.molotov_thrown ?? m.molotovs_thrown ?? 0,
                     // Confrontos
-                    trades: m.trades || 0,
-                    trade_kill_count: m.trades || 0,
-                    clutches: m.clutches || 0,
-                    clutches_won: m.clutches || 0,
+                    trades: m.trades ?? m.trade_kills_succeed ?? m.trade_count ?? m.tradeKills ?? 0,
+                    trade_kill_count: m.trades ?? m.trade_kills_succeed ?? m.trade_count ?? m.tradeKills ?? 0,
+                    trade_kill_opportunities: m.trade_kill_opportunities ?? 0,
+                    traded_death_opportunities: m.traded_death_opportunities ?? 0,
+                    trade_kills_succeed: m.trade_kills_succeed ?? 0,
+                    traded_deaths_succeed: m.traded_deaths_succeed ?? 0,
+                    clutches: m.clutches ?? m.clutch_count ?? m.clutches_won ?? m.clutchesWon ?? 0,
+                    clutches_won: m.clutches ?? m.clutch_count ?? m.clutches_won ?? m.clutchesWon ?? 0,
                     // Flash
-                    flash_assists: m.flashAssists || 0,
+                    flash_assists: m.flashAssists ?? m.flash_assist ?? m.flash_assists ?? m.flashbang_assists ?? 0,
                     is_user: false // será conferido no cliente via SteamID
                 };
             });

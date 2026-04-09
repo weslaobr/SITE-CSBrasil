@@ -95,6 +95,57 @@ export async function POST(req: NextRequest) {
                             teamA: detail.teamA,
                             teamB: detail.teamB
                         };
+
+                        try {
+                            const globalMatchData = {
+                                source: 'Leetify',
+                                mapName: mapName.charAt(0).toUpperCase() + mapName.slice(1),
+                                duration: m.match_duration ? `${Math.round(m.match_duration / 60)} min` : '45 min',
+                                matchDate: matchDate,
+                                scoreA: scoreArr[0] || 0,
+                                scoreB: scoreArr[1] || 0,
+                                metadata: { ...matchMetaExtra }
+                            };
+
+                            await prisma.globalMatch.upsert({
+                                where: { id: m.id },
+                                update: globalMatchData,
+                                create: { id: m.id, ...globalMatchData }
+                            });
+
+                            if (detail.stats && Array.isArray(detail.stats)) {
+                                for (const p of detail.stats) {
+                                    const pSteamId = p.steam64_id || p.player_id || p.steamId;
+                                    if (!pSteamId) continue;
+                                    
+                                    const rawHs = Number(p.accuracy_head ?? p.hs_percentage ?? 0);
+                                    const pData = {
+                                        team: String(p.initial_team_number || p.team_id || p.teamId || p.game_team || 'x'),
+                                        kills: p.total_kills ?? p.kills ?? 0,
+                                        deaths: p.total_deaths ?? p.deaths ?? 0,
+                                        assists: p.total_assists ?? p.assists ?? 0,
+                                        score: p.score ?? 0,
+                                        mvps: p.mvps ?? 0,
+                                        adr: p.dpr ?? p.adr ?? p.average_damage_per_round ?? 0,
+                                        hsPercentage: rawHs > 1 ? Math.round(rawHs) : Math.round(rawHs * 100),
+                                        matchResult: p.match_result ?? p.outcome ?? result,
+                                        metadata: p 
+                                    };
+
+                                    await prisma.globalMatchPlayer.upsert({
+                                        where: { globalMatchId_steamId: { globalMatchId: m.id, steamId: pSteamId } },
+                                        update: pData,
+                                        create: {
+                                            globalMatchId: m.id,
+                                            steamId: pSteamId,
+                                            ...pData
+                                        }
+                                    });
+                                }
+                            }
+                        } catch (cacheErr: any) {
+                            console.warn(`[QuickSync] Could not cache GlobalMatch for ${m.id}: ${cacheErr.message}`);
+                        }
                     } catch (detailErr: any) {
                         console.warn(`[QuickSync] Could not fetch match details for ${m.id}: ${detailErr.message}`);
                     }
