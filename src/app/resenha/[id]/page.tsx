@@ -28,17 +28,17 @@ function PlayerEvaluationCard({ evalData, isOwner, onDelete, onEdit, dbPlayers }
       className="bg-zinc-900/40 rounded-2xl border border-white/5 overflow-hidden flex flex-col group hover:border-yellow-500/30 transition-all backdrop-blur-md relative"
     >
       {isOwner && (
-        <div className="absolute top-4 right-4 flex items-center gap-2 z-10 opacity-0 group-hover:opacity-100 transition-all">
+        <div className="absolute top-4 right-[72px] flex items-center gap-2 z-10 opacity-0 group-hover:opacity-100 transition-all">
           <button 
             onClick={() => onEdit(evalData)}
-            className="p-2 bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-black rounded-lg transition-all"
+            className="p-2 bg-zinc-900 border border-yellow-500/20 text-yellow-500 hover:bg-yellow-500 hover:text-black hover:scale-110 rounded-lg transition-all shadow-xl"
             title="Editar Avaliação"
           >
             <Pencil size={14} />
           </button>
           <button 
             onClick={() => onDelete(evalData.id)}
-            className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all"
+            className="p-2 bg-zinc-900 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white hover:scale-110 rounded-lg transition-all shadow-xl"
             title="Remover Avaliação"
           >
             <Trash size={14} />
