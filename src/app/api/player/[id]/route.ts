@@ -16,7 +16,7 @@ export async function GET(
         const results = await Promise.all([
             prisma.user.findUnique({
                 where: { steamId: steamId },
-                include: { matches: { orderBy: { matchDate: 'desc' }, take: 20 } }
+                include: { matches: { orderBy: { matchDate: 'desc' }, take: 100 } }
             }),
             prisma.player.findUnique({
                 where: { steamId: steamId },
@@ -176,6 +176,26 @@ export async function GET(
             anomalies.push({ id: 'vac-ban', title: 'VAC Ban Detected', status: 'Critical', description: 'This account has active VAC bans.' });
         }
 
+        // Calcular rank máximo de Competitivo entre todas as fontes disponíveis
+        // 1. CS2.space per-map competitive ranks (1-18)
+        const compMaps = cs2space?.ranks?.competitive || {};
+        const maxFromCS2Space = Object.values(compMaps).length > 0
+            ? Math.max(...Object.values(compMaps).map((m: any) => m.rank || 0))
+            : 0;
+
+        // 2. User.cs2Rank (String salvo pelo bot/sync) - converte se for número 1-18
+        const cs2RankStr = dbUser?.cs2Rank || '';
+        const maxFromUserRank = parseInt(cs2RankStr);
+        const maxFromDB = (!isNaN(maxFromUserRank) && maxFromUserRank >= 1 && maxFromUserRank <= 18)
+            ? maxFromUserRank : 0;
+
+        // 3. Leetify matchmaking rank (skill_level 1-18)
+        const maxFromLeetify = leetifyData?.ranks?.matchmaking || 0;
+
+        // Final: usa o maior entre todas as fontes
+        const maxCompetitiveRank = Math.max(maxFromCS2Space, maxFromDB, maxFromLeetify);
+        console.log(`[CompRank] CS2Space=${maxFromCS2Space}, UserRank=${maxFromDB}, Leetify=${maxFromLeetify}, Final=${maxCompetitiveRank}`);
+
         // Montar playerStats enriquecido com dados do Player + Stats + CS2Space
         const playerStatsEnriched = dbPlayer?.Stats ? {
             ...dbPlayer.Stats,
@@ -188,6 +208,8 @@ export async function GET(
             faceitElo:   dbPlayer.Stats.faceitElo   || cs2space?.faceit?.elo   || null,
             // Premier máximo vindo do CS2.space se DB não tiver
             premierRating: dbPlayer.Stats.premierRating || cs2space?.ranks?.premier || null,
+            // Rank máximo de Competitivo clássico
+            maxCompetitiveRank: dbPlayer.Stats.maxCompetitiveRank || maxCompetitiveRank || null,
         } : cs2space ? {
             faceitName:    cs2space.faceit?.nickname || null,
             faceitId:      cs2space.faceit?.id       || null,
@@ -196,6 +218,7 @@ export async function GET(
             premierRating: cs2space.ranks?.premier   || null,
             gcLevel:       null,
             gcNickname:    steamId,
+            maxCompetitiveRank: maxCompetitiveRank || null,
         } : null;
 
         return NextResponse.json({

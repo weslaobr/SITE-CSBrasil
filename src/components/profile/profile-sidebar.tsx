@@ -52,6 +52,9 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
         : 'N/A';
 
     const mmRank = getMMRank(leetifyData?.ranks?.matchmaking || 0);
+    // Rank máximo de Competitivo (entre todos os mapas via CS2.space)
+    const maxCompRankId = playerStats?.maxCompetitiveRank || leetifyData?.ranks?.matchmaking || 0;
+    const maxCompRank = getMMRank(maxCompRankId);
 
     // Premier Rating — prioridade: DB > cs2space (já dentro de playerStats) > leetifyData
     const premierRating = playerStats?.premierRating
@@ -211,13 +214,32 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                             </div>
                         </div>
 
-                        {/* Competitivo clássico */}
-                        <div className="bg-sky-500/10 p-4 rounded-2xl border border-sky-500/10 text-center flex flex-col items-center justify-center group hover:bg-sky-500/15 transition-all">
-                            <p className="text-[9px] text-sky-500/60 uppercase font-black italic tracking-widest mb-1 leading-none">Competitivo</p>
-                            {mmRank.icon ? (
-                                <img src={mmRank.icon} alt={mmRank.name} className="h-7 mt-1 object-contain drop-shadow-lg scale-110 group-hover:scale-125 transition-transform" title={mmRank.name} />
+                        {/* Competitivo clássico — Rank Máximo */}
+                        <div className="col-span-2 bg-sky-500/10 p-4 rounded-2xl border border-sky-500/20 text-center flex flex-col justify-center group hover:bg-sky-500/15 transition-all">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-[9px] text-sky-400/70 uppercase font-black italic tracking-widest leading-none">Competitivo</p>
+                                <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-400">
+                                    Máximo
+                                </span>
+                            </div>
+                            {maxCompRank.icon ? (
+                                <div className="flex items-center justify-center gap-3 mt-1">
+                                    <img
+                                        src={maxCompRank.icon}
+                                        alt={maxCompRank.name}
+                                        className="h-14 w-auto object-contain drop-shadow-lg group-hover:scale-110 transition-transform"
+                                    />
+                                    <div className="flex flex-col items-start leading-none gap-1">
+                                        <span className="text-lg font-black italic uppercase leading-none tracking-tight text-white">
+                                            {maxCompRank.name}
+                                        </span>
+                                        <span className="text-[9px] text-sky-400 font-black uppercase tracking-widest opacity-80">
+                                            Rank Competitivo
+                                        </span>
+                                    </div>
+                                </div>
                             ) : (
-                                <p className="text-[10px] mt-1 font-black text-sky-500 italic uppercase">Unranked</p>
+                                <p className="text-[11px] mt-2 font-black text-sky-400/60 italic uppercase">Sem ranking</p>
                             )}
                         </div>
 
