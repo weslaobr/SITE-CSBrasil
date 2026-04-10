@@ -59,10 +59,12 @@ export async function POST(req: NextRequest) {
                 // 2. Tentar Faceit API Direto se CS2 Space falhou pro Faceit
                 if (faceitNeedsUpdate && !updateData.faceitLevel) {
                     const faceitData = await getFaceitPlayerBySteamId(player.steamId);
-                    if (faceitData?.games?.cs2) {
-                        updateData.faceitLevel = faceitData.games.cs2.skill_level || 0;
-                        updateData.faceitElo = faceitData.games.cs2.faceit_elo || 0;
-                        if (faceitData.nickname) {
+                    // cs2 ou csgo (contas mais antigas linkadas como csgo)
+                    const faceitGame = faceitData?.games?.cs2 || (faceitData?.games as any)?.csgo;
+                    if (faceitGame) {
+                        updateData.faceitLevel = faceitGame.skill_level || 0;
+                        updateData.faceitElo = faceitGame.faceit_elo || 0;
+                        if (faceitData?.nickname) {
                             await (prisma as any).player.update({
                                 where: { id: player.id },
                                 data: { faceitName: faceitData.nickname }

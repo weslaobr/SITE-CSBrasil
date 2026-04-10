@@ -197,15 +197,22 @@ export async function GET(
         console.log(`[CompRank] CS2Space=${maxFromCS2Space}, UserRank=${maxFromDB}, Leetify=${maxFromLeetify}, Final=${maxCompetitiveRank}`);
 
         // Montar playerStats enriquecido com dados do Player + Stats + CS2Space
+        // Leetify gamersClubLevel como fallback para GC (quando Stats não tem ou é 0)
+        const leetifyGCLevel = leetifyData?.ranks?.gamersClubLevel || null;
+        const leetifyFaceitLevel = leetifyData?.ranks?.faceitLevel || null;
+        const leetifyFaceitElo   = leetifyData?.ranks?.faceitElo   || null;
+
         const playerStatsEnriched = dbPlayer?.Stats ? {
             ...dbPlayer.Stats,
             // Dados de identidade do Player
             faceitName: dbPlayer.faceitName || cs2space?.faceit?.nickname || null,
             faceitId:   dbPlayer.faceitId   || cs2space?.faceit?.id       || null,
             gcNickname: dbPlayer.steamId    || null, // GC usa steamId64 na URL
-            // Fallback de FACEIT vindo do CS2.space
-            faceitLevel: dbPlayer.Stats.faceitLevel || cs2space?.faceit?.level || null,
-            faceitElo:   dbPlayer.Stats.faceitElo   || cs2space?.faceit?.elo   || null,
+            // Fallback de FACEIT: DB → CS2.space → Leetify
+            faceitLevel: dbPlayer.Stats.faceitLevel || cs2space?.faceit?.level || leetifyFaceitLevel || null,
+            faceitElo:   dbPlayer.Stats.faceitElo   || cs2space?.faceit?.elo   || leetifyFaceitElo   || null,
+            // GamersClub: DB → Leetify (GC não tem API pública, Leetify é a melhor fonte automática)
+            gcLevel: dbPlayer.Stats.gcLevel || leetifyGCLevel || null,
             // Premier máximo vindo do CS2.space se DB não tiver
             premierRating: dbPlayer.Stats.premierRating || cs2space?.ranks?.premier || null,
             // Rank máximo de Competitivo clássico
@@ -213,10 +220,22 @@ export async function GET(
         } : cs2space ? {
             faceitName:    cs2space.faceit?.nickname || null,
             faceitId:      cs2space.faceit?.id       || null,
-            faceitLevel:   cs2space.faceit?.level    || null,
-            faceitElo:     cs2space.faceit?.elo      || null,
+            // Fallback de FACEIT: CS2.space → Leetify
+            faceitLevel:   cs2space.faceit?.level    || leetifyFaceitLevel || null,
+            faceitElo:     cs2space.faceit?.elo      || leetifyFaceitElo   || null,
             premierRating: cs2space.ranks?.premier   || null,
-            gcLevel:       null,
+            // GamersClub: Leetify como única fonte automática disponível
+            gcLevel:       leetifyGCLevel,
+            gcNickname:    steamId,
+            maxCompetitiveRank: maxCompetitiveRank || null,
+        } : leetifyData ? {
+            // Jogador sem dbPlayer e sem CS2.space — apenas dados do Leetify
+            faceitName:    null,
+            faceitId:      null,
+            faceitLevel:   leetifyFaceitLevel,
+            faceitElo:     leetifyFaceitElo,
+            premierRating: leetifyData.ranks?.premier || null,
+            gcLevel:       leetifyGCLevel,
             gcNickname:    steamId,
             maxCompetitiveRank: maxCompetitiveRank || null,
         } : null;
