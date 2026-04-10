@@ -905,11 +905,13 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             </td>
                                             {/* Replay 2D */}
                                             <td className="px-3 py-4 text-center">
-                                                <Link href={`/dashboard/match/${match.id}/viewer`} onClick={(e) => e.stopPropagation()}>
-                                                    <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-yellow-500/10 hover:bg-yellow-500 text-yellow-500 hover:text-black transition-all group/replay shadow-lg shadow-yellow-500/5 active:scale-90 border border-yellow-500/10 hover:border-yellow-500">
-                                                        <Play size={16} className="fill-current ml-0.5" />
-                                                    </button>
-                                                </Link>
+                                                {match.isTracker && (
+                                                    <Link href={`/dashboard/match/${match.id}/viewer`} onClick={(e) => e.stopPropagation()}>
+                                                        <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-yellow-500/10 hover:bg-yellow-500 text-yellow-500 hover:text-black transition-all group/replay shadow-lg shadow-yellow-500/5 active:scale-90 border border-yellow-500/10 hover:border-yellow-500">
+                                                            <Play size={16} className="fill-current ml-0.5" />
+                                                        </button>
+                                                    </Link>
+                                                )}
                                             </td>
                                             <td className="px-4 py-4 text-right">
                                                 <div className="flex flex-col items-end gap-0.5">

@@ -121,7 +121,21 @@ export async function GET(
             return NextResponse.json(data);
         }
 
-        // 2. Se não encontrou localmente, tentamos no Leetify API (Fallback)
+        // 2. Se não encontrou no GlobalMatch, tentamos no Tracker API (Python)
+        // Isso é essencial para o 2D Viewer de partidas locais que ainda não foram migradas
+        const TRACKER_API = process.env.PYTHON_API_URL || 'http://localhost:8000';
+        try {
+            const trackerRes = await axios.get(`${TRACKER_API}/api/match/${matchId}`);
+            if (trackerRes.status === 200) {
+                let trackerData = trackerRes.data;
+                // Normalizar se necessário (o python geralmente já retorna no formato ou próximo dele)
+                return NextResponse.json(trackerData);
+            }
+        } catch (trackerError) {
+            console.warn(`Match ${matchId} not found in Tracker API fallback.`);
+        }
+
+        // 3. Fallback final: Leetify API
         if (!LEETIFY_API_KEY) {
             return NextResponse.json({ error: "Match not found locally and LEETIFY_API_KEY is missing." }, { status: 404 });
         }
@@ -198,4 +212,5 @@ export async function GET(
         console.error(`Error fetching match ${matchId}:`, error.message);
         return NextResponse.json({ error: "Failed to fetch match details" }, { status: 500 });
     }
+
 }
