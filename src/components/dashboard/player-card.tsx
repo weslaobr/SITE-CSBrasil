@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Target, TrendingUp, Clock } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 
 interface PlayerCardProps {
@@ -34,10 +35,12 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
             {/* Header: Avatar & Nickname */}
             <div className="relative flex items-center space-x-4 mb-6">
                 <div className="relative">
-                    <img
-                        src={player.avatar}
+                    <Image
+                        src={player.avatar || '/favicon.png'}
                         alt={player.nickname}
-                        className="w-16 h-16 rounded-full border-2 border-yellow-500/30 p-0.5"
+                        width={64}
+                        height={64}
+                        className="w-16 h-16 rounded-full border-2 border-yellow-500/30 p-0.5 object-cover"
                     />
                     <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase">
                         Pro

@@ -441,9 +441,16 @@ const GlobalRanking: React.FC = () => {
                                         </span>
                                     )}
                                     {user.faceitLevel > 0 && (
-                                        <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-400 border border-orange-500/20 tracking-widest">
-                                            FCS {user.faceitLevel}
-                                        </span>
+                                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20">
+                                            <img 
+                                                src={`/img/icone-faceit-level-${String(user.faceitLevel).padStart(2, '0')}.png`}
+                                                className="w-3 h-3 object-contain"
+                                                alt=""
+                                            />
+                                            <span className="text-[8px] font-black uppercase text-orange-400 tracking-widest">
+                                                {user.faceitElo > 0 ? user.faceitElo.toLocaleString('pt-BR') : `LVL ${user.faceitLevel}`}
+                                            </span>
+                                        </div>
                                     )}
                                 </div>
                             </motion.div>
@@ -712,9 +719,18 @@ const GlobalRanking: React.FC = () => {
                                         {/* Faceit */}
                                         <td className="px-4 py-3.5 text-center hidden md:table-cell">
                                             {user.faceitLevel > 0 ? (
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] font-black uppercase tracking-wide">
-                                                    <Star size={9} /> {user.faceitLevel}
-                                                </span>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <img 
+                                                        src={`/img/icone-faceit-level-${String(user.faceitLevel).padStart(2, '0')}.png`}
+                                                        className="w-5 h-5 object-contain"
+                                                        alt={`Lvl ${user.faceitLevel}`}
+                                                    />
+                                                    {user.faceitElo > 0 && (
+                                                        <span className="text-[11px] font-black text-white italic tracking-tighter">
+                                                            {user.faceitElo.toLocaleString('pt-BR')}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             ) : <span className="text-zinc-800">—</span>}
                                         </td>
 

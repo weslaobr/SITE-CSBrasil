@@ -326,9 +326,10 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
 
         // 2. Faceit Logic
         if (isFaceit && rank) {
+            const level = parseInt(rank) || 0;
             return {
-                label: `Level ${rank}`,
-                icon: `https://pub-89f41b4e94cc4f36987f1eb79bc3eb97.r2.dev/faceit/faceit${rank}.png`,
+                label: `Lvl ${rank}`,
+                icon: level > 0 ? `/img/icone-faceit-level-${String(level).padStart(2, '0')}.png` : null,
                 color: 'text-orange-400',
                 isPremier: false
             };

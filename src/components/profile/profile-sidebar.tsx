@@ -224,9 +224,9 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                         {/* GamersClub */}
                         <div className="bg-[#FFCC00]/10 p-4 rounded-2xl border border-[#FFCC00]/10 text-center flex flex-col justify-center group hover:bg-[#FFCC00]/15 transition-all">
                             <p className="text-[9px] text-[#FFCC00]/60 uppercase font-black italic tracking-widest mb-1 leading-none">GamersClub</p>
-                            <div className="flex items-center justify-center gap-1.5 mt-1">
-                                <img src="/img/icone-gamersclub.png" className="w-4 h-4 object-contain brightness-125" alt="GC" />
-                                <p className="text-lg font-black text-[#FFCC00] italic uppercase leading-none">
+                            <div className="flex items-center justify-center gap-2 mt-1">
+                                <img src="/img/icone-gamersclub.png" className="w-8 h-8 object-contain brightness-125 drop-shadow-md" alt="GC" />
+                                <p className="text-xl font-black text-[#FFCC00] italic uppercase leading-none">
                                     {playerStats?.gcLevel || 'N/A'}
                                 </p>
                             </div>
@@ -242,20 +242,28 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                                     </span>
                                 )}
                             </div>
-                            <div className="flex items-center justify-center gap-1.5 mt-1">
+                            <div className="flex items-center justify-center gap-3 mt-1">
                                 {faceitLevel > 0 ? (
                                     <>
-                                        <img
-                                            src={`https://faceit-ranking.eu/img/levels/${faceitLevel}.png`}
-                                            className="w-6 h-6 object-contain drop-shadow-md group-hover:scale-125 transition-transform"
-                                            alt={`Faceit ${faceitLevel}`}
-                                        />
-                                        <p className="text-xl font-black text-white italic tracking-tighter leading-none">
-                                            {faceitElo > 0 ? faceitElo.toLocaleString() : `Nível ${faceitLevel}`}
-                                        </p>
+                                        <div className="relative group">
+                                            <img
+                                                src={`/img/icone-faceit-level-${String(faceitLevel).padStart(2, '0')}.png`}
+                                                className="w-12 h-12 object-contain drop-shadow-2xl group-hover:scale-110 transition-transform"
+                                                alt={`Faceit ${faceitLevel}`}
+                                            />
+                                        </div>
+                                        <div className="flex flex-col items-start leading-none gap-0.5">
+                                            <span 
+                                                className="text-3xl font-black italic uppercase leading-none tracking-tighter text-white"
+                                                style={{ textShadow: '0 0 15px rgba(255, 85, 0, 0.4)' }}
+                                            >
+                                                {faceitElo > 0 ? faceitElo.toLocaleString('pt-BR') : '—'}
+                                            </span>
+                                            <span className="text-[9px] text-[#ff5500] font-black uppercase tracking-widest opacity-80">Pontuação Faceit ELO</span>
+                                        </div>
                                     </>
                                 ) : (
-                                    <p className="text-base font-black text-[#ff5500] italic uppercase">N/A</p>
+                                    <p className="text-base font-black text-[#ff5500] italic uppercase">Aguardando Dados...</p>
                                 )}
                             </div>
                         </div>

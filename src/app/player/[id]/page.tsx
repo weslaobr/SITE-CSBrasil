@@ -74,10 +74,50 @@ export default function PlayerProfilePage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-                <div className="text-center space-y-4">
-                    <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto" />
-                    <p className="text-zinc-500 font-black uppercase text-[10px] tracking-[0.3em]">Sincronizando Perfil...</p>
+            <div className="min-h-screen bg-[#0a0a0b] text-white p-4 md:p-8 lg:p-12 space-y-12">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start opacity-50 animate-pulse">
+                    {/* Skeleton Sidebar */}
+                    <div className="lg:col-span-3 h-[800px] bg-zinc-900/40 rounded-[2rem] border border-white/5 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-32 bg-yellow-500/10" />
+                        <div className="flex flex-col items-center pt-16 px-6">
+                            <div className="w-32 h-32 rounded-full bg-zinc-800 border-4 border-yellow-500/20 z-10" />
+                            <div className="w-3/4 h-6 bg-zinc-800 rounded mt-4" />
+                            <div className="w-1/2 h-4 bg-zinc-800 rounded mt-2" />
+                            <div className="w-full h-px bg-white/5 my-6" />
+                            <div className="w-full space-y-4">
+                                <div className="h-10 bg-zinc-800 rounded-xl" />
+                                <div className="h-10 bg-zinc-800 rounded-xl" />
+                                <div className="h-10 bg-zinc-800 rounded-xl" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="lg:col-span-9 space-y-8">
+                        {/* Skeleton Sync Action */}
+                        <div className="h-24 bg-zinc-900/40 rounded-[2rem] border border-white/5 w-full flex items-center justify-between p-6">
+                            <div className="space-y-2">
+                                <div className="w-48 h-6 bg-zinc-800 rounded" />
+                                <div className="w-64 h-3 bg-zinc-800 rounded" />
+                            </div>
+                            <div className="w-40 h-10 bg-zinc-800 rounded-xl" />
+                        </div>
+
+                        {/* Skeleton Badges */}
+                        <div className="h-32 bg-zinc-900/40 rounded-[2rem] border border-white/5 w-full p-6 space-y-4">
+                            <div className="w-32 h-5 bg-zinc-800 rounded" />
+                            <div className="flex gap-2">
+                                {[...Array(6)].map((_, i) => (
+                                    <div key={i} className="w-24 h-10 bg-zinc-800 rounded-xl" />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Skeleton Charts Grid */}
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 h-96">
+                            <div className="bg-zinc-900/40 rounded-[40px] border border-white/5" />
+                            <div className="bg-zinc-900/40 rounded-[40px] border border-white/5" />
+                        </div>
+                    </div>
                 </div>
             </div>
         );

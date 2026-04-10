@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession, signIn } from 'next-auth/react';
 import { Search, Trophy, Zap, Shield, BarChart3, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function TropaCSHome() {
+  const { data: session, status } = useSession();
   const [steamId, setSteamId] = useState('');
   const router = useRouter();
 
@@ -40,28 +42,50 @@ export default function TropaCSHome() {
               </p>
             </motion.div>
 
-            <motion.form
-              onSubmit={handleSearch}
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3 }}
-              className="relative max-w-2xl mx-auto group"
+              className="relative max-w-xl mx-auto group mt-8"
             >
-              <div className="absolute inset-0 bg-yellow-500/20 rounded-3xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
-              <div className="relative flex items-center bg-zinc-900/80 backdrop-blur-3xl border border-white/10 rounded-3xl p-2 pl-6 shadow-2xl">
-                <Search className="text-zinc-600" size={20} />
-                <input
-                  type="text"
-                  value={steamId}
-                  onChange={(e) => setSteamId(e.target.value)}
-                  placeholder="DIGITE SEU STEAMID64 (ex: 76561198024691636)"
-                  className="flex-1 bg-transparent border-none focus:outline-none px-4 font-bold text-white uppercase italic tracking-wider text-sm placeholder:text-zinc-700"
-                />
-                <button className="bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase italic tracking-tighter px-8 py-4 rounded-2xl transition-all hover:scale-105 active:scale-95">
-                  ANALISAR
-                </button>
+              <div className="absolute inset-0 bg-yellow-500/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative bg-zinc-900/80 backdrop-blur-3xl border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col items-center justify-center gap-4">
+                {status === "loading" ? (
+                  <div className="w-8 h-8 border-2 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin" />
+                ) : session ? (
+                  <div className="flex flex-col items-center gap-4 w-full">
+                    <div className="flex items-center gap-4">
+                      {session.user?.image && (
+                        <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-yellow-500" />
+                      )}
+                      <div className="text-left">
+                        <p className="text-sm text-zinc-400 font-bold uppercase tracking-widest">Bem-vindo(a),</p>
+                        <p className="text-xl font-black text-white italic">{session.user?.name}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => router.push(`/player/${(session.user as any)?.steamId || session.user?.id || ''}`)}
+                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase italic tracking-tighter px-8 py-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      Acessar Meu Perfil <Zap size={18} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-full text-center space-y-4">
+                    <p className="text-sm text-zinc-400 font-bold uppercase tracking-wider">Pronto para descobrir suas estatísticas?</p>
+                    <button
+                      onClick={() => signIn('steam')}
+                      className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase italic tracking-tighter px-8 py-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
+                    >
+                       Entrar com a Steam
+                    </button>
+                    <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em] mt-2">
+                       Ou procure jogadores na barra de navegação no topo.
+                    </p>
+                  </div>
+                )}
               </div>
-            </motion.form>
+            </motion.div>
 
             <div className="flex flex-wrap justify-center gap-12 pt-12">
               <div className="text-center">
