@@ -1,13 +1,24 @@
 from fastapi import FastAPI, Depends, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
+from typing import Optional
 from app.db.session import get_db
 from app.schemas.importer import ImportMatchRequest
 from app.tasks.match_tasks import process_match_task
 from app.services.downloader import DownloaderService
+from app.services.demo_analyzer import DemoAnalyzerService
 from app.core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
+
+
+class DemoAnalyzeRequest(BaseModel):
+    demo_url: str
+    submitted_by_steamid: Optional[str] = None
 
 # CORS (Frontend Next.js)
 app.add_middleware(
