@@ -96,6 +96,22 @@ export default function ComparePage() {
     const [playerB, setPlayerB] = useState<RankUser | null>(null);
     const [selectingFor, setSelectingFor] = useState<'A' | 'B' | null>(null);
 
+    const [h2hData, setH2hData] = useState<any>(null);
+    const [h2hLoading, setH2hLoading] = useState(false);
+
+    useEffect(() => {
+        if (playerA && playerB) {
+            setH2hLoading(true);
+            fetch(`/api/compare/h2h?steamIdA=${playerA.steamId}&steamIdB=${playerB.steamId}`)
+                .then(r => r.json())
+                .then(setH2hData)
+                .catch(console.error)
+                .finally(() => setH2hLoading(false));
+        } else {
+            setH2hData(null);
+        }
+    }, [playerA, playerB]);
+
     useEffect(() => {
         fetch('/api/ranking')
             .then(r => r.json())
@@ -355,6 +371,68 @@ export default function ComparePage() {
                         <StatBar labelA="Partidas" labelB="Partidas" valA={playerA.matchesPlayed} valB={playerB.matchesPlayed} colorA={colorA} colorB={colorB} />
                         <StatBar labelA="GC Level" labelB="GC Level" valA={playerA.gcLevel} valB={playerB.gcLevel} colorA={colorA} colorB={colorB} />
                         <StatBar labelA="Faceit Lvl" labelB="Faceit Lvl" valA={playerA.faceitLevel} valB={playerB.faceitLevel} colorA={colorA} colorB={colorB} />
+                    </div>
+
+                    {/* Common Matches (H2H) */}
+                    <div className="bg-zinc-950/60 border border-white/[0.07] rounded-3xl p-6 backdrop-blur-xl space-y-5">
+                        <h2 className="text-sm font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                            <Users size={14} /> Histórico em Comum
+                        </h2>
+                        
+                        {h2hLoading ? (
+                            <div className="flex justify-center py-6">
+                                <RefreshCw className="animate-spin text-zinc-600" size={24} />
+                            </div>
+                        ) : h2hData && h2hData.totalCommon > 0 ? (
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between bg-black/20 rounded-2xl p-4 border border-white/5">
+                                    <div className="text-center flex-1">
+                                        <p className="text-2xl font-black" style={{ color: h2hData.winsA > h2hData.winsB ? colorA : (h2hData.winsA === h2hData.winsB ? '#fff' : 'rgba(255,255,255,0.3)') }}>{h2hData.winsA}</p>
+                                        <p className="text-[8px] font-black uppercase tracking-widest text-zinc-500 mt-1">Mais Ponto$</p>
+                                    </div>
+                                    <div className="text-center px-4">
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">{h2hData.totalCommon} Partidas</p>
+                                        <p className="text-[8px] text-zinc-600 mt-1 uppercase font-bold">Na mesma sala</p>
+                                    </div>
+                                    <div className="text-center flex-1">
+                                        <p className="text-2xl font-black" style={{ color: h2hData.winsB > h2hData.winsA ? colorB : (h2hData.winsA === h2hData.winsB ? '#fff' : 'rgba(255,255,255,0.3)') }}>{h2hData.winsB}</p>
+                                        <p className="text-[8px] font-black uppercase tracking-widest text-zinc-500 mt-1">Mais Ponto$</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                    {h2hData.matches.map((m: any, i: number) => (
+                                        <div key={i} className="flex flex-col gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs">
+                                            <div className="flex justify-between items-center text-zinc-500 text-[10px] font-bold uppercase tracking-wider">
+                                                <span>{new Date(m.date).toLocaleDateString()} • {m.map}</span>
+                                                <span className={m.isSameTeam ? "text-blue-400" : "text-red-400"}>
+                                                    {m.isSameTeam ? "Mesmo Time" : "Adversários"}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-black w-6" style={{ color: m.betterPlacedSteamId === playerA.steamId ? colorA : 'rgba(255,255,255,0.3)' }}>
+                                                        {m.playerA.score}
+                                                    </span>
+                                                    <span className="text-zinc-400 text-[9px]">{m.playerA.kills}K - {m.playerA.deaths}D</span>
+                                                </div>
+                                                <span className="text-[9px] text-zinc-600 font-black">VS</span>
+                                                <div className="flex items-center gap-2 flex-row-reverse">
+                                                    <span className="font-black w-6 text-right" style={{ color: m.betterPlacedSteamId === playerB.steamId ? colorB : 'rgba(255,255,255,0.3)' }}>
+                                                        {m.playerB.score}
+                                                    </span>
+                                                    <span className="text-zinc-400 text-[9px]">{m.playerB.kills}K - {m.playerB.deaths}D</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-6 text-zinc-600 text-xs font-bold uppercase tracking-widest">
+                                Eles nunca jogaram na mesma partida cadastrada.
+                            </div>
+                        )}
                     </div>
 
                     {/* Quick links */}
