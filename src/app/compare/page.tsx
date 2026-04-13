@@ -86,6 +86,105 @@ function StatBar({ labelA, labelB, valA, valB, unit = '', colorA, colorB, higher
         </div>
     );
 }
+function PlayerSearch({
+    side, player, search, setSearch, filtered, setPlayer
+}: {
+    side: 'A' | 'B';
+    player: RankUser | null;
+    search: string;
+    setSearch: (v: string) => void;
+    filtered: RankUser[];
+    setPlayer: (p: RankUser) => void;
+}) {
+    const sideColor = side === 'A' ? '#3b82f6' : '#f97316';
+
+    return (
+        <div className="flex-1 space-y-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full" style={{ background: sideColor }} />
+                Jogador {side}
+            </p>
+
+            {player ? (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative rounded-3xl p-6 flex flex-col items-center gap-4 border text-center"
+                    style={{
+                        background: `${getTierColor(player.rating)}10`,
+                        borderColor: `${getTierColor(player.rating)}40`,
+                        boxShadow: `0 0 30px ${getTierColor(player.rating)}20`,
+                    }}
+                >
+                    <button
+                        onClick={() => { setPlayer(null as any); setSearch(''); }}
+                        className="absolute top-3 right-3 w-6 h-6 bg-white/10 hover:bg-white/20 rounded-full text-zinc-400 text-[10px] font-black transition-all"
+                    >
+                        ✕
+                    </button>
+                    <img
+                        src={player.avatar}
+                        alt={player.nickname}
+                        className="w-16 h-16 rounded-full border-2"
+                        style={{ borderColor: getTierColor(player.rating) }}
+                    />
+                    <div>
+                        <Link href={`/player/${player.steamId}`}>
+                            <h3 className="font-black italic uppercase tracking-tight text-lg hover:underline"
+                                style={{ color: getTierColor(player.rating) }}
+                            >
+                                {player.nickname}
+                            </h3>
+                        </Link>
+                        <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">#{player.rank} no ranking</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 w-full">
+                        <div className="bg-black/20 rounded-xl p-2 text-center">
+                            <p className="text-[8px] text-zinc-600 font-black uppercase">SR Premier</p>
+                            <p className="text-base font-black" style={{ color: getTierColor(player.rating) }}>
+                                {player.rating > 0 ? player.rating.toLocaleString() : '—'}
+                            </p>
+                        </div>
+                        <div className="bg-black/20 rounded-xl p-2 text-center">
+                            <p className="text-[8px] text-zinc-600 font-black uppercase">Win Rate</p>
+                            <p className="text-base font-black text-zinc-300">{player.winRate}</p>
+                        </div>
+                    </div>
+                </motion.div>
+            ) : (
+                <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                    <input
+                        type="text"
+                        placeholder={`Buscar jogador ${side}...`}
+                        className="w-full bg-zinc-950/70 border border-white/[0.07] rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:border-blue-500/40 placeholder:text-zinc-700 transition-all"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    {filtered.length > 0 && (
+                        <div className="absolute z-50 w-full mt-2 bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+                            {filtered.slice(0, 5).map(p => (
+                                <button
+                                    key={p.steamId}
+                                    onClick={() => { setPlayer(p); setSearch(''); }}
+                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left"
+                                >
+                                    <img src={p.avatar} alt={p.nickname} className="w-8 h-8 rounded-full" />
+                                    <div>
+                                        <p className="font-bold text-sm text-white">{p.nickname}</p>
+                                        <p className="text-[9px] text-zinc-600 font-bold uppercase">
+                                            #{p.rank} • SR {p.rating > 0 ? p.rating.toLocaleString() : '—'}
+                                        </p>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function ComparePage() {
     const [players, setPlayers] = useState<RankUser[]>([]);
@@ -139,106 +238,6 @@ export default function ComparePage() {
 
     const colorA = playerA ? getTierColor(playerA.rating) : '#3b82f6';
     const colorB = playerB ? getTierColor(playerB.rating) : '#f97316';
-
-    function PlayerSearch({
-        side, player, search, setSearch, filtered, setPlayer
-    }: {
-        side: 'A' | 'B';
-        player: RankUser | null;
-        search: string;
-        setSearch: (v: string) => void;
-        filtered: RankUser[];
-        setPlayer: (p: RankUser) => void;
-    }) {
-        const sideColor = side === 'A' ? '#3b82f6' : '#f97316';
-
-        return (
-            <div className="flex-1 space-y-3">
-                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full" style={{ background: sideColor }} />
-                    Jogador {side}
-                </p>
-
-                {player ? (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="relative rounded-3xl p-6 flex flex-col items-center gap-4 border text-center"
-                        style={{
-                            background: `${getTierColor(player.rating)}10`,
-                            borderColor: `${getTierColor(player.rating)}40`,
-                            boxShadow: `0 0 30px ${getTierColor(player.rating)}20`,
-                        }}
-                    >
-                        <button
-                            onClick={() => { setPlayer(null as any); setSearch(''); }}
-                            className="absolute top-3 right-3 w-6 h-6 bg-white/10 hover:bg-white/20 rounded-full text-zinc-400 text-[10px] font-black transition-all"
-                        >
-                            ✕
-                        </button>
-                        <img
-                            src={player.avatar}
-                            alt={player.nickname}
-                            className="w-16 h-16 rounded-full border-2"
-                            style={{ borderColor: getTierColor(player.rating) }}
-                        />
-                        <div>
-                            <Link href={`/player/${player.steamId}`}>
-                                <h3 className="font-black italic uppercase tracking-tight text-lg hover:underline"
-                                    style={{ color: getTierColor(player.rating) }}
-                                >
-                                    {player.nickname}
-                                </h3>
-                            </Link>
-                            <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">#{player.rank} no ranking</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 w-full">
-                            <div className="bg-black/20 rounded-xl p-2 text-center">
-                                <p className="text-[8px] text-zinc-600 font-black uppercase">SR Premier</p>
-                                <p className="text-base font-black" style={{ color: getTierColor(player.rating) }}>
-                                    {player.rating > 0 ? player.rating.toLocaleString() : '—'}
-                                </p>
-                            </div>
-                            <div className="bg-black/20 rounded-xl p-2 text-center">
-                                <p className="text-[8px] text-zinc-600 font-black uppercase">Win Rate</p>
-                                <p className="text-base font-black text-zinc-300">{player.winRate}</p>
-                            </div>
-                        </div>
-                    </motion.div>
-                ) : (
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                        <input
-                            type="text"
-                            placeholder={`Buscar jogador ${side}...`}
-                            className="w-full bg-zinc-950/70 border border-white/[0.07] rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:border-blue-500/40 placeholder:text-zinc-700 transition-all"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                        {filtered.length > 0 && (
-                            <div className="absolute z-50 w-full mt-2 bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-                                {filtered.slice(0, 5).map(p => (
-                                    <button
-                                        key={p.steamId}
-                                        onClick={() => { setPlayer(p); setSearch(''); }}
-                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left"
-                                    >
-                                        <img src={p.avatar} alt={p.nickname} className="w-8 h-8 rounded-full" />
-                                        <div>
-                                            <p className="font-bold text-sm text-white">{p.nickname}</p>
-                                            <p className="text-[9px] text-zinc-600 font-bold uppercase">
-                                                #{p.rank} • SR {p.rating > 0 ? p.rating.toLocaleString() : '—'}
-                                            </p>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-        );
-    }
 
     const canCompare = playerA && playerB;
 
