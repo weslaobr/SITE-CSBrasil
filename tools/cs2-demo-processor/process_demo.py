@@ -246,35 +246,41 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
     # ── Placar dos Times ─────────────────────
     score_a, score_b = None, None
     try:
-        # Apenas a entidade CCSTeam possui os campos de "half score".
-        # Os jogadores usam m_iScore apenas para as estatísticas de MVP.
-        df_ts = parser.parse_ticks(["m_scoreFirstHalf", "m_scoreSecondHalf", "m_scoreOvertime", "team_name"])
+        # A variável m_scoreFirstHalf costuma vir 0x0 em CS2 (a Valve/Plugins não atualizam consistemente).
+        # Vamos usar m_iScore que é a pontuação oficial, mas filtrando apenas Entidades de Equipes.
+        # Entidade de Equipe (CCSTeam) não possui nome ('name' será NaN ou vazio).
+        # Jogadores possuem 'name', 'steamid', etc.
+        df_ts = parser.parse_ticks(["m_iScore", "team_name", "name"])
         
-        if df_ts is not None and not df_ts.empty and "team_name" in df_ts.columns:
-            # Pega as últimas atualizações de placar das equipes no último tick da demo
-            latest_teams = df_ts.dropna(subset=["team_name"]).drop_duplicates(subset=["team_name"], keep="last")
+        if df_ts is not None and not df_ts.empty and "m_iScore" in df_ts.columns and "team_name" in df_ts.columns:
+            # Filtra os ticks onde NÃO é de um jogador
+            df_teams = df_ts[df_ts["name"].isna() | (df_ts["name"] == "")]
             
-            score_ct = 0
-            score_t = 0
-            
-            for _, row in latest_teams.iterrows():
-                tname = str(row["team_name"])
-                # Soma as metades e o OT para saber a pontuação total associada a este time
-                total = int(row.get("m_scoreFirstHalf", 0) or 0) + int(row.get("m_scoreSecondHalf", 0) or 0) + int(row.get("m_scoreOvertime", 0) or 0)
+            if not df_teams.empty:
+                latest_teams = df_teams.dropna(subset=["team_name"]).drop_duplicates(subset=["team_name"], keep="last")
+                summary = latest_teams.set_index("team_name")["m_iScore"].to_dict()
                 
-                norm_k = normalize_team(tname)
-                if norm_k == "CT":
-                    score_ct = max(score_ct, total)
-                elif norm_k == "T":
-                    score_t = max(score_t, total)
-            
-            score_a, score_b = score_ct, score_t
-            log_fn(f"📊 Placar extraído via Half Scores da CCSTeam: CT {score_ct} x T {score_t}")
+                score_ct = 0
+                score_t = 0
+                
+                for tname, v in summary.items():
+                    total = int(v or 0)
+                    norm_k = normalize_team(str(tname))
+                    if norm_k == "CT":
+                        score_ct = max(score_ct, total)
+                    elif norm_k == "T":
+                        score_t = max(score_t, total)
+                
+                score_a, score_b = score_ct, score_t
+                log_fn(f"📊 Placar extraído via m_iScore da Equipe: CT {score_ct} x T {score_t}")
+            else:
+                raise ValueError("Nenhuma entidade de time (CCSTeam) detectada nos ticks.")
         else:
-            raise ValueError("Colunas Half Scores não foram encontradas, tentando Fallback.")
+            raise ValueError("Colunas m_iScore ou team_name não foram encontradas.")
             
     except Exception as e:
         # Fallback lendo events "round_end", com simulação amadora simplificada para falhas severas
+        log_fn(f"⚠️  Tentando Fallback: {e}")
         try:
             df_re = parser.parse_event("round_end")
             if df_re is not None and not df_re.empty and "winner" in df_re.columns:
@@ -283,7 +289,7 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
                 score_a, score_b = wins_ct, wins_t
                 log_fn(f"📊 Placar via round_end absoluto (Cuidado - Ignora sideswap): CT {wins_ct} x T {wins_t}")
             else:
-                log_fn(f"⚠️  Placar falhou no fallback. {e}")
+                log_fn(f"⚠️  Placar falhou no fallback de rounds.")
         except Exception as e2:
             log_fn(f"⚠️  Ambos métodos de placar falharam: {e2}")
 
