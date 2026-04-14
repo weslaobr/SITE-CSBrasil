@@ -248,22 +248,25 @@ export async function GET(
         } : null;
 
         // 3. Format Global Matches to match the old Match schema for the frontend
-        const formattedGlobalMatches = globalMatchPlayers.map(gmp => ({
-            id: gmp.id,
-            externalId: gmp.globalMatchId,
-            source: gmp.match.source || 'Local Demo',
-            gameMode: 'Competitive',
-            mapName: gmp.match.mapName,
-            kills: gmp.kills,
-            deaths: gmp.deaths,
-            assists: gmp.assists,
-            score: gmp.match.scoreA != null ? `${gmp.match.scoreA}-${gmp.match.scoreB}` : '0-0',
-            result: gmp.matchResult,
-            matchDate: gmp.match.matchDate,
-            hsPercentage: gmp.hsPercentage,
-            adr: gmp.adr,
-            metadata: gmp.metadata
-        }));
+        const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
+            const mappedResult = gmp.matchResult === 'win' ? 'Win' : (gmp.matchResult === 'loss' ? 'Loss' : 'Tie');
+            return {
+                id: gmp.id,
+                externalId: gmp.globalMatchId,
+                source: gmp.match.source || 'Local Demo',
+                gameMode: 'Competitive',
+                mapName: gmp.match.mapName,
+                kills: gmp.kills,
+                deaths: gmp.deaths,
+                assists: gmp.assists,
+                score: gmp.match.scoreA != null ? `${gmp.match.scoreA}-${gmp.match.scoreB}` : '0-0',
+                result: mappedResult,
+                matchDate: gmp.match.matchDate,
+                hsPercentage: gmp.hsPercentage,
+                adr: gmp.adr,
+                metadata: gmp.metadata
+            };
+        });
 
         // Merge Leetify matches and Local Demo matches, sort by date
         const allMatches = [

@@ -246,22 +246,23 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
     # ── Placar dos Times ─────────────────────
     score_a, score_b = None, None
     try:
-        for fields in [["score", "team_name"], ["m_iTeamScore", "m_szTeamname"]]:
-            df_ts = parser.parse_ticks(fields)
-            if df_ts is not None and not df_ts.empty:
-                sc_col = fields[0]
-                tn_col = fields[1]
-                if sc_col in df_ts.columns and tn_col in df_ts.columns:
-                    summary = df_ts.groupby(tn_col)[sc_col].max().to_dict()
-                    teams_with_scores = {
-                        k: int(v) for k, v in summary.items()
-                        if k and str(k).strip() not in ("", "Unassigned", "Spectator", "1")
-                    }
-                    vals = sorted(teams_with_scores.values(), reverse=True)
-                    if len(vals) >= 2:
-                        score_a, score_b = vals[0], vals[1]
-                        log_fn(f"📊 Placar: {vals[0]} x {vals[1]}")
-                        break
+        # Pega a tabela que geralmente contém o placar em CS2: team_score / m_iScore / m_score
+        df_ts = parser.parse_ticks(["m_iScore", "team_name"])
+        if df_ts is not None and not df_ts.empty:
+            if "m_iScore" in df_ts.columns and "team_name" in df_ts.columns:
+                summary = df_ts.groupby("team_name")["m_iScore"].max().to_dict()
+                
+                score_ct = 0
+                score_t = 0
+                for k, v in summary.items():
+                    norm_k = normalize_team(str(k))
+                    if norm_k == "CT":
+                        score_ct = max(score_ct, int(v))
+                    elif norm_k == "T":
+                        score_t = max(score_t, int(v))
+                
+                score_a, score_b = score_ct, score_t
+                log_fn(f"📊 Placar: {score_ct} x {score_t} (CT x T)")
     except Exception as e:
         log_fn(f"⚠️  Placar dos times não extraído: {e}")
 
@@ -333,8 +334,7 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
         })
 
     # Determina resultado por time
-    if score_a is not None and score_b is not None and score_a != score_b:
-        # Time A = CT, Time B = T (convenção mais comum)
+    if score_a is not None and score_b is not None and score_a != score_b: # CT vs T
         winner_team = "CT" if score_a > score_b else "T"
         for p in players_out:
             if p["team"] == winner_team:

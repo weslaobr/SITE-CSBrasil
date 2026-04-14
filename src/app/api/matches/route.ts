@@ -30,8 +30,15 @@ export async function GET(req: NextRequest) {
             where: { userId },
             orderBy: { matchDate: 'desc' }
         });
+        
+        // Fetch matches imported via Local CS2 Demo Processor
+        const globalMatchPlayers = await prisma.globalMatchPlayer.findMany({
+            where: { steamId: (session.user as any)?.steamId || '' },
+            include: { match: true },
+            orderBy: { match: { matchDate: 'desc' } }
+        });
 
-        console.log(`[Matches GET] userId=${userId} — Found ${rawMatches.length} matches in DB`);
+        console.log(`[Matches GET] userId=${userId} — Found ${rawMatches.length} legacy matches, ${globalMatchPlayers.length} local demos in DB`);
 
         // Enrich matches: if DB columns are 0/null, recover from raw Leetify metadata
         const matches = rawMatches.map((m) => {
@@ -68,9 +75,35 @@ export async function GET(req: NextRequest) {
             return { ...m, kills, deaths, assists, adr, hsPercentage };
         });
 
+        // Format Global Matches to match the old Match schema for the frontend
+        const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
+            const mappedResult = gmp.matchResult === 'win' ? 'Win' : (gmp.matchResult === 'loss' ? 'Loss' : 'Tie');
+            return {
+                id: gmp.id,
+                externalId: gmp.globalMatchId,
+                source: gmp.match.source || 'Local Demo',
+                gameMode: 'Competitive',
+                mapName: gmp.match.mapName,
+                kills: gmp.kills,
+                deaths: gmp.deaths,
+                assists: gmp.assists,
+                score: gmp.match.scoreA != null ? `${gmp.match.scoreA}-${gmp.match.scoreB}` : '0-0',
+                result: mappedResult,
+                matchDate: gmp.match.matchDate,
+                hsPercentage: gmp.hsPercentage,
+                adr: gmp.adr,
+                metadata: gmp.metadata
+            };
+        });
+
+        // Merge and sort
+        const allMatches = [...matches, ...formattedGlobalMatches].sort((a, b) => 
+            new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime()
+        );
+
         return NextResponse.json({
-            matches: matches || [],
-            count: (matches || []).length
+            matches: allMatches,
+            count: allMatches.length
         });
     } catch (error) {
         console.error("Critical Matches Fetch Error:", error);

@@ -43,6 +43,17 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const pathname = usePathname();
     const { data: session } = useSession();
 
+    const mySteamId = session?.user ? (session.user as any).steamId : null;
+    const isPlayerRoute = pathname.startsWith('/player/');
+    const viewedPlayerId = isPlayerRoute ? pathname.split('/')[2] : null;
+    
+    // Logic to distinguish 'Meu Perfil' from 'Perfil do Jogador'
+    const isViewingOtherPlayer = isPlayerRoute && viewedPlayerId && viewedPlayerId !== mySteamId;
+    const profileLabel = isViewingOtherPlayer ? "Perfil do Jogador" : "Meu Perfil";
+    const profileHref = isViewingOtherPlayer 
+        ? `/player/${viewedPlayerId}` 
+        : (mySteamId ? `/player/${mySteamId}` : "/profile");
+
     return (
         <div className="flex h-screen bg-zinc-950 text-white overflow-hidden">
             {/* Sidebar */}
@@ -139,10 +150,10 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <div className="mt-auto pt-6 border-t border-white/5 space-y-2">
                     <SidebarItem
                         icon={<UserIcon size={20} />}
-                        label="Meu Perfil"
+                        label={profileLabel}
                         collapsed={collapsed}
                         active={pathname.startsWith('/player/')}
-                        href={session?.user && (session.user as any).steamId ? `/player/${(session.user as any).steamId}` : "/profile"}
+                        href={profileHref}
                     />
                     {session && (
                         <>
