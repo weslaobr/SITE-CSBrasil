@@ -28,7 +28,13 @@ export async function GET(
             getPlayerInventory(steamId).catch(() => []),
             getSteamLevel(steamId).catch(() => 0),
             getPlayerBans(steamId).catch(() => null),
-            getCS2SpacePlayerInfo(steamId).catch(() => null)
+            getCS2SpacePlayerInfo(steamId).catch(() => null),
+            prisma.globalMatchPlayer.findMany({
+                where: { steamId: steamId },
+                include: { match: true },
+                orderBy: { match: { matchDate: 'desc' } },
+                take: 50
+            }).catch(() => [])
         ]);
 
         const dbUser = results[0] as any;
@@ -40,6 +46,7 @@ export async function GET(
         const steamLevel = results[6] as any;
         const bans = results[7] as any;
         const cs2space = results[8] as any;
+        const globalMatchPlayers = results[9] as any[];
 
         if (!profile) {
             return NextResponse.json({ error: "Player not found" }, { status: 404 });
@@ -240,6 +247,30 @@ export async function GET(
             maxCompetitiveRank: maxCompetitiveRank || null,
         } : null;
 
+        // 3. Format Global Matches to match the old Match schema for the frontend
+        const formattedGlobalMatches = globalMatchPlayers.map(gmp => ({
+            id: gmp.id,
+            externalId: gmp.globalMatchId,
+            source: gmp.match.source || 'Local Demo',
+            gameMode: 'Competitive',
+            mapName: gmp.match.mapName,
+            kills: gmp.kills,
+            deaths: gmp.deaths,
+            assists: gmp.assists,
+            score: gmp.match.scoreA != null ? `${gmp.match.scoreA}-${gmp.match.scoreB}` : '0-0',
+            result: gmp.matchResult,
+            matchDate: gmp.match.matchDate,
+            hsPercentage: gmp.hsPercentage,
+            adr: gmp.adr,
+            metadata: gmp.metadata
+        }));
+
+        // Merge Leetify matches and Local Demo matches, sort by date
+        const allMatches = [
+            ...(dbUser?.matches || []).filter((m: any) => m.source === 'Leetify'),
+            ...formattedGlobalMatches
+        ].sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
+
         return NextResponse.json({
             profile,
             steamStats,
@@ -253,7 +284,7 @@ export async function GET(
             trustBreakdown: breakdown,
             anomalies,
             inventoryValue,
-            matches: (dbUser?.matches || []).filter((m: any) => m.source === 'Leetify')
+            matches: allMatches
         });
     } catch (error: any) {
         console.error("Error fetching dynamic player data:", error);
