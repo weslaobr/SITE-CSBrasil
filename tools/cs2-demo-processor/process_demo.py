@@ -246,35 +246,46 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
     # ── Placar dos Times ─────────────────────
     score_a, score_b = None, None
     try:
-        # Pega m_scoreTotal que pertence a CCSTeam e não CCSPlayerController (que usa m_iScore para kills*2)
-        df_ts = parser.parse_ticks(["m_scoreTotal", "team_name"])
+        # Apenas a entidade CCSTeam possui os campos de "half score".
+        # Os jogadores usam m_iScore apenas para as estatísticas de MVP.
+        df_ts = parser.parse_ticks(["m_scoreFirstHalf", "m_scoreSecondHalf", "m_scoreOvertime", "team_name"])
         
-        if df_ts is not None and not df_ts.empty and "m_scoreTotal" in df_ts.columns and "team_name" in df_ts.columns:
-            # Pega o placar no final da demo (keep='last')
+        if df_ts is not None and not df_ts.empty and "team_name" in df_ts.columns:
+            # Pega as últimas atualizações de placar das equipes no último tick da demo
             latest_teams = df_ts.dropna(subset=["team_name"]).drop_duplicates(subset=["team_name"], keep="last")
-            summary = latest_teams.set_index("team_name")["m_scoreTotal"].to_dict()
             
             score_ct = 0
             score_t = 0
-            for k, v in summary.items():
-                norm_k = normalize_team(str(k))
+            
+            for _, row in latest_teams.iterrows():
+                tname = str(row["team_name"])
+                # Soma as metades e o OT para saber a pontuação total associada a este time
+                total = int(row.get("m_scoreFirstHalf", 0) or 0) + int(row.get("m_scoreSecondHalf", 0) or 0) + int(row.get("m_scoreOvertime", 0) or 0)
+                
+                norm_k = normalize_team(tname)
                 if norm_k == "CT":
-                    score_ct = max(score_ct, int(v))
+                    score_ct = max(score_ct, total)
                 elif norm_k == "T":
-                    score_t = max(score_t, int(v))
+                    score_t = max(score_t, total)
             
             score_a, score_b = score_ct, score_t
-            log_fn(f"📊 Placar extraído via m_scoreTotal: {score_ct} x {score_t}")
+            log_fn(f"📊 Placar extraído via Half Scores da CCSTeam: CT {score_ct} x T {score_t}")
         else:
-            # Fallback seguro: tentar contar as rodadas ganhas (Não lida com half-swap, mas impede números gigantes)
+            raise ValueError("Colunas Half Scores não foram encontradas, tentando Fallback.")
+            
+    except Exception as e:
+        # Fallback lendo events "round_end", com simulação amadora simplificada para falhas severas
+        try:
             df_re = parser.parse_event("round_end")
             if df_re is not None and not df_re.empty and "winner" in df_re.columns:
                 wins_t = int((df_re["winner"] == 2).sum())
                 wins_ct = int((df_re["winner"] == 3).sum())
                 score_a, score_b = wins_ct, wins_t
-                log_fn(f"📊 Placar calculado via round_end (Sem considerar swap): CT {wins_ct} x T {wins_t}")
-    except Exception as e:
-        log_fn(f"⚠️  Placar dos times não extraído: {e}")
+                log_fn(f"📊 Placar via round_end absoluto (Cuidado - Ignora sideswap): CT {wins_ct} x T {wins_t}")
+            else:
+                log_fn(f"⚠️  Placar falhou no fallback. {e}")
+        except Exception as e2:
+            log_fn(f"⚠️  Ambos métodos de placar falharam: {e2}")
 
     # ── Estatísticas Avançadas (Duelos e Granadas) ──────────
     flash_assists = {sid: 0 for sid in player_info}
@@ -409,6 +420,8 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
             "hsPercentage":  hs_pct,
             "matchResult":   "tie",  # calculado abaixo
             "metadata": {
+                "name":          info["name"],
+                "nickname":      info["name"],
                 "flashAssists":  flash_assists.get(sid, 0),
                 "utilDmg":       util_dmg.get(sid, 0),
                 "rawDmg":        dmg,
