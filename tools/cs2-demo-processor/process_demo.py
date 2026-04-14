@@ -85,19 +85,33 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
     log_fn(f"📂 Abrindo: {os.path.basename(filepath)}")
     parser = DemoParser(filepath)
 
-    # ── Header ──────────────────────────────
+    # ── Header e Duração Segura ─────────────────
     header = {}
     try:
         header = parser.parse_header()
         map_name = header.get("map_name", "unknown")
-        tick_rate = float(header.get("playback_ticks", 0)) / max(float(header.get("playback_time", 1)), 1)
+        
+        # O playback_time costuma vir corrompido no CS2, então já calculamos via round_end
         duration_secs = float(header.get("playback_time", 0))
-        duration_str  = seconds_to_mmss(duration_secs)
+        duration_str = "00:00"
+        
+        if duration_secs > 0:
+            duration_str = seconds_to_mmss(duration_secs)
+        else:
+            try:
+                df_re = parser.parse_event("round_end")
+                if df_re is not None and not df_re.empty and "tick" in df_re.columns:
+                    max_tick = int(df_re["tick"].max())
+                    m, s = divmod(int(max_tick / 64), 60)
+                    duration_str = f"{m:02d}:{s:02d}"
+            except:
+                pass
+                
         log_fn(f"🗺️  Mapa: {map_name} | Duração: {duration_str}")
     except Exception as e:
         log_fn(f"⚠️  Erro ao ler header: {e}")
         map_name     = "unknown"
-        duration_str = None
+        duration_str = "00:00"
 
     # ── Jogadores e Times ───────────────────
     player_info = {}   # steamId -> {name, team}
@@ -243,55 +257,59 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
     except Exception as e:
         log_fn(f"⚠️  Score/MVPs não extraídos: {e}")
 
-    # ── Placar dos Times ─────────────────────
+    # ── Placar dos Times e Duração ─────────────────────
     score_a, score_b = None, None
+    
     try:
-        # A variável m_scoreFirstHalf costuma vir 0x0 em CS2 (a Valve/Plugins não atualizam consistemente).
-        # Vamos usar m_iScore que é a pontuação oficial, mas filtrando apenas Entidades de Equipes.
-        # Entidade de Equipe (CCSTeam) não possui nome ('name' será NaN ou vazio).
-        # Jogadores possuem 'name', 'steamid', etc.
-        df_ts = parser.parse_ticks(["m_iScore", "team_name", "name"])
-        
-        if df_ts is not None and not df_ts.empty and "m_iScore" in df_ts.columns and "team_name" in df_ts.columns:
-            # Filtra os ticks onde NÃO é de um jogador
-            df_teams = df_ts[df_ts["name"].isna() | (df_ts["name"] == "")]
+        df_re = parser.parse_event("round_end")
+        if df_re is not None and not df_re.empty and "winner" in df_re.columns:
+            if "tick" in df_re.columns:
+                df_re = df_re.sort_values("tick")
+                
+            pts_a = 0  # Time que COMEÇA de CT
+            pts_b = 0  # Time que COMEÇA de T
+            rounds_played = 0
             
-            if not df_teams.empty:
-                latest_teams = df_teams.dropna(subset=["team_name"]).drop_duplicates(subset=["team_name"], keep="last")
-                summary = latest_teams.set_index("team_name")["m_iScore"].to_dict()
+            for w_val in df_re["winner"]:
+                w_str = str(w_val).strip().upper()
+                w = ""
+                # Mapeia qualquer variação do parser para os lados fundamentais
+                if w_str in ["2", "2.0", "T", "TERRORIST", "TERRORISTS"]:
+                    w = "2"
+                elif w_str in ["3", "3.0", "CT", "COUNTER-TERRORIST", "COUNTER-TERRORISTS"]:
+                    w = "3"
+                else:
+                    continue  # Desempate ou draw
+
+                rounds_played += 1
                 
-                score_ct = 0
-                score_t = 0
+                # Regra MR12
+                if rounds_played <= 12:
+                    is_a_ct = True
+                elif rounds_played <= 24:
+                    is_a_ct = False
+                else:
+                    ot_round = rounds_played - 24
+                    ot_half = ((ot_round - 1) % 6) // 3
+                    is_a_ct = (ot_half % 2 == 0)
                 
-                for tname, v in summary.items():
-                    total = int(v or 0)
-                    norm_k = normalize_team(str(tname))
-                    if norm_k == "CT":
-                        score_ct = max(score_ct, total)
-                    elif norm_k == "T":
-                        score_t = max(score_t, total)
-                
-                score_a, score_b = score_ct, score_t
-                log_fn(f"📊 Placar extraído via m_iScore da Equipe: CT {score_ct} x T {score_t}")
-            else:
-                raise ValueError("Nenhuma entidade de time (CCSTeam) detectada nos ticks.")
+                if is_a_ct:
+                    if w == "3": pts_a += 1
+                    elif w == "2": pts_b += 1
+                else:
+                    if w == "2": pts_a += 1
+                    elif w == "3": pts_b += 1
+            
+            score_a = max(pts_a, pts_b)
+            score_b = min(pts_a, pts_b)
+            log_fn(f"📊 Placar Reconstruído (MR12 Sim): {score_a} x {score_b} ({rounds_played} rounds)")
         else:
-            raise ValueError("Colunas m_iScore ou team_name não foram encontradas.")
+            raise ValueError("Evento round_end vazio ou sem vencedor.")
             
     except Exception as e:
-        # Fallback lendo events "round_end", com simulação amadora simplificada para falhas severas
-        log_fn(f"⚠️  Tentando Fallback: {e}")
-        try:
-            df_re = parser.parse_event("round_end")
-            if df_re is not None and not df_re.empty and "winner" in df_re.columns:
-                wins_t = int((df_re["winner"] == 2).sum())
-                wins_ct = int((df_re["winner"] == 3).sum())
-                score_a, score_b = wins_ct, wins_t
-                log_fn(f"📊 Placar via round_end absoluto (Cuidado - Ignora sideswap): CT {wins_ct} x T {wins_t}")
-            else:
-                log_fn(f"⚠️  Placar falhou no fallback de rounds.")
-        except Exception as e2:
-            log_fn(f"⚠️  Ambos métodos de placar falharam: {e2}")
+        log_fn(f"⚠️  Falha ao reconstruir o placar/tempo: {e}")
+        score_a, score_b = 0, 0
+
 
     # ── Estatísticas Avançadas (Duelos e Granadas) ──────────
     flash_assists = {sid: 0 for sid in player_info}
