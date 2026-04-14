@@ -120,7 +120,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
     // Helper to detect the platform/mode of a match
-    const detectMode = (m: Match): 'GamersClub' | 'Faceit' | 'Premier' | 'Competitive' => {
+    const detectMode = (m: Match): 'GamersClub' | 'Faceit' | 'Premier' | 'Mix' | 'Competitive' => {
         const src = (m.source || '').toLowerCase();
         const mode = (m.gameMode || '').toLowerCase();
         const meta = (m.metadata?.source || m.metadata?.data_source || '').toLowerCase();
@@ -131,6 +131,9 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         }
         if (src === 'faceit' || mode.includes('faceit') || meta.includes('faceit')) {
             return 'Faceit';
+        }
+        if (src === 'mix' || mode.includes('mix') || meta.includes('mix')) {
+            return 'Mix';
         }
         if (src.includes('premier') || mode.includes('premier') || meta.includes('premier') ||
             m.metadata?.rank_type === 11 ||
@@ -618,6 +621,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                         { id: 'Premier',     label: '⭐ Premier' },
                         { id: 'Faceit',      label: '🔴 Faceit' },
                         { id: 'GamersClub',  label: '🛡 GC' },
+                        { id: 'Mix',         label: '⚔️ Mix' },
                     ].map(({ id, label }) => (
                         <button
                             key={id}
@@ -687,109 +691,104 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     <th className="px-3 py-3.5 text-center">Replay</th>
                                     <th className="px-5 py-3.5 text-right">Data</th>
                                 </tr>
-                            </thead>
-                            <tbody className="">
-                                {filteredMatches.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((match, i) => {
-                                    const isWin = match.result === 'Win';
-                                    const isLoss = match.result === 'Loss';
-                                    const isDraw = match.result === 'Draw';
-                                    const matchMode = detectMode(match);
-                                    const isGamersClub = matchMode === 'GamersClub';
-                                    const isPremier = matchMode === 'Premier';
-                                    const isFaceit = matchMode === 'Faceit';
-                                            
-                                            return (
-                                                <motion.tr
-                                                    key={match.id || match.externalId || Math.random().toString()}
-                                                    initial={{ opacity: 0, y: 6 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: i * 0.025, type: 'spring', stiffness: 200, damping: 24 }}
-                                                    className="group relative border-b border-white/[0.04] transition-colors cursor-pointer hover:bg-white/[0.02]"
-                                                    onClick={() => handleViewMatch(match)}
-                                                >
-                                            {/* Result accent strip */}
-                                            <td className="p-0 w-1">
-                                                <div className={`h-full w-[3px] rounded-r transition-all duration-300 ${
-                                                    isWin ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' :
-                                                    isLoss ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
-                                                    'bg-zinc-700'
-                                                } opacity-0 group-hover:opacity-100`} />
-                                            </td>
-                                            {/* Mapa */}
-                                            <td className="px-5 py-3.5">
-                                                <div className="flex items-center gap-3.5">
-                                                    <div className="relative w-16 h-10 overflow-hidden rounded-xl border border-white/[0.08] shrink-0 group-hover:border-white/20 transition-all shadow-lg">
-                                                        <img
-                                                            src={getMapImage(match.mapName)}
-                                                            className="w-full h-full object-cover brightness-50 group-hover:brightness-90 transition-all duration-500 group-hover:scale-110"
-                                                            alt={match.mapName}
-                                                        />
-                                                        <div className={`absolute inset-0 ${
-                                                            isWin ? 'bg-gradient-to-t from-emerald-900/60 to-transparent' :
-                                                            isLoss ? 'bg-gradient-to-t from-red-900/60 to-transparent' :
-                                                            'bg-gradient-to-t from-black/60 to-transparent'
-                                                        }`} />
-                                                    </div>
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="font-black text-[13px] text-zinc-200 uppercase italic tracking-tight group-hover:text-yellow-400 transition-colors leading-none">
-                                                            {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' :
-                                                             match.mapName.replace('de_', '').replace(/_/g, ' ').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                                                        </span>
-                                                        <span className={`self-start px-2 py-0.5 text-[7px] font-black uppercase tracking-[0.15em] rounded-md ${
-                                                            isWin ? 'bg-emerald-500/15 text-emerald-400' :
-                                                            isLoss ? 'bg-red-500/15 text-red-400' :
-                                                            'bg-zinc-800/60 text-zinc-500'
-                                                        }`}>
-                                                            {isWin ? '✓ Vitória' : isLoss ? '✗ Derrota' : '= Empate'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-3 py-4 text-center">
-                                                <div className={`inline-flex items-center gap-1 px-4 py-1.5 rounded-xl border font-black italic text-base tracking-tighter ${
-                                                    isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 
-                                                    isLoss ? 'bg-red-500/10 border-red-500/20 text-red-400' : 
-                                                    'bg-zinc-800/30 border-white/5 text-zinc-500'
-                                                }`}>
-                                                    {match.score || '—'}
-                                                </div>
-                                            </td>
-                                            <td className="px-3 py-4 text-center">
-                                                 <div className="flex justify-center flex-col items-center gap-0.5 group/rank">
-                                                     {(() => {
-                                                         const rankInfo = getRankInfo(match.rank, match.source, match.gameMode, match.metadata);
-                                                         return (
-                                                             <>
-                                                                 {rankInfo.icon ? (
-                                                                     <img 
-                                                                         src={rankInfo.icon} 
-                                                                         className="w-9 h-auto filter drop-shadow-[0_0_6px_rgba(255,255,255,0.12)] group-hover/rank:scale-110 transition-transform duration-300" 
-                                                                         alt={rankInfo.label}
-                                                                     />
-                                                                 ) : rankInfo.isPremier ? (
-                                                                     <div className={`text-base font-black italic tracking-tighter ${rankInfo.color}`}>
-                                                                         {rankInfo.label}
+                            </thead>                                                                const isGamersClub = matchMode === 'GamersClub';
+                                                                const isPremier = matchMode === 'Premier';
+                                                                const isFaceit = matchMode === 'Faceit';
+                                                                const isMix = matchMode === 'Mix';
+                                                                
+                                                                return (
+                                                                    <motion.tr
+                                                                        key={match.id || match.externalId || Math.random().toString()}
+                                                                        initial={{ opacity: 0, y: 6 }}
+                                                                        animate={{ opacity: 1, y: 0 }}
+                                                                        transition={{ delay: i * 0.025, type: 'spring', stiffness: 200, damping: 24 }}
+                                                                        className="group relative border-b border-white/[0.04] transition-colors cursor-pointer hover:bg-white/[0.02]"
+                                                                        onClick={() => handleViewMatch(match)}
+                                                                    >
+                                                                {/* Result accent strip */}
+                                                                <td className="p-0 w-1">
+                                                                    <div className={`h-full w-[3px] rounded-r transition-all duration-300 ${
+                                                                        isWin ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' :
+                                                                        isLoss ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
+                                                                        'bg-zinc-700'
+                                                                    } opacity-0 group-hover:opacity-100`} />
+                                                                </td>
+                                                                {/* Mapa */}
+                                                                <td className="px-5 py-3.5">
+                                                                    <div className="flex items-center gap-3.5">
+                                                                        <div className="relative w-16 h-10 overflow-hidden rounded-xl border border-white/[0.08] shrink-0 group-hover:border-white/20 transition-all shadow-lg">
+                                                                            <img
+                                                                                src={getMapImage(match.mapName)}
+                                                                                className="w-full h-full object-cover brightness-50 group-hover:brightness-90 transition-all duration-500 group-hover:scale-110"
+                                                                                alt={match.mapName}
+                                                                            />
+                                                                            <div className={`absolute inset-0 ${
+                                                                                isWin ? 'bg-gradient-to-t from-emerald-900/60 to-transparent' :
+                                                                                isLoss ? 'bg-gradient-to-t from-red-900/60 to-transparent' :
+                                                                                'bg-gradient-to-t from-black/60 to-transparent'
+                                                                            }`} />
+                                                                        </div>
+                                                                        <div className="flex flex-col gap-1">
+                                                                            <span className="font-black text-[13px] text-zinc-200 uppercase italic tracking-tight group-hover:text-yellow-400 transition-colors leading-none">
+                                                                                {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' :
+                                                                                 match.mapName.replace('de_', '').replace(/_/g, ' ').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                                                            </span>
+                                                                            <span className={`self-start px-2 py-0.5 text-[7px] font-black uppercase tracking-[0.15em] rounded-md ${
+                                                                                isWin ? 'bg-emerald-500/15 text-emerald-400' :
+                                                                                isLoss ? 'bg-red-500/15 text-red-400' :
+                                                                                'bg-zinc-800/60 text-zinc-500'
+                                                                            }`}>
+                                                                                {isWin ? '✓ Vitória' : isLoss ? '✗ Derrota' : '= Empate'}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-3 py-4 text-center">
+                                                                    <div className={`inline-flex items-center gap-1 px-4 py-1.5 rounded-xl border font-black italic text-base tracking-tighter ${
+                                                                        isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 
+                                                                        isLoss ? 'bg-red-500/10 border-red-500/20 text-red-400' : 
+                                                                        'bg-zinc-800/30 border-white/5 text-zinc-500'
+                                                                    }`}>
+                                                                        {match.score || '—'}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-3 py-4 text-center">
+                                                                     <div className="flex justify-center flex-col items-center gap-0.5 group/rank">
+                                                                         {(() => {
+                                                                             const rankInfo = getRankInfo(match.rank, match.source, match.gameMode, match.metadata);
+                                                                             return (
+                                                                                 <>
+                                                                                     {rankInfo.icon ? (
+                                                                                         <img 
+                                                                                             src={rankInfo.icon} 
+                                                                                             className="w-9 h-auto filter drop-shadow-[0_0_6px_rgba(255,255,255,0.12)] group-hover/rank:scale-110 transition-transform duration-300" 
+                                                                                             alt={rankInfo.label}
+                                                                                         />
+                                                                                     ) : rankInfo.isPremier ? (
+                                                                                         <div className={`text-base font-black italic tracking-tighter ${rankInfo.color}`}>
+                                                                                             {rankInfo.label}
+                                                                                         </div>
+                                                                                     ) : (
+                                                                                         <span className="text-zinc-700 font-black italic text-[9px]">—</span>
+                                                                                     )}
+                                                                                     {rankInfo.icon && <span className="text-[7px] font-black text-zinc-700 max-w-[60px] text-center leading-tight">{rankInfo.label}</span>}
+                                                                                 </>
+                                                                             );
+                                                                         })()}
                                                                      </div>
-                                                                 ) : (
-                                                                     <span className="text-zinc-700 font-black italic text-[9px]">—</span>
-                                                                 )}
-                                                                 {rankInfo.icon && <span className="text-[7px] font-black text-zinc-700 max-w-[60px] text-center leading-tight">{rankInfo.label}</span>}
-                                                             </>
-                                                         );
-                                                     })()}
-                                                 </div>
-                                             </td>
-                                            <td className="px-3 py-4 text-center">
-                                                <div className="flex flex-col items-center gap-1">
-                                                    <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wide ${
-                                                        isGamersClub ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                                        isFaceit ? 'bg-orange-600/10 text-orange-400 border-orange-600/20' :
-                                                        isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                                                        'bg-yellow-500/5 text-yellow-500/70 border-yellow-500/15'
-                                                    }`}>
-                                                        <span>{isGamersClub ? '🛡' : isFaceit ? '🔴' : isPremier ? '⭐' : '🎮'}</span>
-                                                        <span>{isGamersClub ? 'GC' : isFaceit ? 'Faceit' : isPremier ? 'Premier' : 'Comp'}</span>
-                                                    </div>
+                                                                 </td>
+                                                                <td className="px-3 py-4 text-center">
+                                                                    <div className="flex flex-col items-center gap-1">
+                                                                        <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wide ${
+                                                                            isGamersClub ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                                                            isFaceit ? 'bg-orange-600/10 text-orange-400 border-orange-600/20' :
+                                                                            isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                                                                            isMix ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' :
+                                                                            'bg-yellow-500/5 text-yellow-500/70 border-yellow-500/15'
+                                                                        }`}>
+                                                                            <span>{isGamersClub ? '🛡' : isFaceit ? '🔴' : isPremier ? '⭐' : isMix ? '⚔️' : '🎮'}</span>
+                                                                            <span>{isGamersClub ? 'GC' : isFaceit ? 'Faceit' : isPremier ? 'Premier' : isMix ? 'Mix' : 'Comp'}</span>
+                                                                        </div>
                                                     {isPremier && match.metadata?.rank_delta && (
                                                         <div className={`flex items-center gap-0.5 text-[8px] font-black ${match.metadata.rank_delta > 0 ? 'text-yellow-500' : 'text-red-400'}`}>
                                                             {match.metadata.rank_delta > 0 ? <ChevronUp size={9} /> : <ChevronDown size={9} />}
