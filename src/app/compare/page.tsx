@@ -28,7 +28,7 @@ const PREMIER_TIERS = [
     { name: 'Blue',       min: 10000, max: 14999,   color: '#6b8fff' },
     { name: 'Purple',     min: 15000, max: 19999,   color: '#ce93d8' },
     { name: 'Pink',       min: 20000, max: 24999,   color: '#f06292' },
-    { name: 'Red',        min: 25000, max: 29999,   color: '#ef9a9a' },
+    { name: 'Red',        min: 25000, max: 29999,   color: '#d32f2f' },
     { name: 'Gold',       min: 30000, max: Infinity, color: '#f5c518' },
 ];
 
