@@ -246,45 +246,87 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
     # ── Placar dos Times ─────────────────────
     score_a, score_b = None, None
     try:
-        # Pega a tabela que geralmente contém o placar em CS2: team_score / m_iScore / m_score
-        df_ts = parser.parse_ticks(["m_iScore", "team_name"])
-        if df_ts is not None and not df_ts.empty:
-            if "m_iScore" in df_ts.columns and "team_name" in df_ts.columns:
-                summary = df_ts.groupby("team_name")["m_iScore"].max().to_dict()
-                
-                score_ct = 0
-                score_t = 0
-                for k, v in summary.items():
-                    norm_k = normalize_team(str(k))
-                    if norm_k == "CT":
-                        score_ct = max(score_ct, int(v))
-                    elif norm_k == "T":
-                        score_t = max(score_t, int(v))
-                
-                score_a, score_b = score_ct, score_t
-                log_fn(f"📊 Placar: {score_ct} x {score_t} (CT x T)")
+        # Pega m_scoreTotal que pertence a CCSTeam e não CCSPlayerController (que usa m_iScore para kills*2)
+        df_ts = parser.parse_ticks(["m_scoreTotal", "team_name"])
+        
+        if df_ts is not None and not df_ts.empty and "m_scoreTotal" in df_ts.columns and "team_name" in df_ts.columns:
+            # Pega o placar no final da demo (keep='last')
+            latest_teams = df_ts.dropna(subset=["team_name"]).drop_duplicates(subset=["team_name"], keep="last")
+            summary = latest_teams.set_index("team_name")["m_scoreTotal"].to_dict()
+            
+            score_ct = 0
+            score_t = 0
+            for k, v in summary.items():
+                norm_k = normalize_team(str(k))
+                if norm_k == "CT":
+                    score_ct = max(score_ct, int(v))
+                elif norm_k == "T":
+                    score_t = max(score_t, int(v))
+            
+            score_a, score_b = score_ct, score_t
+            log_fn(f"📊 Placar extraído via m_scoreTotal: {score_ct} x {score_t}")
+        else:
+            # Fallback seguro: tentar contar as rodadas ganhas (Não lida com half-swap, mas impede números gigantes)
+            df_re = parser.parse_event("round_end")
+            if df_re is not None and not df_re.empty and "winner" in df_re.columns:
+                wins_t = int((df_re["winner"] == 2).sum())
+                wins_ct = int((df_re["winner"] == 3).sum())
+                score_a, score_b = wins_ct, wins_t
+                log_fn(f"📊 Placar calculado via round_end (Sem considerar swap): CT {wins_ct} x T {wins_t}")
     except Exception as e:
         log_fn(f"⚠️  Placar dos times não extraído: {e}")
 
-    # ── Flash Assists e Util Dmg (metadata) ──
+    # ── Estatísticas Avançadas (Duelos e Granadas) ──────────
     flash_assists = {sid: 0 for sid in player_info}
     util_dmg      = {sid: 0 for sid in player_info}
+    
+    adv_stats = {sid: {
+        "fk": 0, "fd": 0, "triples": 0, "quads": 0, "aces": 0,
+        "blind_time": 0.0, "he": 0, "flash": 0, "smoke": 0, "molotov": 0
+    } for sid in player_info}
+    
+
+    # Granadas Lançadas
+    try:
+        events_to_parse = [
+            ("hegrenade_detonate", "he"), 
+            ("flashbang_detonate", "flash"), 
+            ("smokegrenade_detonate", "smoke"), 
+            ("inferno_startburn", "molotov")
+        ]
+        for ev, g_type in events_to_parse:
+            df_g = parser.parse_event(ev)
+            if df_g is not None and not df_g.empty:
+                t_col = next((c for c in ["userid", "user_steamid", "thrower_steamid", "attacker_steamid"] if c in df_g.columns), None)
+                if t_col:
+                    for _, row in df_g.iterrows():
+                        sid = str(row[t_col])
+                        if sid in adv_stats:
+                            adv_stats[sid][g_type] += 1
+    except Exception as e:
+        log_fn(f"⚠️  Granadas (lançadas) não extraídas: {e}")
+
+    # Blind Time (Segundos cegando inimigos)
     try:
         df_fa = parser.parse_event("player_blind")
         if df_fa is not None and not df_fa.empty:
             att_col = next((c for c in ["attacker_steamid", "thrower_steamid"] if c in df_fa.columns), None)
-            if att_col:
+            vic_col = next((c for c in ["user_steamid", "victim_steamid"] if c in df_fa.columns), None)
+            dur_col = "blind_duration"
+            if att_col and dur_col and vic_col:
                 for _, row in df_fa.iterrows():
                     sid = str(row.get(att_col, "0"))
-                    if sid in flash_assists:
+                    vic = str(row.get(vic_col, "0"))
+                    if sid in flash_assists and sid != vic:
                         flash_assists[sid] += 1
-    except Exception:
-        pass
+                        adv_stats[sid]["blind_time"] += float(row.get(dur_col, 0) or 0)
+    except Exception as e:
+        log_fn(f"⚠️  Blind duration falhou: {e}")
 
+    # Utility Damage (HE, Molotov)
     try:
         df_ud = parser.parse_event("player_hurt")
         if df_ud is not None and not df_ud.empty:
-            # Dano de granadas (HE, Molotov) - weapon que não é pistola/rifle
             util_weapons = {"hegrenade", "molotov", "inferno", "flashbang"}
             att_col  = next((c for c in ["attacker_steamid"] if c in df_ud.columns), None)
             dmg_col  = next((c for c in ["dmg_health", "damage"] if c in df_ud.columns), None)
@@ -297,6 +339,46 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
                         util_dmg[sid] += int(row.get(dmg_col, 0) or 0)
     except Exception:
         pass
+
+    # Duelos: First Kills / First Deaths e MultiKills
+    try:
+        df_k = parser.parse_event("player_death")
+        df_rs = parser.parse_event("round_start")
+        if df_k is not None and not df_k.empty and "tick" in df_k.columns:
+            df_k = df_k.sort_values(by="tick")
+            round_starts = sorted(df_rs["tick"].tolist()) if (df_rs is not None and not df_rs.empty and "tick" in df_rs.columns) else [0]
+            
+            def get_round(t):
+                # Retorna em qual round este tick pertence
+                r = 0
+                for start in round_starts:
+                    if t >= start:
+                        r += 1
+                return r
+
+            df_k["round_num"] = df_k["tick"].apply(get_round) if round_starts else [1] * len(df_k)
+
+            for r_num, r_kills in df_k.groupby("round_num"):
+                if r_kills.empty: continue
+                # First Kill e Death
+                first = r_kills.iloc[0]
+                att = str(first.get("attacker_steamid", "0"))
+                vic = str(first.get("user_steamid", "0"))
+                if att in adv_stats and att != vic and att != "0":
+                    adv_stats[att]["fk"] += 1
+                if vic in adv_stats and vic != "0":
+                    adv_stats[vic]["fd"] += 1
+
+                # Multi-kills: filtra apenas mortes causadas pelo atacante dentro deste round
+                r_counts = r_kills[r_kills["attacker_steamid"] != r_kills["user_steamid"]].groupby("attacker_steamid").size()
+                for atk_sid, count in r_counts.items():
+                    atk_sid = str(atk_sid)
+                    if atk_sid in adv_stats:
+                        if count == 3: adv_stats[atk_sid]["triples"] += 1
+                        elif count == 4: adv_stats[atk_sid]["quads"] += 1
+                        elif count >= 5: adv_stats[atk_sid]["aces"] += 1
+    except Exception as e:
+        log_fn(f"⚠️  Duelos não extraídos integralmente: {e}")
 
     # ──────────────────────────────────────────
     # Monta a lista de jogadores
@@ -327,9 +409,19 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
             "hsPercentage":  hs_pct,
             "matchResult":   "tie",  # calculado abaixo
             "metadata": {
-                "flashAssists": flash_assists.get(sid, 0),
-                "utilDmg":      util_dmg.get(sid, 0),
-                "rawDmg":       dmg,
+                "flashAssists":  flash_assists.get(sid, 0),
+                "utilDmg":       util_dmg.get(sid, 0),
+                "rawDmg":        dmg,
+                "fk":            adv_stats[sid]["fk"],
+                "fd":            adv_stats[sid]["fd"],
+                "triples":       adv_stats[sid]["triples"],
+                "quads":         adv_stats[sid]["quads"],
+                "aces":          adv_stats[sid]["aces"],
+                "blindTime":     adv_stats[sid]["blind_time"],
+                "heThrown":      adv_stats[sid]["he"],
+                "flashThrown":   adv_stats[sid]["flash"],
+                "smokesThrown":  adv_stats[sid]["smoke"],
+                "molotovThrown": adv_stats[sid]["molotov"]
             },
         })
 
