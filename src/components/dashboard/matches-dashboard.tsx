@@ -691,13 +691,19 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     <th className="px-3 py-3.5 text-center">Replay</th>
                                     <th className="px-5 py-3.5 text-right">Data</th>
                                 </tr>
-                            </thead>                                                                const isGamersClub = matchMode === 'GamersClub';
-                                                                const isPremier = matchMode === 'Premier';
-                                                                const isFaceit = matchMode === 'Faceit';
-                                                                const isMix = matchMode === 'Mix';
-                                                                
-                                                                return (
-                                                                    <motion.tr
+                            </thead>
+                            <tbody>
+                                {filteredMatches.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((match, i) => {
+                                    const matchMode = detectMode(match);
+                                    const isWin = match.result === 'Win';
+                                    const isLoss = match.result === 'Loss';
+                                    const isGamersClub = matchMode === 'GamersClub';
+                                    const isPremier = matchMode === 'Premier';
+                                    const isFaceit = matchMode === 'Faceit';
+                                    const isMix = matchMode === 'Mix';
+                                    
+                                    return (
+                                        <motion.tr
                                                                         key={match.id || match.externalId || Math.random().toString()}
                                                                         initial={{ opacity: 0, y: 6 }}
                                                                         animate={{ opacity: 1, y: 0 }}
