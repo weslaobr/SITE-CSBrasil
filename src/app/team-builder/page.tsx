@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus } from "lucide-react";
+import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Player {
@@ -14,6 +14,17 @@ interface Player {
     isGuest?: boolean;
     assignment: "unassigned" | "A" | "B";
 }
+
+const MAP_POOL = [
+    { id: "dust2", name: "Dust2", image: "/img/maps/Dust2.webp" },
+    { id: "mirage", name: "Mirage", image: "/img/maps/Mirage.webp" },
+    { id: "inferno", name: "Inferno", image: "/img/maps/Inferno.webp" },
+    { id: "nuke", name: "Nuke", image: "/img/maps/Nuke.webp" },
+    { id: "vertigo", name: "Vertigo", image: "/img/maps/Vertigo.webp" },
+    { id: "ancient", name: "Ancient", image: "/img/maps/Ancient.webp" },
+    { id: "anubis", name: "Anubis", image: "/img/maps/Anubis.webp" },
+    { id: "overpass", name: "Overpass", image: "/img/maps/Overpass.webp" },
+];
 
 // Subcomponents
 function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMoveLeft, side }: { player: Player, pos: number, onRemove: ()=>void, onMoveUnassigned: ()=>void, onMoveRight?: ()=>void, onMoveLeft?: ()=>void, side: "left"|"right" }) {
@@ -83,6 +94,11 @@ export default function TeamBuilderPage() {
     const [guestName, setGuestName] = useState("");
     const [guestRating, setGuestRating] = useState("");
     const [showGuestForm, setShowGuestForm] = useState(false);
+
+    // Map Veto State
+    const [vetoMaps, setVetoMaps] = useState<Record<string, { type: "ban" | "pick", team: "A" | "B" | "system" }>>({});
+    const [vetoTurn, setVetoTurn] = useState<"A" | "B">("A");
+    const [vetoHistory, setVetoHistory] = useState<{ type: "ban" | "pick", map: string, team: "A" | "B" | "system" }[]>([]);
 
     useEffect(() => {
         const fetchPlayers = async () => {
@@ -187,6 +203,34 @@ export default function TeamBuilderPage() {
         });
 
         setSelectedPlayers(newAssignments);
+    };
+
+    const handleMapAction = (mapId: string, type: "ban" | "pick", isRandom = false) => {
+        if (vetoMaps[mapId]) return;
+
+        const team = isRandom ? "system" : vetoTurn;
+        const newAction = { type, map: mapId, team };
+
+        setVetoMaps(prev => ({ ...prev, [mapId]: { type, team } }));
+        setVetoHistory(prev => [...prev, newAction]);
+
+        if (!isRandom) {
+            setVetoTurn(prev => prev === "A" ? "B" : "A");
+        }
+    };
+
+    const handleRandomMap = () => {
+        const available = MAP_POOL.filter(m => !vetoMaps[m.id]);
+        if (available.length === 0) return;
+        
+        const random = available[Math.floor(Math.random() * available.length)];
+        handleMapAction(random.id, "pick", true);
+    };
+
+    const resetVeto = () => {
+        setVetoMaps({});
+        setVetoTurn("A");
+        setVetoHistory([]);
     };
 
     const unassigned = selectedPlayers.filter(p => p.assignment === "unassigned");
@@ -469,6 +513,158 @@ export default function TeamBuilderPage() {
                             </div>
                         </div>
 
+                    </div>
+
+                    {/* ── MAP VETO SECTION ── */}
+                    <div className="mt-12 space-y-8">
+                        <div className="flex flex-col md:flex-row justify-between items-end gap-4 border-b border-white/5 pb-6">
+                            <div>
+                                <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white flex items-center gap-3">
+                                    <MapIcon className="text-yellow-500" /> Veto de Mapas
+                                </h2>
+                                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">
+                                    Selecione os mapas ou use o sorteador
+                                </p>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={resetVeto}
+                                    className="p-3 bg-zinc-900 border border-white/5 rounded-xl text-zinc-500 hover:text-white transition-all"
+                                    title="Resetar Veto"
+                                >
+                                    <RotateCcw size={18} />
+                                </button>
+                                <button 
+                                    onClick={handleRandomMap}
+                                    className="flex items-center gap-2 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase text-xs rounded-xl transition-all shadow-lg active:scale-95 border border-yellow-300/30"
+                                >
+                                    <Shuffle size={16} /> Mapa Aleatório
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col xl:flex-row gap-8">
+                            {/* Map Grid */}
+                            <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                {MAP_POOL.map((map) => {
+                                    const state = vetoMaps[map.id];
+                                    const isBanned = state?.type === "ban";
+                                    const isPicked = state?.type === "pick";
+                                    
+                                    return (
+                                        <motion.div 
+                                            key={map.id}
+                                            layout
+                                            className={`relative aspect-video rounded-2xl overflow-hidden border-2 transition-all group ${
+                                                isBanned ? 'border-red-500/50 opacity-40 grayscale' :
+                                                isPicked ? 'border-green-500 shadow-lg shadow-green-500/20' :
+                                                'border-white/5 hover:border-yellow-500/50'
+                                            }`}
+                                        >
+                                            <img src={map.image} alt={map.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                                            
+                                            <div className="absolute inset-0 p-4 flex flex-col justify-between">
+                                                <div className="flex justify-between items-start">
+                                                    <span className="text-lg font-black italic uppercase tracking-tighter text-white drop-shadow-md">
+                                                        {map.name}
+                                                    </span>
+                                                    {state && (
+                                                        <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter shadow-xl ${
+                                                            state.type === "pick" ? 'bg-green-500 text-black' : 'bg-red-500 text-white'
+                                                        }`}>
+                                                            {state.type === "pick" ? "Picked" : "Banned"}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {!state && (
+                                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                                        <button 
+                                                            onClick={() => handleMapAction(map.id, "pick")}
+                                                            className="flex-1 bg-green-500 hover:bg-green-400 text-black py-1.5 rounded-lg font-black text-[10px] uppercase shadow-lg shadow-green-900/20"
+                                                        >
+                                                            Pick
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleMapAction(map.id, "ban")}
+                                                            className="flex-1 bg-red-500 hover:bg-red-400 text-white py-1.5 rounded-lg font-black text-[10px] uppercase shadow-lg shadow-red-900/20"
+                                                        >
+                                                            Ban
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {isBanned && (
+                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                    <div className="text-red-500 text-4xl font-black border-4 border-red-500 px-4 py-1 rounded-xl rotate-[-12deg] shadow-2xl">
+                                                        BAN
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Veto Sidebar / History */}
+                            <div className="xl:w-80 space-y-4">
+                                <div className="bg-zinc-900/40 p-5 rounded-2xl border border-white/5 backdrop-blur-xl h-full flex flex-col">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                            <History size={14} className="text-yellow-500" /> Log de Veto
+                                        </h3>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px] font-bold text-zinc-500">TURNO:</span>
+                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded ${vetoTurn === "A" ? 'bg-yellow-500 text-black' : 'bg-blue-500 text-white'}`}>
+                                                TIME {vetoTurn}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 space-y-3 min-h-[300px]">
+                                        {vetoHistory.length === 0 ? (
+                                            <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
+                                                <MapIcon size={40} className="mb-2" />
+                                                <p className="text-[10px] font-bold uppercase tracking-widest">Nenhuma ação</p>
+                                            </div>
+                                        ) : (
+                                            vetoHistory.map((entry, i) => (
+                                                <motion.div 
+                                                    initial={{ opacity: 0, x: 20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    key={i} 
+                                                    className="flex items-center gap-3 p-3 bg-black/40 border border-white/5 rounded-xl"
+                                                >
+                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                                        entry.type === "pick" ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                                                    }`}>
+                                                        {entry.type === "pick" ? <Trophy size={16} /> : <X size={16} />}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-baseline justify-between">
+                                                            <p className="font-black text-sm uppercase text-white truncate">{MAP_POOL.find(m => m.id === entry.map)?.name}</p>
+                                                            <span className={`text-[8px] font-black uppercase px-1 rounded ${
+                                                                entry.team === "A" ? 'bg-yellow-500/20 text-yellow-500' : 
+                                                                entry.team === "B" ? 'bg-blue-500/20 text-blue-500' : 
+                                                                'bg-zinc-500/20 text-zinc-400'
+                                                            }`}>
+                                                                {entry.team === "system" ? "Random" : `Time ${entry.team}`}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                                                            {entry.type === "pick" ? "Selecionado" : "Banido"}
+                                                        </p>
+                                                    </div>
+                                                </motion.div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
