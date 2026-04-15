@@ -132,7 +132,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         if (src === 'faceit' || mode.includes('faceit') || meta.includes('faceit')) {
             return 'Faceit';
         }
-        if (src === 'mix' || mode.includes('mix') || meta.includes('mix')) {
+        if (src === 'mix' || src === 'demo' || mode.includes('mix') || meta.includes('mix')) {
             return 'Mix';
         }
         if (src.includes('premier') || mode.includes('premier') || meta.includes('premier') ||

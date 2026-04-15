@@ -254,7 +254,7 @@ export async function GET(
                 id: gmp.id,
                 externalId: gmp.globalMatchId,
                 source: gmp.match.source || 'Local Demo',
-                gameMode: (gmp.match.source || '').toLowerCase() === 'mix' ? 'Mix' : 'Competitive',
+                gameMode: ['mix', 'demo'].includes((gmp.match.source || '').toLowerCase()) ? 'Mix' : 'Competitive',
                 mapName: gmp.match.mapName,
                 kills: gmp.kills,
                 deaths: gmp.deaths,

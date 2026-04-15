@@ -37,7 +37,9 @@ export default function MatchesPage() {
                     const rawTracker = await resTracker.json();
                     trackerMatches = rawTracker.map((m: any) => ({
                         ...m,
-                        id: m.id, // match_id
+                        id: m.match_id || m.id, // match_id from FastAPI
+                        source: m.source || 'Tracker',
+                        gameMode: (m.source === 'mix' || m.source === 'demo') ? 'Mix' : (m.game_mode || 'Competitive'),
                         result: m.result === 'Win' ? 'Win' : m.result === 'Loss' ? 'Loss' : 'Tie',
                         mapName: m.map_name,
                         matchDate: m.parsed_at, // Use parse date as proxy if match date missing
