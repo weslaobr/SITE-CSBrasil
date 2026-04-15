@@ -162,7 +162,14 @@ def insert_match(match_data: dict, players_data: list[dict]) -> tuple[bool, str]
             """
             INSERT INTO "GlobalMatch" (id, source, "mapName", duration, "matchDate", "scoreA", "scoreB", metadata)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (id) DO NOTHING;
+            ON CONFLICT (id) DO UPDATE SET
+                source = EXCLUDED.source,
+                "mapName" = EXCLUDED."mapName",
+                duration = EXCLUDED.duration,
+                "matchDate" = EXCLUDED."matchDate",
+                "scoreA" = EXCLUDED."scoreA",
+                "scoreB" = EXCLUDED."scoreB",
+                metadata = EXCLUDED.metadata;
             """,
             (
                 match_data["id"],
