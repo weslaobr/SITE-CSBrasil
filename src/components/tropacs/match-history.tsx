@@ -36,8 +36,8 @@ export default function MatchHistory({ matches, onSync, loading }: MatchHistoryP
     const mappedMatches = matches.map((m: any) => ({
         id: m.id || m.externalId,
         externalId: m.externalId || m.id,
-        source: m.source || m.data_source || 'Leetify',
-        gameMode: m.gameMode || 'Competitive',
+        source: m.source || m.data_source || 'mix',
+        gameMode: m.gameMode || (['mix', 'demo', 'local'].some(s => (m.source || '').toLowerCase().includes(s)) ? 'Mix' : 'Competitive'),
         mapName: m.mapName || m.map_name || 'Desconhecido',
         kills: m.kills || 0,
         deaths: m.deaths || 0,

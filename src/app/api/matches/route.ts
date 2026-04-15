@@ -81,8 +81,8 @@ export async function GET(req: NextRequest) {
             return {
                 id: gmp.id,
                 externalId: gmp.globalMatchId,
-                source: gmp.match.source || 'Local Demo',
-                gameMode: ['mix', 'demo'].includes((gmp.match.source || '').toLowerCase()) ? 'Mix' : 'Competitive',
+                source: gmp.match.source || 'mix',
+                gameMode: ['mix', 'demo', 'local'].some(s => (gmp.match.source || 'mix').toLowerCase().includes(s)) ? 'Mix' : 'Competitive',
                 mapName: gmp.match.mapName,
                 kills: gmp.kills,
                 deaths: gmp.deaths,
