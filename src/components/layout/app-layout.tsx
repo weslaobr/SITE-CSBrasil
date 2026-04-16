@@ -23,7 +23,8 @@ import {
     Swords,
     Medal,
     MessageSquareQuote,
-    Server
+    Server,
+    Terminal
 } from 'lucide-react';
 
 const SidebarItem = ({ icon, label, active, collapsed, href }: { icon: any, label: string, active?: boolean, collapsed: boolean, href: string }) => (
