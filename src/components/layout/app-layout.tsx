@@ -45,6 +45,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { data: session } = useSession();
 
     const mySteamId = session?.user ? (session.user as any).steamId : null;
+    const isAdmin = mySteamId === "76561198024691636";
     const isPlayerRoute = pathname.startsWith('/player/');
     const viewedPlayerId = isPlayerRoute ? pathname.split('/')[2] : null;
     
@@ -96,6 +97,15 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         collapsed={collapsed}
                         href="/jogar"
                     />
+                    {isAdmin && (
+                        <SidebarItem
+                            icon={<Terminal size={20} />}
+                            label="Painel Admin"
+                            active={pathname === '/painel'}
+                            collapsed={collapsed}
+                            href="/painel"
+                        />
+                    )}
                     <SidebarItem
                         icon={<Wind size={20} />}
                         label="Utilidades"
