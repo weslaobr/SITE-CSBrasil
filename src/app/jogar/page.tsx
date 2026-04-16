@@ -2,13 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Loader2, ExternalLink, ShieldCheck, Copy, Check } from 'lucide-react';
 
 export default function RedirectPage() {
     const [mounted, setMounted] = useState(false);
     const serverIp = '103.14.27.41:27272';
     const serverPassword = '091867';
     const connectUrl = `steam://connect/${serverIp}/${serverPassword}`;
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        const command = `connect ${serverIp}; password ${serverPassword}`;
+        navigator.clipboard.writeText(command);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     useEffect(() => {
         setMounted(true);
@@ -57,11 +65,20 @@ export default function RedirectPage() {
                         Abrir Manualmente <ExternalLink size={16} />
                     </a>
 
-                    <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 text-left">
+                    <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 text-left relative group transition-all hover:bg-zinc-900/80">
                         <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest mb-2">Comando Console:</p>
-                        <code className="text-[11px] text-yellow-500/80 font-mono break-all leading-tight">
-                            connect {serverIp}; password {serverPassword}
-                        </code>
+                        <div className="flex items-center justify-between gap-3">
+                            <code className="text-[11px] text-yellow-500/80 font-mono break-all leading-tight">
+                                connect {serverIp}; password {serverPassword}
+                            </code>
+                            <button
+                                onClick={handleCopy}
+                                className="flex-shrink-0 p-2 hover:bg-white/5 rounded-xl transition-all text-zinc-500 hover:text-yellow-500 active:scale-90"
+                                title="Copiar comando"
+                            >
+                                {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </motion.div>
