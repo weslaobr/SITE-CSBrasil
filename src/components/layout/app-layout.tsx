@@ -22,7 +22,8 @@ import {
     Map,
     Swords,
     Medal,
-    MessageSquareQuote
+    MessageSquareQuote,
+    Server
 } from 'lucide-react';
 
 const SidebarItem = ({ icon, label, active, collapsed, href }: { icon: any, label: string, active?: boolean, collapsed: boolean, href: string }) => (
@@ -87,6 +88,13 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         active={pathname === '/ranking'}
                         collapsed={collapsed}
                         href="/ranking"
+                    />
+                    <SidebarItem
+                        icon={<Server size={20} />}
+                        label="Servidor"
+                        active={pathname === '/jogar'}
+                        collapsed={collapsed}
+                        href="/jogar"
                     />
                     <SidebarItem
                         icon={<Wind size={20} />}
