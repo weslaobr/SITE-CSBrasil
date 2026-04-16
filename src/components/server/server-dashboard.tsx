@@ -50,6 +50,7 @@ export function ServerDashboard() {
     const [logs, setLogs] = useState<string[]>([]);
     const [command, setCommand] = useState('');
     const [mounted, setMounted] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const consoleRef = useRef<HTMLDivElement>(null);
     const socketRef = useRef<WebSocket | null>(null);
 
@@ -57,31 +58,37 @@ export function ServerDashboard() {
         setMounted(true);
     }, []);
 
+    const fetchResources = async () => {
+        try {
+            const res = await fetch('/api/server/resources');
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || 'Falha ao conectar com o servidor');
+            }
+            const data = await res.json();
+            setResources(data.attributes);
+            setError(null);
+            
+            // Add to history for chart
+            setHistory(prev => {
+                const newEntry = {
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                    cpu: data.attributes.resources.cpu_absolute.toFixed(1),
+                    memory: (data.attributes.resources.memory_bytes / 1024 / 1024 / 1024).toFixed(2),
+                };
+                const updated = [...prev, newEntry];
+                return updated.slice(-20); // Keep last 20 entries
+            });
+            setLoading(false);
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message);
+            setLoading(false);
+        }
+    };
+
     // Fetch initial resources and start polling
     useEffect(() => {
-        const fetchResources = async () => {
-            try {
-                const res = await fetch('/api/server/resources');
-                if (!res.ok) throw new Error('Failed to fetch resources');
-                const data = await res.json();
-                setResources(data.attributes);
-                
-                // Add to history for chart
-                setHistory(prev => {
-                    const newEntry = {
-                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-                        cpu: data.attributes.resources.cpu_absolute.toFixed(1),
-                        memory: (data.attributes.resources.memory_bytes / 1024 / 1024 / 1024).toFixed(2),
-                    };
-                    const updated = [...prev, newEntry];
-                    return updated.slice(-20); // Keep last 20 entries
-                });
-                setLoading(false);
-            } catch (err) {
-                console.error(err);
-            }
-        };
-
         fetchResources();
         const interval = setInterval(fetchResources, 3000);
         return () => clearInterval(interval);
@@ -106,8 +113,6 @@ export function ServerDashboard() {
                     const msg = JSON.parse(event.data);
                     if (msg.event === 'console output') {
                         setLogs(prev => [...prev.slice(-100), msg.args[0]]);
-                    } else if (msg.event === 'stats') {
-                        // Optional: update stats via websocket
                     }
                 };
 
@@ -139,9 +144,13 @@ export function ServerDashboard() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ signal })
             });
-            if (!res.ok) alert('Falha ao enviar comando');
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || 'Falha ao enviar comando');
+            }
         } catch (err) {
             console.error(err);
+            alert('Erro de conexão ao enviar comando');
         } finally {
             setPowerLoading(null);
         }
@@ -154,7 +163,29 @@ export function ServerDashboard() {
         setCommand('');
     };
 
-    if (!mounted || loading) {
+    if (!mounted) return null;
+
+    if (error && !resources) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-6 p-6">
+                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/20">
+                    <AlertTriangle className="w-8 h-8 text-red-500" />
+                </div>
+                <div className="text-center space-y-2">
+                    <h3 className="text-white font-black uppercase italic tracking-tighter text-xl">Erro de Conexão</h3>
+                    <p className="text-zinc-500 text-sm max-w-xs mx-auto">{error}</p>
+                </div>
+                <button 
+                    onClick={() => { setLoading(true); fetchResources(); }}
+                    className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                >
+                    Tentar Novamente
+                </button>
+            </div>
+        );
+    }
+
+    if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <Loader2 className="w-10 h-10 text-yellow-500 animate-spin" />
