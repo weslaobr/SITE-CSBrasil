@@ -5,7 +5,7 @@ import { getAuthOptions } from '@/lib/auth';
 // O SteamID do Admin definido pelo usuário
 const ADMIN_STEAM_ID = "76561198024691636";
 
-export async function POST() {
+export async function POST(req: NextRequest) {
     try {
         // Tenta obter a sessão de forma mais estável
         const session = await getServerSession(getAuthOptions());
