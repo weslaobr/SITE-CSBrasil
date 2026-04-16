@@ -1,65 +1,89 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { ServerDashboard } from "@/components/server/server-dashboard";
-import { ShieldAlert, Lock } from "lucide-react";
+import { ShieldAlert, Lock, RefreshCw } from "lucide-react";
 import { getAuthOptions } from "@/lib/auth";
 
 const ADMIN_STEAM_ID = "76561198024691636";
 
+export const metadata = {
+    title: "Painel Admin · TropaCS",
+    description: "Painel de gerenciamento do servidor CS2 da TropaCS.",
+    robots: { index: false, follow: false },
+};
+
 export default async function PainelPage() {
-    // Tentamos buscar a sessão. Se o getAuthOptions precisar do 'req' e ele for undefined,
-    // ele usará o NEXTAUTH_URL do .env como fallback.
     const session = await getServerSession(getAuthOptions());
 
-    // Redireciona se não estiver logado
     if (!session?.user) {
         redirect("/api/auth/signin/steam");
     }
 
     const steamId = (session.user as any).steamId;
 
-    // Verificação de Admin (Steam ID específico)
     if (steamId !== ADMIN_STEAM_ID) {
         return (
-            <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20">
-                    <Lock className="w-10 h-10 text-red-500" />
-                </div>
-                <h1 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-2">
-                    Acesso <span className="text-red-500">Restrito</span>
-                </h1>
-                <p className="text-zinc-500 max-w-md mx-auto text-sm leading-relaxed">
-                    Desculpe, você não tem permissão para acessar o Painel Administrativo do servidor. 
-                    Se você é um administrador, verifique se está logado com a conta Steam correta.
-                </p>
-                <div className="mt-8 px-4 py-2 bg-white/5 border border-white/5 rounded-lg">
-                    <code className="text-[10px] text-zinc-600 font-mono">ID: {steamId || "Não identificado"}</code>
+            <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
+                {/* Background effects */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-red-500/5 rounded-full blur-[120px]" />
+
+                <div className="relative z-10 space-y-6 max-w-sm">
+                    <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto border border-red-500/20">
+                        <Lock className="w-12 h-12 text-red-500" />
+                    </div>
+                    <div>
+                        <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white mb-2">
+                            Acesso <span className="text-red-500">Negado</span>
+                        </h1>
+                        <p className="text-zinc-500 text-sm leading-relaxed">
+                            Você não tem permissão para acessar o Painel Administrativo.
+                            Certifique-se de que está logado com a conta Steam de Admin.
+                        </p>
+                    </div>
+                    <div className="px-4 py-2 bg-white/5 border border-white/5 rounded-xl inline-block">
+                        <code className="text-[10px] text-zinc-600 font-mono">SteamID: {steamId || "N/A"}</code>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <main className="min-h-screen bg-zinc-950">
-            {/* Header da Página */}
-            <header className="px-8 py-8 md:px-12">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <main className="min-h-screen">
+            {/* Page Header */}
+            <div className="relative border-b border-white/5 overflow-hidden">
+                {/* BG glow */}
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-transparent to-transparent pointer-events-none" />
+
+                <div className="relative px-6 py-6 md:px-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    {/* Title */}
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <ShieldAlert className="w-5 h-5 text-yellow-500" />
-                            <p className="text-[10px] text-yellow-500 font-black uppercase tracking-[0.3em]">Ambiente Seguro</p>
+                        <div className="flex items-center gap-2 mb-1">
+                            <ShieldAlert className="w-4 h-4 text-yellow-500" />
+                            <span className="text-[10px] text-yellow-500 font-black uppercase tracking-[0.3em]">Ambiente Seguro</span>
                         </div>
-                        <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-white">
+                        <h1 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter text-white leading-none">
                             PAINEL <span className="text-yellow-500">ADMIN</span>
                         </h1>
                     </div>
-                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest max-w-xs text-left md:text-right border-l md:border-l-0 md:border-r border-white/10 pl-4 md:pl-0 md:pr-4">
-                        Gerenciamento direto do servidor CS2 Firegames
-                    </p>
-                </div>
-            </header>
 
-            {/* O Dashboard */}
+                    {/* Admin badge */}
+                    <div className="flex items-center gap-3 bg-white/5 border border-white/5 rounded-2xl px-4 py-3 self-start sm:self-auto">
+                        <img
+                            src={session.user?.image || ""}
+                            alt="avatar"
+                            className="w-8 h-8 rounded-lg border border-white/10"
+                        />
+                        <div>
+                            <p className="text-xs font-black text-white leading-none">{session.user?.name}</p>
+                            <p className="text-[10px] text-yellow-500 font-bold uppercase tracking-wider mt-0.5">Administrador</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Dashboard */}
             <ServerDashboard />
         </main>
     );
