@@ -27,7 +27,7 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
                     const protocol = (url?.protocol === 'http:' && (url.hostname.includes('localhost') || url.hostname === '127.0.0.1')) ? 'http:' : (url?.protocol || 'https:');
                     const origin = url ? `${protocol}//${url.host}` : process.env.NEXTAUTH_URL;
                     
-                    return SteamProvider(req!, {
+                    return SteamProvider(req || {} as any, {
                         clientSecret: process.env.STEAM_API_KEY!,
                         callbackUrl: `${process.env.NEXTAUTH_URL || origin}/api/auth/callback/steam`,
                         profile(profile: any) {

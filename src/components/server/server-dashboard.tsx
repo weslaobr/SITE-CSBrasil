@@ -49,8 +49,13 @@ export function ServerDashboard() {
     const [powerLoading, setPowerLoading] = useState<string | null>(null);
     const [logs, setLogs] = useState<string[]>([]);
     const [command, setCommand] = useState('');
+    const [mounted, setMounted] = useState(false);
     const consoleRef = useRef<HTMLDivElement>(null);
     const socketRef = useRef<WebSocket | null>(null);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Fetch initial resources and start polling
     useEffect(() => {
@@ -149,7 +154,7 @@ export function ServerDashboard() {
         setCommand('');
     };
 
-    if (loading) {
+    if (!mounted || loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <Loader2 className="w-10 h-10 text-yellow-500 animate-spin" />

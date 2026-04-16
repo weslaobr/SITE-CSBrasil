@@ -7,6 +7,8 @@ import { getAuthOptions } from "@/lib/auth";
 const ADMIN_STEAM_ID = "76561198024691636";
 
 export default async function PainelPage() {
+    // Tentamos buscar a sessão. Se o getAuthOptions precisar do 'req' e ele for undefined,
+    // ele usará o NEXTAUTH_URL do .env como fallback.
     const session = await getServerSession(getAuthOptions());
 
     // Redireciona se não estiver logado
