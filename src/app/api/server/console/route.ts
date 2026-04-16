@@ -19,13 +19,18 @@ export async function GET(req: any) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const apiKey = process.env.PTERODACTYL_API_KEY;
-        const serverId = process.env.PTERODACTYL_SERVER_ID;
-        const panelUrl = process.env.PTERODACTYL_PANEL_URL;
+        const missing = [];
+        if (!process.env.PTERODACTYL_API_KEY) missing.push('PTERODACTYL_API_KEY');
+        if (!process.env.PTERODACTYL_SERVER_ID) missing.push('PTERODACTYL_SERVER_ID');
+        if (!process.env.PTERODACTYL_PANEL_URL) missing.push('PTERODACTYL_PANEL_URL');
 
-        if (!apiKey || !serverId || !panelUrl) {
-            return NextResponse.json({ error: 'Server configuration missing' }, { status: 500 });
+        if (missing.length > 0) {
+            return NextResponse.json({ error: `Configuração faltando na Vercel: ${missing.join(', ')}` }, { status: 500 });
         }
+
+        const apiKey = process.env.PTERODACTYL_API_KEY!;
+        const serverId = process.env.PTERODACTYL_SERVER_ID!;
+        const panelUrl = process.env.PTERODACTYL_PANEL_URL!;
 
         const response = await fetch(`${panelUrl}/api/client/servers/${serverId}/websocket`, {
             headers: {
