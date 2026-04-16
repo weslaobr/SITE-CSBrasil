@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, ExternalLink, ShieldCheck, Copy, Check } from 'lucide-react';
+import { Loader2, ExternalLink, ShieldCheck, Copy, Check, Paintbrush } from 'lucide-react';
 
 export default function RedirectPage() {
     const [mounted, setMounted] = useState(false);
@@ -79,6 +79,24 @@ export default function RedirectPage() {
                                 {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
                             </button>
                         </div>
+                    </div>
+
+                    <div className="bg-yellow-500/5 border border-yellow-500/10 rounded-2xl p-4 text-left relative group transition-all hover:bg-yellow-500/10">
+                        <div className="flex items-center gap-3 mb-2">
+                            <Paintbrush className="w-4 h-4 text-yellow-500" />
+                            <p className="text-[10px] text-yellow-500/60 font-black uppercase tracking-widest">Personalização de Skins</p>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 mb-3 leading-relaxed">
+                            Modifique as skins de suas armas através do nosso inventário web para usar em nosso servidor.
+                        </p>
+                        <a 
+                            href="https://inventory.cstrike.app/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full py-3 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all border border-white/5"
+                        >
+                            Acessar Inventário <ExternalLink size={12} />
+                        </a>
                     </div>
                 </div>
             </motion.div>
