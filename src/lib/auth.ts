@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { getServerSession } from "next-auth";
 import SteamProvider from "next-auth-steam";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
@@ -23,13 +23,16 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
         providers: [
             {
                 ...(() => {
+                    // Na Vercel, o NEXTAUTH_URL nem sempre é necessário se as URLs de callback forem relativas
+                    // ou se basearem no host da requisição.
                     const url = req ? new URL(req.url) : null;
-                    const protocol = (url?.protocol === 'http:' && (url.hostname.includes('localhost') || url.hostname === '127.0.0.1')) ? 'http:' : (url?.protocol || 'https:');
-                    const origin = url ? `${protocol}//${url.host}` : process.env.NEXTAUTH_URL;
+                    const protocol = (url?.protocol === 'http:' && (url.hostname.includes('localhost') || url.hostname === '127.0.0.1')) ? 'http:' : 'https:';
+                    const host = url ? url.host : (process.env.NEXTAUTH_URL?.replace('https://', '')?.replace('http://', '') || '');
+                    const origin = host ? `${protocol}//${host}` : process.env.NEXTAUTH_URL;
                     
                     return SteamProvider(req || {} as any, {
                         clientSecret: process.env.STEAM_API_KEY!,
-                        callbackUrl: `${process.env.NEXTAUTH_URL || origin}/api/auth/callback/steam`,
+                        callbackUrl: `${origin}/api/auth/callback/steam`,
                         profile(profile: any) {
                             return {
                                 id: profile.steamid,

@@ -5,9 +5,10 @@ import { getAuthOptions } from '@/lib/auth';
 // O SteamID do Admin definido pelo usuário
 const ADMIN_STEAM_ID = "76561198024691636";
 
-export async function GET(req: any) {
+export async function GET() {
     try {
-        const session = await getServerSession(getAuthOptions(req));
+        // Tenta obter a sessão de forma mais estável
+        const session = await getServerSession(getAuthOptions());
         
         // Verificação de Autenticação e Autorização
         if (!session?.user) {
