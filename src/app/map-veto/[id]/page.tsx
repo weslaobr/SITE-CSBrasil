@@ -9,11 +9,14 @@ const MAP_IMAGES: Record<string, string> = {
   Mirage:  "/img/maps/Mirage.webp",
   Inferno: "/img/maps/Inferno.webp",
   Nuke:    "/img/maps/Nuke.webp",
-  Vertigo: "https://map-veto.com/images/maps/vertigo.jpg",
+  Vertigo: "/img/maps/Vertigo.webp",
   Ancient: "/img/maps/Ancient.webp",
   Anubis:  "/img/maps/Anubis.webp",
   Dust2:   "/img/maps/Dust2.webp",
   Overpass: "/img/maps/Overpass.webp",
+  Cache:   "/img/maps/Cache.png",
+  Train:   "/img/maps/Train.webp",
+  Cobblestone: "/img/maps/Cobblestone.png",
 };
 
 const MAP_COLORS: Record<string, string> = {
@@ -24,6 +27,9 @@ const MAP_COLORS: Record<string, string> = {
   Ancient: "from-[#2d6a4f]/10 to-[#1b4332]/20",
   Anubis:  "from-[#ffb703]/10 to-[#fb8500]/20",
   Dust2:   "from-[#f4a261]/10 to-[#e76f51]/20",
+  Cache:   "from-[#2a9d8f]/10 to-[#264653]/20",
+  Train:   "from-[#607d8b]/10 to-[#263238]/20",
+  Cobblestone: "from-[#795548]/10 to-[#3e2723]/20",
 };
 
 const RPS_ICONS: Record<string, React.ReactNode> = {

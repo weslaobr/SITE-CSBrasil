@@ -56,6 +56,27 @@ export const MAPS_META: Record<string, MapMetadata> = {
     scale: 7.0,
     image: "/img/maps/Nuke.webp",
   },
+  de_cache: {
+    name: "Cache",
+    pos_x: -2000,
+    pos_y: 2000,
+    scale: 5.0,
+    image: "/img/maps/Cache.png",
+  },
+  de_train: {
+    name: "Train",
+    pos_x: -2000,
+    pos_y: 2000,
+    scale: 5.0,
+    image: "/img/maps/Train.webp",
+  },
+  de_cbble: {
+    name: "Cobblestone",
+    pos_x: -2000,
+    pos_y: 2000,
+    scale: 5.0,
+    image: "/img/maps/Cobblestone.png",
+  },
 };
 
 /**

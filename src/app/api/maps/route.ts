@@ -9,6 +9,9 @@ const MAP_IMAGES: Record<string, string> = {
     'Ancient': '/img/maps/Ancient.webp',
     'Anubis': '/img/maps/Anubis.webp',
     'Dust2': '/img/maps/Dust2.webp',
+    'Cache': '/img/maps/Cache.png',
+    'Train': '/img/maps/Train.webp',
+    'Cobblestone': '/img/maps/Cobblestone.png',
     'de_mirage': '/img/maps/Mirage.webp',
     'de_inferno': '/img/maps/Inferno.webp',
     'de_nuke': '/img/maps/Nuke.webp',
@@ -16,6 +19,9 @@ const MAP_IMAGES: Record<string, string> = {
     'de_ancient': '/img/maps/Ancient.webp',
     'de_anubis': '/img/maps/Anubis.webp',
     'de_dust2': '/img/maps/Dust2.webp',
+    'de_cache': '/img/maps/Cache.png',
+    'de_train': '/img/maps/Train.webp',
+    'de_cbble': '/img/maps/Cobblestone.png',
 };
 
 function normalizeMapName(raw: string): string {

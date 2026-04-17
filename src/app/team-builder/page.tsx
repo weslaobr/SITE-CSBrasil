@@ -24,6 +24,9 @@ const FALLBACK_MAP_POOL = [
     { id: "ancient", name: "Ancient", image: "/img/maps/Ancient.webp" },
     { id: "anubis", name: "Anubis", image: "/img/maps/Anubis.webp" },
     { id: "overpass", name: "Overpass", image: "/img/maps/Overpass.webp" },
+    { id: "cache", name: "Cache", image: "/img/maps/Cache.png" },
+    { id: "train", name: "Train", image: "/img/maps/Train.webp" },
+    { id: "cobblestone", name: "Cobblestone", image: "/img/maps/Cobblestone.png" },
 ];
 
 // Subcomponents
