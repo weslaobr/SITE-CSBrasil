@@ -15,7 +15,7 @@ interface Player {
     assignment: "unassigned" | "A" | "B";
 }
 
-const MAP_POOL = [
+const FALLBACK_MAP_POOL = [
     { id: "dust2", name: "Dust2", image: "/img/maps/Dust2.webp" },
     { id: "mirage", name: "Mirage", image: "/img/maps/Mirage.webp" },
     { id: "inferno", name: "Inferno", image: "/img/maps/Inferno.webp" },
@@ -90,6 +90,7 @@ export default function TeamBuilderPage() {
     const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(true);
+    const [mapPool, setMapPool] = useState<{id: string, name: string, image: string, active?: boolean}[]>(FALLBACK_MAP_POOL);
 
     const [guestName, setGuestName] = useState("");
     const [guestRating, setGuestRating] = useState("");
@@ -122,7 +123,22 @@ export default function TeamBuilderPage() {
             }
         };
 
+        const fetchMaps = async () => {
+            try {
+                const res = await fetch("/api/admin/maps");
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) {
+                        setMapPool(data.filter(m => m.active !== false));
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch maps:", err);
+            }
+        };
+
         fetchPlayers();
+        fetchMaps();
     }, []);
 
     const handleSelectPlayer = (player: Player) => {
@@ -220,7 +236,7 @@ export default function TeamBuilderPage() {
     };
 
     const handleRandomMap = () => {
-        const available = MAP_POOL.filter(m => !vetoMaps[m.id]);
+        const available = mapPool.filter(m => !vetoMaps[m.id]);
         if (available.length === 0) return;
         
         const random = available[Math.floor(Math.random() * available.length)];
@@ -555,7 +571,7 @@ export default function TeamBuilderPage() {
                 <div className="flex flex-col xl:flex-row gap-10">
                     {/* Map Grid */}
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {MAP_POOL.map((map) => {
+                        {mapPool.map((map) => {
                             const state = vetoMaps[map.id];
                             const isBanned = state?.type === "ban";
                             const isPicked = state?.type === "pick";
@@ -655,7 +671,7 @@ export default function TeamBuilderPage() {
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-baseline justify-between mb-0.5">
                                                         <p className="font-black text-base uppercase text-white truncate drop-shadow-md">
-                                                            {MAP_POOL.find(m => m.id === entry.map)?.name}
+                                                            {mapPool.find(m => m.id === entry.map)?.name}
                                                         </p>
                                                         <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
                                                             entry.team === "A" ? 'bg-yellow-500/20 text-yellow-500' : 

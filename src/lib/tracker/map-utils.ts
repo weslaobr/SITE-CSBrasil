@@ -59,6 +59,14 @@ export const MAPS_META: Record<string, MapMetadata> = {
 };
 
 /**
+ * Safely retrieves map metadata
+ */
+export function getMapMeta(mapName: string): MapMetadata | undefined {
+  const normalized = mapName.toLowerCase().startsWith('de_') ? mapName.toLowerCase() : `de_${mapName.toLowerCase()}`;
+  return MAPS_META[normalized];
+}
+
+/**
  * Maps game units to pixel coordinates based on radar metadata
  */
 export function worldToCanvas(x: number, y: number, meta: MapMetadata, canvasSize: number = 1024) {

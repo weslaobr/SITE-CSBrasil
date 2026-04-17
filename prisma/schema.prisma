@@ -353,3 +353,14 @@ model PlayerEvaluation {
 
   @@unique([listId, evaluatedPlayerName])
 }
+
+model MapPool {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  gameId    String   @unique // ex: de_cache
+  image     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

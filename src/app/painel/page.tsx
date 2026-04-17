@@ -1,8 +1,8 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { ServerDashboard } from "@/components/server/server-dashboard";
-import { ShieldAlert, Lock, RefreshCw } from "lucide-react";
+import { ShieldAlert, Lock } from "lucide-react";
 import { getAuthOptions } from "@/lib/auth";
+import { PainelTabs } from "@/components/admin/painel-tabs";
 
 const ADMIN_STEAM_ID = "76561198024691636";
 
@@ -83,8 +83,8 @@ export default async function PainelPage() {
                 </div>
             </div>
 
-            {/* Dashboard */}
-            <ServerDashboard />
+            {/* Content with Tabs */}
+            <PainelTabs />
         </main>
     );
 }

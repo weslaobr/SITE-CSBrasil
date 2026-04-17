@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getAuthOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import fs from 'fs/promises';
+import path from 'path';
 
 export async function POST(req: Request) {
   try {
@@ -24,7 +26,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid format' }, { status: 400 });
     }
 
-    const defaultMapPool = ["Mirage", "Inferno", "Nuke", "Overpass", "Ancient", "Anubis", "Dust2"];
+    // Load dynamic map pool from config
+    let defaultMapPool = ["Mirage", "Inferno", "Nuke", "Overpass", "Ancient", "Anubis", "Dust2"];
+    try {
+      const configPath = path.join(process.cwd(), 'src/config/maps.json');
+      const configData = await fs.readFile(configPath, 'utf-8');
+      const maps = JSON.parse(configData);
+      const activeMaps = maps.filter((m: any) => m.active !== false).map((m: any) => m.name);
+      if (activeMaps.length > 0) defaultMapPool = activeMaps;
+    } catch (err) {
+      console.error('Failed to load map pool config for veto:', err);
+    }
 
     const lobby = await (prisma as any).mapVetoLobby.create({
       data: {
