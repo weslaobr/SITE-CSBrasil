@@ -404,95 +404,93 @@ const MatchReportModal: React.FC<Props> = ({
 
         return (
             <div className="flex flex-col gap-6 mt-2 relative">
-                {/* Linha vertical central para o estilo de timeline */}
-                <div className="absolute left-[21px] top-6 bottom-6 w-px bg-yellow-500/20 hidden lg:block" />
-
                 <div className="flex items-center gap-3 px-2">
                     <div className="h-px flex-1 bg-white/5" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 italic">Timeline Detalhada da Partida</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 italic">Relatório Detalhado da Partida</span>
                     <div className="h-px flex-1 bg-white/5" />
                 </div>
 
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-4">
                     {rounds.map(rNum => {
                         const r = summaries[rNum];
                         const kills = r.kills || [];
                         const damage = r.damage || {};
-                        const topDamagers = Object.entries(damage)
-                            .map(([sid, d]) => ({ sid, dmg: Number(d) }))
-                            .sort((a, b) => b.dmg - a.dmg)
-                            .slice(0, 3);
+                        
+                        // Group kills by attacker to create a "report" feel
+                        const killsByPlayer: Record<string, { victims: string[], weapons: string[], hsCount: number }> = {};
+                        kills.forEach((k: any) => {
+                            if (!killsByPlayer[k.attackerName]) {
+                                killsByPlayer[k.attackerName] = { victims: [], weapons: [], hsCount: 0 };
+                            }
+                            killsByPlayer[k.attackerName].victims.push(k.victimName);
+                            killsByPlayer[k.attackerName].weapons.push(k.weapon.replace("weapon_", ""));
+                            if (k.isHeadshot) killsByPlayer[k.attackerName].hsCount++;
+                        });
 
                         return (
                             <motion.div 
                                 key={rNum}
-                                initial={{ opacity: 0, x: -10 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                viewport={{ once: true }}
-                                className="relative pl-0 lg:pl-12 flex flex-col gap-3 group"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-[#0c121d] border border-white/[0.05] rounded-2xl overflow-hidden shadow-xl"
                             >
-                                {/* Marcador de round na timeline */}
-                                <div className="absolute left-0 top-0 w-11 h-11 rounded-2xl bg-[#0c121d] border border-yellow-500/30 flex items-center justify-center z-10 hidden lg:flex group-hover:border-yellow-500 transition-colors shadow-[0_0_15px_rgba(234,179,8,0.1)]">
-                                    <span className="text-xs font-black text-yellow-500 italic">{rNum}</span>
+                                <div className="bg-zinc-900/40 px-5 py-2.5 border-b border-white/5 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
+                                            <span className="text-xs font-black text-yellow-500 italic">{rNum}</span>
+                                        </div>
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Round {rNum}</h4>
+                                    </div>
+                                    <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">
+                                        {kills.length} {kills.length === 1 ? 'eliminação' : 'eliminações'}
+                                    </span>
                                 </div>
 
-                                <div className="bg-zinc-950/40 border border-white/[0.05] rounded-3xl p-5 md:p-6 space-y-4 hover:border-white/10 transition-colors">
-                                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                                        <div className="flex items-center gap-2">
-                                            <span className="lg:hidden text-xs font-black italic text-yellow-500 mr-2">R{rNum}</span>
-                                            <h4 className="text-[11px] font-black uppercase tracking-widest text-zinc-300">Resumo do Round</h4>
-                                        </div>
-                                        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest bg-white/[0.03] px-3 py-1 rounded-full">{kills.length} Elasminaçõse</span>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        {/* Kills List */}
-                                        <div className="space-y-2.5">
-                                            <h5 className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-3">Confrontos</h5>
-                                            {kills.length === 0 ? (
-                                                <p className="text-[10px] text-zinc-700 italic">Sem eliminações registradas neste round.</p>
-                                            ) : (
-                                                <div className="space-y-2">
-                                                    {kills.map((k: any, idx: number) => (
-                                                        <div key={idx} className="flex items-center gap-3 text-[11px] bg-white/[0.01] p-2 rounded-xl border border-white/[0.03] hover:border-white/5 transition-colors">
-                                                            <span className="text-zinc-200 font-bold truncate flex-1 text-right">{k.attackerName}</span>
-                                                            <div className="flex flex-col items-center gap-0.5 shrink-0 px-2 border-x border-white/5">
-                                                                {k.isHeadshot && <Target size={12} className="text-yellow-500" />}
-                                                                <span className="text-[8px] font-black uppercase text-zinc-500">{k.weapon.replace("weapon_", "")}</span>
+                                <div className="p-5 space-y-4">
+                                    {/* Kill Feed style report */}
+                                    <div className="space-y-3">
+                                        {Object.entries(killsByPlayer).length === 0 ? (
+                                            <p className="text-[10px] text-zinc-700 italic px-2">Nenhuma eliminação registrada.</p>
+                                        ) : (
+                                            Object.entries(killsByPlayer).map(([attacker, data], idx) => {
+                                                const victimCount = data.victims.length;
+                                                const uniqueWeapons = Array.from(new Set(data.weapons));
+                                                return (
+                                                    <div key={idx} className="flex flex-col gap-1 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.03]">
+                                                        <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
+                                                            <span className="text-[11px] font-black text-white italic">{attacker}</span>
+                                                            <span className="text-[10px] font-bold text-zinc-500">eliminou</span>
+                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                {data.victims.map((v, vIdx) => (
+                                                                    <React.Fragment key={vIdx}>
+                                                                        <span className="text-[11px] font-bold text-zinc-300">{v}</span>
+                                                                        {vIdx < data.victims.length - 1 && <span className="text-zinc-700 text-[10px]">•</span>}
+                                                                    </React.Fragment>
+                                                                ))}
                                                             </div>
-                                                            <span className="text-zinc-400 truncate flex-1">{k.victimName}</span>
                                                         </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Damage Summary */}
-                                        <div className="space-y-3">
-                                            <h5 className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-3">Maiores Danos</h5>
-                                            {topDamagers.length > 0 ? (
-                                                <div className="space-y-2">
-                                                    {topDamagers.map((d, idx) => {
-                                                        const p = allPlayers.find(pl => pl.steamId === d.sid);
-                                                        const pName = p?.nickname || "Jogador";
-                                                        return (
-                                                            <div key={d.sid} className="flex items-center justify-between bg-zinc-900/40 px-4 py-2.5 rounded-2xl border border-white/[0.02]">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className={`w-1.5 h-1.5 rounded-full ${p?.team === 'CT' ? 'bg-blue-500' : 'bg-orange-500'}`} />
-                                                                    <span className="text-[11px] font-bold text-zinc-400">{pName}</span>
-                                                                </div>
-                                                                <div className="flex items-baseline gap-1">
-                                                                    <span className="text-sm font-black italic text-zinc-200">{d.dmg}</span>
-                                                                    <span className="text-[8px] font-bold text-zinc-600 uppercase">HP</span>
-                                                                </div>
+                                                        <div className="flex items-center gap-3 mt-1 underline-offset-4">
+                                                            <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-600 uppercase tracking-tight">
+                                                                <Target size={10} className="text-zinc-700" />
+                                                                {uniqueWeapons.join(", ")}
                                                             </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[10px] text-zinc-700 italic">Dados de dano não disponíveis.</p>
-                                            )}
-                                        </div>
+                                                            {data.hsCount > 0 && (
+                                                                <div className="flex items-center gap-1 text-[9px] font-black text-yellow-500/60 uppercase">
+                                                                    <Star size={10} />
+                                                                    {data.hsCount} Headshot{data.hsCount > 1 ? 's' : ''}
+                                                                </div>
+                                                            )}
+                                                            {victimCount >= 3 && (
+                                                                <div className={`flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${victimCount === 3 ? 'text-amber-400 bg-amber-500/10' : victimCount === 4 ? 'text-orange-400 bg-orange-500/10' : 'text-purple-400 bg-purple-500/10'}`}>
+                                                                    <Flame size={10} />
+                                                                    {victimCount}K
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
                                     </div>
                                 </div>
                             </motion.div>
