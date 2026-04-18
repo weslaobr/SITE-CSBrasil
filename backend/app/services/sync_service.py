@@ -40,7 +40,8 @@ class SyncService:
                             process_match_task.delay(
                                 match_id=match_id,
                                 steamid=user.steamId,
-                                demo_url=m["demo_url"]
+                                demo_url=m["demo_url"],
+                                match_date=m.get("date")
                             )
                 except Exception as e:
                     logger.error(f"SyncService: Failed to sync user {user.steamId}: {str(e)}")

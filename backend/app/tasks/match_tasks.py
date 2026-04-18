@@ -3,9 +3,10 @@ from app.services.downloader import DownloaderService
 from app.services.parser import ParserService
 from app.db.session import AsyncSessionLocal
 import asyncio
+from datetime import datetime
 
 @celery_app.task(name="process_match_task")
-def process_match_task(match_id: str, steamid: str, demo_url: str):
+def process_match_task(match_id: str, steamid: str, demo_url: str, match_date: str = None):
     """
     Background task to download and parse a demo.
     """
@@ -22,7 +23,19 @@ def process_match_task(match_id: str, steamid: str, demo_url: str):
             import logging
             task_logger = logging.getLogger("app.tasks")
             task_logger.info(f"Starting async parser for {match_id}")
-            await parser.parse_and_save(db, match_id_override=match_id)
+            # Parse date string if available
+            dt_match = None
+            if match_date:
+                try:
+                    # Accepts YYYY-MM-DD or ISO formats
+                    dt_match = datetime.fromisoformat(match_date)
+                except ValueError:
+                    try:
+                        dt_match = datetime.strptime(match_date, "%Y-%m-%d %H:%M")
+                    except ValueError:
+                        task_logger.warning(f"Invalid match_date format: {match_date}")
+
+            await parser.parse_and_save(db, match_id_override=match_id, match_date=dt_match)
             task_logger.info(f"Finished async parser for {match_id}")
             
     asyncio.run(run_parser())
