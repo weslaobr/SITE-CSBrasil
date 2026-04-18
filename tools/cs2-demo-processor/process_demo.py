@@ -602,6 +602,7 @@ class DemoProcessorApp(ctk.CTk):
 
         self._demo_data  = None   # resultado do parse_demo()
         self._processing = False
+        self._batch_files = []    # lista de arquivos para fila
 
         self._build_ui()
         self._test_db_connection()
@@ -633,7 +634,7 @@ class DemoProcessorApp(ctk.CTk):
         # ── Painel Esquerdo (controles)
         left = ctk.CTkFrame(self, corner_radius=10)
         left.grid(row=1, column=0, padx=(14, 7), pady=14, sticky="nsew")
-        left.grid_rowconfigure(6, weight=1)
+        left.grid_rowconfigure(8, weight=1)
         left.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(left, text="Arquivo de Demo", font=ctk.CTkFont(weight="bold")).grid(
@@ -644,35 +645,38 @@ class DemoProcessorApp(ctk.CTk):
         ctk.CTkEntry(left, textvariable=self._demo_path_var, state="readonly").grid(
             row=1, column=0, padx=14, pady=(0, 6), sticky="ew"
         )
-        ctk.CTkButton(left, text="📁  Selecionar Demo (.dem)", command=self._select_demo).grid(
-            row=2, column=0, padx=14, pady=(0, 12), sticky="ew"
+        ctk.CTkButton(left, text="📁  Selecionar Demo Única", command=self._select_demo).grid(
+            row=2, column=0, padx=14, pady=(0, 6), sticky="ew"
+        )
+        ctk.CTkButton(left, text="📂  Selecionar Múltiplas (Fila)", command=self._select_multiple_demos, fg_color="#34495e", hover_color="#2c3e50").grid(
+            row=3, column=0, padx=14, pady=(0, 12), sticky="ew"
         )
 
         sep = ctk.CTkFrame(left, height=1, fg_color="#333")
-        sep.grid(row=3, column=0, padx=14, sticky="ew", pady=4)
+        sep.grid(row=4, column=0, padx=14, sticky="ew", pady=4)
 
         # Source
         ctk.CTkLabel(left, text="Tipo de Partida (source)", font=ctk.CTkFont(weight="bold")).grid(
-            row=4, column=0, padx=14, pady=(10, 4), sticky="w"
+            row=5, column=0, padx=14, pady=(10, 4), sticky="w"
         )
         self._source_var = ctk.StringVar(value="mix")
         ctk.CTkOptionMenu(
             left,
             values=["mix", "matchmaking", "faceit", "esea", "gcbrasil", "outro"],
             variable=self._source_var,
-        ).grid(row=5, column=0, padx=14, pady=(0, 12), sticky="ew")
+        ).grid(row=6, column=0, padx=14, pady=(0, 12), sticky="ew")
 
         # Log
         ctk.CTkLabel(left, text="Log de Processamento", font=ctk.CTkFont(weight="bold")).grid(
-            row=6, column=0, padx=14, pady=(10, 4), sticky="w"
+            row=7, column=0, padx=14, pady=(10, 4), sticky="w"
         )
         self._log_box = ctk.CTkTextbox(left, font=ctk.CTkFont(family="Consolas", size=11))
-        self._log_box.grid(row=7, column=0, padx=14, pady=(0, 10), sticky="nsew")
-        left.grid_rowconfigure(7, weight=1)
+        self._log_box.grid(row=8, column=0, padx=14, pady=(0, 10), sticky="nsew")
+        left.grid_rowconfigure(8, weight=1)
 
         # Botões de ação
         btn_frame = ctk.CTkFrame(left, fg_color="transparent")
-        btn_frame.grid(row=8, column=0, padx=14, pady=(0, 14), sticky="ew")
+        btn_frame.grid(row=9, column=0, padx=14, pady=(0, 14), sticky="ew")
         btn_frame.grid_columnconfigure(0, weight=1)
         btn_frame.grid_columnconfigure(1, weight=1)
 
@@ -745,20 +749,42 @@ class DemoProcessorApp(ctk.CTk):
             filetypes=[("CS2 Demo Files", "*.dem"), ("Todos os arquivos", "*.*")]
         )
         if path:
-            self._demo_path_var.set(path)
+            self._batch_files = []
+            self._demo_path_var.set(os.path.basename(path))
+            self._full_path = path
             self._demo_data = None
-            self._btn_process.configure(state="normal")
+            self._btn_process.configure(state="normal", text="🔍  Processar Demo")
             self._btn_send.configure(state="disabled")
             self._show_placeholder()
             self._log_box.delete("1.0", "end")
             self._log(f"📂 Demo selecionada: {os.path.basename(path)}")
+
+    def _select_multiple_demos(self):
+        paths = filedialog.askopenfilenames(
+            title="Selecionar múltiplas demos (.dem)",
+            filetypes=[("CS2 Demo Files", "*.dem"), ("Todos os arquivos", "*.*")]
+        )
+        if paths:
+            self._batch_files = list(paths)
+            self._demo_path_var.set(f"{len(paths)} arquivos selecionados")
+            self._demo_data = None
+            self._btn_process.configure(state="normal", text="🚀  Iniciar Fila")
+            self._btn_send.configure(state="disabled")
+            self._show_placeholder()
+            self._log_box.delete("1.0", "end")
+            self._log(f"📂 {len(paths)} demos na fila para processamento.")
 
     # ── Processar Demo ────────────────────────
 
     def _on_process(self):
         if self._processing:
             return
-        path = self._demo_path_var.get()
+
+        if self._batch_files:
+            self._on_batch_process()
+            return
+
+        path = self._full_path if hasattr(self, '_full_path') else self._demo_path_var.get()
         if not path or not os.path.isfile(path):
             messagebox.showerror("Erro", "Selecione um arquivo .dem válido.")
             return
@@ -769,6 +795,53 @@ class DemoProcessorApp(ctk.CTk):
         self._demo_data = None
 
         threading.Thread(target=self._do_parse, args=(path,), daemon=True).start()
+
+    def _on_batch_process(self):
+        self._processing = True
+        self._btn_process.configure(state="disabled", text="⏳  Em Fila...")
+        self._btn_send.configure(state="disabled")
+        self._log_box.delete("1.0", "end")
+        self._log(f"🚀 Iniciando processamento de {len(self._batch_files)} demos...")
+        
+        threading.Thread(target=self._do_batch_process, daemon=True).start()
+
+    def _do_batch_process(self):
+        count = len(self._batch_files)
+        success = 0
+        errors = 0
+        source = self._source_var.get()
+
+        for i, path in enumerate(self._batch_files):
+            name = os.path.basename(path)
+            self._log(f"\n--- [{i+1}/{count}] {name} ---")
+            try:
+                result = parse_demo(path, log_fn=self._log)
+                if result:
+                    result["match"]["source"] = source
+                    self._log("📤 Enviando para o banco (Auto-overwrite)...")
+                    # O db_connector.insert_match já faz overwrite por causa do DELETE GlobalMatchPlayer
+                    ok, msg = db_connector.insert_match(result["match"], result["players"])
+                    if ok:
+                        success += 1
+                        self._log(f"✅ Sucesso: {msg}")
+                    else:
+                        errors += 1
+                        self._log(f"❌ Erro no banco: {msg}")
+                else:
+                    errors += 1
+                    self._log(f"❌ Falha no parse da demo.")
+            except Exception as e:
+                errors += 1
+                self._log(f"❌ Erro inesperado: {str(e)}")
+            
+            # Pequeno delay para UI respirar
+            self.after(100)
+
+        self._processing = False
+        summary = f"\n✨ Fila Concluída!\n✅ Sucessos: {success}\n❌ Erros: {errors}"
+        self._log(summary)
+        self.after(0, lambda: messagebox.showinfo("Fila Concluída", summary))
+        self.after(0, lambda: self._btn_process.configure(state="normal", text="🚀  Iniciar Fila"))
 
     def _do_parse(self, path: str):
         try:
