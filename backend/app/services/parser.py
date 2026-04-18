@@ -41,25 +41,38 @@ class ParserService:
         logger.info(f"Parser: Starting parse for {self.demo_path}")
         self.dem.parse()
 
-        # --- Match Start Detection ---
-        # We need to ignore warmup and knife rounds. 
-        # Competitive matches usually start after a 'round_announce_match_start' event
-        # or a series of restarts.
+        # --- Strict Match Start Detection ---
+        # We need to ignore warmup and especially the "knife round".
+        # A knife round is usually followed by a restart.
         start_tick = 0
         try:
-            # Check for match start event
+            # 1. Identify all match start events
+            match_start_events = []
             if hasattr(self.dem, 'events') and "round_announce_match_start" in self.dem.events:
-                match_start_df = self.dem.events["round_announce_match_start"]
-                if not match_start_df.empty:
-                    # Take the last match start event (in case of multiple restarts)
-                    start_tick = int(match_start_df["tick"].max())
+                match_start_events = self.dem.events["round_announce_match_start"]["tick"].tolist()
             
-            # If no event, or as a secondary check, let's look at rounds
-            # If we have many rounds, the first many might be warmup.
-            # We filter rounds, kills, etc. to only include those >= start_tick
-            logger.info(f"Parser: Match start detected at tick {start_tick}")
+            # 2. Identify the first firearm kill
+            # Firearms = anything that is not a knife or a decoy (sometimes used for trolling)
+            non_knife_kills = self.dem.kills[~self.dem.kills["weapon"].str.contains("knife", case=False, na=False)]
+            first_firearm_kill_tick = non_knife_kills["tick"].min() if not non_knife_kills.empty else float('inf')
+            
+            # 3. Decision: The match start is the LAST 'round_announce_match_start' 
+            # that occurs BEFORE or AT the first firearm kill.
+            candidate_starts = [t for t in match_start_events if t < first_firearm_kill_tick]
+            if candidate_starts:
+                start_tick = max(candidate_starts)
+            elif first_firearm_kill_tick != float('inf'):
+                # Fallback: find the start of the round that contains the first firearm kill
+                firearm_round = self.dem.rounds[self.dem.rounds["end_tick"] > first_firearm_kill_tick]
+                if not firearm_round.empty:
+                    # CS2 rounds often don't have start_tick in awpy yet, 
+                    # so we approximate by the end of previous round or 0
+                    prev_rounds = self.dem.rounds[self.dem.rounds["end_tick"] < first_firearm_kill_tick]
+                    start_tick = prev_rounds["end_tick"].max() if not prev_rounds.empty else 0
+            
+            logger.info(f"Parser: Strict match start detected at tick {start_tick} (Firearm kill at {first_firearm_kill_tick})")
         except Exception as e:
-            logger.warning(f"Parser: Failed to detect match start events: {e}")
+            logger.warning(f"Parser: Error in strict match start detection: {e}")
 
         def filter_df(df, tick_col="tick"):
             if df is not None and not df.empty and tick_col in df.columns:
