@@ -19,7 +19,11 @@ def process_match_task(match_id: str, steamid: str, demo_url: str):
     # Running async session in celery (which is synchronous)
     async def run_parser():
         async with AsyncSessionLocal() as db:
+            import logging
+            task_logger = logging.getLogger("app.tasks")
+            task_logger.info(f"Starting async parser for {match_id}")
             await parser.parse_and_save(db, match_id_override=match_id)
+            task_logger.info(f"Finished async parser for {match_id}")
             
     asyncio.run(run_parser())
     

@@ -15,7 +15,11 @@ except ImportError:
             self.damages = pd.DataFrame([])
             self.grenades = pd.DataFrame([])
             self.ticks = pd.DataFrame([{"tick": 0, "steamid": "76561198000000000", "pos_x": -1000, "pos_y": 500, "yaw": 90}])
-        def parse(self): pass
+        def parse(self): 
+            import os
+            if os.getenv("PYTHON_ENV") != "development":
+                raise ImportError("awpy is not installed. Mock data is restricted in production.")
+            pass
 
 import pandas as pd
 from typing import Dict, Any, List
@@ -33,20 +37,46 @@ class ParserService:
         self.dem = Demo(demo_path)
 
     async def parse_and_save(self, db: AsyncSession, match_id_override: str = None):
-        """
-        Parses the demo and saves all data to the database.
-        """
+        # 1. Match Metadata
         logger.info(f"Parser: Starting parse for {self.demo_path}")
         self.dem.parse()
         
-        # 1. Match Metadata
-        map_name = self.dem.header["map_name"]
         match_id = match_id_override or self.dem.header["client_name"]
+        map_name = self.dem.header["map_name"]
         
+        # 0. Cleanup existing data for this match_id
+        from sqlalchemy import delete
+        from app.models.tracker import MatchPlayer as MP, Round as R, KillEvent as KE, DamageEvent as DE, GrenadeEvent as GE, TickData as TD
+        
+        logger.info(f"Parser: Cleaning up old records for match {match_id}")
+        await db.execute(delete(MP).where(MP.match_id == match_id))
+        await db.execute(delete(R).where(R.match_id == match_id))
+        await db.execute(delete(KE).where(KE.match_id == match_id))
+        await db.execute(delete(DE).where(DE.match_id == match_id))
+        await db.execute(delete(GE).where(GE.match_id == match_id))
+        await db.execute(delete(TD).where(TD.match_id == match_id))
+        await db.flush()
+
         match = await db.get(Match, match_id)
         if not match:
             match = Match(match_id=match_id, map_name=map_name)
             db.add(match)
+        else:
+            match.map_name = map_name
+        
+        # Calcular scores a partir dos rounds
+        rounds_df = self.dem.rounds
+        if not rounds_df.empty:
+            match.score_ct = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0])
+            match.score_t = int(rounds_df[rounds_df["winner_side"] == "T"].shape[0])
+            if "end_tick" in rounds_df.columns:
+                max_tick = rounds_df["end_tick"].max()
+                # Assumindo 64 tick para duração básica ou pegando do header se disponível
+                match.duration_seconds = int(max_tick / 64)
+            
+            if match.score_ct > match.score_t: match.winner_team = "CT"
+            elif match.score_t > match.score_ct: match.winner_team = "T"
+            else: match.winner_team = "Draw"
         
         # 2. Players & Overall Stats
         player_stats = self.dem.player_stats
@@ -57,6 +87,9 @@ class ParserService:
             if not player:
                 player = Player(steamid64=steamid, personaname=row["name"])
                 db.add(player)
+            else:
+                # Update name if it changed
+                player.personaname = row["name"]
             
             # MatchPlayer stats (KAST and Rating are pre-calculated by awpy)
             mp_stats = MatchPlayer(
