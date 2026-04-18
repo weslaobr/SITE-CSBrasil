@@ -115,6 +115,7 @@ export async function GET(
                 team_2_score: localMatch.scoreA || 0,
                 team_3_score: localMatch.scoreB || 0,
                 demo_url: localMeta.demoUrl || null,
+                metadata: localMeta,
                 stats: localStats
             };
 
