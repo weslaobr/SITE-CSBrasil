@@ -898,6 +898,14 @@ const MatchReportModal: React.FC<Props> = ({
                                                 { label: 'K', value: userData.kills, color: 'text-white' },
                                                 { label: 'D', value: userData.deaths, color: 'text-zinc-500' },
                                                 { label: 'A', value: userData.assists, color: 'text-zinc-600' },
+                                            ].map((s, i) => (
+                                                <React.Fragment key={s.label}>
+                                                    {i > 0 && <div className="w-px h-5 bg-white/5" />}
+                                                    <div className="flex flex-col items-center">
+                                                        <span className={`text-base font-black italic leading-none ${s.color}`}>{s.value}</span>
+                                                        <span className="text-[8px] font-black text-zinc-700 uppercase">{s.label}</span>
+                                                    </div>
+                                                </React.Fragment>
                                             ))}
                                             {currentMatch.adr && Number(currentMatch.adr) > 0 && (
                                                 <>
