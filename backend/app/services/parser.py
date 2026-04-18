@@ -40,6 +40,45 @@ class ParserService:
         # 1. Match Metadata
         logger.info(f"Parser: Starting parse for {self.demo_path}")
         self.dem.parse()
+
+        # --- Match Start Detection ---
+        # We need to ignore warmup and knife rounds. 
+        # Competitive matches usually start after a 'round_announce_match_start' event
+        # or a series of restarts.
+        start_tick = 0
+        try:
+            # Check for match start event
+            if hasattr(self.dem, 'events') and "round_announce_match_start" in self.dem.events:
+                match_start_df = self.dem.events["round_announce_match_start"]
+                if not match_start_df.empty:
+                    # Take the last match start event (in case of multiple restarts)
+                    start_tick = int(match_start_df["tick"].max())
+            
+            # If no event, or as a secondary check, let's look at rounds
+            # If we have many rounds, the first many might be warmup.
+            # We filter rounds, kills, etc. to only include those >= start_tick
+            logger.info(f"Parser: Match start detected at tick {start_tick}")
+        except Exception as e:
+            logger.warning(f"Parser: Failed to detect match start events: {e}")
+
+        def filter_df(df, tick_col="tick"):
+            if df is not None and not df.empty and tick_col in df.columns:
+                return df[df[tick_col] >= start_tick].copy()
+            return df
+
+        # Filter all DataFrames
+        self.dem.rounds = filter_df(self.dem.rounds, "end_tick") # Rounds use end_tick
+        self.dem.kills = filter_df(self.dem.kills)
+        self.dem.damages = filter_df(self.dem.damages)
+        self.dem.grenades = filter_df(self.dem.grenades, "tick")
+        if hasattr(self.dem, 'ticks'):
+            self.dem.ticks = filter_df(self.dem.ticks)
+
+        # Re-number rounds to be 1-based for the competitive part
+        if not self.dem.rounds.empty:
+            self.dem.rounds = self.dem.rounds.sort_values("end_tick").reset_index(drop=True)
+            self.dem.rounds["round"] = self.dem.rounds.index + 1
+        # --- End Match Start Detection ---
         
         # Determine unique match_id from demo header or file hash fallback
         # This prevents duplication if the same demo is re-uploaded with different filenames/URLs
@@ -91,8 +130,23 @@ class ParserService:
             else: match.winner_team = "Draw"
         
         # 2. Players & Overall Stats
-        player_stats = self.dem.player_stats
-        for _, row in player_stats.iterrows():
+        # We recalculate stats from filtered DataFrames to ensure accuracy (no mockup/warmup kills)
+        # However, we still need the list of players.
+        player_stats_agg = self.dem.player_stats
+        
+        # Pre-calculate counts from filtered kills/damages
+        kills_by_player = self.dem.kills.groupby("attacker_steamid").size().to_dict() if not self.dem.kills.empty else {}
+        deaths_by_player = self.dem.kills.groupby("victim_steamid").size().to_dict() if not self.dem.kills.empty else {}
+        hs_by_player = self.dem.kills[self.dem.kills["is_headshot"] == True].groupby("attacker_steamid").size().to_dict() if not self.dem.kills.empty else {}
+        
+        # Damage aggregation for ADR
+        # Filter out team damage if possible (assumes attacker_side != victim_side or similar)
+        # For now, we take all damage in filtered DF
+        dmg_by_player = self.dem.damages.groupby("attacker_steamid")["hp_damage"].sum().to_dict() if not self.dem.damages.empty else {}
+        
+        num_rounds = len(self.dem.rounds) if not self.dem.rounds.empty else 1
+
+        for _, row in player_stats_agg.iterrows():
             steamid = int(row["steamid"])
             
             player = await db.get(Player, steamid)
@@ -100,26 +154,32 @@ class ParserService:
                 player = Player(steamid64=steamid, personaname=row["name"])
                 db.add(player)
             else:
-                # Update name if it changed
                 player.personaname = row["name"]
             
-            # MatchPlayer stats (KAST and Rating are pre-calculated by awpy)
+            # Extract recalculated stats
+            pkills = int(kills_by_player.get(steamid, 0))
+            pdeaths = int(deaths_by_player.get(steamid, 0))
+            phscount = int(hs_by_player.get(steamid, 0))
+            pdmg = float(dmg_by_player.get(steamid, 0))
+            padr = pdmg / num_rounds if num_rounds > 0 else 0.0
+
+            # MatchPlayer stats
             mp_stats = MatchPlayer(
                 match_id=match_id,
                 steamid64=steamid,
                 team=row["team_name"],
-                kills=int(row["kills"]),
-                deaths=int(row["deaths"]),
-                assists=int(row["assists"]),
-                adr=float(row["adr"]),
-                kast=float(row["kast"]),
+                kills=pkills,
+                deaths=pdeaths,
+                assists=int(row["assists"]), # Assists are harder to re-calc, use row for now
+                adr=padr,
+                kast=float(row["kast"]), # Keep original KAST/Rating as fallback/approximation
                 rating=float(row["rating"]),
-                hs_count=int(row["headshot_kills"]),
+                hs_count=phscount,
                 utility_damage=int(row["utility_damage"]),
                 flash_assists=int(row["flash_assists"]),
                 # Novas estatísticas para o guia de desempenho
-                fk=int(row.get("first_kills", row.get("fk", 0))),
-                fd=int(row.get("first_deaths", row.get("fd", 0))),
+                fk=0, # Will be updated below
+                fd=0, # Will be updated below
                 triples=int(row.get("triple_kills", row.get("3k", 0))),
                 quads=int(row.get("quad_kills", row.get("4k", 0))),
                 aces=int(row.get("ace_kills", row.get("5k", 0))),
