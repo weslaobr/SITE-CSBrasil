@@ -113,6 +113,35 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
         map_name     = "unknown"
         duration_str = "00:00"
 
+    # ── Detecção de Início Real (Fim do Warmup) ──
+    start_tick = 0
+    try:
+        df_start_events = parser.parse_event("round_announce_match_start")
+        df_all_kills = parser.parse_event("player_death")
+        
+        first_gun_kill_tick = None
+        if df_all_kills is not None and not df_all_kills.empty:
+            # Lista de "armas reais" para ignorar kills de faca no aquecimento/round faca
+            # demoparser2 usa nomes como 'ak47', 'm4a1_s', etc.
+            gun_kills = df_all_kills[~df_all_kills["weapon"].str.contains("knife|bayonet|fists|melee", case=False, na=False)]
+            if not gun_kills.empty:
+                first_gun_kill_tick = int(gun_kills["tick"].min())
+
+        if df_start_events is not None and not df_start_events.empty:
+            ticks = sorted(df_start_events["tick"].tolist())
+            if first_gun_kill_tick:
+                # O início real é o ÚLTIMO evento de start ANTES da primeira kill de arma
+                candidates = [t for t in ticks if t <= first_gun_kill_tick]
+                start_tick = max(candidates) if candidates else ticks[0]
+            else:
+                start_tick = ticks[-1]
+            log_fn(f"🏁 Início real detectado no tick {start_tick} (baseado em kills e eventos).")
+        elif first_gun_kill_tick:
+            start_tick = first_gun_kill_tick
+            log_fn(f"⚠️  Mensagem de start não encontrada. Usando primeira kill de arma no tick {start_tick}.")
+    except Exception as e:
+        log_fn(f"⚠️  Erro ao detectar início da partida: {e}")
+
     # ── Jogadores e Times ───────────────────
     player_info = {}   # steamId -> {name, team}
     try:
@@ -161,6 +190,12 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
         log_fn("❌ Não foi possível extrair jogadores desta demo.")
         return None
 
+    # Função auxiliar para filtrar por tick
+    def filter_tick(df):
+        if df is not None and not df.empty and "tick" in df.columns:
+            return df[df["tick"] >= start_tick]
+        return df
+
     # ── Kills → KDA + HS% ───────────────────
     # Estrutura: {steamId: {kills, deaths, assists, hs_kills}}
     kda   = {sid: {"kills": 0, "deaths": 0, "assists": 0, "hs_kills": 0} for sid in player_info}
@@ -168,6 +203,7 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
 
     try:
         df_kills = parser.parse_event("player_death")
+        df_kills = filter_tick(df_kills)
         if df_kills is not None and not df_kills.empty:
             # Attacker
             for _, row in df_kills.iterrows():
@@ -184,7 +220,7 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
                 if assister in kda and assister != "0":
                     kda[assister]["assists"] += 1
 
-            log_fn(f"💀 Kills extraídos via player_death ({len(df_kills)} eventos).")
+            log_fn(f"💀 Kills extraídos ({len(df_kills)} eventos pós-warmup).")
     except Exception as e:
         log_fn(f"⚠️  parse_event('player_death') falhou: {e}")
         # Fallback: parse_ticks para kills/deaths/assists
@@ -217,6 +253,7 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
     dmg_total = {sid: 0 for sid in player_info}
     try:
         df_dmg = parser.parse_event("player_hurt")
+        df_dmg = filter_tick(df_dmg)
         if df_dmg is not None and not df_dmg.empty:
             dmg_col = next((c for c in ["dmg_health", "damage", "health_damage"] if c in df_dmg.columns), None)
             att_col = next((c for c in ["attacker_steamid", "attacker_steamid64"] if c in df_dmg.columns), None)
@@ -225,7 +262,7 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
                     sid = str(row.get(att_col, "0"))
                     if sid in dmg_total:
                         dmg_total[sid] += int(row.get(dmg_col, 0) or 0)
-                log_fn("💥 Dano extraído via player_hurt.")
+                log_fn("💥 Dano extraído pós-warmup.")
     except Exception as e:
         log_fn(f"⚠️  parse_event('player_hurt') falhou: {e}")
 
@@ -258,56 +295,62 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
         log_fn(f"⚠️  Score/MVPs não extraídos: {e}")
 
     # ── Placar dos Times e Duração ─────────────────────
-    score_a, score_b = None, None
+    score_a, score_b = 0, 0
     
     try:
         df_re = parser.parse_event("round_end")
-        if df_re is not None and not df_re.empty and "winner" in df_re.columns:
-            if "tick" in df_re.columns:
-                df_re = df_re.sort_values("tick")
-                
-            pts_a = 0  # Time que COMEÇA de CT
-            pts_b = 0  # Time que COMEÇA de T
-            rounds_played = 0
-            
-            for w_val in df_re["winner"]:
-                w_str = str(w_val).strip().upper()
-                w = ""
-                # Mapeia qualquer variação do parser para os lados fundamentais
-                if w_str in ["2", "2.0", "T", "TERRORIST", "TERRORISTS"]:
-                    w = "2"
-                elif w_str in ["3", "3.0", "CT", "COUNTER-TERRORIST", "COUNTER-TERRORISTS"]:
-                    w = "3"
-                else:
-                    continue  # Desempate ou draw
+        df_re = filter_tick(df_re)
+        
+        # Para um placar preciso (ex: 13-5), precisamos saber qual time começou em qual lado.
+        # Identificamos os times no primeiro tick válido.
+        team_mapping = {} # steamid -> "A" ou "B"
+        
+        df_ticks_start = parser.parse_ticks(["steamid", "team_name"], ticks=[start_tick + 64])
+        if df_ticks_start is not None and not df_ticks_start.empty:
+            for _, row in df_ticks_start.iterrows():
+                sid = str(row["steamid"])
+                t_name = normalize_team(str(row["team_name"]))
+                if t_name == "CT": team_mapping[sid] = "A"
+                elif t_name == "T": team_mapping[sid] = "B"
 
-                rounds_played += 1
-                
-                # Regra MR12
-                if rounds_played <= 12:
-                    is_a_ct = True
-                elif rounds_played <= 24:
-                    is_a_ct = False
-                else:
-                    ot_round = rounds_played - 24
-                    ot_half = ((ot_round - 1) % 6) // 3
-                    is_a_ct = (ot_half % 2 == 0)
-                
-                if is_a_ct:
-                    if w == "3": pts_a += 1
-                    elif w == "2": pts_b += 1
-                else:
-                    if w == "2": pts_a += 1
-                    elif w == "3": pts_b += 1
+        if df_re is not None and not df_re.empty and "winner" in df_re.columns:
+            df_re = df_re.sort_values("tick")
             
-            score_a = max(pts_a, pts_b)
-            score_b = min(pts_a, pts_b)
-            log_fn(f"📊 Placar Reconstruído (MR12 Sim): {score_a} x {score_b} ({rounds_played} rounds)")
+            pts_a, pts_b = 0, 0
+            # Acompanhamos quem é CT em cada tick de round_end
+            for _, r_end in df_re.iterrows():
+                w_side = normalize_team(str(r_end["winner"]))
+                end_tick = int(r_end["tick"])
+                
+                # Descobrimos quem era CT neste tick específico (para lidar com trocas de lado)
+                # Pegamos um jogador aleatório que sabemos ser do Time A
+                ct_now = "unknown"
+                sample_player_a = next((sid for sid, team in team_mapping.items() if team == "A"), None)
+                if sample_player_a:
+                    df_t_now = parser.parse_ticks(["team_name"], ticks=[end_tick - 10], players=[int(sample_player_a)])
+                    if df_t_now is not None and not df_t_now.empty:
+                        ct_now = normalize_team(str(df_t_now.iloc[0]["team_name"]))
+                
+                # Se o Time A era CT e o CT ganhou OU Time A era T e T ganhou -> ponto A
+                if ct_now == "CT":
+                    if w_side == "CT": pts_a += 1
+                    elif w_side == "T": pts_b += 1
+                elif ct_now == "T":
+                    if w_side == "T": pts_a += 1
+                    elif w_side == "CT": pts_b += 1
+                else:
+                    # Fallback caso não consiga determinar o lado (ex: jogador saiu)
+                    if w_side == "CT": pts_a += 1
+                    else: pts_b += 1
+            
+            score_a = pts_a
+            score_b = pts_b
+            log_fn(f"📊 Placar Final Reconstruído: {score_a} x {score_b}")
         else:
-            raise ValueError("Evento round_end vazio ou sem vencedor.")
+            raise ValueError("Evento round_end vazio pós-filtro.")
             
     except Exception as e:
-        log_fn(f"⚠️  Falha ao reconstruir o placar/tempo: {e}")
+        log_fn(f"⚠️  Falha ao reconstruir placar detalhado: {e}")
         score_a, score_b = 0, 0
 
 
@@ -331,6 +374,7 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
         ]
         for ev, g_type in events_to_parse:
             df_g = parser.parse_event(ev)
+            df_g = filter_tick(df_g)
             if df_g is not None and not df_g.empty:
                 t_col = next((c for c in ["userid", "user_steamid", "thrower_steamid", "attacker_steamid"] if c in df_g.columns), None)
                 if t_col:
@@ -344,6 +388,7 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
     # Blind Time (Segundos cegando inimigos)
     try:
         df_fa = parser.parse_event("player_blind")
+        df_fa = filter_tick(df_fa)
         if df_fa is not None and not df_fa.empty:
             att_col = next((c for c in ["attacker_steamid", "thrower_steamid"] if c in df_fa.columns), None)
             vic_col = next((c for c in ["user_steamid", "victim_steamid"] if c in df_fa.columns), None)
@@ -361,6 +406,7 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
     # Utility Damage (HE, Molotov)
     try:
         df_ud = parser.parse_event("player_hurt")
+        df_ud = filter_tick(df_ud)
         if df_ud is not None and not df_ud.empty:
             util_weapons = {"hegrenade", "molotov", "inferno", "flashbang"}
             att_col  = next((c for c in ["attacker_steamid"] if c in df_ud.columns), None)
@@ -378,10 +424,12 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
     # Duelos: First Kills / First Deaths e MultiKills
     try:
         df_k = parser.parse_event("player_death")
+        df_k = filter_tick(df_k)
         df_rs = parser.parse_event("round_start")
+        df_rs = filter_tick(df_rs)
         if df_k is not None and not df_k.empty and "tick" in df_k.columns:
             df_k = df_k.sort_values(by="tick")
-            round_starts = sorted(df_rs["tick"].tolist()) if (df_rs is not None and not df_rs.empty and "tick" in df_rs.columns) else [0]
+            round_starts = sorted(df_rs["tick"].tolist()) if (df_rs is not None and not df_rs.empty and "tick" in df_rs.columns) else [start_tick]
             
             def get_round(t):
                 # Retorna em qual round este tick pertence
@@ -393,18 +441,39 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
 
             df_k["round_num"] = df_k["tick"].apply(get_round) if round_starts else [1] * len(df_k)
 
+            # --- NOVO: Log de Confrontos Detalhado ---
+            round_summaries = {} # round_num -> {kills: [], damage: {sid: dmg}}
+
             for r_num, r_kills in df_k.groupby("round_num"):
+                r_num = int(r_num)
+                if r_num not in round_summaries:
+                    round_summaries[r_num] = {"kills": [], "damage": {}}
+                
                 if r_kills.empty: continue
                 # First Kill e Death
                 first = r_kills.iloc[0]
                 att = str(first.get("attacker_steamid", "0"))
                 vic = str(first.get("user_steamid", "0"))
-                if att in adv_stats and att != vic and att != "0":
+                if att in adv_stats and att != victim and att != "0":
                     adv_stats[att]["fk"] += 1
                 if vic in adv_stats and vic != "0":
                     adv_stats[vic]["fd"] += 1
 
-                # Multi-kills: filtra apenas mortes causadas pelo atacante dentro deste round
+                # Registrar todas as kills do round para o log
+                for _, k_row in r_kills.iterrows():
+                    k_att = str(k_row.get("attacker_steamid", "0"))
+                    k_vic = str(k_row.get("user_steamid", "0"))
+                    if k_att != "0":
+                        round_summaries[r_num]["kills"].append({
+                            "attackerName": player_info.get(k_att, {}).get("name", "Jogador"),
+                            "attackerSteamId": k_att,
+                            "victimName": player_info.get(k_vic, {}).get("name", "Jogador"),
+                            "victimSteamId": k_vic,
+                            "weapon": str(k_row.get("weapon", "unknown")),
+                            "isHeadshot": bool(k_row.get("headshot", False))
+                        })
+
+                # Multi-kills
                 r_counts = r_kills[r_kills["attacker_steamid"] != r_kills["user_steamid"]].groupby("attacker_steamid").size()
                 for atk_sid, count in r_counts.items():
                     atk_sid = str(atk_sid)
@@ -412,17 +481,40 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
                         if count == 3: adv_stats[atk_sid]["triples"] += 1
                         elif count == 4: adv_stats[atk_sid]["quads"] += 1
                         elif count >= 5: adv_stats[atk_sid]["aces"] += 1
+
+            # Extrair Dano por Round
+            try:
+                df_dmg_rounds = parser.parse_event("player_hurt")
+                df_dmg_rounds = filter_tick(df_dmg_rounds)
+                if df_dmg_rounds is not None and not df_dmg_rounds.empty:
+                    df_dmg_rounds["round_num"] = df_dmg_rounds["tick"].apply(get_round) if round_starts else [1] * len(df_dmg_rounds)
+                    for r_num, r_dmg in df_dmg_rounds.groupby("round_num"):
+                        r_num = int(r_num)
+                        if r_num not in round_summaries:
+                            round_summaries[r_num] = {"kills": [], "damage": {}}
+                        
+                        dmg_agg = r_dmg.groupby("attacker_steamid")["dmg_health"].sum() if "dmg_health" in r_dmg.columns else r_dmg.groupby("attacker_steamid")["damage"].sum()
+                        for sid, d_val in dmg_agg.items():
+                            round_summaries[r_num]["damage"][str(sid)] = int(d_val)
+            except Exception as e:
+                log_fn(f"⚠️  Erro ao processar dano por round: {e}")
+
     except Exception as e:
         log_fn(f"⚠️  Duelos não extraídos integralmente: {e}")
 
     # ──────────────────────────────────────────
-    # Monta a lista de jogadores
+    # Monta a lista de jogadores (somente quem participou da partida real)
     # ──────────────────────────────────────────
     players_out = []
     for sid, info in player_info.items():
         k   = kda[sid]["kills"]
         d   = kda[sid]["deaths"]
         a   = kda[sid]["assists"]
+        
+        # FILTRO CRÍTICO: Se o jogador não matou nem morreu depois do warmup, ele não jogou a partida real.
+        if k == 0 and d == 0:
+            continue
+
         hs  = kda[sid]["hs_kills"]
         dmg = dmg_total.get(sid, 0)
 
@@ -485,7 +577,10 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
         "matchDate": datetime.now(),
         "scoreA":    score_a,
         "scoreB":    score_b,
-        "metadata":  {"demoFile": os.path.basename(filepath)},
+        "metadata":  {
+            "demoFile": os.path.basename(filepath),
+            "roundSummaries": round_summaries
+        },
     }
 
     log_fn(f"✅ Demo processada: {len(players_out)} jogadores, placar {score_a} x {score_b}")

@@ -156,6 +156,12 @@ def insert_match(match_data: dict, players_data: list[dict]) -> tuple[bool, str]
         conn = _get_connection()
         cur = conn.cursor()
 
+        # --- Limpeza de dados antigos (Sobrescrita total) ---
+        # Antes de salvar os novos dados, removemos todos os jogadores anteriores desta partida
+        # para garantir que se a demo foi reprocessada com menos pessoas, herde apenas as novas.
+        match_id = match_data["id"]
+        cur.execute('DELETE FROM "GlobalMatchPlayer" WHERE "globalMatchId" = %s;', (match_id,))
+        
         # --- Insere GlobalMatch ---
         import json
         cur.execute(

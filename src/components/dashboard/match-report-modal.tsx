@@ -395,6 +395,77 @@ const MatchReportModal: React.FC<Props> = ({
     const hasRichData = allPlayers.some(p => p.utilDmg > 0 || p.flashAssists > 0 || p.fk > 0 || p.triples > 0 || p.smokesThrown > 0 || p.flashThrown > 0 || p.molotovThrown > 0 || p.trades > 0);
 
 
+    const RoundLog = () => {
+        const summaries = currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries;
+        if (!summaries) return null;
+
+        const rounds = Object.keys(summaries).map(Number).sort((a, b) => a - b);
+
+        return (
+            <div className="flex flex-col gap-4 mt-2">
+                <div className="flex items-center gap-3 px-2">
+                    <div className="h-px flex-1 bg-white/5" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 italic">Log Detalhado de Rounds</span>
+                    <div className="h-px flex-1 bg-white/5" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {rounds.map(rNum => {
+                        const r = summaries[rNum];
+                        const kills = r.kills || [];
+                        const damage = r.damage || {};
+                        
+                        const topDamagers = Object.entries(damage)
+                            .map(([sid, d]) => ({ sid, dmg: Number(d) }))
+                            .sort((a, b) => b.dmg - a.dmg)
+                            .slice(0, 3);
+
+                        return (
+                            <div key={rNum} className="bg-zinc-950/40 border border-white/[0.05] rounded-2xl p-4 space-y-3 hover:border-yellow-500/20 transition-colors group">
+                                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                    <span className="text-xs font-black italic text-yellow-500">ROUND {rNum}</span>
+                                    <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">{kills.length} Kills</span>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    {kills.length === 0 ? (
+                                        <p className="text-[10px] text-zinc-700 italic">Sem eliminações registradas.</p>
+                                    ) : (
+                                        kills.map((k: any, idx: number) => (
+                                            <div key={idx} className="flex items-center gap-2 text-[10px] leading-tight">
+                                                <span className="text-zinc-300 font-bold truncate max-w-[80px]">{k.attackerName}</span>
+                                                <div className="flex items-center gap-1 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+                                                    <Target size={10} className={k.isHeadshot ? "text-yellow-500" : "text-zinc-500"} />
+                                                    <span className="text-[8px] font-black uppercase text-zinc-600">{k.weapon.replace("weapon_", "")}</span>
+                                                </div>
+                                                <span className="text-zinc-500">→</span>
+                                                <span className="text-zinc-500 truncate max-w-[80px]">{k.victimName}</span>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                {topDamagers.length > 0 && (
+                                    <div className="pt-2 border-t border-white/5 flex flex-wrap gap-2">
+                                        {topDamagers.map(d => {
+                                            const pName = allPlayers.find(p => p.steamId === d.sid)?.nickname || "Jogador";
+                                            return (
+                                                <div key={d.sid} className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-md">
+                                                    <span className="text-[8px] font-bold text-zinc-500 truncate max-w-[50px]">{pName}</span>
+                                                    <span className="text-[9px] font-black text-yellow-500/80">{d.dmg}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
     // ── TABS CONFIG ───────────────────────────────────────────────────────────
     const tabs: { id: 'placar'|'desempenho'|'utilitarios'|'confrontos'; label: string; icon: React.ReactNode }[] = [
         { id: 'placar',       label: 'Placar',       icon: <Shield size={12} /> },
