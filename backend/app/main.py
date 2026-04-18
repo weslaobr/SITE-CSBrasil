@@ -42,7 +42,7 @@ async def import_match(request: ImportMatchRequest):
     if request.share_code:
         import uuid
         is_url = "http" in request.share_code
-        match_id_mock = request.share_code.split("/")[-1].split(".")[0][:15] if is_url else request.share_code
+        match_id_mock = request.share_code.split("/")[-1].split(".")[0] if is_url else request.share_code
 
         process_match_task.delay(
             match_id=match_id_mock,

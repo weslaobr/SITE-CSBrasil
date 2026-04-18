@@ -41,7 +41,19 @@ class ParserService:
         logger.info(f"Parser: Starting parse for {self.demo_path}")
         self.dem.parse()
         
-        match_id = match_id_override or self.dem.header["client_name"]
+        # Determine unique match_id from demo header or file hash fallback
+        # This prevents duplication if the same demo is re-uploaded with different filenames/URLs
+        extracted_id = self.dem.header.get("match_id") or self.dem.header.get("client_name")
+        
+        # If the ID is too generic or missing, use a file content hash
+        if not extracted_id or extracted_id in ["Counter-Strike 2", "mock_share_code"]:
+            import hashlib
+            with open(self.demo_path, "rb") as f:
+                # Hash first 1MB for speed and high collision avoidance 
+                file_hash = hashlib.md5(f.read(1024 * 1024)).hexdigest()
+            extracted_id = f"demo_{file_hash}"
+            
+        match_id = match_id_override or extracted_id
         map_name = self.dem.header["map_name"]
         
         # 0. Cleanup existing data for this match_id
