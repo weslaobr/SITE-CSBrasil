@@ -178,7 +178,7 @@ export default function DemosTab() {
                                                 <p className="text-[11px] font-bold text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight">
                                                     {demo.name}
                                                 </p>
-                                                <p className="text-[9px] font-mono text-zinc-600 mt-0.5">csgo/MatchZy/demos/</p>
+                                                <p className="text-[9px] font-mono text-zinc-600 mt-0.5 truncate max-w-[200px]" title={demo.path}>{demo.path.split('/').slice(0, -1).join('/')}/</p>
                                             </div>
                                         </div>
                                     </td>

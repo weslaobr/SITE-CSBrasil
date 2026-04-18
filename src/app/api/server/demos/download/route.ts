@@ -9,13 +9,9 @@ export async function GET(req: NextRequest) {
         const session = await getServerSession(getAuthOptions(req));
 
         if (!session?.user) {
-            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+            return NextResponse.json({ error: 'Não autorizado. Faça login com a Steam.' }, { status: 401 });
         }
 
-        const steamId = (session.user as any).steamId;
-        if (steamId !== ADMIN_STEAM_ID) {
-            return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
-        }
 
         const { searchParams } = new URL(req.url);
         const filePath = searchParams.get('file');

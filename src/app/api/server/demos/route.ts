@@ -2,8 +2,8 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getAuthOptions } from '@/lib/auth';
 
-const ADMIN_STEAM_ID = "76561198024691636";
-const DEMOS_PATH = "/csgo/MatchZy/demos"; // Caminho padrão do MatchZy
+const DEMOS_PATH = "game/csgo/MatchZy/demos"; // Caminho padrão do MatchZy
+const FALLBACK_PATH = "game/csgo/MatchZy";    // Caminho alternativo
 
 export async function GET(req: NextRequest) {
     try {
@@ -11,11 +11,6 @@ export async function GET(req: NextRequest) {
 
         if (!session?.user) {
             return NextResponse.json({ error: 'Não autorizado. Faça login com a Steam.' }, { status: 401 });
-        }
-
-        const steamId = (session.user as any).steamId;
-        if (steamId !== ADMIN_STEAM_ID) {
-            return NextResponse.json({ error: 'Acesso negado. Você não é Admin.' }, { status: 403 });
         }
 
         const apiKey = process.env.PTERODACTYL_API_KEY;
@@ -26,34 +21,40 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Configuração do Pterodactyl incompleta.' }, { status: 500 });
         }
 
-        // Tentar listar arquivos na pasta de demos
-        // Pterodactyl API: GET /api/client/servers/{server}/files/list?directory={path}
-        const encodedPath = encodeURIComponent(DEMOS_PATH);
-        const url = `${panelUrl}/api/client/servers/${serverId}/files/list?directory=${encodedPath}`;
+        const listFiles = async (path: string) => {
+            const encodedPath = encodeURIComponent(path);
+            const url = `${panelUrl}/api/client/servers/${serverId}/files/list?directory=${encodedPath}`;
+            
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                cache: 'no-store'
+            });
 
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            cache: 'no-store'
-        });
+            if (!response.ok) return null;
+            return await response.json();
+        };
 
-        if (!response.ok) {
-            // Se falhar, talvez o caminho esteja errado. Vamos tentar o caminho raiz do CSGO como fallback ou retornar erro detalhado
-            const errorData = await response.json().catch(() => ({}));
-            return NextResponse.json({
-                error: `Erro ao listar demos no servidor`,
-                details: errorData,
-                path: DEMOS_PATH
-            }, { status: response.status });
+        // Tentar listar arquivos na pasta de demos, se falhar tenta na pasta raiz do MatchZy
+        let data = await listFiles(DEMOS_PATH);
+        let currentPath = DEMOS_PATH;
+
+        if (!data || !data.data || data.data.length === 0) {
+            data = await listFiles(FALLBACK_PATH);
+            currentPath = FALLBACK_PATH;
         }
 
-        const data = await response.json();
+        if (!data || !data.data) {
+            return NextResponse.json({ 
+                error: `Não foi possível encontrar a pasta de demos no servidor`,
+                tried: [DEMOS_PATH, FALLBACK_PATH]
+            }, { status: 404 });
+        }
         
         // Filtrar apenas arquivos .dem
-        // O Pterodactyl retorna um array em data.data
         const files = (data.data || [])
             .filter((item: any) => item.attributes.is_file && item.attributes.name.endsWith('.dem'))
             .map((item: any) => ({
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
                 mimetype: item.attributes.mimetype,
                 createdAt: item.attributes.created_at,
                 modifiedAt: item.attributes.modified_at,
-                path: `${DEMOS_PATH}/${item.attributes.name}`
+                path: `${currentPath}/${item.attributes.name}`
             }));
 
         // Ordenar por data de modificação (mais recentes primeiro)
@@ -75,3 +76,4 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Erro interno ao buscar demos', message: error.message }, { status: 500 });
     }
 }
+

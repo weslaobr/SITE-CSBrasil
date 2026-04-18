@@ -9,6 +9,7 @@ interface Player {
     nickname: string;
     avatar: string;
     rating: number;
+    resenhaRating?: number;
     gcLevel?: number;
     faceitLevel?: number;
     isGuest?: boolean;
@@ -30,7 +31,9 @@ const FALLBACK_MAP_POOL = [
 ];
 
 // Subcomponents
-function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMoveLeft, side }: { player: Player, pos: number, onRemove: ()=>void, onMoveUnassigned: ()=>void, onMoveRight?: ()=>void, onMoveLeft?: ()=>void, side: "left"|"right" }) {
+function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMoveLeft, side, balanceMode }: { player: Player, pos: number, onRemove: ()=>void, onMoveUnassigned: ()=>void, onMoveRight?: ()=>void, onMoveLeft?: ()=>void, side: "left"|"right", balanceMode: "standard"|"resenha" }) {
+    const displayRating = balanceMode === "resenha" ? `${(player.resenhaRating || 5).toFixed(1)} ★` : `${player.rating} SR`;
+    
     return (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} layout
             className={`group relative flex items-center bg-zinc-950/80 p-3 rounded-xl border border-white/5 shadow-md ${side === "left" ? "pr-10" : "pl-10"}`}>
@@ -40,14 +43,14 @@ function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMo
                     <img src={player.avatar} className="w-8 h-8 rounded-md border border-white/10 shrink-0" />
                     <div className="flex flex-col flex-1 min-w-0 ml-3">
                         <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.nickname} {player.isGuest && <span className="ml-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>}</p>
-                        <p className="text-[10px] font-mono text-zinc-400 font-bold mt-0.5">{player.rating} SR</p>
+                        <p className="text-[10px] font-mono text-zinc-400 font-bold mt-0.5">{displayRating}</p>
                     </div>
                 </>
             ) : (
                 <>
                     <div className="flex flex-col flex-1 min-w-0 mr-3 text-right">
                         <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.isGuest && <span className="mr-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>} {player.nickname}</p>
-                        <p className="text-[10px] font-mono text-zinc-400 font-bold mt-0.5">{player.rating} SR</p>
+                        <p className="text-[10px] font-mono text-zinc-400 font-bold mt-0.5">{displayRating}</p>
                     </div>
                     <img src={player.avatar} className="w-8 h-8 rounded-md border border-white/10 shrink-0" />
                 </>
@@ -99,31 +102,47 @@ export default function TeamBuilderPage() {
     const [guestRating, setGuestRating] = useState("");
     const [showGuestForm, setShowGuestForm] = useState(false);
 
+    const [balanceMode, setBalanceMode] = useState<"standard" | "resenha">("standard");
+
     // Map Veto State
     const [vetoMaps, setVetoMaps] = useState<Record<string, { type: "ban" | "pick", team: "A" | "B" | "system" }>>({});
     const [vetoTurn, setVetoTurn] = useState<"A" | "B">("A");
     const [vetoHistory, setVetoHistory] = useState<{ type: "ban" | "pick", map: string, team: "A" | "B" | "system" }[]>([]);
 
     useEffect(() => {
-        const fetchPlayers = async () => {
+        const fetchResenhaRanking = async () => {
             try {
-                const res = await fetch("/api/ranking");
+                const res = await fetch("/api/resenha/ranking");
                 const data = await res.json();
-                
-                const playersList = data.players || data;
-                
-                if (Array.isArray(playersList)) {
-                    const formatted = playersList.map(p => ({
-                        ...p,
-                        assignment: "unassigned" as const
-                    }));
-                    setDbPlayers(formatted);
-                }
+                return data;
             } catch (error) {
-                console.error("Failed to fetch players:", error);
-            } finally {
-                setLoading(false);
+                console.error("Failed to fetch resenha ranking:", error);
+                return [];
             }
+        };
+
+        const fetchAll = async () => {
+            setLoading(true);
+            const [playersRes, resenhaRes] = await Promise.all([
+                fetch("/api/ranking"),
+                fetchResenhaRanking()
+            ]);
+
+            const playersData = await playersRes.json();
+            const playersList = playersData.players || playersData;
+            
+            if (Array.isArray(playersList)) {
+                const formatted = playersList.map(p => {
+                    const resenhaInfo = resenhaRes.find((r: any) => r.steamId === p.steamId);
+                    return {
+                        ...p,
+                        resenhaRating: resenhaInfo?.avgOverall || 5, // Default to 5 if no rating
+                        assignment: "unassigned" as const
+                    };
+                });
+                setDbPlayers(formatted);
+            }
+            setLoading(false);
         };
 
         const fetchMaps = async () => {
@@ -140,7 +159,7 @@ export default function TeamBuilderPage() {
             }
         };
 
-        fetchPlayers();
+        fetchAll();
         fetchMaps();
     }, []);
 
@@ -169,6 +188,7 @@ export default function TeamBuilderPage() {
             nickname: guestName,
             avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=" + guestName,
             rating: ratingNum,
+            resenhaRating: 5, // Default for guests
             isGuest: true,
             assignment: "unassigned"
         };
@@ -201,23 +221,26 @@ export default function TeamBuilderPage() {
             return;
         }
 
-        const sorted = [...selectedPlayers].sort((a, b) => b.rating - a.rating);
+        const getRating = (p: Player) => balanceMode === "resenha" ? (p.resenhaRating || 5) : p.rating;
+
+        const sorted = [...selectedPlayers].sort((a, b) => getRating(b) - getRating(a));
         let tA = 0;
         let tB = 0;
         let cA = 0;
         let cB = 0;
 
         const newAssignments = sorted.map(p => {
+            const pRating = getRating(p);
             if (cA === 5) {
-                cB++; tB += p.rating; return { ...p, assignment: "B" as const };
+                cB++; tB += pRating; return { ...p, assignment: "B" as const };
             }
             if (cB === 5) {
-                cA++; tA += p.rating; return { ...p, assignment: "A" as const };
+                cA++; tA += pRating; return { ...p, assignment: "A" as const };
             }
             if (tA <= tB) {
-                cA++; tA += p.rating; return { ...p, assignment: "A" as const };
+                cA++; tA += pRating; return { ...p, assignment: "A" as const };
             } else {
-                cB++; tB += p.rating; return { ...p, assignment: "B" as const };
+                cB++; tB += pRating; return { ...p, assignment: "B" as const };
             }
         });
 
@@ -256,8 +279,15 @@ export default function TeamBuilderPage() {
     const teamA = selectedPlayers.filter(p => p.assignment === "A");
     const teamB = selectedPlayers.filter(p => p.assignment === "B");
 
-    const avgA = teamA.length > 0 ? Math.round(teamA.reduce((acc, p) => acc + p.rating, 0) / teamA.length) : 0;
-    const avgB = teamB.length > 0 ? Math.round(teamB.reduce((acc, p) => acc + p.rating, 0) / teamB.length) : 0;
+    const getPlayerRating = (p: Player) => balanceMode === "resenha" ? (p.resenhaRating || 5) : p.rating;
+
+    const avgA = teamA.length > 0 ? (balanceMode === "resenha" 
+        ? Math.round((teamA.reduce((acc, p) => acc + (p.resenhaRating || 5), 0) / teamA.length) * 10) / 10
+        : Math.round(teamA.reduce((acc, p) => acc + p.rating, 0) / teamA.length)) : 0;
+    
+    const avgB = teamB.length > 0 ? (balanceMode === "resenha"
+        ? Math.round((teamB.reduce((acc, p) => acc + (p.resenhaRating || 5), 0) / teamB.length) * 10) / 10
+        : Math.round(teamB.reduce((acc, p) => acc + p.rating, 0) / teamB.length)) : 0;
 
     const availableDbPlayers = dbPlayers.filter(dbP => !selectedPlayers.some(sp => sp.steamId === dbP.steamId));
     const filteredDbPool = availableDbPlayers.filter(p => p.nickname.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -369,8 +399,8 @@ export default function TeamBuilderPage() {
                                         <div className="flex-1 min-w-0">
                                             <p className="font-bold text-sm truncate group-hover:text-purple-400 transition-colors">{p.nickname}</p>
                                             <div className="flex gap-2 mt-1">
-                                                <span className="text-[10px] bg-black/50 text-yellow-500 px-1.5 py-0.5 rounded font-mono font-bold">{p.rating} SR</span>
-                                                {(p.gcLevel ?? 0) > 0 && <span className="text-[10px] bg-black/50 text-zinc-400 px-1.5 py-0.5 rounded font-bold">Lvl {p.gcLevel}</span>}
+                                                <span className={`text-[10px] bg-black/50 ${balanceMode === 'standard' ? 'text-yellow-500' : 'text-zinc-500'} px-1.5 py-0.5 rounded font-mono font-bold`}>{p.rating} SR</span>
+                                                <span className={`text-[10px] bg-black/50 ${balanceMode === 'resenha' ? 'text-purple-400' : 'text-zinc-500'} px-1.5 py-0.5 rounded font-mono font-bold`}>{(p.resenhaRating || 5).toFixed(1)} ★</span>
                                             </div>
                                         </div>
                                         <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 group-hover:bg-purple-500 group-hover:text-black transition-all">
@@ -430,9 +460,24 @@ export default function TeamBuilderPage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                            <button 
-                                onClick={handleResetTeams}
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <div className="flex bg-zinc-800 p-1 rounded-xl border border-white/5 mr-2">
+                                        <button 
+                                            onClick={() => setBalanceMode("standard")}
+                                            className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${balanceMode === "standard" ? "bg-purple-500 text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}
+                                        >
+                                            Standard
+                                        </button>
+                                        <button 
+                                            onClick={() => setBalanceMode("resenha")}
+                                            className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${balanceMode === "resenha" ? "bg-purple-500 text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}
+                                        >
+                                            Resenha
+                                        </button>
+                                    </div>
+
+                                    <button 
+                                        onClick={handleResetTeams}
                                 disabled={selectedPlayers.every(p => p.assignment === "unassigned")}
                                 className={`flex items-center justify-center p-4 rounded-xl font-black transition-all shrink-0 border ${!selectedPlayers.every(p => p.assignment === "unassigned") ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white border-white/10 hover:border-white/30 active:scale-95 shadow-md' : 'bg-white/5 text-zinc-700 border-white/5 cursor-not-allowed'}`}
                                 title="Voltar times para o Saguão"
@@ -465,8 +510,8 @@ export default function TeamBuilderPage() {
                                         <div className="flex flex-col ml-3 group-hover:opacity-20 transition-all min-w-0">
                                             <p className="font-bold text-sm text-white truncate">{p.nickname}</p>
                                             <div className="flex items-center gap-2 mt-0.5">
-                                                <p className="text-xs font-mono font-bold text-yellow-500/90">{p.rating} <span className="text-zinc-500 text-[10px]">SR</span></p>
-                                                {(p.gcLevel ?? 0) > 0 && <span className="text-[10px] bg-black/40 text-purple-400 font-bold px-1.5 py-0.5 rounded border border-purple-500/20">Lvl {p.gcLevel}</span>}
+                                                <p className={`text-[10px] font-mono font-bold ${balanceMode === 'standard' ? 'text-yellow-500' : 'text-zinc-500'}`}>{p.rating} SR</p>
+                                                <p className={`text-[10px] font-mono font-bold ${balanceMode === 'resenha' ? 'text-purple-400' : 'text-zinc-500'}`}>{(p.resenhaRating || 5).toFixed(1)} ★</p>
                                             </div>
                                         </div>
                                         
@@ -494,12 +539,14 @@ export default function TeamBuilderPage() {
                                 <h3 className="text-2xl font-black italic uppercase tracking-tighter text-yellow-500 drop-shadow-md">Time A</h3>
                                 <div className="flex items-center gap-2 mt-2">
                                     <Medal size={14} className="text-zinc-400" />
-                                    <p className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-widest">Média SR: <span className="text-white text-sm">{avgA}</span></p>
+                                    <p className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-widest">
+                                        Média {balanceMode === "resenha" ? "Resenha" : "SR"}: <span className="text-white text-sm">{avgA}{balanceMode === "resenha" ? " ★" : ""}</span>
+                                    </p>
                                 </div>
                             </div>
                             <div className="p-4 space-y-2 min-h-[300px]">
                                 {teamA.map((p, idx) => (
-                                    <PlayerCard key={p.steamId} player={p} pos={idx+1} onRemove={() => handleRemovePlayer(p.steamId)} onMoveUnassigned={() => handleAssign(p.steamId, "unassigned")} onMoveRight={() => handleAssign(p.steamId, "B")} side="left" />
+                                    <PlayerCard key={p.steamId} player={p} pos={idx+1} onRemove={() => handleRemovePlayer(p.steamId)} onMoveUnassigned={() => handleAssign(p.steamId, "unassigned")} onMoveRight={() => handleAssign(p.steamId, "B")} side="left" balanceMode={balanceMode} />
                                 ))}
                                 {Array.from({ length: 5 - teamA.length }).map((_, i) => (
                                     <EmptySlot key={`empty-a-${i}`} team="A" onClick={() => {
@@ -515,13 +562,13 @@ export default function TeamBuilderPage() {
                             <div className="bg-gradient-to-bl from-blue-500/20 to-transparent p-6 border-b border-blue-500/10 flex flex-col items-end text-right">
                                 <h3 className="text-2xl font-black italic uppercase tracking-tighter text-blue-500 drop-shadow-md">Time B</h3>
                                 <div className="flex items-center gap-2 mt-2">
-                                    <p className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-widest"><span className="text-white text-sm">{avgB}</span> :Média SR</p>
+                                    <p className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-widest"><span className="text-white text-sm">{avgB}{balanceMode === "resenha" ? " ★" : ""}</span> :{balanceMode === "resenha" ? "Resenha" : "SR"} Média</p>
                                     <Medal size={14} className="text-zinc-400" />
                                 </div>
                             </div>
                             <div className="p-4 space-y-2 min-h-[300px]">
                                 {teamB.map((p, idx) => (
-                                    <PlayerCard key={p.steamId} player={p} pos={idx+1} onRemove={() => handleRemovePlayer(p.steamId)} onMoveUnassigned={() => handleAssign(p.steamId, "unassigned")} onMoveLeft={() => handleAssign(p.steamId, "A")} side="right" />
+                                    <PlayerCard key={p.steamId} player={p} pos={idx+1} onRemove={() => handleRemovePlayer(p.steamId)} onMoveUnassigned={() => handleAssign(p.steamId, "unassigned")} onMoveLeft={() => handleAssign(p.steamId, "A")} side="right" balanceMode={balanceMode} />
                                 ))}
                                 {Array.from({ length: 5 - teamB.length }).map((_, i) => (
                                     <EmptySlot key={`empty-b-${i}`} team="B" onClick={() => {
