@@ -504,7 +504,7 @@ const MatchReportModal: React.FC<Props> = ({
     };
 
     // ── TABS CONFIG ───────────────────────────────────────────────────────────
-    const tabs: { id: 'placar'|'desempenho'|'utilitarios'|'confrontos'; label: string; icon: React.ReactNode }[] = [
+    const tabs: { id: 'placar'|'desempenho'|'utilitarios'|'confrontos'|'linha-tempo'; label: string; icon: React.ReactNode }[] = [
         { id: 'placar',       label: 'Placar',       icon: <Shield size={12} /> },
         { id: 'desempenho',   label: 'Desempenho',   icon: <TrendingUp size={12} /> },
         { id: 'utilitarios',  label: 'Utilitários',  icon: <Zap size={12} /> },
@@ -968,10 +968,16 @@ const MatchReportModal: React.FC<Props> = ({
                                     initial={{ opacity: 0, y: 6 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.15 }}
-                                    className="flex gap-3 items-start"
+                                    className="flex flex-col gap-3 items-stretch"
                                 >
-                                    <TeamBlock players={t1} title="Seu Time" scoreVal={scoreA} ally={true} />
-                                    <TeamBlock players={t2} title="Adversários" scoreVal={scoreE} ally={false} />
+                                    {tab === 'linha-tempo' && (currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries) ? (
+                                        <RoundLog />
+                                    ) : (
+                                        <div className="flex gap-3 items-start">
+                                            <TeamBlock players={t1} title="Seu Time" scoreVal={scoreA} ally={true} />
+                                            <TeamBlock players={t2} title="Adversários" scoreVal={scoreE} ally={false} />
+                                        </div>
+                                    )}
                                 </motion.div>
                             )}
 
