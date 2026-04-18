@@ -389,114 +389,123 @@ const MatchReportModal: React.FC<Props> = ({
     const isWin = currentMatch.result === 'Win' || scoreA > scoreE;
     const mode = detectMode();
     const mapDisplay = currentMatch.mapName?.replace('de_','').split('_').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Mapa';
-    const dateStr = new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
-    const userData = t1.find(p=>p.isUser) || t2.find(p=>p.isUser) || t1[0];
-    const allPlayers = [...t1, ...t2];
-    const isVerified = !!currentMatch.metadata?.stats || currentMatch.source === 'Faceit';
-    const hasRichData = allPlayers.some(p => p.utilDmg > 0 || p.flashAssists > 0 || p.fk > 0 || p.triples > 0 || p.smokesThrown > 0 || p.flashThrown > 0 || p.molotovThrown > 0 || p.trades > 0);
-
-
-    const RoundLog = () => {
+    const dateStr = new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'    const RoundLog = () => {
         const summaries = currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries;
-        if (!summaries) return null;
-
+        if (!summaries) return (
+            <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
+                <Clock size={40} className="mb-4 opacity-20" />
+                <p className="text-xs font-black uppercase tracking-widest">Linha do tempo indisponível</p>
+                <p className="text-[10px] lowercase text-zinc-700 mt-1">Requer demo processada pelo bot</p>
+            </div>
+        );
+        
         const rounds = Object.keys(summaries).map(Number).sort((a, b) => a - b);
+        
+        // Helper para cores de time
+        const getSideColor = (side: string) => {
+            if (side === 'CT') return 'text-blue-400';
+            if (side === 'T') return 'text-orange-400';
+            return 'text-white';
+        };
+
+        const getSideBg = (side: string) => {
+            if (side === 'CT') return 'bg-blue-500/10 border-blue-500/20';
+            if (side === 'T') return 'bg-orange-500/10 border-orange-500/20';
+            return 'bg-white/5 border-white/10';
+        };
 
         return (
-            <div className="flex flex-col gap-6 mt-2 relative">
-                <div className="flex items-center gap-3 px-2">
-                    <div className="h-px flex-1 bg-white/5" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 italic">Relatório Detalhado da Partida</span>
-                    <div className="h-px flex-1 bg-white/5" />
-                </div>
+            <div className="flex flex-col gap-8 mt-4 relative">
+                {/* Linha vertical decorativa */}
+                <div className="absolute left-9 top-0 bottom-0 w-px bg-gradient-to-b from-white/5 via-white/[0.02] to-transparent" />
 
-                <div className="flex flex-col gap-4">
-                    {rounds.map(rNum => {
-                        const r = summaries[rNum];
-                        const kills = r.kills || [];
-                        const damage = r.damage || {};
-                        
-                        // Group kills by attacker to create a "report" feel
-                        const killsByPlayer: Record<string, { victims: string[], weapons: string[], hsCount: number }> = {};
-                        kills.forEach((k: any) => {
-                            if (!killsByPlayer[k.attackerName]) {
-                                killsByPlayer[k.attackerName] = { victims: [], weapons: [], hsCount: 0 };
-                            }
-                            killsByPlayer[k.attackerName].victims.push(k.victimName);
-                            killsByPlayer[k.attackerName].weapons.push(k.weapon.replace("weapon_", ""));
-                            if (k.isHeadshot) killsByPlayer[k.attackerName].hsCount++;
-                        });
+                {rounds.map(rNum => {
+                    const r = summaries[rNum];
+                    const kills = r.kills || [];
+                    const winner = r.winner || ""; # Novo campo do parser atualizado
+                    const reason = r.reason || "";
+                    
+                    const isWin = (winner === "CT" && t1[0].team === "CT") || (winner === "T" && t1[0].team === "T"); # Heurística simples se t1 é o time do usuário
 
-                        return (
+                    return (
+                        <div key={rNum} className="relative pl-14">
+                            {/* Marcador de Round */}
+                            <div className={`absolute left-0 top-0 w-11 h-11 rounded-2xl border-2 flex flex-col items-center justify-center z-10 shadow-2xl transition-transform hover:scale-110 ${
+                                winner === 'CT' ? 'bg-[#0f172a] border-blue-500/50 text-blue-400' : 
+                                winner === 'T' ? 'bg-[#1c1917] border-orange-500/50 text-orange-400' : 
+                                'bg-zinc-900 border-white/10 text-zinc-500'
+                            }`}>
+                                <span className="text-[8px] font-black uppercase leading-none mb-0.5 tracking-tighter">RD</span>
+                                <span className="text-lg font-black italic leading-none">{rNum}</span>
+                            </div>
+
                             <motion.div 
-                                key={rNum}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="bg-[#0c121d] border border-white/[0.05] rounded-2xl overflow-hidden shadow-xl"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="bg-white/[0.02] border border-white/[0.05] rounded-[24px] overflow-hidden"
                             >
-                                <div className="bg-zinc-900/40 px-5 py-2.5 border-b border-white/5 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
-                                            <span className="text-xs font-black text-yellow-500 italic">{rNum}</span>
-                                        </div>
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Round {rNum}</h4>
+                                {/* Round Header Inside */}
+                                <div className="px-6 py-3 border-b border-white/[0.03] flex items-center justify-between bg-white/[0.01]">
+                                    <div className="flex items-center gap-4">
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                                            Fim do Round {rNum}
+                                        </h4>
+                                        {winner && (
+                                            <div className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${getSideColor(winner)} ${getSideBg(winner)}`}>
+                                                {winner === 'CT' ? <Shield size={10} /> : <Target size={10} />}
+                                                Vitória {winner}
+                                                {reason && <span className="text-zinc-600 lowercase font-normal ml-1">({reason.replace('ct_win_', '').replace('t_win_', '').replace('_', ' ')})</span>}
+                                            </div>
+                                        )}
                                     </div>
-                                    <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">
-                                        {kills.length} {kills.length === 1 ? 'eliminação' : 'eliminações'}
+                                    <span className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest">
+                                        {kills.length} eventos
                                     </span>
                                 </div>
 
-                                <div className="p-5 space-y-4">
-                                    {/* Kill Feed style report */}
-                                    <div className="space-y-3">
-                                        {Object.entries(killsByPlayer).length === 0 ? (
-                                            <p className="text-[10px] text-zinc-700 italic px-2">Nenhuma eliminação registrada.</p>
-                                        ) : (
-                                            Object.entries(killsByPlayer).map(([attacker, data], idx) => {
-                                                const victimCount = data.victims.length;
-                                                const uniqueWeapons = Array.from(new Set(data.weapons));
-                                                return (
-                                                    <div key={idx} className="flex flex-col gap-1 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.03]">
-                                                        <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
-                                                            <span className="text-[11px] font-black text-white italic">{attacker}</span>
-                                                            <span className="text-[10px] font-bold text-zinc-500">eliminou</span>
-                                                            <div className="flex items-center gap-1.5 flex-wrap">
-                                                                {data.victims.map((v, vIdx) => (
-                                                                    <React.Fragment key={vIdx}>
-                                                                        <span className="text-[11px] font-bold text-zinc-300">{v}</span>
-                                                                        {vIdx < data.victims.length - 1 && <span className="text-zinc-700 text-[10px]">•</span>}
-                                                                    </React.Fragment>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-3 mt-1 underline-offset-4">
-                                                            <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-600 uppercase tracking-tight">
-                                                                <Target size={10} className="text-zinc-700" />
-                                                                {uniqueWeapons.join(", ")}
-                                                            </div>
-                                                            {data.hsCount > 0 && (
-                                                                <div className="flex items-center gap-1 text-[9px] font-black text-yellow-500/60 uppercase">
-                                                                    <Star size={10} />
-                                                                    {data.hsCount} Headshot{data.hsCount > 1 ? 's' : ''}
-                                                                </div>
-                                                            )}
-                                                            {victimCount >= 3 && (
-                                                                <div className={`flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${victimCount === 3 ? 'text-amber-400 bg-amber-500/10' : victimCount === 4 ? 'text-orange-400 bg-orange-500/10' : 'text-purple-400 bg-purple-500/10'}`}>
-                                                                    <Flame size={10} />
-                                                                    {victimCount}K
-                                                                </div>
-                                                            )}
+                                <div className="p-4 space-y-2">
+                                    {kills.length === 0 ? (
+                                        <p className="text-[10px] text-zinc-600 italic px-4 py-2">Sem baixas registradas.</p>
+                                    ) : (
+                                        kills.map((k: any, kIdx: number) => {
+                                            const attSide = k.attackerSide || (allPlayers.find(p => p.nickname === k.attackerName)?.team) || "unknown";
+                                            const vicSide = k.victimSide || (allPlayers.find(p => p.nickname === k.victimName)?.team) || "unknown";
+                                            const weapon = k.weapon?.replace("weapon_", "").replace("_", "-").toUpperCase() || "unknown";
+                                            
+                                            return (
+                                                <div key={kIdx} className="flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors hover:bg-white/[0.03] animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${kIdx * 50}ms` }}>
+                                                    {/* Attacker */}
+                                                    <div className="flex-1 flex justify-end items-center gap-3">
+                                                        <span className={`text-[12px] font-black italic truncate max-w-[140px] ${getSideColor(attSide)}`}>
+                                                            {k.attackerName}
+                                                        </span>
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${attSide === 'CT' ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]'}`} />
+                                                    </div>
+
+                                                    {/* Weapon Action */}
+                                                    <div className="flex flex-col items-center gap-1 min-w-[100px]">
+                                                        <div className="px-3 py-1 rounded-lg bg-zinc-900/50 border border-white/5 flex items-center gap-2">
+                                                            <span className="text-[10px] font-mono font-black text-zinc-400 tracking-tight">{weapon}</span>
+                                                            {k.isHeadshot && <Star size={10} className="text-yellow-500" />}
                                                         </div>
                                                     </div>
-                                                );
-                                            })
-                                        )}
-                                    </div>
+
+                                                    {/* Victim */}
+                                                    <div className="flex-1 flex products-start items-center gap-3">
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${vicSide === 'CT' ? 'bg-blue-500' : 'bg-orange-500'}`} />
+                                                        <span className={`text-[12px] font-bold truncate max-w-[140px] ${getSideColor(vicSide)} opacity-80`}>
+                                                            {k.victimName}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
                                 </div>
                             </motion.div>
-                        );
-                    })}
-                </div>
+                        </div>
+                    );
+                })}
             </div>
         );
     };

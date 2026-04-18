@@ -442,12 +442,30 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
             df_k["round_num"] = df_k["tick"].apply(get_round) if round_starts else [1] * len(df_k)
 
             # --- NOVO: Log de Confrontos Detalhado ---
-            round_summaries = {} # round_num -> {kills: [], damage: {sid: dmg}}
+            round_summaries = {} # round_num -> {kills: [], damage: {}, winner: "", reason: ""}
+            
+            # Mapear vencedores e motivos por round usando round_end
+            round_ends = {} # round_num -> {winner, reason}
+            if df_re is not None and not df_re.empty:
+                for _, re_row in df_re.iterrows():
+                    re_tick = int(re_row["tick"])
+                    re_num = get_round(re_tick)
+                    round_ends[re_num] = {
+                        "winner_side": normalize_team(str(re_row.get("winner", ""))),
+                        "reason": str(re_row.get("reason", ""))
+                    }
 
             for r_num, r_kills in df_k.groupby("round_num"):
                 r_num = int(r_num)
+                r_end_info = round_ends.get(r_num, {})
+                
                 if r_num not in round_summaries:
-                    round_summaries[r_num] = {"kills": [], "damage": {}}
+                    round_summaries[r_num] = {
+                        "kills": [], 
+                        "damage": {},
+                        "winner": r_end_info.get("winner_side", ""),
+                        "reason": r_end_info.get("reason", "")
+                    }
                 
                 if r_kills.empty: continue
                 # First Kill e Death
@@ -464,11 +482,26 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                     k_att = str(k_row.get("attacker_steamid", "0"))
                     k_vic = str(k_row.get("user_steamid", "0"))
                     if k_att != "0":
+                        # Descobrir o lado (CT/T) de cada um para o visual
+                        # Como as trocas de lado ocorrem, pegamos o lado do atacante no tick da kill
+                        att_side = "unknown"
+                        vic_side = "unknown"
+                        try:
+                            # Tenta pegar info rápida do lado
+                            sides_df = parser.parse_ticks(["team_name"], ticks=[k_row["tick"]], players=[int(k_att), int(k_vic)])
+                            if sides_df is not None and not sides_df.empty:
+                                for _, s_row in sides_df.iterrows():
+                                    if str(s_row["steamid"]) == k_att: att_side = normalize_team(str(s_row["team_name"]))
+                                    if str(s_row["steamid"]) == k_vic: vic_side = normalize_team(str(s_row["team_name"]))
+                        except: pass
+
                         round_summaries[r_num]["kills"].append({
                             "attackerName": player_info.get(k_att, {}).get("name", "Jogador"),
                             "attackerSteamId": k_att,
+                            "attackerSide": att_side,
                             "victimName": player_info.get(k_vic, {}).get("name", "Jogador"),
                             "victimSteamId": k_vic,
+                            "victimSide": vic_side,
                             "weapon": str(k_row.get("weapon", "unknown")),
                             "isHeadshot": bool(k_row.get("headshot", False))
                         })
