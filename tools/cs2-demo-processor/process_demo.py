@@ -68,7 +68,7 @@ def normalize_team(raw: str) -> str:
 # Parser de Demo
 # ─────────────────────────────────────────────
 
-def parse_demo(filepath: str, log_fn=print) -> dict | None:
+def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     """
     Processa um arquivo .dem e retorna um dict com:
       {
@@ -574,7 +574,7 @@ def parse_demo(filepath: str, log_fn=print) -> dict | None:
         "source":    "mix",          # padrão; usuário pode alterar na UI
         "mapName":   map_name,
         "duration":  duration_str,
-        "matchDate": datetime.now(),
+        "matchDate": match_date if match_date else datetime.now(),
         "scoreA":    score_a,
         "scoreB":    score_b,
         "metadata":  {
@@ -666,17 +666,26 @@ class DemoProcessorApp(ctk.CTk):
             variable=self._source_var,
         ).grid(row=6, column=0, padx=14, pady=(0, 12), sticky="ew")
 
+        # Data da Partida
+        ctk.CTkLabel(left, text="Data da Partida (YYYY-MM-DD HH:MM)", font=ctk.CTkFont(weight="bold")).grid(
+            row=7, column=0, padx=14, pady=(5, 4), sticky="w"
+        )
+        self._date_var = ctk.StringVar(value=datetime.now().strftime("%Y-%m-%d %H:%M"))
+        ctk.CTkEntry(left, textvariable=self._date_var).grid(
+            row=8, column=0, padx=14, pady=(0, 12), sticky="ew"
+        )
+
         # Log
         ctk.CTkLabel(left, text="Log de Processamento", font=ctk.CTkFont(weight="bold")).grid(
-            row=7, column=0, padx=14, pady=(10, 4), sticky="w"
+            row=9, column=0, padx=14, pady=(10, 4), sticky="w"
         )
         self._log_box = ctk.CTkTextbox(left, font=ctk.CTkFont(family="Consolas", size=11))
-        self._log_box.grid(row=8, column=0, padx=14, pady=(0, 10), sticky="nsew")
-        left.grid_rowconfigure(8, weight=1)
+        self._log_box.grid(row=10, column=0, padx=14, pady=(0, 10), sticky="nsew")
+        left.grid_rowconfigure(10, weight=1)
 
         # Botões de ação
         btn_frame = ctk.CTkFrame(left, fg_color="transparent")
-        btn_frame.grid(row=9, column=0, padx=14, pady=(0, 14), sticky="ew")
+        btn_frame.grid(row=11, column=0, padx=14, pady=(0, 14), sticky="ew")
         btn_frame.grid_columnconfigure(0, weight=1)
         btn_frame.grid_columnconfigure(1, weight=1)
 
@@ -753,6 +762,16 @@ class DemoProcessorApp(ctk.CTk):
             self._demo_path_var.set(os.path.basename(path))
             self._full_path = path
             self._demo_data = None
+            
+            # Tenta pegar a data do arquivo
+            try:
+                mtime = os.path.getmtime(path)
+                f_date = datetime.fromtimestamp(mtime)
+                self._date_var.set(f_date.strftime("%Y-%m-%d %H:%M"))
+                self._log(f"📅 Data detectada do arquivo: {f_date.strftime('%d/%m/%Y %H:%M')}")
+            except:
+                pass
+
             self._btn_process.configure(state="normal", text="🔍  Processar Demo")
             self._btn_send.configure(state="disabled")
             self._show_placeholder()
@@ -789,12 +808,19 @@ class DemoProcessorApp(ctk.CTk):
             messagebox.showerror("Erro", "Selecione um arquivo .dem válido.")
             return
 
+        # Pega a data da UI
+        try:
+            m_date = datetime.strptime(self._date_var.get(), "%Y-%m-%d %H:%M")
+        except:
+            m_date = datetime.now()
+            self._log("⚠️ Formato de data inválido, usando agora.")
+
         self._processing = True
         self._btn_process.configure(state="disabled", text="⏳  Processando...")
         self._btn_send.configure(state="disabled")
         self._demo_data = None
 
-        threading.Thread(target=self._do_parse, args=(path,), daemon=True).start()
+        threading.Thread(target=self._do_parse, args=(path, m_date), daemon=True).start()
 
     def _on_batch_process(self):
         self._processing = True
@@ -814,8 +840,18 @@ class DemoProcessorApp(ctk.CTk):
         for i, path in enumerate(self._batch_files):
             name = os.path.basename(path)
             self._log(f"\n--- [{i+1}/{count}] {name} ---")
+            
+            # Para fila, sempre tenta pegar data do arquivo
+            m_date = datetime.now()
             try:
-                result = parse_demo(path, log_fn=self._log)
+                mtime = os.path.getmtime(path)
+                m_date = datetime.fromtimestamp(mtime)
+                self._log(f"📅 Data do arquivo: {m_date.strftime('%d/%m/%Y %H:%M')}")
+            except:
+                pass
+
+            try:
+                result = parse_demo(path, log_fn=self._log, match_date=m_date)
                 if result:
                     result["match"]["source"] = source
                     self._log("📤 Enviando para o banco (Auto-overwrite)...")
@@ -843,9 +879,9 @@ class DemoProcessorApp(ctk.CTk):
         self.after(0, lambda: messagebox.showinfo("Fila Concluída", summary))
         self.after(0, lambda: self._btn_process.configure(state="normal", text="🚀  Iniciar Fila"))
 
-    def _do_parse(self, path: str):
+    def _do_parse(self, path: str, m_date):
         try:
-            result = parse_demo(path, log_fn=self._log)
+            result = parse_demo(path, log_fn=self._log, match_date=m_date)
             if result:
                 # Aplica o source selecionado pelo usuário
                 result["match"]["source"] = self._source_var.get()
