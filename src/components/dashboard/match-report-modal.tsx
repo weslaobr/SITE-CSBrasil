@@ -282,8 +282,8 @@ const MatchReportModal: React.FC<Props> = ({
         if (meta.fullStats?.rounds?.[0]?.teams) {
             const [a, b] = meta.fullStats.rounds[0].teams;
             return {
-                t1: (a.players||[]).map((p:any)=>normalizeP(p,isUserP(p), a.side || a.teamSide)).sort(byKills),
-                t2: (b.players||[]).map((p:any)=>normalizeP(p,isUserP(p), b.side || b.teamSide)).sort(byKills)
+                t1: (a.players||[]).map((p:any)=>normalizeP(p,isUserP(p), a.side || a.teamSide || 'CT')).sort(byKills),
+                t2: (b.players||[]).map((p:any)=>normalizeP(p,isUserP(p), b.side || b.teamSide || 'T')).sort(byKills)
             };
         }
         if (meta.stats && Array.isArray(meta.stats)) {
@@ -299,24 +299,24 @@ const MatchReportModal: React.FC<Props> = ({
             else { t1 = meta.stats.slice(0,5); t2 = meta.stats.slice(5,10); }
             if (t2.some(isUserP)) { [t1, t2] = [t2, t1]; }
             return {
-                t1: t1.map((p:any)=>normalizeP(p,isUserP(p))).sort(byKills),
-                t2: t2.map((p:any)=>normalizeP(p,isUserP(p))).sort(byKills)
+                t1: t1.map((p:any)=>normalizeP(p,isUserP(p), 'CT')).sort(byKills),
+                t2: t2.map((p:any)=>normalizeP(p,isUserP(p), 'T')).sort(byKills)
             };
         }
         if (meta.players && Array.isArray(meta.players)) {
             return {
-                t1: meta.players.slice(0,5).map((p:any)=>normalizeP(p,isUserP(p))).sort(byKills),
-                t2: meta.players.slice(5,10).map((p:any)=>normalizeP(p,isUserP(p))).sort(byKills)
+                t1: meta.players.slice(0,5).map((p:any)=>normalizeP(p,isUserP(p), 'CT')).sort(byKills),
+                t2: meta.players.slice(5,10).map((p:any)=>normalizeP(p,isUserP(p), 'T')).sort(byKills)
             };
         }
         return {
             t1: [
-                normalizeP({nickname:'[Você]',kills:currentMatch?.kills,deaths:currentMatch?.deaths,assists:currentMatch?.assists,adr:currentMatch?.adr},true),
-                normalizeP({nickname:'Aliado 1'}),normalizeP({nickname:'Aliado 2'}),
-                normalizeP({nickname:'Aliado 3'}),normalizeP({nickname:'Aliado 4'}),
+                normalizeP({nickname:'[Você]',kills:currentMatch?.kills,deaths:currentMatch?.deaths,assists:currentMatch?.assists,adr:currentMatch?.adr},true, 'CT'),
+                normalizeP({nickname:'Aliado 1'},false, 'CT'),normalizeP({nickname:'Aliado 2'},false, 'CT'),
+                normalizeP({nickname:'Aliado 3'},false, 'CT'),normalizeP({nickname:'Aliado 4'},false, 'CT'),
             ],
-            t2: [normalizeP({nickname:'Inimigo 1'}),normalizeP({nickname:'Inimigo 2'}),
-                 normalizeP({nickname:'Inimigo 3'}),normalizeP({nickname:'Inimigo 4'}),normalizeP({nickname:'Inimigo 5'})]
+            t2: [normalizeP({nickname:'Inimigo 1'},false, 'T'),normalizeP({nickname:'Inimigo 2'},false, 'T'),
+                 normalizeP({nickname:'Inimigo 3'},false, 'T'),normalizeP({nickname:'Inimigo 4'},false, 'T'),normalizeP({nickname:'Inimigo 5'},false, 'T')]
         };
     };
 
@@ -411,69 +411,76 @@ const MatchReportModal: React.FC<Props> = ({
         
         // Helper para cores de time
         const getSideColor = (side: string) => {
-            if (side === 'CT') return 'text-blue-400';
+            if (side === 'CT') return 'text-sky-400';
             if (side === 'T') return 'text-orange-400';
-            return 'text-white';
+            return 'text-zinc-500';
         };
 
         const getSideBg = (side: string) => {
-            if (side === 'CT') return 'bg-blue-500/10 border-blue-500/20';
+            if (side === 'CT') return 'bg-sky-500/10 border-sky-500/20';
             if (side === 'T') return 'bg-orange-500/10 border-orange-500/20';
             return 'bg-white/5 border-white/10';
         };
 
         return (
-            <div className="flex flex-col gap-8 mt-4 relative">
+            <div className="flex flex-col gap-6 mt-4 relative">
                 {/* Linha vertical decorativa */}
-                <div className="absolute left-9 top-0 bottom-0 w-px bg-gradient-to-b from-white/5 via-white/[0.02] to-transparent" />
+                <div className="absolute left-[22px] top-0 bottom-0 w-px bg-gradient-to-b from-white/10 via-white/[0.02] to-transparent" />
 
                 {rounds.map(rNum => {
                     const r = summaries[rNum];
                     const kills = r.kills || [];
-                    const winner = r.winner || ""; // Novo campo do parser atualizado
+                    const winner = r.winner || "";
                     const reason = r.reason || "";
                     
-                    const isWin = (winner === "CT" && t1[0]?.team === "CT") || (winner === "T" && t1[0]?.team === "T"); // Heurística simples se t1 é o time do usuário
+                    const isWin = (winner === "CT" && t1[0]?.team === "CT") || (winner === "T" && t1[0]?.team === "T");
 
                     return (
-                        <div key={rNum} className="relative pl-14">
+                        <div key={rNum} className="relative pl-12">
                             {/* Marcador de Round */}
                             <div className={`absolute left-0 top-0 w-11 h-11 rounded-2xl border-2 flex flex-col items-center justify-center z-10 shadow-2xl transition-transform hover:scale-110 ${
-                                winner === 'CT' ? 'bg-[#0f172a] border-blue-500/50 text-blue-400' : 
+                                winner === 'CT' ? 'bg-[#0f172a] border-sky-500/50 text-sky-400' : 
                                 winner === 'T' ? 'bg-[#1c1917] border-orange-500/50 text-orange-400' : 
                                 'bg-zinc-900 border-white/10 text-zinc-500'
                             }`}>
-                                <span className="text-[8px] font-black uppercase leading-none mb-0.5 tracking-tighter">RD</span>
+                                <span className="text-[7px] font-black uppercase leading-none mb-0.5 tracking-tighter opacity-70">Round</span>
                                 <span className="text-lg font-black italic leading-none">{rNum}</span>
                             </div>
 
                             <motion.div 
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className="bg-white/[0.02] border border-white/[0.05] rounded-[24px] overflow-hidden"
+                                className="bg-[#0c0f15] border border-white/[0.05] rounded-[24px] overflow-hidden"
                             >
                                 {/* Round Header Inside */}
                                 <div className="px-6 py-3 border-b border-white/[0.03] flex items-center justify-between bg-white/[0.01]">
                                     <div className="flex items-center gap-4">
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
-                                            Fim do Round {rNum}
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                                            Resultado do Round
                                         </h4>
                                         {winner && (
-                                            <div className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${getSideColor(winner)} ${getSideBg(winner)}`}>
+                                            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getSideColor(winner)} ${getSideBg(winner)} border`}>
                                                 {winner === 'CT' ? <Shield size={10} /> : <Target size={10} />}
-                                                Vitória {winner}
-                                                {reason && <span className="text-zinc-600 lowercase font-normal ml-1">({reason.replace('ct_win_', '').replace('t_win_', '').replace('_', ' ')})</span>}
+                                                VENCEU: {winner}
+                                                {reason && (
+                                                    <span className="text-zinc-600 lowercase font-normal ml-1 border-l border-white/10 pl-2">
+                                                        {reason.replace('ct_win_', '').replace('t_win_', '').replace('_', ' ')}
+                                                    </span>
+                                                )}
                                             </div>
                                         )}
                                     </div>
-                                    <span className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest">
-                                        {kills.length} eventos
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <Activity size={10} className="text-zinc-700" />
+                                        <span className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest">
+                                            {kills.length} eventos
+                                        </span>
+                                    </div>
                                 </div>
 
-                                <div className="p-4 space-y-2">
+                                <div className="p-3 space-y-1 bg-black/20">
                                     {kills.length === 0 ? (
-                                        <p className="text-[10px] text-zinc-600 italic px-4 py-2">Sem baixas registradas.</p>
+                                        <p className="text-[10px] text-zinc-600 italic px-4 py-3">Sem baixas registradas.</p>
                                     ) : (
                                         kills.map((k: any, kIdx: number) => {
                                             const attSide = k.attackerSide || (allPlayers.find(p => p.nickname === k.attackerName)?.team) || "unknown";
@@ -481,30 +488,44 @@ const MatchReportModal: React.FC<Props> = ({
                                             const weapon = k.weapon?.replace("weapon_", "").replace("_", "-").toUpperCase() || "unknown";
                                             
                                             return (
-                                                <div key={kIdx} className="flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors hover:bg-white/[0.03] animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${kIdx * 50}ms` }}>
+                                                <div key={kIdx} className="group relative flex items-center gap-4 px-4 py-2 rounded-xl transition-all hover:bg-white/[0.02]">
                                                     {/* Attacker */}
                                                     <div className="flex-1 flex justify-end items-center gap-3">
-                                                        <span className={`text-[12px] font-black italic truncate max-w-[140px] ${getSideColor(attSide)}`}>
-                                                            {k.attackerName}
-                                                        </span>
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${attSide === 'CT' ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]'}`} />
+                                                        <div className="flex flex-col items-end">
+                                                            <span className={`text-[12px] font-black italic tracking-tight ${getSideColor(attSide)}`}>
+                                                                {k.attackerName}
+                                                            </span>
+                                                            <span className="text-[7px] font-black uppercase text-zinc-600 tracking-widest">{attSide}</span>
+                                                        </div>
+                                                        <div className={`w-1 h-6 rounded-full ${attSide === 'CT' ? 'bg-sky-500 shadow-[0_0_8px_rgba(56,189,248,0.4)]' : 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]'}`} />
                                                     </div>
 
-                                                    {/* Weapon Action */}
-                                                    <div className="flex flex-col items-center gap-1 min-w-[100px]">
-                                                        <div className="px-3 py-1 rounded-lg bg-zinc-900/50 border border-white/5 flex items-center gap-2">
-                                                            <span className="text-[10px] font-mono font-black text-zinc-400 tracking-tight">{weapon}</span>
-                                                            {k.isHeadshot && <Star size={10} className="text-yellow-500" />}
+                                                    {/* Action Arrow / Weapon */}
+                                                    <div className="flex flex-col items-center gap-1 min-w-[120px]">
+                                                        <div className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/5 flex items-center gap-3 shadow-inner">
+                                                            <span className="text-[9px] font-mono font-black text-zinc-400 tracking-tighter">{weapon}</span>
+                                                            {k.isHeadshot && (
+                                                                <div className="flex items-center gap-1">
+                                                                    <div className="w-[1px] h-3 bg-white/10" />
+                                                                    <Target size={10} className="text-rose-500" />
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
 
                                                     {/* Victim */}
-                                                    <div className="flex-1 flex products-start items-center gap-3">
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${vicSide === 'CT' ? 'bg-blue-500' : 'bg-orange-500'}`} />
-                                                        <span className={`text-[12px] font-bold truncate max-w-[140px] ${getSideColor(vicSide)} opacity-80`}>
-                                                            {k.victimName}
-                                                        </span>
+                                                    <div className="flex-1 flex items-center gap-3">
+                                                        <div className={`w-1 h-6 rounded-full ${vicSide === 'CT' ? 'bg-sky-500' : 'bg-orange-500'} opacity-30`} />
+                                                        <div className="flex flex-col items-start">
+                                                            <span className={`text-[12px] font-bold tracking-tight ${getSideColor(vicSide)} opacity-60`}>
+                                                                {k.victimName}
+                                                            </span>
+                                                            <span className="text-[7px] font-bold uppercase text-zinc-700 tracking-widest">{vicSide}</span>
+                                                        </div>
                                                     </div>
+
+                                                    {/* Background line effect */}
+                                                    <div className="absolute inset-x-4 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 </div>
                                             );
                                         })
