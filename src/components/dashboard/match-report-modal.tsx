@@ -42,6 +42,7 @@ interface PlayerStats {
     molotovThrown: number;
     isUser?: boolean;
     steamId?: string;
+    team?: string;
 }
 
 
@@ -211,7 +212,7 @@ const MatchReportModal: React.FC<Props> = ({
                (metaS && pS === metaS) || false;
     };
 
-    const normalizeP = (p: any, isUser = false): PlayerStats => {
+    const normalizeP = (p: any, isUser = false, team?: string): PlayerStats => {
         const kills   = p.kills ?? p.total_kills ?? parseInt(p.player_stats?.Kills ?? '0') ?? 0;
         const deaths  = p.deaths ?? p.total_deaths ?? parseInt(p.player_stats?.Deaths ?? '0') ?? 1; // avoid /0
         const assists = p.assists ?? p.total_assists ?? parseInt(p.player_stats?.Assists ?? '0') ?? 0;
@@ -269,7 +270,8 @@ const MatchReportModal: React.FC<Props> = ({
             smokesThrown: Number(p.smokesThrown ?? p.smokes_thrown ?? p.smoke_thrown ?? 0),
             molotovThrown: Number(p.molotovThrown ?? p.molotovs_thrown ?? p.molotov_thrown ?? 0),
             isUser,
-            steamId: p.steam64_id || p.player_id || p.steamId || p.steam_id
+            steamId: p.steam64_id || p.player_id || p.steamId || p.steam_id,
+            team
         };
     };
 
@@ -280,8 +282,8 @@ const MatchReportModal: React.FC<Props> = ({
         if (meta.fullStats?.rounds?.[0]?.teams) {
             const [a, b] = meta.fullStats.rounds[0].teams;
             return {
-                t1: (a.players||[]).map((p:any)=>normalizeP(p,isUserP(p))).sort(byKills),
-                t2: (b.players||[]).map((p:any)=>normalizeP(p,isUserP(p))).sort(byKills)
+                t1: (a.players||[]).map((p:any)=>normalizeP(p,isUserP(p), a.side || a.teamSide)).sort(byKills),
+                t2: (b.players||[]).map((p:any)=>normalizeP(p,isUserP(p), b.side || b.teamSide)).sort(byKills)
             };
         }
         if (meta.stats && Array.isArray(meta.stats)) {
@@ -389,7 +391,10 @@ const MatchReportModal: React.FC<Props> = ({
     const isWin = currentMatch.result === 'Win' || scoreA > scoreE;
     const mode = detectMode();
     const mapDisplay = currentMatch.mapName?.replace('de_','').split('_').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Mapa';
-    const dateStr = new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'    const RoundLog = () => {
+    const dateStr = new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
+    
+    const RoundLog = () => {
+        const allPlayers = [...t1, ...t2];
         const summaries = currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries;
         if (!summaries) return (
             <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
@@ -422,10 +427,10 @@ const MatchReportModal: React.FC<Props> = ({
                 {rounds.map(rNum => {
                     const r = summaries[rNum];
                     const kills = r.kills || [];
-                    const winner = r.winner || ""; # Novo campo do parser atualizado
+                    const winner = r.winner || ""; // Novo campo do parser atualizado
                     const reason = r.reason || "";
                     
-                    const isWin = (winner === "CT" && t1[0].team === "CT") || (winner === "T" && t1[0].team === "T"); # Heurística simples se t1 é o time do usuário
+                    const isWin = (winner === "CT" && t1[0].team === "CT") || (winner === "T" && t1[0].team === "T"); // Heurística simples se t1 é o time do usuário
 
                     return (
                         <div key={rNum} className="relative pl-14">
