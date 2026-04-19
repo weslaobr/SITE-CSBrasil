@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     Download, Clock, HardDrive, RefreshCw, 
     FileWarning, Loader2, Search, ExternalLink,
-    FileText, Calendar, Users
+    FileText, Calendar
 } from 'lucide-react';
 
 interface DemoFile {
