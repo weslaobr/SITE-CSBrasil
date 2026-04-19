@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Body
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
@@ -48,7 +48,8 @@ async def import_match(request: ImportMatchRequest):
         process_match_task.delay(
             match_id=match_id_mock,
             steamid=request.steamid,
-            demo_url=request.share_code if is_url else None
+            demo_url=request.share_code if is_url else None,
+            source="mix"
         )
         return {
             "status": "processing",
@@ -67,7 +68,8 @@ async def import_match(request: ImportMatchRequest):
         process_match_task.delay(
             match_id=match["sharing_code"],
             steamid=request.steamid,
-            demo_url=match["demo_url"]
+            demo_url=match["demo_url"],
+            source="matchmaking"
         )
     
     return {
@@ -117,26 +119,31 @@ async def list_matches(db: AsyncSession = Depends(get_db)):
     return matches
 
 @app.get("/api/match/{match_id}/demo", tags=["Tracker"])
-async def download_match_demo(match_id: str):
+async def download_match_demo(match_id: str, db: AsyncSession = Depends(get_db)):
     """
-    Serves the downloaded .dem file for a match.
+    Serves the downloaded .dem file for a match, or redirects to the external URL.
     """
     import os
-    # We look for the decompressed .dem file first
-    file_path = os.path.join(settings.DEMO_PATH, f"{match_id}.dem")
+    from app.models.tracker import Match
     
+    # Check for local file first
+    file_path = os.path.join(settings.DEMO_PATH, f"{match_id}.dem")
     if not os.path.exists(file_path):
-        # Try the .bz2 if the .dem isn't there
         file_path = os.path.join(settings.DEMO_PATH, f"{match_id}.dem.bz2")
     
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Demo file not found on server.")
+    if os.path.exists(file_path):
+        return FileResponse(
+            path=file_path, 
+            filename=f"{match_id}.dem" + (".bz2" if file_path.endswith(".bz2") else ""),
+            media_type='application/octet-stream'
+        )
         
-    return FileResponse(
-        path=file_path, 
-        filename=f"{match_id}.dem" + (".bz2" if file_path.endswith(".bz2") else ""),
-        media_type='application/octet-stream'
-    )
+    # File not on server, check if we have a demo_url to redirect to
+    match = await db.get(Match, match_id)
+    if match and match.demo_url and match.demo_url.startswith("http"):
+        return RedirectResponse(url=match.demo_url)
+        
+    raise HTTPException(status_code=404, detail="Demo file not found and no external URL available.")
 
 # Entry point for local testing
 if __name__ == "__main__":

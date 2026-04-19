@@ -37,7 +37,7 @@ class ParserService:
         self.demo_path = demo_path
         self.dem = Demo(demo_path)
 
-    async def parse_and_save(self, db: AsyncSession, match_id_override: str = None, match_date: datetime = None, demo_url: str = None):
+    async def parse_and_save(self, db: AsyncSession, match_id_override: str = None, match_date: datetime = None, demo_url: str = None, source: str = None):
         # 1. Match Metadata
         logger.info(f"Parser: Starting parse for {self.demo_path}")
         self.dem.parse()
@@ -131,7 +131,8 @@ class ParserService:
                 match_id=match_id, 
                 map_name=map_name,
                 match_date=match_date or datetime.now(),
-                demo_url=demo_url
+                demo_url=demo_url,
+                source=source or "vanilla"
             )
             db.add(match)
         else:
@@ -140,6 +141,8 @@ class ParserService:
                 match.match_date = match_date
             if demo_url:
                 match.demo_url = demo_url
+            if source:
+                match.source = source
         
         # Calcular scores a partir dos rounds
         rounds_df = self.dem.rounds

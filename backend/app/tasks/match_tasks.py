@@ -6,7 +6,7 @@ import asyncio
 from datetime import datetime
 
 @celery_app.task(name="process_match_task")
-def process_match_task(match_id: str, steamid: str, demo_url: str, match_date: str = None):
+def process_match_task(match_id: str, steamid: str, demo_url: str, match_date: str = None, source: str = None):
     """
     Background task to download and parse a demo.
     """
@@ -35,10 +35,29 @@ def process_match_task(match_id: str, steamid: str, demo_url: str, match_date: s
                     except ValueError:
                         task_logger.warning(f"Invalid match_date format: {match_date}")
 
-            await parser.parse_and_save(db, match_id_override=match_id, match_date=dt_match, demo_url=demo_url)
+            await parser.parse_and_save(db, match_id_override=match_id, match_date=dt_match, demo_url=demo_url, source=source)
             task_logger.info(f"Finished async parser for {match_id}")
             
     asyncio.run(run_parser())
+
+    # Cleanup for official Valve matches to save server space
+    if source == "matchmaking":
+        import os
+        try:
+            # Delete both .dem and .dem.bz2
+            for ext in [".dem", ".dem.bz2"]:
+                path = local_path.replace(".dem.bz2", ext) if local_path.endswith(".dem.bz2") else local_path + ext
+                # Correct heuristic: local_path might already be the de-compressed one or the compressed one
+                # Let's just try to delete common patterns
+                from app.core.config import settings
+                p1 = os.path.join(settings.DEMO_PATH, f"{match_id}.dem")
+                p2 = os.path.join(settings.DEMO_PATH, f"{match_id}.dem.bz2")
+                for p in [p1, p2]:
+                    if os.path.exists(p):
+                        os.remove(p)
+            print(f"Cleanup: Deleted temporary demo files for official match {match_id}")
+        except Exception as e:
+            print(f"Cleanup Error: {e}")
     
     return {"status": "success", "match_id": match_id}
 
