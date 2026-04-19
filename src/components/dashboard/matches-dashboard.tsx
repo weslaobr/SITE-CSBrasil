@@ -12,18 +12,9 @@ import {
     ChevronUp,
     Filter, 
     ExternalLink, 
-    Search, 
-    RefreshCw, 
-    ChevronRight,
-    Copy,
-    Lock,
-    Users,
-    Activity,
-    Zap,
-    TrendingUp,
-    Check,
     Shield,
-    Play
+    Play,
+    Download
 } from 'lucide-react';
 import MatchReportModal from './match-report-modal';
 import Link from 'next/link';
@@ -910,13 +901,26 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             </td>
                                             {/* Replay 2D */}
                                             <td className="px-3 py-4 text-center">
-                                                {match.isTracker && (
-                                                    <Link href={`/dashboard/match/${match.id}/viewer`} onClick={(e) => e.stopPropagation()}>
-                                                        <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-yellow-500/10 hover:bg-yellow-500 text-yellow-500 hover:text-black transition-all group/replay shadow-lg shadow-yellow-500/5 active:scale-90 border border-yellow-500/10 hover:border-yellow-500">
-                                                            <Play size={16} className="fill-current ml-0.5" />
-                                                        </button>
-                                                    </Link>
-                                                )}
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {match.isTracker && (
+                                                        <Link href={`/dashboard/match/${match.id}/viewer`} onClick={(e) => e.stopPropagation()}>
+                                                            <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-yellow-500/10 hover:bg-yellow-500 text-yellow-500 hover:text-black transition-all group/replay shadow-lg shadow-yellow-500/5 active:scale-90 border border-yellow-500/10 hover:border-yellow-500" title="Ver Replay 2D">
+                                                                <Play size={16} className="fill-current ml-0.5" />
+                                                            </button>
+                                                        </Link>
+                                                    )}
+                                                    
+                                                    <a 
+                                                        href={`/api/match/${match.id}/demo`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-sky-500/10 hover:bg-sky-500 text-sky-500 hover:text-white transition-all group/download shadow-lg shadow-sky-500/5 active:scale-90 border border-sky-500/10 hover:border-sky-500"
+                                                        title="Baixar Demo"
+                                                    >
+                                                        <Download size={16} />
+                                                    </a>
+                                                </div>
                                             </td>
                                             <td className="px-4 py-4 text-right">
                                                 <div className="flex flex-col items-end gap-0.5">
