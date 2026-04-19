@@ -70,6 +70,7 @@ export async function GET(req: NextRequest) {
         }
 
         if (!result) {
+            // Se não encontrou nada, tenta retornar o erro do primeiro caminho (ou um geral)
             return NextResponse.json({ 
                 error: `Pasta de demos não encontrada nos locais padrão`,
                 tried: attemptedPaths,
@@ -93,36 +94,10 @@ export async function GET(req: NextRequest) {
                 };
             });
 
-        // Buscar informações das partidas no banco de dados para os arquivos encontrados
-        const matchIds = files.map((f: any) => f.matchId).filter(Boolean);
-        const matches = await prisma.globalMatch.findMany({
-            where: { id: { in: matchIds } },
-            include: { players: true }
-        });
+        // Ordenar por data de modificação (mais recentes primeiro)
+        files.sort((a: any, b: any) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime());
 
-        // Mesclar informações da demo com informações da partida
-        const filesWithMatchInfo = files.map((file: any) => {
-            const match = matches.find(m => m.id === file.matchId);
-            const playersPreview = match?.players.map(p => {
-                const pMeta = p.metadata as any;
-                return pMeta?.name || pMeta?.nickname || pMeta?.displayName || 'Jogador';
-            }).filter(Boolean) || [];
-
-            return {
-                ...file,
-                matchInfo: match ? {
-                    id: match.id,
-                    mapName: match.mapName || 'Desconhecido',
-                    score: match.scoreA !== null ? `${match.scoreA}x${match.scoreB}` : null,
-                    players: playersPreview
-                } : null
-            };
-        });
-
-        // Ordenar por data (mais recentes primeiro)
-        filesWithMatchInfo.sort((a: any, b: any) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime());
-
-        return NextResponse.json({ files: filesWithMatchInfo });
+        return NextResponse.json({ files });
 
     } catch (error: any) {
         console.error('[SERVER_DEMOS]', error);
