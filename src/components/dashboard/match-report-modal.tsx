@@ -235,6 +235,79 @@ const MatchReportModal: React.FC<Props> = ({
         return `${CDN}/de_${bare}.png`;
     };
 
+    const weaponImg = (name: string) => {
+        if (!name) return '';
+        let cleanName = name.toLowerCase().replace('weapon_', '').trim();
+        
+        // Manual mapping for special cases to match the ChetdeJong/cs2-killfeed-generator naming
+        const MAPPING: Record<string, string> = {
+            'm4a1_s': 'm4a1_silencer',
+            'm4a1-s': 'm4a1_silencer',
+            'm4a1_silencer': 'm4a1_silencer',
+            'm4a1': 'm4a1',
+            'm4a1_silencer_off': 'm4a1_silencer_off',
+            'usp_s': 'usp_silencer',
+            'usp-s': 'usp_silencer',
+            'usp_silencer': 'usp_silencer',
+            'usp_silencer_off': 'usp_silencer_off',
+            'deagle': 'deagle',
+            'desert_eagle': 'deagle',
+            'p2000': 'hkp2000',
+            'hkp2000': 'hkp2000',
+            'revolver': 'revolver',
+            'r8': 'revolver',
+            'scout': 'ssg08',
+            'ssg08': 'ssg08',
+            'hegrenade': 'hegrenade',
+            'smokegrenade': 'smokegrenade',
+            'smoke': 'smokegrenade',
+            'flashbang': 'flashbang',
+            'inferno': 'inferno',
+            'molotov': 'molotov',
+            'incgrenade': 'incgrenade',
+            'decoy': 'decoy',
+            'c4': 'planted_c4',
+            'planted_c4': 'planted_c4',
+            'zeus': 'taser',
+            'taser': 'taser',
+            'zeus27': 'taser',
+            'bayonet': 'bayonet',
+            'knife': 'knife',
+            'knifegg': 'knifegg',
+            'knife_t': 'knife_t',
+            'knife_ct': 'knife',
+            'knife_butterfly': 'knife_butterfly',
+            'knife_karambit': 'knife_karambit',
+            'knife_m9_bayonet': 'knife_m9_bayonet',
+            'knife_flip': 'knife_flip',
+            'knife_gut': 'knife_gut',
+            'knife_falchion': 'knife_falchion',
+            'knife_tactical': 'knife_tactical',
+            'knife_survival_bowie': 'knife_survival_bowie',
+            'knife_stiletto': 'knife_stiletto',
+            'knife_ursus': 'knife_ursus',
+            'knife_widowmaker': 'knife_widowmaker',
+            'knife_canis': 'knife_canis',
+            'knife_cord': 'knife_cord',
+            'knife_outdoor': 'knife_outdoor',
+            'knife_skeleton': 'knife_skeleton',
+            'knife_kukri': 'knife_kukri',
+            'knife_bowie': 'knife_bowie',
+            'knife_css': 'knife_css',
+            'knife_gypsy_jackknife': 'knife_gypsy_jackknife',
+            'knife_push': 'knife_push',
+            'knife_twinblade': 'knife_twinblade',
+            'flashbang_assist': 'flashbang_assist',
+        };
+
+
+
+        const finalName = MAPPING[cleanName] || cleanName;
+        return `https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/${finalName}.svg`;
+    };
+
+
+
     const isUserP = (p: any) => {
         if (!p) return false;
         const metaN = currentMatch?.metadata?.playerNickname || currentMatch?.metadata?.metadata?.playerNickname;
@@ -544,7 +617,19 @@ const MatchReportModal: React.FC<Props> = ({
                                                         {/* Action Arrow / Weapon */}
                                                         <div className="flex flex-col items-center gap-1 min-w-[140px]">
                                                             <div className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/5 flex items-center gap-3 shadow-inner relative overflow-hidden">
-                                                                <span className="text-[9px] font-mono font-black text-zinc-400 tracking-tighter shrink-0">{weapon}</span>
+                                                                <img 
+                                                                    src={weaponImg(k.weapon)} 
+                                                                    alt={weapon}
+                                                                    title={weapon}
+                                                                    className="h-[14px] w-auto brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity"
+                                                                    onError={(e) => {
+                                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                                        const next = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
+                                                                        if (next) next.style.display = 'block';
+                                                                    }}
+                                                                />
+                                                                <span className="text-[8px] font-mono font-black text-zinc-500 hidden text-center">{weapon}</span>
+
                                                                 {dmg && (
                                                                     <div className="flex items-center gap-1 ml-auto">
                                                                         <div className="w-[1px] h-3 bg-white/10" />
