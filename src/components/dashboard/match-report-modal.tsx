@@ -543,8 +543,35 @@ const MatchReportModal: React.FC<Props> = ({
                                             })
                                         )}
                                     </div>
+                                    
+                                    {/* Dano por Jogador */}
+                                    {r.damage && Object.keys(r.damage).length > 0 && (
+                                        <div className="mt-4 pt-3 border-t border-white/[0.03] px-4">
+                                            <div className="flex items-center gap-3 flex-wrap">
+                                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/[0.03] border border-white/5">
+                                                    <Flame size={10} className="text-orange-500/70" />
+                                                    <span className="text-[8px] font-black uppercase text-zinc-500 tracking-widest">Danos do Round</span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {Object.entries(r.damage)
+                                                        .sort(([, a], [, b]) => (b as any) - (a as any))
+                                                        .map(([sid, dmg]) => {
+                                                            const p = allPlayers.find(px => String(px.steamId) === sid);
+                                                            if (!p || (dmg as number) <= 0) return null;
+                                                            return (
+                                                                <div key={sid} className={`flex items-center gap-2 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.05] shadow-sm`}>
+                                                                    <span className={`text-[9px] font-bold ${getSideColor(p.team || '')}`}>{p.nickname}</span>
+                                                                    <div className="w-[1px] h-2 bg-white/10" />
+                                                                    <span className="text-[9px] font-black text-orange-400">{dmg as number}</span>
+                                                                    <span className="text-[7px] font-bold text-zinc-600 uppercase">dmg</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
-                                    {/* Survivors Section */}
                                     {survivors.length > 0 && (
                                         <div className="mt-4 pt-3 border-t border-white/[0.03] px-4 pb-1">
                                             <div className="flex items-center gap-3 flex-wrap">

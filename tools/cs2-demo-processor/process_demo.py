@@ -521,16 +521,25 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                 df_dmg_rounds = filter_tick(df_dmg_rounds)
                 if df_dmg_rounds is not None and not df_dmg_rounds.empty:
                     df_dmg_rounds["round_num"] = df_dmg_rounds["tick"].apply(get_round) if round_starts else [1] * len(df_dmg_rounds)
-                    for r_num, r_dmg in df_dmg_rounds.groupby("round_num"):
-                        r_num = int(r_num)
-                        if r_num not in round_summaries:
-                            round_summaries[r_num] = {"kills": [], "damage": {}}
-                        
-                        dmg_agg = r_dmg.groupby("attacker_steamid")["dmg_health"].sum() if "dmg_health" in r_dmg.columns else r_dmg.groupby("attacker_steamid")["damage"].sum()
-                        for sid, d_val in dmg_agg.items():
-                            round_summaries[r_num]["damage"][str(sid)] = int(d_val)
+                    
+                    # Identificar coluna de dano
+                    dmg_col = next((c for c in ["dmg_health", "damage", "health_damage"] if c in df_dmg_rounds.columns), None)
+                    att_col = next((c for c in ["attacker_steamid", "attacker_steamid64"] if c in df_dmg_rounds.columns), None)
+
+                    if dmg_col and att_col:
+                        for r_num, r_dmg in df_dmg_rounds.groupby("round_num"):
+                            r_num = int(r_num)
+                            if r_num not in round_summaries:
+                                round_summaries[r_num] = {"kills": [], "damage": {}}
+                            
+                            # Dano causado por atacante neste round
+                            dmg_agg = r_dmg.groupby(att_col)[dmg_col].sum()
+                            for sid, d_val in dmg_agg.items():
+                                round_summaries[r_num]["damage"][str(sid)] = int(d_val)
+                                
             except Exception as e:
                 log_fn(f"⚠️  Erro ao processar dano por round: {e}")
+
 
     except Exception as e:
         log_fn(f"⚠️  Duelos não extraídos integralmente: {e}")
