@@ -394,6 +394,7 @@ const MatchReportModal: React.FC<Props> = ({
     const dateStr = new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
     const hasRichData = !!(currentMatch?.metadata?.fullStats || currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries);
     const isVerified = hasRichData;
+    const userData = t1.find(p => p.isUser) || t2.find(p => p.isUser);
     
     const RoundLog = () => {
         const allPlayers = [...t1, ...t2];
@@ -432,7 +433,7 @@ const MatchReportModal: React.FC<Props> = ({
                     const winner = r.winner || ""; // Novo campo do parser atualizado
                     const reason = r.reason || "";
                     
-                    const isWin = (winner === "CT" && t1[0].team === "CT") || (winner === "T" && t1[0].team === "T"); // Heurística simples se t1 é o time do usuário
+                    const isWin = (winner === "CT" && t1[0]?.team === "CT") || (winner === "T" && t1[0]?.team === "T"); // Heurística simples se t1 é o time do usuário
 
                     return (
                         <div key={rNum} className="relative pl-14">
