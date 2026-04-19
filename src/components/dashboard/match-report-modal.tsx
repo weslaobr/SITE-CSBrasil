@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, Calendar, MapPin, Shield, Target, Activity,
     Zap, TrendingUp, Crosshair, Star, Flame, Eye, RefreshCw, AlertCircle,
-    Clock
+    Clock, Download
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -1075,6 +1075,19 @@ const MatchReportModal: React.FC<Props> = ({
                                         <RefreshCw size={12} className={isSyncing ? "animate-spin text-yellow-500" : ""} />
                                         <span className="hidden sm:inline">{isSyncing ? 'Atualizando...' : 'Atualizar'}</span>
                                     </button>
+
+                                    {currentMatch.url && (
+                                        <a
+                                            href={currentMatch.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="h-8 px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 hover:text-sky-300 flex items-center gap-2 border border-sky-500/20 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest"
+                                            title="Baixar demo da partida para assistir"
+                                        >
+                                            <Download size={12} />
+                                            <span className="hidden lg:inline">Assistir Demo</span>
+                                        </a>
+                                    )}
                                     
                                     {userData && (
                                         <div className="hidden md:flex items-center gap-2.5 bg-black/30 border border-white/5 rounded-xl px-3 py-1.5">

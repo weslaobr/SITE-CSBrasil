@@ -35,7 +35,7 @@ def process_match_task(match_id: str, steamid: str, demo_url: str, match_date: s
                     except ValueError:
                         task_logger.warning(f"Invalid match_date format: {match_date}")
 
-            await parser.parse_and_save(db, match_id_override=match_id, match_date=dt_match)
+            await parser.parse_and_save(db, match_id_override=match_id, match_date=dt_match, demo_url=demo_url)
             task_logger.info(f"Finished async parser for {match_id}")
             
     asyncio.run(run_parser())

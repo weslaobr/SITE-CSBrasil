@@ -37,7 +37,7 @@ class ParserService:
         self.demo_path = demo_path
         self.dem = Demo(demo_path)
 
-    async def parse_and_save(self, db: AsyncSession, match_id_override: str = None, match_date: datetime = None):
+    async def parse_and_save(self, db: AsyncSession, match_id_override: str = None, match_date: datetime = None, demo_url: str = None):
         # 1. Match Metadata
         logger.info(f"Parser: Starting parse for {self.demo_path}")
         self.dem.parse()
@@ -122,17 +122,24 @@ class ParserService:
         await db.execute(delete(TD).where(TD.match_id == match_id))
         await db.flush()
 
+        # 0.5. Fetch or Create Match record
+        from app.models.tracker import Match
+        match = await db.get(Match, match_id)
+        
         if not match:
             match = Match(
                 match_id=match_id, 
                 map_name=map_name,
-                match_date=match_date or datetime.now()
+                match_date=match_date or datetime.now(),
+                demo_url=demo_url
             )
             db.add(match)
         else:
             match.map_name = map_name
             if match_date:
                 match.match_date = match_date
+            if demo_url:
+                match.demo_url = demo_url
         
         # Calcular scores a partir dos rounds
         rounds_df = self.dem.rounds
