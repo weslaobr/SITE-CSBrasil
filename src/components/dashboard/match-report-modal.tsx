@@ -392,6 +392,8 @@ const MatchReportModal: React.FC<Props> = ({
     const mode = detectMode();
     const mapDisplay = currentMatch.mapName?.replace('de_','').split('_').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Mapa';
     const dateStr = new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
+    const hasRichData = !!(currentMatch?.metadata?.fullStats || currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries);
+    const isVerified = hasRichData;
     
     const RoundLog = () => {
         const allPlayers = [...t1, ...t2];
