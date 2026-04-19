@@ -1078,7 +1078,7 @@ const MatchReportModal: React.FC<Props> = ({
 
                                     {currentMatch && (
                                         <a
-                                            href={`/api/match/${match.id}/demo`}
+                                            href={`/api/match/${match?.id}/demo`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="h-8 px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 hover:text-sky-300 flex items-center gap-2 border border-sky-500/20 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest"
