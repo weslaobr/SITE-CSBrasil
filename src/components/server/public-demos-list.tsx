@@ -28,10 +28,8 @@ export function PublicDemosList() {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
-    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        setMounted(true);
         fetchDemos();
     }, []);
 
@@ -45,11 +43,7 @@ export function PublicDemosList() {
                 throw new Error(data.error || 'Erro ao buscar demos do servidor');
             }
             const data = await res.json();
-            if (data && typeof data === 'object') {
-                setDemos(data.files || []);
-            } else {
-                setDemos([]);
-            }
+            setDemos(data.files || []);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -118,7 +112,7 @@ export function PublicDemosList() {
         return matchesName || matchesPlayers || matchesMap;
     });
 
-    if (!mounted || loading) return (
+    if (loading) return (
         <div className="flex flex-col items-center justify-center p-12 gap-4">
             <Loader2 className="w-8 h-8 text-yellow-500 animate-spin" />
             <p className="text-zinc-500 font-bold uppercase tracking-widest text-[9px]">Buscando arquivos de gravação...</p>
