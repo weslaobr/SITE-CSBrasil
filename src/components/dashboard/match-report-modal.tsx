@@ -435,6 +435,9 @@ const MatchReportModal: React.FC<Props> = ({
                     
                     const isWin = (winner === "CT" && t1[0]?.team === "CT") || (winner === "T" && t1[0]?.team === "T");
 
+                    // Cálculo de sobreviventes
+                    const survivors = allPlayers.filter(p => !kills.some((k: any) => k.victimName === p.nickname));
+
                     return (
                         <div key={rNum} className="relative pl-12">
                             {/* Marcador de Round */}
@@ -478,57 +481,90 @@ const MatchReportModal: React.FC<Props> = ({
                                     </div>
                                 </div>
 
-                                <div className="p-3 space-y-1 bg-black/20">
-                                    {kills.length === 0 ? (
-                                        <p className="text-[10px] text-zinc-600 italic px-4 py-3">Sem baixas registradas.</p>
-                                    ) : (
-                                        kills.map((k: any, kIdx: number) => {
-                                            const attSide = k.attackerSide || (allPlayers.find(p => p.nickname === k.attackerName)?.team) || "unknown";
-                                            const vicSide = k.victimSide || (allPlayers.find(p => p.nickname === k.victimName)?.team) || "unknown";
-                                            const weapon = k.weapon?.replace("weapon_", "").replace("_", "-").toUpperCase() || "unknown";
-                                            
-                                            return (
-                                                <div key={kIdx} className="group relative flex items-center gap-4 px-4 py-2 rounded-xl transition-all hover:bg-white/[0.02]">
-                                                    {/* Attacker */}
-                                                    <div className="flex-1 flex justify-end items-center gap-3">
-                                                        <div className="flex flex-col items-end">
-                                                            <span className={`text-[12px] font-black italic tracking-tight ${getSideColor(attSide)}`}>
-                                                                {k.attackerName}
-                                                            </span>
-                                                            <span className="text-[7px] font-black uppercase text-zinc-600 tracking-widest">{attSide}</span>
+                                <div className="p-3 bg-black/20">
+                                    <div className="space-y-1">
+                                        {kills.length === 0 ? (
+                                            <p className="text-[10px] text-zinc-600 italic px-4 py-3">Sem baixas registradas.</p>
+                                        ) : (
+                                            kills.map((k: any, kIdx: number) => {
+                                                const attSide = k.attackerSide || (allPlayers.find(p => p.nickname === k.attackerName)?.team) || "unknown";
+                                                const vicSide = k.victimSide || (allPlayers.find(p => p.nickname === k.victimName)?.team) || "unknown";
+                                                const weapon = k.weapon?.replace("weapon_", "").replace("_", "-").toUpperCase() || "unknown";
+                                                const dmg = k.damage || k.dmg || k.hp_dmg || null;
+                                                
+                                                return (
+                                                    <div key={kIdx} className="group relative flex items-center gap-4 px-4 py-2 rounded-xl transition-all hover:bg-white/[0.02]">
+                                                        {/* Attacker */}
+                                                        <div className="flex-1 flex justify-end items-center gap-3">
+                                                            <div className="flex flex-col items-end">
+                                                                <span className={`text-[12px] font-black italic tracking-tight ${getSideColor(attSide)}`}>
+                                                                    {k.attackerName}
+                                                                </span>
+                                                                <span className="text-[7px] font-black uppercase text-zinc-600 tracking-widest">{attSide}</span>
+                                                            </div>
+                                                            <div className={`w-1 h-6 rounded-full ${attSide === 'CT' ? 'bg-sky-500 shadow-[0_0_8px_rgba(56,189,248,0.4)]' : 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]'}`} />
                                                         </div>
-                                                        <div className={`w-1 h-6 rounded-full ${attSide === 'CT' ? 'bg-sky-500 shadow-[0_0_8px_rgba(56,189,248,0.4)]' : 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]'}`} />
-                                                    </div>
 
-                                                    {/* Action Arrow / Weapon */}
-                                                    <div className="flex flex-col items-center gap-1 min-w-[120px]">
-                                                        <div className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/5 flex items-center gap-3 shadow-inner">
-                                                            <span className="text-[9px] font-mono font-black text-zinc-400 tracking-tighter">{weapon}</span>
-                                                            {k.isHeadshot && (
-                                                                <div className="flex items-center gap-1">
-                                                                    <div className="w-[1px] h-3 bg-white/10" />
-                                                                    <Target size={10} className="text-rose-500" />
-                                                                </div>
-                                                            )}
+                                                        {/* Action Arrow / Weapon */}
+                                                        <div className="flex flex-col items-center gap-1 min-w-[140px]">
+                                                            <div className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/5 flex items-center gap-3 shadow-inner relative overflow-hidden">
+                                                                <span className="text-[9px] font-mono font-black text-zinc-400 tracking-tighter shrink-0">{weapon}</span>
+                                                                {dmg && (
+                                                                    <div className="flex items-center gap-1 ml-auto">
+                                                                        <div className="w-[1px] h-3 bg-white/10" />
+                                                                        <span className="text-[8px] font-black text-emerald-500/70">{dmg}</span>
+                                                                        <span className="text-[7px] font-bold text-zinc-600">DMG</span>
+                                                                    </div>
+                                                                )}
+                                                                {k.isHeadshot && (
+                                                                    <div className="flex items-center gap-1">
+                                                                        <div className="w-[1px] h-3 bg-white/10" />
+                                                                        <Target size={10} className="text-rose-500" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
 
-                                                    {/* Victim */}
-                                                    <div className="flex-1 flex items-center gap-3">
-                                                        <div className={`w-1 h-6 rounded-full ${vicSide === 'CT' ? 'bg-sky-500' : 'bg-orange-500'} opacity-30`} />
-                                                        <div className="flex flex-col items-start">
-                                                            <span className={`text-[12px] font-bold tracking-tight ${getSideColor(vicSide)} opacity-60`}>
-                                                                {k.victimName}
-                                                            </span>
-                                                            <span className="text-[7px] font-bold uppercase text-zinc-700 tracking-widest">{vicSide}</span>
+                                                        {/* Victim */}
+                                                        <div className="flex-1 flex items-center gap-3">
+                                                            <div className={`w-1 h-6 rounded-full ${vicSide === 'CT' ? 'bg-sky-500' : 'bg-orange-500'} opacity-30`} />
+                                                            <div className="flex flex-col items-start">
+                                                                <span className={`text-[12px] font-bold tracking-tight ${getSideColor(vicSide)} opacity-60`}>
+                                                                    {k.victimName}
+                                                                </span>
+                                                                <span className="text-[7px] font-bold uppercase text-zinc-700 tracking-widest">{vicSide}</span>
+                                                            </div>
                                                         </div>
-                                                    </div>
 
-                                                    {/* Background line effect */}
-                                                    <div className="absolute inset-x-4 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        {/* Background line effect */}
+                                                        <div className="absolute inset-x-4 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+
+                                    {/* Survivors Section */}
+                                    {survivors.length > 0 && (
+                                        <div className="mt-4 pt-3 border-t border-white/[0.03] px-4 pb-1">
+                                            <div className="flex items-center gap-3 flex-wrap">
+                                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/[0.03] border border-white/5">
+                                                    <Eye size={10} className="text-zinc-600" />
+                                                    <span className="text-[8px] font-black uppercase text-zinc-500 tracking-widest">Sobreviventes</span>
                                                 </div>
-                                            );
-                                        })
+                                                <div className="flex flex-wrap gap-2">
+                                                    {survivors.map(s => {
+                                                        const side = s.team || (t1.some(p => p.nickname === s.nickname) ? 'CT' : 'T');
+                                                        return (
+                                                            <div key={s.nickname} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${getSideBg(side)} border border-white/5 shadow-sm`}>
+                                                                <div className={`w-1 h-1 rounded-full ${side === 'CT' ? 'bg-sky-500' : 'bg-orange-500'}`} />
+                                                                <span className={`text-[9px] font-bold ${getSideColor(side)}`}>{s.nickname}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             </motion.div>
