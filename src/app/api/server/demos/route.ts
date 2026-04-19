@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getAuthOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 const DEMOS_PATH = "game/csgo/MatchZy/demos"; // Caminho padrão do MatchZy
 const FALLBACK_PATH = "game/csgo/MatchZy";    // Caminho alternativo
@@ -54,17 +55,61 @@ export async function GET(req: NextRequest) {
             }, { status: 404 });
         }
         
-        // Filtrar apenas arquivos .dem
+        // 1. Buscar todas as matches globais que possuem metadados de arquivo de demo
+        // Isso ajuda a vincular o arquivo físico com os dados do banco
+        const globalMatches = await prisma.globalMatch.findMany({
+            where: {
+                OR: [
+                    { source: 'mix' },
+                    { source: 'demo' },
+                    { source: 'local' }
+                ]
+            },
+            include: {
+                players: {
+                    select: {
+                        steamId: true,
+                        metadata: true,
+                    }
+                }
+            },
+            orderBy: { matchDate: 'desc' },
+            take: 100 // Pega as 100 mais recentes
+        });
+
+        // Filtrar apenas arquivos .dem e anexar preview de jogadores
         const files = (data.data || [])
             .filter((item: any) => item.attributes.is_file && item.attributes.name.endsWith('.dem'))
-            .map((item: any) => ({
-                name: item.attributes.name,
-                size: item.attributes.size,
-                mimetype: item.attributes.mimetype,
-                createdAt: item.attributes.created_at,
-                modifiedAt: item.attributes.modified_at,
-                path: `${currentPath}/${item.attributes.name}`
-            }));
+            .map((item: any) => {
+                const fileName = item.attributes.name;
+                
+                // Tenta encontrar a match correspondente no banco
+                const match = globalMatches.find(m => {
+                    const meta = m.metadata as any;
+                    return meta?.demoFile === fileName || meta?.fileName === fileName;
+                });
+
+                // Se encontrou, extrai os nomes dos jogadores
+                const playersPreview = match?.players.map(p => {
+                    const pMeta = p.metadata as any;
+                    return pMeta?.name || pMeta?.nickname || pMeta?.displayName || 'Jogador';
+                }) || [];
+
+                return {
+                    name: fileName,
+                    size: item.attributes.size,
+                    mimetype: item.attributes.mimetype,
+                    createdAt: item.attributes.created_at,
+                    modifiedAt: item.attributes.modified_at,
+                    path: `${currentPath}/${fileName}`,
+                    matchInfo: match ? {
+                        id: match.id,
+                        mapName: match.mapName,
+                        score: match.scoreA !== null ? `${match.scoreA}x${match.scoreB}` : null,
+                        players: playersPreview
+                    } : null
+                };
+            });
 
         // Ordenar por data de modificação (mais recentes primeiro)
         files.sort((a: any, b: any) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime());

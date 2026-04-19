@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, Calendar, MapPin, Shield, Target, Activity,
     Zap, TrendingUp, Crosshair, Star, Flame, Eye, RefreshCw, AlertCircle,
-    Clock
+    Clock, Download, Loader2
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -85,6 +85,7 @@ const MatchReportModal: React.FC<Props> = ({
     const [isSyncing, setIsSyncing] = useState(false);
     const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos' | 'linha-tempo'>('placar');
     const [fetchError, setFetchError] = useState(false);
+    const [downloadingDemo, setDownloadingDemo] = useState(false);
 
     const match = initialMatch || internalMatch;
 
@@ -151,6 +152,41 @@ const MatchReportModal: React.FC<Props> = ({
             console.error(e);
         } finally {
             setIsSyncing(false);
+        }
+    };
+
+    const handleDownloadDemo = async () => {
+        const demoFile = currentMatch?.metadata?.demoFile || currentMatch?.metadata?.metadata?.demoFile;
+        if (!demoFile || downloadingDemo) return;
+        
+        setDownloadingDemo(true);
+        try {
+            // Tenta o caminho padrão game/csgo/MatchZy/demos/
+            const filePath = `game/csgo/MatchZy/demos/${demoFile}`;
+            const res = await axios.get(`/api/server/demos/download?file=${encodeURIComponent(filePath)}`);
+            
+            if (res.data.downloadUrl) {
+                window.open(res.data.downloadUrl, '_blank');
+            } else {
+                throw new Error('Link não gerado');
+            }
+        } catch (e) {
+            console.error("Erro ao baixar demo:", e);
+            // Fallback: Tenta sem o prefixo /demos/ caso esteja na raiz do MatchZy
+            try {
+                const demoFile = currentMatch?.metadata?.demoFile || currentMatch?.metadata?.metadata?.demoFile;
+                const filePath = `game/csgo/MatchZy/${demoFile}`;
+                const res = await axios.get(`/api/server/demos/download?file=${encodeURIComponent(filePath)}`);
+                if (res.data.downloadUrl) {
+                    window.open(res.data.downloadUrl, '_blank');
+                } else {
+                    alert("Arquivo de demo não encontrado no servidor ou expirado.");
+                }
+            } catch (err) {
+                alert("Arquivo de demo não encontrado no servidor ou expirado.");
+            }
+        } finally {
+            setDownloadingDemo(false);
         }
     };
 
