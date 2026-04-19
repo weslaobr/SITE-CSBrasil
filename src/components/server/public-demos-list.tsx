@@ -14,12 +14,6 @@ interface DemoFile {
     createdAt: string;
     modifiedAt: string;
     path: string;
-    matchInfo?: {
-        id: string;
-        mapName: string;
-        score: string | null;
-        players: string[];
-    } | null;
 }
 
 export function PublicDemosList() {
@@ -87,13 +81,9 @@ export function PublicDemosList() {
         });
     };
 
-    const filteredDemos = demos.filter(demo => {
-        const query = searchQuery.toLowerCase();
-        const matchesName = demo.name.toLowerCase().includes(query);
-        const matchesPlayers = demo.matchInfo?.players?.some(p => p.toLowerCase().includes(query));
-        const matchesMap = demo.matchInfo?.mapName?.toLowerCase().includes(query);
-        return matchesName || matchesPlayers || matchesMap;
-    });
+    const filteredDemos = demos.filter(demo => 
+        demo.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center p-12 gap-4">
@@ -120,7 +110,7 @@ export function PublicDemosList() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-600" />
                         <input 
                             type="text"
-                            placeholder="Buscar partida ou jogador..."
+                            placeholder="Buscar partida..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="bg-black/40 border border-white/5 rounded-xl pl-9 pr-4 py-2 text-[10px] text-white focus:outline-none focus:border-yellow-500/40 w-full md:w-48 transition-all"
@@ -149,59 +139,33 @@ export function PublicDemosList() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4">
                     {filteredDemos.slice(0, 10).map((demo) => (
-                        <div key={demo.name} className="bg-zinc-900/40 border border-white/5 hover:border-yellow-500/20 rounded-2xl p-4 flex flex-col gap-4 group transition-all">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center text-zinc-600 group-hover:text-yellow-500 transition-colors border border-white/5 flex-shrink-0">
-                                        <FileText size={20} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-[11px] font-black text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight truncate max-w-[150px]">
-                                                {demo.name.replace('.dem', '')}
-                                            </p>
-                                            {demo.matchInfo?.score && (
-                                                <span className="text-[9px] font-black bg-white/5 px-2 py-0.5 rounded text-zinc-400">
-                                                    {demo.matchInfo.score}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-3 mt-1 text-[9px] font-bold text-zinc-500 uppercase">
-                                            <span className="flex items-center gap-1"><Clock size={10} /> {formatDate(demo.modifiedAt)}</span>
-                                            <span className="flex items-center gap-1"><HardDrive size={10} /> {formatSize(demo.size)}</span>
-                                        </div>
+                        <div key={demo.name} className="bg-zinc-900/40 border border-white/5 hover:border-yellow-500/20 rounded-2xl p-4 flex items-center justify-between group transition-all">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center text-zinc-600 group-hover:text-yellow-500 transition-colors border border-white/5 flex-shrink-0">
+                                    <FileText size={20} />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[11px] font-black text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight truncate">
+                                        {demo.name.replace('.dem', '')}
+                                    </p>
+                                    <div className="flex items-center gap-3 mt-1 text-[9px] font-bold text-zinc-500 uppercase">
+                                        <span className="flex items-center gap-1"><Clock size={10} /> {formatDate(demo.modifiedAt)}</span>
+                                        <span className="flex items-center gap-1"><HardDrive size={10} /> {formatSize(demo.size)}</span>
                                     </div>
                                 </div>
-
-                                <button 
-                                    onClick={() => handleDownload(demo)}
-                                    disabled={downloadingFile === demo.name}
-                                    className="flex-shrink-0 p-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl transition-all shadow-lg shadow-yellow-500/10 active:scale-95 disabled:opacity-50"
-                                >
-                                    {downloadingFile === demo.name ? (
-                                        <Loader2 size={16} className="animate-spin" />
-                                    ) : (
-                                        <Download size={16} />
-                                    )}
-                                </button>
                             </div>
 
-                            {/* Player Preview Section */}
-                            {demo.matchInfo?.players && demo.matchInfo.players.length > 0 && (
-                                <div className="pt-3 border-t border-white/5">
-                                    <div className="flex items-center gap-1.5 mb-2">
-                                        <Users size={10} className="text-zinc-500" />
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500">Jogadores na Partida</span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1">
-                                        {demo.matchInfo.players.map((player, idx) => (
-                                            <span key={idx} className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-white/5 text-zinc-400 border border-white/5">
-                                                {player}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            <button 
+                                onClick={() => handleDownload(demo)}
+                                disabled={downloadingFile === demo.name}
+                                className="flex-shrink-0 p-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl transition-all shadow-lg shadow-yellow-500/10 active:scale-95 disabled:opacity-50"
+                            >
+                                {downloadingFile === demo.name ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                    <Download size={16} />
+                                )}
+                            </button>
                         </div>
                     ))}
                 </div>
