@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
 
         // Filtrar apenas arquivos .dem e anexar preview de jogadores
         const files = (data.data || [])
-            .filter((item: any) => item?.attributes?.name && item.attributes.is_file && item.attributes.name.endsWith('.dem'))
+            .filter((item: any) => item.attributes.is_file && item.attributes.name.endsWith('.dem'))
             .map((item: any) => {
                 const fileName = item.attributes.name;
                 
@@ -93,18 +93,18 @@ export async function GET(req: NextRequest) {
                 const playersPreview = match?.players.map(p => {
                     const pMeta = p.metadata as any;
                     return pMeta?.name || pMeta?.nickname || pMeta?.displayName || 'Jogador';
-                }).filter(Boolean) || [];
+                }) || [];
 
                 return {
                     name: fileName,
-                    size: Number(item.attributes.size) || 0,
-                    mimetype: item.attributes.mimetype || 'application/octet-stream',
+                    size: item.attributes.size,
+                    mimetype: item.attributes.mimetype,
                     createdAt: item.attributes.created_at,
                     modifiedAt: item.attributes.modified_at,
                     path: `${currentPath}/${fileName}`,
                     matchInfo: match ? {
                         id: match.id,
-                        mapName: match.mapName || 'Desconhecido',
+                        mapName: match.mapName,
                         score: match.scoreA !== null ? `${match.scoreA}x${match.scoreB}` : null,
                         players: playersPreview
                     } : null
