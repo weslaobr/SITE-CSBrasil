@@ -47,8 +47,8 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
     const mySteamId = session?.user ? (session.user as any).steamId : null;
     const isAdmin = mySteamId === "76561198024691636";
-    const isPlayerRoute = pathname.startsWith('/player/');
-    const viewedPlayerId = isPlayerRoute ? pathname.split('/')[2] : null;
+    const isPlayerRoute = pathname?.startsWith('/player/') ?? false;
+    const viewedPlayerId = (isPlayerRoute && pathname) ? pathname.split('/')[2] : null;
     
     // Logic to distinguish 'Meu Perfil' from 'Perfil do Jogador'
     const isViewingOtherPlayer = isPlayerRoute && viewedPlayerId && viewedPlayerId !== mySteamId;
@@ -212,7 +212,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 {/* Top Header/Bar */}
                 <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-zinc-900/20 sticky top-0 backdrop-blur-md z-40">
                     <div className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
-                        {pathname === '/' ? 'Dashboard' : pathname.split('/').pop()} Geral
+                        {(pathname === '/' || !pathname) ? 'Dashboard' : pathname.split('/').filter(Boolean).pop()} Geral
                     </div>
 
                     <div className="flex items-center gap-4">
