@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, Calendar, MapPin, Shield, Target, Activity,
     Zap, TrendingUp, Crosshair, Star, Flame, Eye, RefreshCw, AlertCircle,
-    Clock, Download, Loader2
+    Clock
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -85,7 +85,6 @@ const MatchReportModal: React.FC<Props> = ({
     const [isSyncing, setIsSyncing] = useState(false);
     const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos' | 'linha-tempo'>('placar');
     const [fetchError, setFetchError] = useState(false);
-    const [downloadingDemo, setDownloadingDemo] = useState(false);
 
     const match = initialMatch || internalMatch;
 
@@ -152,47 +151,6 @@ const MatchReportModal: React.FC<Props> = ({
             console.error(e);
         } finally {
             setIsSyncing(false);
-        }
-    };
-
-    const handleDownloadDemo = async () => {
-        const demoFile = currentMatch?.metadata?.demoFile || currentMatch?.metadata?.metadata?.demoFile;
-        if (!demoFile || downloadingDemo) return;
-        
-        setDownloadingDemo(true);
-        try {
-            // Tenta alguns caminhos comuns no servidor
-            const commonPaths = [
-                `game/csgo/MatchZy/demos/${demoFile}`,
-                `csgo/MatchZy/demos/${demoFile}`,
-                `MatchZy/demos/${demoFile}`,
-                `game/csgo/demos/${demoFile}`,
-                `csgo/demos/${demoFile}`,
-                demoFile
-            ];
-
-            let success = false;
-            for (const filePath of commonPaths) {
-                try {
-                    const res = await axios.get(`/api/server/demos/download?file=${encodeURIComponent(filePath)}`);
-                    if (res.data.downloadUrl) {
-                        window.open(res.data.downloadUrl, '_blank');
-                        success = true;
-                        break;
-                    }
-                } catch (e) {
-                    continue; // Tenta o próximo caminho
-                }
-            }
-
-            if (!success) {
-                alert("Arquivo de demo não encontrado no servidor. Demos são deletadas após 7 dias.");
-            }
-        } catch (e) {
-            console.error("Erro ao baixar demo:", e);
-            alert("Erro ao tentar baixar a demo.");
-        } finally {
-            setDownloadingDemo(false);
         }
     };
 
@@ -1144,22 +1102,6 @@ const MatchReportModal: React.FC<Props> = ({
                                             )}
                                         </div>
                                     )}
-                                    {/* Baixar Demo Button */}
-                                    {(currentMatch?.metadata?.demoFile || currentMatch?.metadata?.metadata?.demoFile) && (
-                                        <button
-                                            onClick={handleDownloadDemo}
-                                            disabled={downloadingDemo}
-                                            className="flex items-center gap-2 px-4 h-8 bg-yellow-500 text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20 active:scale-95 disabled:opacity-50"
-                                        >
-                                            {downloadingDemo ? (
-                                                <Loader2 size={12} className="animate-spin" />
-                                            ) : (
-                                                <Download size={12} />
-                                            )}
-                                            {downloadingDemo ? 'Gerando...' : 'Assistir Demo'}
-                                        </button>
-                                    )}
-
                                     <button
                                         onClick={onClose}
                                         className="w-8 h-8 rounded-xl bg-black/50 hover:bg-red-500/80 flex items-center justify-center border border-white/10 group active:scale-95 transition-all shrink-0"
