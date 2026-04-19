@@ -69,29 +69,46 @@ export function PublicDemosList() {
     };
 
     const formatSize = (bytes: number) => {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        if (!bytes || bytes === 0) return '0 Bytes';
+        try {
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            if (i < 0) return '0 Bytes';
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        } catch {
+            return '0 Bytes';
+        }
     };
 
     const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        return date.toLocaleString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        if (!dateStr) return 'Data desconhecida';
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return 'Data inválida';
+            
+            return date.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch {
+            return 'Erro na data';
+        }
     };
 
     const filteredDemos = demos.filter(demo => {
-        const query = searchQuery.toLowerCase();
+        if (!demo || !demo.name) return false;
+        
+        const query = searchQuery.toLowerCase().trim();
+        if (!query) return true;
+
         const matchesName = demo.name.toLowerCase().includes(query);
-        const matchesPlayers = demo.matchInfo?.players?.some(p => p.toLowerCase().includes(query));
-        const matchesMap = demo.matchInfo?.mapName?.toLowerCase().includes(query);
+        const matchesPlayers = demo.matchInfo?.players?.some(p => p.toLowerCase().includes(query)) || false;
+        const matchesMap = demo.matchInfo?.mapName?.toLowerCase()?.includes(query) || false;
+        
         return matchesName || matchesPlayers || matchesMap;
     });
 
@@ -158,7 +175,7 @@ export function PublicDemosList() {
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2">
                                             <p className="text-[11px] font-black text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight truncate max-w-[150px]">
-                                                {demo.name.replace('.dem', '')}
+                                                {demo.name ? demo.name.replace('.dem', '') : 'Gravação'}
                                             </p>
                                             {demo.matchInfo?.score && (
                                                 <span className="text-[9px] font-black bg-white/5 px-2 py-0.5 rounded text-zinc-400">
