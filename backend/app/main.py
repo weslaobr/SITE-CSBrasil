@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Body
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
@@ -114,6 +115,28 @@ async def list_matches(db: AsyncSession = Depends(get_db)):
     matches = result.scalars().all()
     
     return matches
+
+@app.get("/api/match/{match_id}/demo", tags=["Tracker"])
+async def download_match_demo(match_id: str):
+    """
+    Serves the downloaded .dem file for a match.
+    """
+    import os
+    # We look for the decompressed .dem file first
+    file_path = os.path.join(settings.DEMO_PATH, f"{match_id}.dem")
+    
+    if not os.path.exists(file_path):
+        # Try the .bz2 if the .dem isn't there
+        file_path = os.path.join(settings.DEMO_PATH, f"{match_id}.dem.bz2")
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Demo file not found on server.")
+        
+    return FileResponse(
+        path=file_path, 
+        filename=f"{match_id}.dem" + (".bz2" if file_path.endswith(".bz2") else ""),
+        media_type='application/octet-stream'
+    )
 
 # Entry point for local testing
 if __name__ == "__main__":
