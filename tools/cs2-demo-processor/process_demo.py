@@ -434,22 +434,29 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         if df_fa is not None and not df_fa.empty:
             att_col = next((c for c in ["attacker_steamid", "thrower_steamid"] if c in df_fa.columns), None)
             vic_col = next((c for c in ["user_steamid", "victim_steamid"] if c in df_fa.columns), None)
-            dur_col = "blind_duration"
-            if att_col and dur_col and vic_col:
+            # Tenta encontrar o campo de duração (pode variar entre versões do demoparser2)
+            dur_col = next((c for c in ["blind_duration", "blind_time", "duration"] if c in df_fa.columns), None)
+            
+            if att_col and vic_col and dur_col:
                 for _, row in df_fa.iterrows():
                     sid = str(row.get(att_col, "0"))
                     vic = str(row.get(vic_col, "0"))
+                    # Contamos apenas cegueira causada em inimigos
                     if sid in flash_assists and sid != vic:
                         flash_assists[sid] += 1
                         adv_stats[sid]["blind_time"] += float(row.get(dur_col, 0) or 0)
+            else:
+                log_fn(f"⚠️  Dados de 'player_blind' incompletos (campos: {list(df_fa.columns)}). Blind time será zerado.")
     except Exception as e:
-        log_fn(f"⚠️  Blind duration falhou: {e}")
+        log_fn(f"⚠️  Aviso: Não foi possível processar blind duration: {e}")
 
     # Utility Damage (HE, Molotov)
     try:
         df_ud = parser.parse_event("player_hurt")
         df_ud = filter_tick(df_ud)
-        if df_ud is not None and not df_ud.empty:
+        is_empty_ud = df_ud.empty if hasattr(df_ud, "empty") else (len(df_ud) == 0 if df_ud is not None else True)
+
+        if df_ud is not None and not is_empty_ud:
             util_weapons = {"hegrenade", "molotov", "inferno", "flashbang"}
             att_col  = next((c for c in ["attacker_steamid"] if c in df_ud.columns), None)
             dmg_col  = next((c for c in ["dmg_health", "damage"] if c in df_ud.columns), None)
@@ -1138,7 +1145,10 @@ class DemoProcessorApp(ctk.CTk):
             messagebox.showerror("Erro", "Processe uma demo primeiro.")
             return
 
+        # Cria cópia profunda parcial para não corromper os dados originais em caso de re-envio
         match = self._demo_data["match"].copy()
+        match["metadata"] = self._demo_data["match"]["metadata"].copy()
+        
         players = [p.copy() for p in self._demo_data["players"]]
         raw_data = self._demo_data.get("raw", {}) # Supondo que parse_demo retorne os DFs brutos no 'raw'
 
@@ -1220,6 +1230,18 @@ class DemoProcessorApp(ctk.CTk):
                     # Se antes era loss e A ganhou, ele é B.
                     # Vamos simplificar: se o resultado original era baseado em ser A...
                     pass # Na verdade a lógica de win/loss precisa ser consistente.
+
+        # --- NOVO: Filtrar o JSON de metadados para que o site reflita a exclusão ---
+        filtered_summaries = {}
+        for r_num in selected_rounds:
+            key = str(r_num)
+            if key in summaries:
+                filtered_summaries[key] = summaries[key]
+            elif r_num in summaries:
+                filtered_summaries[key] = summaries[r_num]
+        
+        # Substitui no metadata original (cópia)
+        match["metadata"]["roundSummaries"] = filtered_summaries
 
         # Atualiza a UI para mostrar que estamos enviando dados filtrados
         self._log(f"📊 Novo placar: {new_score_a} - {new_score_b}")
