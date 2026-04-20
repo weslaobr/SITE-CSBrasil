@@ -1095,7 +1095,11 @@ class DemoProcessorApp(ctk.CTk):
             sorted_rounds = sorted([int(k) for k in summaries.keys()])
             
             for r_num in sorted_rounds:
-                s = summaries[str(r_num)]
+                # Busca flexível (aceita chave int ou str)
+                s = summaries.get(r_num) or summaries.get(str(r_num))
+                if not s: 
+                    continue
+                    
                 r_frame = ctk.CTkFrame(timeline_f, fg_color="#1a1a2e", corner_radius=6)
                 r_frame.pack(fill="x", pady=2)
                 
@@ -1120,8 +1124,12 @@ class DemoProcessorApp(ctk.CTk):
                 
                 kills = s.get("kills", [])
                 if kills:
-                    k_txt = f"({len(kills)} kills)"
-                    ctk.CTkLabel(r_frame, text=k_txt, font=ctk.CTkFont(size=10), text_color="gray").pack(side="right", padx=15)
+                    kills_txt = f"({len(kills)} kills)"
+                    # Verifica se houve morte de faca
+                    has_knife = any("knife" in str(k.get("weapon", "")).lower() or "bayonet" in str(k.get("weapon", "")).lower() for k in kills)
+                    if has_knife:
+                        kills_txt = "🔪 " + kills_txt
+                    ctk.CTkLabel(r_frame, text=kills_txt, font=ctk.CTkFont(size=10), text_color="gray").pack(side="right", padx=15)
 
     # ── Enviar para Banco ─────────────────────
 
@@ -1158,13 +1166,11 @@ class DemoProcessorApp(ctk.CTk):
         # vamos pedir pro db_connector aceitar o que mandamos.
         
         def is_team_a_winner(r_num):
-            # Lógica reversa: se no parse_demo original o ponto foi pro A, e o winner_side era X...
-            # Melhor: No parse_demo, vamos salvar 'logical_winner' no summary
-            s = summaries.get(str(r_num), {})
+            s = summaries.get(r_num) or summaries.get(str(r_num), {})
             return s.get("logical_winner") == "A"
         
         def is_team_b_winner(r_num):
-            s = summaries.get(str(r_num), {})
+            s = summaries.get(r_num) or summaries.get(str(r_num), {})
             return s.get("logical_winner") == "B"
 
         new_score_a = len([r for r in selected_rounds if is_team_a_winner(r)])
@@ -1183,13 +1189,15 @@ class DemoProcessorApp(ctk.CTk):
             p_hs = 0
             
             for r_num in selected_rounds:
-                s = summaries.get(str(r_num), {})
+                s = summaries.get(r_num) or summaries.get(str(r_num), {})
+                if not s: continue
+                
                 # Kills
                 r_kills = s.get("kills", [])
-                p_kills += len([k for k in r_kills if str(k.get("attacker_steamid")) == sid])
-                p_deaths += len([k for k in r_kills if str(k.get("victim_steamid")) == sid])
-                p_assists += len([k for k in r_kills if str(k.get("assister_steamid")) == sid])
-                p_hs += len([k for k in r_kills if str(k.get("attacker_steamid")) == sid and k.get("is_headshot")])
+                p_kills += len([k for k in r_kills if str(k.get("attackerSteamId") or k.get("attacker_steamid")) == sid])
+                p_deaths += len([k for k in r_kills if str(k.get("victimSteamId") or k.get("user_steamid")) == sid])
+                p_assists += len([k for k in r_kills if str(k.get("assisterSteamId") or k.get("assister_steamid")) == sid])
+                p_hs += len([k for k in r_kills if str(k.get("attackerSteamId") or k.get("attacker_steamid")) == sid and k.get("isHeadshot")])
                 
                 # Damage (usando o summary damage map)
                 p_damage += s.get("damage", {}).get(sid, 0)
