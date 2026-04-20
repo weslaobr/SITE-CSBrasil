@@ -618,19 +618,23 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
             },
         })
 
-    # Determina resultado por time
-    if score_a is not None and score_b is not None and score_a != score_b: # CT vs T
-        winner_team = "CT" if score_a > score_b else "T"
+    # Determina resultado final baseado no Time A vs Time B
+    if score_a is not None and score_b is not None:
+        if score_a > score_b: # Time A venceu
+            results_map = {"A": "win", "B": "loss"}
+        elif score_b > score_a: # Time B venceu
+            results_map = {"A": "loss", "B": "win"}
+        else: # Empate
+            results_map = {"A": "tie", "B": "tie"}
+            
         for p in players_out:
-            if p["team"] == winner_team:
-                p["matchResult"] = "win"
-            elif p["team"] in ("CT", "T"):
-                p["matchResult"] = "loss"
+            sid = p["steamId"]
+            logical_team = team_mapping.get(sid)
+            if logical_team:
+                p["matchResult"] = results_map[logical_team]
             else:
+                # Fallback caso o jogador tenha entrado depois
                 p["matchResult"] = "tie"
-    elif score_a is not None and score_b is not None and score_a == score_b:
-        for p in players_out:
-            p["matchResult"] = "tie"
 
     match_id = generate_match_id(header)
     match_out = {

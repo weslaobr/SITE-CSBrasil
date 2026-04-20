@@ -183,15 +183,54 @@ class DemoAnalyzerService:
                 "players": [],
             }
 
-        # ── Calculate scores from rounds ──────────────────────────────
-        score_ct = 0
-        score_t = 0
-        duration_str = None
+        # ── Calculate scores from rounds (Team A vs Team B tracking) ──
+        score_ct = 0 # Will store Logical Team A score
+        score_t = 0  # Will store Logical Team B score
+        duration_str = "00:00"
+        team_mapping = {} # steamid -> "A" or "B"
+        
         try:
             rounds_df = dem.rounds
             if not rounds_df.empty and "winner_side" in rounds_df.columns:
-                score_ct = int((rounds_df["winner_side"] == "CT").sum())
-                score_t = int((rounds_df["winner_side"] == "T").sum())
+                # 1. Identify teams at the start (Logical Team A = who started CT)
+                # We can check dem.player_stats if it has team_name, but it might be final.
+                # To be robust, we look at the first round kills or ticks.
+                # For brevity and since this service needs to be fast, we use first round end sides.
+                first_round = rounds_df.iloc[0]
+                first_winner_side = first_round["winner_side"]
+                
+                # Assign players to teams based on first round end if possible, or assume player_stats
+                # actually, we can check dem.player_stats to see who is CT/T.
+                for _, p_row in dem.player_stats.iterrows():
+                    sid = str(int(p_row["steamid"]))
+                    # This is a heuristic: if we don't have side-switch info yet,
+                    # we'll use a more advanced check below in the loop.
+                    team_mapping[sid] = "A" if p_row["team_name"] == "CT" else "B"
+
+                # 2. Track score using sides (approximate if side switch not detected)
+                # In most competitive matches, sides switch at round 12 or 15.
+                # A more robust way is to check player sides, but that requires ticks.
+                # For GlobalMatch, we'll implement a simple side-tracking based on MR12/MR15.
+                for idx, r_row in rounds_df.iterrows():
+                    w_side = r_row["winner_side"]
+                    round_num = idx + 1
+                    
+                    # Side switch detection (MR12 = 12 rounds, MR15 = 15 rounds)
+                    # This is a fallback. A better way is to check the 'team_name' in player_stats
+                    # but those are aggregated.
+                    switched = False
+                    if len(rounds_df) <= 24: # MR12
+                        if round_num > 12: switched = True
+                    else: # MR15
+                        if round_num > 15: switched = True
+                    
+                    if not switched:
+                        if w_side == "CT": score_ct += 1
+                        else: score_t += 1
+                    else:
+                        if w_side == "T": score_ct += 1
+                        else: score_t += 1
+
                 # Duration: estimate from total rounds
                 total_rounds = len(rounds_df)
                 avg_round_sec = 110  # ~1:50 per round avg

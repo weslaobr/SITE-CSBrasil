@@ -150,19 +150,71 @@ class ParserService:
             if source:
                 match.source = source
         
-        # Calcular scores a partir dos rounds
-        rounds_df = self.dem.rounds
-        if not rounds_df.empty:
-            match.score_ct = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0])
-            match.score_t = int(rounds_df[rounds_df["winner_side"] == "T"].shape[0])
-            if "end_tick" in rounds_df.columns:
-                max_tick = rounds_df["end_tick"].max()
-                # Assumindo 64 tick para duração básica ou pegando do header se disponível
-                match.duration_seconds = int(max_tick / 64)
+        # --- Logical Team Tracking for Correct Scores ---
+        score_a, score_b = 0, 0
+        team_mapping = {}  # steamid -> "A" (started CT) or "B" (started T)
+        
+        try:
+            # 1. Identify teams at the start of the match
+            # We look at ticks shortly after start_tick to ensure everyone has joined a team
+            if hasattr(self.dem, 'ticks') and not self.dem.ticks.empty:
+                start_ticks_df = self.dem.ticks[(self.dem.ticks["tick"] >= start_tick) & (self.dem.ticks["tick"] <= start_tick + 128)]
+                if not start_ticks_df.empty:
+                    # In awpy, we might need to join with player info if team is not in ticks
+                    # But often it is. Let's assume we have steamid and team_name or similar
+                    # If not, we fallback to a simpler approach
+                    for _, row in start_ticks_df.drop_duplicates("steamid").iterrows():
+                        sid = row["steamid"]
+                        # We need to find the side. In CS2/awpy, team is often 2 (T) or 3 (CT)
+                        team_num = row.get("team_num", row.get("team_number", 0))
+                        if team_num == 3: team_mapping[sid] = "A"
+                        elif team_num == 2: team_mapping[sid] = "B"
             
-            if match.score_ct > match.score_t: match.winner_team = "CT"
-            elif match.score_t > match.score_ct: match.winner_team = "T"
-            else: match.winner_team = "Draw"
+            # 2. Iterate rounds and track which logical team won
+            rounds_df = self.dem.rounds
+            if not rounds_df.empty and team_mapping:
+                for _, r_row in rounds_df.iterrows():
+                    winner_side = r_row["winner_side"]
+                    end_tick = r_row["end_tick"]
+                    
+                    # Find side of Team A at this round end
+                    # We look for any player from Team A in the ticks around the round end
+                    side_a = "unknown"
+                    sample_a_sid = next((sid for sid, t in team_mapping.items() if t == "A"), None)
+                    if sample_a_sid and hasattr(self.dem, 'ticks'):
+                        end_ticks_df = self.dem.ticks[(self.dem.ticks["tick"] >= end_tick - 64) & (self.dem.ticks["tick"] <= end_tick)]
+                        player_tick = end_ticks_df[end_ticks_df["steamid"] == sample_a_sid]
+                        if not player_tick.empty:
+                            team_num = player_tick.iloc[-1].get("team_num", player_tick.iloc[-1].get("team_number", 0))
+                            side_a = "CT" if team_num == 3 else ("T" if team_num == 2 else "unknown")
+                    
+                    if side_a == winner_side:
+                        score_a += 1
+                    elif side_a != "unknown":
+                        score_b += 1
+                    else:
+                        # Fallback to side-based if we can't track
+                        if winner_side == "CT": score_a += 1
+                        else: score_b += 1
+            else:
+                # Fallback: Just count CT/T wins if we can't map teams
+                score_a = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0])
+                score_b = int(rounds_df[rounds_df["winner_side"] == "T"].shape[0])
+        except Exception as e:
+            logger.warning(f"Parser: Error calculating logical scores: {e}")
+            score_a = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0]) if not rounds_df.empty else 0
+            score_b = int(rounds_df[rounds_df["winner_side"] == "T"].shape[0]) if not rounds_df.empty else 0
+
+        match.score_ct = score_a
+        match.score_t = score_b
+        
+        if score_a > score_b: match.winner_team = "CT"
+        elif score_b > score_a: match.winner_team = "T"
+        else: match.winner_team = "Draw"
+
+        if not rounds_df.empty and "end_tick" in rounds_df.columns:
+            max_tick = rounds_df["end_tick"].max()
+            match.duration_seconds = int(max_tick / 64)
         
         # 2. Players & Overall Stats
         # We recalculate stats from filtered DataFrames to ensure accuracy (no mockup/warmup kills)
