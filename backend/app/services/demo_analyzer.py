@@ -184,59 +184,62 @@ class DemoAnalyzerService:
             }
 
         # ── Calculate scores from rounds (Team A vs Team B tracking) ──
-        score_ct = 0 # Will store Logical Team A score
-        score_t = 0  # Will store Logical Team B score
-        duration_str = "00:00"
-        team_mapping = {} # steamid -> "A" or "B"
+        score_a, score_b = 0, 0
+        team_mapping = {} # steamid -> "A" (started CT) or "B" (started T)
         
         try:
             rounds_df = dem.rounds
             if not rounds_df.empty and "winner_side" in rounds_df.columns:
-                # 1. Identify teams at the start (Logical Team A = who started CT)
-                # We can check dem.player_stats if it has team_name, but it might be final.
-                # To be robust, we look at the first round kills or ticks.
-                # For brevity and since this service needs to be fast, we use first round end sides.
-                first_round = rounds_df.iloc[0]
-                first_winner_side = first_round["winner_side"]
-                
-                # Assign players to teams based on first round end if possible, or assume player_stats
-                # actually, we can check dem.player_stats to see who is CT/T.
-                for _, p_row in dem.player_stats.iterrows():
-                    sid = str(int(p_row["steamid"]))
-                    # This is a heuristic: if we don't have side-switch info yet,
-                    # we'll use a more advanced check below in the loop.
-                    team_mapping[sid] = "A" if p_row["team_name"] == "CT" else "B"
+                # 1. Identify teams at the start (Robust window)
+                # We look for player sides at the beginning of the match
+                if hasattr(dem, "ticks") and not dem.ticks.empty:
+                    # In awpy, ticks DF has steamid and team_num
+                    for offset in [64, 128, 256, 512]:
+                        start_ticks = dem.ticks[(dem.ticks["tick"] >= start_tick + offset - 5) & (dem.ticks["tick"] <= start_tick + offset + 5)]
+                        if not start_ticks.empty:
+                            for _, p_row in start_ticks.drop_duplicates("steamid").iterrows():
+                                sid = str(int(p_row["steamid"]))
+                                if sid not in team_mapping:
+                                    t_num = p_row.get("team_num", p_row.get("team_number", 0))
+                                    if t_num == 3: team_mapping[sid] = "A"
+                                    elif t_num == 2: team_mapping[sid] = "B"
+                        if len(team_mapping) >= 10: break
 
-                # 2. Track score using sides (approximate if side switch not detected)
-                # In most competitive matches, sides switch at round 12 or 15.
-                # A more robust way is to check player sides, but that requires ticks.
-                # For GlobalMatch, we'll implement a simple side-tracking based on MR12/MR15.
+                # 2. Track score using sides (Checking multiple players for robustness)
+                last_side_a = "CT"
                 for idx, r_row in rounds_df.iterrows():
                     w_side = r_row["winner_side"]
-                    round_num = idx + 1
+                    end_tick = r_row["end_tick"]
                     
-                    # Side switch detection (MR12 = 12 rounds, MR15 = 15 rounds)
-                    # This is a fallback. A better way is to check the 'team_name' in player_stats
-                    # but those are aggregated.
-                    switched = False
-                    if len(rounds_df) <= 24: # MR12
-                        if round_num > 12: switched = True
-                    else: # MR15
-                        if round_num > 15: switched = True
+                    current_side_a = "unknown"
+                    sids_a = [sid for sid, t in team_mapping.items() if t == "A"]
+                    if sids_a and hasattr(dem, "ticks"):
+                        end_ticks = dem.ticks[(dem.ticks["tick"] >= end_tick - 64) & (dem.ticks["tick"] <= end_tick)]
+                        players_a = end_ticks[end_ticks["steamid"].astype(str).isin(sids_a)]
+                        if not players_a.empty:
+                            team_nums = players_a.groupby("steamid").last()["team_num"] if "team_num" in players_a.columns else players_a.groupby("steamid").last().get("team_number")
+                            if team_nums is not None and not team_nums.empty:
+                                dominant_team = team_nums.mode()[0]
+                                current_side_a = "CT" if dominant_team == 3 else "T"
+                                last_side_a = current_side_a
                     
-                    if not switched:
-                        if w_side == "CT": score_ct += 1
-                        else: score_t += 1
+                    det_side_a = current_side_a if current_side_a != "unknown" else last_side_a
+                    if det_side_a == w_side:
+                        score_a += 1
                     else:
-                        if w_side == "T": score_ct += 1
-                        else: score_t += 1
+                        score_b += 1
 
                 # Duration: estimate from total rounds
                 total_rounds = len(rounds_df)
                 avg_round_sec = 110  # ~1:50 per round avg
                 duration_str = f"{(total_rounds * avg_round_sec) // 60}:{(total_rounds * avg_round_sec) % 60:02d}"
         except Exception as e:
-            logger.warning(f"Could not calculate scores: {e}")
+            logger.warning(f"DemoAnalyzer: Could not calculate logical scores: {e}")
+            score_a = int((rounds_df["winner_side"] == "CT").sum()) if not rounds_df.empty else 0
+            score_b = int((rounds_df["winner_side"] == "T").sum()) if not rounds_df.empty else 0
+
+        # Assign back to variables used for DB
+        score_ct, score_t = score_a, score_b
 
         # ── Insert GlobalMatch ────────────────────────────────────────
         global_match = GlobalMatch(
@@ -244,8 +247,8 @@ class DemoAnalyzerService:
             source="demo",
             mapName=map_name,
             duration=duration_str,
-            scoreA=score_ct,
-            scoreB=score_t,
+            scoreA=score_a,
+            scoreB=score_b,
             metadata={"demo_url": self.demo_url},
         )
         db.add(global_match)
@@ -262,14 +265,13 @@ class DemoAnalyzerService:
         player_stats = dem.player_stats
         players_summary = []
 
-        # Determine which team wins to assign matchResult
-        # CT = team A, T = team B
-        if score_ct > score_t:
-            ct_result, t_result = "win", "loss"
-        elif score_t > score_ct:
-            ct_result, t_result = "loss", "win"
+        # Determine results map based on score_a vs score_b
+        if score_a > score_b:
+            res_map = {"A": "win", "B": "loss"}
+        elif score_b > score_a:
+            res_map = {"A": "loss", "B": "win"}
         else:
-            ct_result, t_result = "tie", "tie"
+            res_map = {"A": "tie", "B": "tie"}
 
         # Calculate FK/FD from kill events
         fk_counts: dict[str, int] = {}
@@ -292,7 +294,10 @@ class DemoAnalyzerService:
             try:
                 steam_id_str = str(int(row["steamid"]))
                 team = row.get("team_name", "Unknown")
-                match_result = ct_result if team == "CT" else t_result
+                
+                # Determine match result by logical team
+                logical_team = team_mapping.get(steam_id_str)
+                match_result = res_map.get(logical_team, "tie")
 
                 # Auto-link to existing user
                 user_id = steam_to_user_id.get(steam_id_str)

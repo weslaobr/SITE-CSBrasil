@@ -324,34 +324,44 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         # Identificamos os times no primeiro tick válido.
         team_mapping = {} # steamid -> "A" ou "B"
         
-        df_ticks_start = parser.parse_ticks(["steamid", "team_name"], ticks=[start_tick + 64])
-        if df_ticks_start is not None and not df_ticks_start.empty:
-            for _, row in df_ticks_start.iterrows():
-                sid = str(row["steamid"])
-                t_name = normalize_team(str(row["team_name"]))
-                if t_name == "CT": team_mapping[sid] = "A"
-                elif t_name == "T": team_mapping[sid] = "B"
+        # Janela de busca inicial robusta para capturar todos os jogadores (Mix/Competitivo)
+        for offset in [64, 128, 256, 512, 1024]:
+            df_ticks_start = parser.parse_ticks(["steamid", "team_name"], ticks=[start_tick + offset])
+            if df_ticks_start is not None and not df_ticks_start.empty:
+                for _, row in df_ticks_start.iterrows():
+                    sid = str(row["steamid"])
+                    if sid not in team_mapping:
+                        t_name = normalize_team(str(row["team_name"]))
+                        if t_name == "CT": team_mapping[sid] = "A"
+                        elif t_name == "T": team_mapping[sid] = "B"
+            if len(team_mapping) >= 10: break
+        
+        log_fn(f"👥 Mapeamento inicial: {len(team_mapping)} jogadores identificados.")
 
         if df_re is not None and not df_re.empty and "winner" in df_re.columns:
             df_re = df_re.sort_values("tick")
             
             pts_a, pts_b = 0, 0
-            # Acompanhamos quem é CT em cada tick de round_end
+            last_side_a = "CT" # Presumimos que Time A começou como CT (baseado no mapeamento)
+
             for _, r_end in df_re.iterrows():
                 w_side = normalize_team(str(r_end["winner"]))
                 end_tick = int(r_end["tick"])
                 
-                # Descobrimos quem era CT neste tick específico (para lidar com trocas de lado)
-                # Pegamos um jogador aleatório que sabemos ser do Time A
+                # Detectar lado atual do Time A (usando múltiplos jogadores como referência)
                 ct_now = "unknown"
-                sample_player_a = next((sid for sid, team in team_mapping.items() if team == "A"), None)
-                if sample_player_a:
-                    df_t_now = parser.parse_ticks(["team_name"], ticks=[end_tick - 10], players=[int(sample_player_a)])
+                sids_a = [sid for sid, team in team_mapping.items() if team == "A"]
+                if sids_a:
+                    # Verifica o time de todos os jogadores conhecidos do Time A e pega a moda
+                    df_t_now = parser.parse_ticks(["team_name"], ticks=[end_tick - 10], players=[int(s) for s in sids_a if s.isdigit()])
                     if df_t_now is not None and not df_t_now.empty:
-                        ct_now = normalize_team(str(df_t_now.iloc[0]["team_name"]))
+                        ct_now = normalize_team(str(df_t_now["team_name"].mode()[0]))
+                        last_side_a = ct_now # Atualiza fallback
                 
-                # Se o Time A era CT e o CT ganhou OU Time A era T e T ganhou -> ponto A
-                if ct_now == "CT":
+                # Usa o lado detectado ou o último conhecido
+                current_side_a = ct_now if ct_now != "unknown" else last_side_a
+                
+                if current_side_a == "CT":
                     if w_side == "CT": pts_a += 1
                     elif w_side == "T": pts_b += 1
                 elif ct_now == "T":

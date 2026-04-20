@@ -155,51 +155,54 @@ class ParserService:
         team_mapping = {}  # steamid -> "A" (started CT) or "B" (started T)
         
         try:
-            # 1. Identify teams at the start of the match
-            # We look at ticks shortly after start_tick to ensure everyone has joined a team
+            # 1. Identify teams at the start of the match (Robust window)
             if hasattr(self.dem, 'ticks') and not self.dem.ticks.empty:
-                start_ticks_df = self.dem.ticks[(self.dem.ticks["tick"] >= start_tick) & (self.dem.ticks["tick"] <= start_tick + 128)]
-                if not start_ticks_df.empty:
-                    # In awpy, we might need to join with player info if team is not in ticks
-                    # But often it is. Let's assume we have steamid and team_name or similar
-                    # If not, we fallback to a simpler approach
-                    for _, row in start_ticks_df.drop_duplicates("steamid").iterrows():
-                        sid = row["steamid"]
-                        # We need to find the side. In CS2/awpy, team is often 2 (T) or 3 (CT)
-                        team_num = row.get("team_num", row.get("team_number", 0))
-                        if team_num == 3: team_mapping[sid] = "A"
-                        elif team_num == 2: team_mapping[sid] = "B"
+                for offset in [64, 128, 256, 512, 1024]:
+                    start_ticks_df = self.dem.ticks[(self.dem.ticks["tick"] >= start_tick + offset - 10) & (self.dem.ticks["tick"] <= start_tick + offset + 10)]
+                    if not start_ticks_df.empty:
+                        for _, row in start_ticks_df.drop_duplicates("steamid").iterrows():
+                            sid = row["steamid"]
+                            if sid not in team_mapping:
+                                team_num = row.get("team_num", row.get("team_number", 0))
+                                if team_num == 3: team_mapping[sid] = "A"
+                                elif team_num == 2: team_mapping[sid] = "B"
+                    if len(team_mapping) >= 10: break
             
+            logger.info(f"Parser: Logical team mapping found {len(team_mapping)} players.")
+
             # 2. Iterate rounds and track which logical team won
             rounds_df = self.dem.rounds
             if not rounds_df.empty and team_mapping:
+                last_side_a = "CT" # Logical Team A started as CT
                 for _, r_row in rounds_df.iterrows():
                     winner_side = r_row["winner_side"]
                     end_tick = r_row["end_tick"]
                     
-                    # Find side of Team A at this round end
-                    # We look for any player from Team A in the ticks around the round end
-                    side_a = "unknown"
-                    sample_a_sid = next((sid for sid, t in team_mapping.items() if t == "A"), None)
-                    if sample_a_sid and hasattr(self.dem, 'ticks'):
+                    # Robust side detection: check all known players of Team A
+                    current_side_a = "unknown"
+                    sids_a = [sid for sid, t in team_mapping.items() if t == "A"]
+                    if sids_a and hasattr(self.dem, 'ticks'):
                         end_ticks_df = self.dem.ticks[(self.dem.ticks["tick"] >= end_tick - 64) & (self.dem.ticks["tick"] <= end_tick)]
-                        player_tick = end_ticks_df[end_ticks_df["steamid"] == sample_a_sid]
-                        if not player_tick.empty:
-                            team_num = player_tick.iloc[-1].get("team_num", player_tick.iloc[-1].get("team_number", 0))
-                            side_a = "CT" if team_num == 3 else ("T" if team_num == 2 else "unknown")
-                    
-                    if side_a == winner_side:
+                        # Get teams of all Team A players at this tick
+                        players_at_end = end_ticks_df[end_ticks_df["steamid"].isin(sids_a)]
+                        if not players_at_end.empty:
+                            # Use majority vote (mode)
+                            team_nums = players_at_end.groupby("steamid").last()["team_num"] if "team_num" in players_at_end.columns else players_at_end.groupby("steamid").last().get("team_number")
+                            if team_nums is not None and not team_nums.empty:
+                                dominant_team = team_nums.mode()[0]
+                                current_side_a = "CT" if dominant_team == 3 else "T"
+                                last_side_a = current_side_a
+
+                    # Determine point
+                    det_side_a = current_side_a if current_side_a != "unknown" else last_side_a
+                    if det_side_a == winner_side:
                         score_a += 1
-                    elif side_a != "unknown":
-                        score_b += 1
                     else:
-                        # Fallback to side-based if we can't track
-                        if winner_side == "CT": score_a += 1
-                        else: score_b += 1
+                        score_b += 1
             else:
-                # Fallback: Just count CT/T wins if we can't map teams
-                score_a = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0])
-                score_b = int(rounds_df[rounds_df["winner_side"] == "T"].shape[0])
+                # Fallback: Just count CT/T wins
+                score_a = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0]) if not rounds_df.empty else 0
+                score_b = int(rounds_df[rounds_df["winner_side"] == "T"].shape[0]) if not rounds_df.empty else 0
         except Exception as e:
             logger.warning(f"Parser: Error calculating logical scores: {e}")
             score_a = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0]) if not rounds_df.empty else 0
