@@ -56,12 +56,14 @@ def seconds_to_mmss(seconds: float) -> str:
 
 def normalize_team(raw: str) -> str:
     """Normaliza o nome do time para 'CT' ou 'T'."""
-    r = str(raw).upper().strip()
-    if "CT" in r or r == "3":
+    raw_s = str(raw).upper().strip()
+    if raw_s in ["NAN", "NONE", "UNKNOWN", "0", "1"]:
+        return "Unknown"
+    if "CT" in raw_s or raw_s == "3":
         return "CT"
-    if "T" in r or r == "2" or "TERRORIST" in r:
+    if "T" in raw_s or raw_s == "2" or "TERRORIST" in raw_s:
         return "T"
-    return r
+    return raw_s
 
 
 # ─────────────────────────────────────────────
@@ -446,23 +448,21 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     try:
         df_k = parser.parse_event("player_death")
         df_k = filter_tick(df_k)
-        df_rs = parser.parse_event("round_start")
-        df_rs = filter_tick(df_rs)
+        
+        # DEFINIÇÃO ROBUSTA DE ROUNDS: Usamos os ticks de fim de round como fronteiras.
+        # Isso garante que kills e danos caiam exatamente nas linhas exibidas na UI.
+        round_end_ticks = sorted(df_re["tick"].tolist()) if (df_re is not None and not df_re.empty) else []
+        
+        def get_round(t):
+            # Retorna em qual round este tick pertence (1-based)
+            # Round N vai até o tick de df_re.iloc[N-1]
+            for i, end_t in enumerate(round_end_ticks):
+                if t <= end_t:
+                    return i + 1
+            return len(round_end_ticks) # Se for depois do último, joga no último
+        
         if df_k is not None and not df_k.empty and "tick" in df_k.columns:
             df_k = df_k.sort_values(by="tick")
-            # Garantir que round_starts comece no start_tick se o primeiro round_start estiver depois
-            round_starts = sorted(df_rs["tick"].tolist()) if (df_rs is not None and not df_rs.empty and "tick" in df_rs.columns) else []
-            if not round_starts or round_starts[0] > start_tick:
-                round_starts = sorted(list(set([start_tick] + round_starts)))
-            
-            def get_round(t):
-                # Retorna em qual round este tick pertence (1-based)
-                r = 0
-                for start in round_starts:
-                    if t >= start:
-                        r += 1
-                return max(1, r)
-
             df_k["round_num"] = df_k["tick"].apply(get_round)
 
             # Mapear vencedores e motivos por round usando round_end
@@ -541,7 +541,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                 df_dmg_rounds = parser.parse_event("player_hurt")
                 df_dmg_rounds = filter_tick(df_dmg_rounds)
                 if df_dmg_rounds is not None and not df_dmg_rounds.empty:
-                    df_dmg_rounds["round_num"] = df_dmg_rounds["tick"].apply(get_round) if round_starts else [1] * len(df_dmg_rounds)
+                    df_dmg_rounds["round_num"] = df_dmg_rounds["tick"].apply(get_round) if round_end_ticks else [1] * len(df_dmg_rounds)
                     
                     # Identificar coluna de dano
                     dmg_col = next((c for c in ["dmg_health", "damage", "health_damage"] if c in df_dmg_rounds.columns), None)
