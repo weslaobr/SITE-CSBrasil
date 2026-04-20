@@ -113,48 +113,9 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         map_name     = "unknown"
         duration_str = "00:00"
 
-    # ── Detecção de Início Real (Fim do Warmup) ──
+    # ── Início da Partida (Processamos tudo a partir do tick 0) ──
     start_tick = 0
-    try:
-        df_start_events = parser.parse_event("round_announce_match_start")
-        df_all_kills = parser.parse_event("player_death")
-        
-        first_gun_kill_tick = None
-        if df_all_kills is not None and not df_all_kills.empty:
-            # Lista extensa de armas não-fogo/utilitários para ignorar no aquecimento/round faca
-            # Inclui facas, melee, grenades, djezuz, etc.
-            exclude_weapons = [
-                "knife", "bayonet", "fists", "melee", "hegrenade", "flashbang", 
-                "smokegrenade", "molotov", "incgrenade", "decoy", "inferno", "taser", "zeus"
-            ]
-            exclude_pattern = "|".join(exclude_weapons)
-            gun_kills = df_all_kills[~df_all_kills["weapon"].str.contains(exclude_pattern, case=False, na=False)]
-            
-            if not gun_kills.empty:
-                first_gun_kill_tick = int(gun_kills["tick"].min())
-
-        if df_start_events is not None and not df_start_events.empty:
-            ticks = sorted(df_start_events["tick"].tolist())
-            if first_gun_kill_tick:
-                # O início real é o ÚLTIMO evento de start ANTES da primeira kill de arma real
-                candidates = [t for t in ticks if t <= first_gun_kill_tick]
-                start_tick = max(candidates) if candidates else ticks[0]
-            else:
-                # Se não houver kills de arma, pegamos o último start (pode ser o final do warmup)
-                start_tick = ticks[-1]
-            log_fn(f"🏁 Início real detectado no tick {start_tick} (baseado em kills e eventos de restart).")
-        elif first_gun_kill_tick:
-            # Fallback: Se não houver evento de Match Start, usamos o início do round que contém a primeira kill de arma
-            try:
-                df_re_all = parser.parse_event("round_end")
-                # O round da primeira kill começou após o fim do round anterior
-                prev_rounds = df_re_all[df_re_all["tick"] < first_gun_kill_tick]
-                start_tick = int(prev_rounds["tick"].max()) if not prev_rounds.empty else 0
-            except:
-                start_tick = first_gun_kill_tick
-            log_fn(f"⚠️  Mensagem de start não encontrada. Retrocedendo para tick {start_tick} (pistol round).")
-    except Exception as e:
-        log_fn(f"⚠️  Erro ao detectar início da partida: {e}")
+    log_fn("ℹ️  Processando todos os eventos desde o tick 0. Selecione os rounds manualmente na linha do tempo.")
 
     # ── Jogadores e Times ───────────────────
     player_info = {}   # steamId -> {name, team}
@@ -234,7 +195,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                 if assister in kda and assister != "0":
                     kda[assister]["assists"] += 1
 
-            log_fn(f"💀 Kills extraídos ({len(df_kills)} eventos pós-warmup).")
+            log_fn(f"💀 Kills extraídos ({len(df_kills)} eventos).")
     except Exception as e:
         log_fn(f"⚠️  parse_event('player_death') falhou: {e}")
         # Fallback: parse_ticks para kills/deaths/assists
@@ -276,7 +237,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                     sid = str(row.get(att_col, "0"))
                     if sid in dmg_total:
                         dmg_total[sid] += int(row.get(dmg_col, 0) or 0)
-                log_fn("💥 Dano extraído pós-warmup.")
+                log_fn("💥 Dano extraído.")
     except Exception as e:
         log_fn(f"⚠️  parse_event('player_hurt') falhou: {e}")
 
@@ -292,7 +253,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
             df_rounds2_filtered = filter_tick(df_rounds2)
             rounds = len(df_rounds2_filtered) if df_rounds2_filtered is not None else 30
             
-        log_fn(f"🔄 {rounds} rounds competitivos detectados (pós-warmup/faca).")
+        log_fn(f"🔄 {rounds} rounds detectados total.")
     except Exception:
         rounds = 30  # fallback padrão
 
@@ -324,7 +285,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         team_mapping = {} # steamid -> "A" ou "B"
         round_summaries = {} # round_num -> {kills: [], damage: {}, winner: "", reason: "", logical_winner: ""}
         
-        # Janela de busca inicial robusta para capturar todos os jogadores (Mix/Competitivo)
+        # Janela de busca inicial robusta para capturar os jogadores
         for offset in [64, 128, 256, 512, 1024]:
             df_ticks_start = parser.parse_ticks(["steamid", "team_name"], ticks=[start_tick + offset])
             if df_ticks_start is not None and not df_ticks_start.empty:
