@@ -87,6 +87,22 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     log_fn(f"📂 Abrindo: {os.path.basename(filepath)}")
     parser = DemoParser(filepath)
 
+    # helpers
+    def is_empty(df):
+        if df is None: return True
+        if hasattr(df, "empty"): return df.empty
+        return len(df) == 0
+
+    start_tick = 0 # Inicializado cedo para filter_tick
+
+    def filter_tick(df):
+        if not is_empty(df) and (hasattr(df, "columns") and "tick" in df.columns or isinstance(df, pd.DataFrame)):
+            try:
+                return df[df["tick"] >= start_tick]
+            except:
+                return df
+        return df
+
     # ── Header e Duração Segura ─────────────────
     header = {}
     try:
@@ -166,20 +182,6 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     if not player_info:
         log_fn("❌ Não foi possível extrair jogadores desta demo.")
         return None
-
-    # Função auxiliar para filtrar por tick
-    def is_empty(df):
-        if df is None: return True
-        if hasattr(df, "empty"): return df.empty
-        return len(df) == 0
-
-    def filter_tick(df):
-        if not is_empty(df) and (hasattr(df, "columns") and "tick" in df.columns or isinstance(df, pd.DataFrame)):
-            try:
-                return df[df["tick"] >= start_tick]
-            except:
-                return df
-        return df
 
     # ── Kills → KDA + HS% ───────────────────
     # Estrutura: {steamId: {kills, deaths, assists, hs_kills}}
