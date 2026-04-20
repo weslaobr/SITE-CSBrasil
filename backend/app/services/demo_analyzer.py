@@ -157,7 +157,9 @@ class DemoAnalyzerService:
             logger.warning(f"DemoAnalyzer: Error detecting match start: {e}")
 
         def filter_tick(df, tick_col="tick"):
-            if df is not None and not df.empty and tick_col in df.columns:
+            if df is not None and tick_col in df.columns:
+                if hasattr(df, "empty") and df.empty: return df
+                if not hasattr(df, "empty") and len(df) == 0: return df
                 return df[df[tick_col] >= start_tick].copy()
             return df
 

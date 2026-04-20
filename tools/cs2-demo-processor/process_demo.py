@@ -102,7 +102,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         else:
             try:
                 df_re = parser.parse_event("round_end")
-                if df_re is not None and not df_re.empty and "tick" in df_re.columns:
+                if not is_empty(df_re) and "tick" in df_re.columns:
                     max_tick = int(df_re["tick"].max())
                     m, s = divmod(int(max_tick / 64), 60)
                     duration_str = f"{m:02d}:{s:02d}"
@@ -145,7 +145,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                 ["name", "steamid", "m_iTeamNum"],
             ]:
                 df_t = parser.parse_ticks(fields)
-                if df_t is not None and not df_t.empty and "name" in df_t.columns:
+                if not is_empty(df_t) and "name" in df_t.columns:
                     df_t = df_t[df_t["name"].notna()]
                     df_t = df_t[df_t["name"].str.lower() != "gotv"]
                     sid_col = "steamid" if "steamid" in df_t.columns else None
@@ -168,9 +168,17 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         return None
 
     # Função auxiliar para filtrar por tick
+    def is_empty(df):
+        if df is None: return True
+        if hasattr(df, "empty"): return df.empty
+        return len(df) == 0
+
     def filter_tick(df):
-        if df is not None and not df.empty and "tick" in df.columns:
-            return df[df["tick"] >= start_tick]
+        if not is_empty(df) and (hasattr(df, "columns") and "tick" in df.columns or isinstance(df, pd.DataFrame)):
+            try:
+                return df[df["tick"] >= start_tick]
+            except:
+                return df
         return df
 
     # ── Kills → KDA + HS% ───────────────────
@@ -181,7 +189,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     try:
         df_kills = parser.parse_event("player_death")
         df_kills = filter_tick(df_kills)
-        if df_kills is not None and not df_kills.empty:
+        if not is_empty(df_kills):
             # Attacker
             for _, row in df_kills.iterrows():
                 attacker = str(row.get("attacker_steamid", "0"))
@@ -207,7 +215,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                 ["name", "steamid", "m_iKills", "m_iAssists", "m_iDeaths"],
             ]:
                 df_s = parser.parse_ticks(stat_fields)
-                if df_s is not None and not df_s.empty:
+                if not is_empty(df_s):
                     k_col = next((c for c in ["kills", "m_iKills"] if c in df_s.columns), None)
                     a_col = next((c for c in ["assists", "m_iAssists"] if c in df_s.columns), None)
                     d_col = next((c for c in ["deaths", "m_iDeaths"] if c in df_s.columns), None)
@@ -231,7 +239,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     try:
         df_dmg = parser.parse_event("player_hurt")
         df_dmg = filter_tick(df_dmg)
-        if df_dmg is not None and not df_dmg.empty:
+        if not is_empty(df_dmg):
             dmg_col = next((c for c in ["dmg_health", "damage", "health_damage"] if c in df_dmg.columns), None)
             att_col = next((c for c in ["attacker_steamid", "attacker_steamid64"] if c in df_dmg.columns), None)
             if dmg_col and att_col:
@@ -264,7 +272,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     mvp_map   = {sid: 0 for sid in player_info}
     try:
         df_sc = parser.parse_ticks(["name", "steamid", "score", "mvps"])
-        if df_sc is not None and not df_sc.empty:
+        if not is_empty(df_sc):
             sid_col = "steamid" if "steamid" in df_sc.columns else None
             if sid_col and "score" in df_sc.columns:
                 latest_sc = df_sc.dropna(subset=["name"]).drop_duplicates(subset=["name"], keep="last")
@@ -290,7 +298,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         # Janela de busca inicial robusta para capturar os jogadores
         for offset in [128, 256, 512, 1024, 2048, 4096]:
             df_ticks_start = parser.parse_ticks(["steamid", "team_name"], ticks=[start_tick + offset])
-            if df_ticks_start is not None and not df_ticks_start.empty:
+            if not is_empty(df_ticks_start):
                 for _, row in df_ticks_start.iterrows():
                     sid = str(row["steamid"])
                     if sid not in team_mapping:
@@ -301,7 +309,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         
         log_fn(f"👥 Mapeamento inicial: {len(team_mapping)} jogadores identificados.")
 
-        if df_re is not None and not df_re.empty and "winner" in df_re.columns:
+        if not is_empty(df_re) and "winner" in df_re.columns:
             df_re = df_re.sort_values("tick")
             
             pts_a, pts_b = 0, 0
@@ -317,7 +325,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                 if sids_a:
                     # Verifica o time de todos os jogadores conhecidos do Time A e pega a moda
                     df_t_now = parser.parse_ticks(["team_name"], ticks=[end_tick - 10], players=[int(s) for s in sids_a if s.isdigit()])
-                    if df_t_now is not None and not df_t_now.empty and "team_name" in df_t_now.columns:
+                    if not is_empty(df_t_now) and "team_name" in df_t_now.columns:
                         m = df_t_now["team_name"].mode()
                         if not m.empty:
                             ct_now = normalize_team(str(m[0]))
@@ -360,7 +368,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         log_fn(f"⚠️  Falha ao reconstruir placar detalhado: {e}")
         # Fallback simples: contar wins por lado se a lógica robusta falhar
         try:
-            if df_re is not None and not df_re.empty and "winner" in df_re.columns:
+            if not is_empty(df_re) and "winner" in df_re.columns:
                 score_a = len(df_re[df_re["winner"].astype(str).str.contains("3|CT")])
                 score_b = len(df_re[df_re["winner"].astype(str).str.contains("2|T")])
                 log_fn(f"ℹ️  Placar estimado via contagem simples: {score_a} x {score_b}")
@@ -391,7 +399,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         for ev, g_type in events_to_parse:
             df_g = parser.parse_event(ev)
             df_g = filter_tick(df_g)
-            if df_g is not None and not df_g.empty:
+            if not is_empty(df_g):
                 t_col = next((c for c in ["userid", "user_steamid", "thrower_steamid", "attacker_steamid"] if c in df_g.columns), None)
                 if t_col:
                     for _, row in df_g.iterrows():
@@ -405,7 +413,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     try:
         df_fa = parser.parse_event("player_blind")
         df_fa = filter_tick(df_fa)
-        if df_fa is not None and not df_fa.empty:
+        if not is_empty(df_fa):
             att_col = next((c for c in ["attacker_steamid", "thrower_steamid"] if c in df_fa.columns), None)
             vic_col = next((c for c in ["user_steamid", "victim_steamid"] if c in df_fa.columns), None)
             # Tenta encontrar o campo de duração (pode variar entre versões do demoparser2)
@@ -461,13 +469,13 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                     return i + 1
             return len(round_end_ticks) # Se for depois do último, joga no último
         
-        if df_k is not None and not df_k.empty and "tick" in df_k.columns:
+        if not is_empty(df_k) and "tick" in df_k.columns:
             df_k = df_k.sort_values(by="tick")
             df_k["round_num"] = df_k["tick"].apply(get_round)
 
             # Mapear vencedores e motivos por round usando round_end
             round_ends = {} # round_num -> {winner, reason}
-            if df_re is not None and not df_re.empty:
+            if not is_empty(df_re):
                 for _, re_row in df_re.iterrows():
                     re_tick = int(re_row["tick"])
                     re_num = get_round(re_tick)
@@ -540,7 +548,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
             try:
                 df_dmg_rounds = parser.parse_event("player_hurt")
                 df_dmg_rounds = filter_tick(df_dmg_rounds)
-                if df_dmg_rounds is not None and not df_dmg_rounds.empty:
+                if not is_empty(df_dmg_rounds):
                     df_dmg_rounds["round_num"] = df_dmg_rounds["tick"].apply(get_round) if round_end_ticks else [1] * len(df_dmg_rounds)
                     
                     # Identificar coluna de dano
