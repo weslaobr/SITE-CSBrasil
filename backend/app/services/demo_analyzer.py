@@ -217,11 +217,13 @@ class DemoAnalyzerService:
                         end_ticks = dem.ticks[(dem.ticks["tick"] >= end_tick - 64) & (dem.ticks["tick"] <= end_tick)]
                         players_a = end_ticks[end_ticks["steamid"].astype(str).isin(sids_a)]
                         if not players_a.empty:
-                            team_nums = players_a.groupby("steamid").last()["team_num"] if "team_num" in players_a.columns else players_a.groupby("steamid").last().get("team_number")
-                            if team_nums is not None and not team_nums.empty:
-                                dominant_team = team_nums.mode()[0]
-                                current_side_a = "CT" if dominant_team == 3 else "T"
-                                last_side_a = current_side_a
+                            m = players_a.groupby("steamid").last()["team_num"] if "team_num" in players_a.columns else players_a.groupby("steamid").last().get("team_number")
+                            if m is not None and not m.empty:
+                                team_nums_mode = m.mode()
+                                if not team_nums_mode.empty:
+                                    dominant_team = team_nums_mode[0]
+                                    current_side_a = "CT" if dominant_team == 3 else "T"
+                                    last_side_a = current_side_a
                     
                     det_side_a = current_side_a if current_side_a != "unknown" else last_side_a
                     if det_side_a == w_side:

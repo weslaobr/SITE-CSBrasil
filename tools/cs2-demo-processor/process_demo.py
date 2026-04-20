@@ -286,13 +286,13 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         round_summaries = {} # round_num -> {kills: [], damage: {}, winner: "", reason: "", logical_winner: ""}
         
         # Janela de busca inicial robusta para capturar os jogadores
-        for offset in [64, 128, 256, 512, 1024]:
+        for offset in [128, 256, 512, 1024, 2048, 4096]:
             df_ticks_start = parser.parse_ticks(["steamid", "team_name"], ticks=[start_tick + offset])
             if df_ticks_start is not None and not df_ticks_start.empty:
                 for _, row in df_ticks_start.iterrows():
                     sid = str(row["steamid"])
                     if sid not in team_mapping:
-                        t_name = normalize_team(str(row["team_name"]))
+                        t_name = normalize_team(str(row.get("team_name", "unknown")))
                         if t_name == "CT": team_mapping[sid] = "A"
                         elif t_name == "T": team_mapping[sid] = "B"
             if len(team_mapping) >= 10: break
@@ -315,9 +315,11 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                 if sids_a:
                     # Verifica o time de todos os jogadores conhecidos do Time A e pega a moda
                     df_t_now = parser.parse_ticks(["team_name"], ticks=[end_tick - 10], players=[int(s) for s in sids_a if s.isdigit()])
-                    if df_t_now is not None and not df_t_now.empty:
-                        ct_now = normalize_team(str(df_t_now["team_name"].mode()[0]))
-                        last_side_a = ct_now # Atualiza fallback
+                    if df_t_now is not None and not df_t_now.empty and "team_name" in df_t_now.columns:
+                        m = df_t_now["team_name"].mode()
+                        if not m.empty:
+                            ct_now = normalize_team(str(m[0]))
+                            last_side_a = ct_now # Atualiza fallback
                 
                 # Usa o lado detectado ou o último conhecido
                 current_side_a = ct_now if ct_now != "unknown" else last_side_a
@@ -354,7 +356,16 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
             
     except Exception as e:
         log_fn(f"⚠️  Falha ao reconstruir placar detalhado: {e}")
-        score_a, score_b = 0, 0
+        # Fallback simples: contar wins por lado se a lógica robusta falhar
+        try:
+            if df_re is not None and not df_re.empty and "winner" in df_re.columns:
+                score_a = len(df_re[df_re["winner"].astype(str).str.contains("3|CT")])
+                score_b = len(df_re[df_re["winner"].astype(str).str.contains("2|T")])
+                log_fn(f"ℹ️  Placar estimado via contagem simples: {score_a} x {score_b}")
+            else:
+                score_a, score_b = 0, 0
+        except:
+            score_a, score_b = 0, 0
 
 
     # ── Estatísticas Avançadas (Duelos e Granadas) ──────────

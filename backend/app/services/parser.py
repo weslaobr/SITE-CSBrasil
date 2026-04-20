@@ -187,11 +187,13 @@ class ParserService:
                         players_at_end = end_ticks_df[end_ticks_df["steamid"].isin(sids_a)]
                         if not players_at_end.empty:
                             # Use majority vote (mode)
-                            team_nums = players_at_end.groupby("steamid").last()["team_num"] if "team_num" in players_at_end.columns else players_at_end.groupby("steamid").last().get("team_number")
-                            if team_nums is not None and not team_nums.empty:
-                                dominant_team = team_nums.mode()[0]
-                                current_side_a = "CT" if dominant_team == 3 else "T"
-                                last_side_a = current_side_a
+                            m = players_at_end.groupby("steamid").last()["team_num"] if "team_num" in players_at_end.columns else players_at_end.groupby("steamid").last().get("team_number")
+                            if m is not None and not m.empty:
+                                team_nums_mode = m.mode()
+                                if not team_nums_mode.empty:
+                                    dominant_team = team_nums_mode[0]
+                                    current_side_a = "CT" if dominant_team == 3 else "T"
+                                    last_side_a = current_side_a
 
                     # Determine point
                     det_side_a = current_side_a if current_side_a != "unknown" else last_side_a
