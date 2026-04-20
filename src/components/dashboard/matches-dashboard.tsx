@@ -195,7 +195,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         const total = filteredMatches.length;
         if (total === 0) return { wr: 0, kills: 0, adr: '0.0', kd: '0.00', hs: '0', rating: '—' };
         
-        const wins = filteredMatches.filter(m => m.result === 'Win').length;
+        const wins = filteredMatches.filter(m => m.result?.toLowerCase() === 'win').length;
         const totalKills = filteredMatches.reduce((acc, m) => acc + (m.kills || 0), 0);
         const totalDeaths = filteredMatches.reduce((acc, m) => acc + (m.deaths || 0), 0);
 
@@ -696,8 +696,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                             <tbody>
                                 {filteredMatches.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((match, i) => {
                                     const matchMode = detectMode(match);
-                                    const isWin = match.result === 'Win';
-                                    const isLoss = match.result === 'Loss';
+                                    const isWin = match.result?.toLowerCase() === 'win';
+                                    const isLoss = match.result?.toLowerCase() === 'loss';
                                     const isGamersClub = matchMode === 'GamersClub';
                                     const isPremier = matchMode === 'Premier';
                                     const isFaceit = matchMode === 'Faceit';

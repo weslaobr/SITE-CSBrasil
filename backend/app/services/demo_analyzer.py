@@ -271,11 +271,11 @@ class DemoAnalyzerService:
 
         # Determine results map based on score_a vs score_b
         if score_a > score_b:
-            res_map = {"A": "win", "B": "loss"}
+            res_map = {"A": "Win", "B": "Loss"}
         elif score_b > score_a:
-            res_map = {"A": "loss", "B": "win"}
+            res_map = {"A": "Loss", "B": "Win"}
         else:
-            res_map = {"A": "tie", "B": "tie"}
+            res_map = {"A": "Tie", "B": "Tie"}
 
         # Calculate FK/FD from kill events
         fk_counts: dict[str, int] = {}
@@ -301,7 +301,7 @@ class DemoAnalyzerService:
                 
                 # Determine match result by logical team
                 logical_team = team_mapping.get(steam_id_str)
-                match_result = res_map.get(logical_team, "tie")
+                match_result = res_map.get(logical_team, "Tie")
 
                 # Auto-link to existing user
                 user_id = steam_to_user_id.get(steam_id_str)

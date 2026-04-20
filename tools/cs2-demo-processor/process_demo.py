@@ -607,7 +607,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
             "mvps":          mvp_map.get(sid, 0),
             "adr":           adr,
             "hsPercentage":  hs_pct,
-            "matchResult":   "tie",  # calculado abaixo
+            "matchResult":   "Tie",  # calculado abaixo
             "metadata": {
                 "name":          info["name"],
                 "nickname":      info["name"],
@@ -630,11 +630,11 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     # Determina resultado final baseado no Time A vs Time B
     if score_a is not None and score_b is not None:
         if score_a > score_b: # Time A venceu
-            results_map = {"A": "win", "B": "loss"}
+            results_map = {"A": "Win", "B": "Loss"}
         elif score_b > score_a: # Time B venceu
-            results_map = {"A": "loss", "B": "win"}
+            results_map = {"A": "Loss", "B": "Win"}
         else: # Empate
-            results_map = {"A": "tie", "B": "tie"}
+            results_map = {"A": "Tie", "B": "Tie"}
             
         for p in players_out:
             sid = p["steamId"]
@@ -643,7 +643,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                 p["matchResult"] = results_map[logical_team]
             else:
                 # Fallback caso o jogador tenha entrado depois
-                p["matchResult"] = "tie"
+                p["matchResult"] = "Tie"
 
     match_id = generate_match_id(header)
     match_out = {
