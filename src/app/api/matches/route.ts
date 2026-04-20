@@ -77,7 +77,8 @@ export async function GET(req: NextRequest) {
 
         // Format Global Matches to match the old Match schema for the frontend
         const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
-            const mappedResult = gmp.matchResult === 'win' ? 'Win' : (gmp.matchResult === 'loss' ? 'Loss' : 'Tie');
+            const res = (gmp.matchResult || '').toLowerCase();
+            const mappedResult = res === 'win' ? 'Win' : (res === 'loss' ? 'Loss' : 'Tie');
             return {
                 id: gmp.id,
                 externalId: gmp.globalMatchId,
