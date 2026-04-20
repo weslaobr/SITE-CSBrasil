@@ -124,6 +124,48 @@ class DemoAnalyzerService:
         dem = Demo(self.demo_path)
         dem.parse()
 
+        # --- Strict Match Start Detection (Exclude Knife/Warmup) ---
+        start_tick = 0
+        try:
+            # 1. Identify match start events (restarts)
+            match_start_events = []
+            if hasattr(dem, "events") and "round_announce_match_start" in dem.events:
+                match_start_events = dem.events["round_announce_match_start"]["tick"].tolist()
+            
+            # 2. Identify first firearm kill
+            exclude_weapons = [
+                "knife", "bayonet", "fists", "melee", "hegrenade", "flashbang", 
+                "smokegrenade", "molotov", "incgrenade", "decoy", "inferno", "taser", "zeus"
+            ]
+            exclude_pattern = "|".join(exclude_weapons)
+            non_knife_kills = dem.kills[~dem.kills["weapon"].str.contains(exclude_pattern, case=False, na=False)]
+            first_firearm_kill_tick = non_knife_kills["tick"].min() if not non_knife_kills.empty else float('inf')
+            
+            # 3. Match start is the last restart before the first gun kill
+            candidate_starts = [t for t in match_start_events if t < first_firearm_kill_tick]
+            if candidate_starts:
+                start_tick = max(candidate_starts)
+            elif first_firearm_kill_tick != float('inf'):
+                # Fallback: find the end of the round before the first firearm kill
+                try:
+                    prev_rounds = dem.rounds[dem.rounds["end_tick"] < first_firearm_kill_tick]
+                    start_tick = prev_rounds["end_tick"].max() if not prev_rounds.empty else 0
+                except:
+                    start_tick = 0
+            logger.info(f"DemoAnalyzer: Match start detected at tick {start_tick}")
+        except Exception as e:
+            logger.warning(f"DemoAnalyzer: Error detecting match start: {e}")
+
+        def filter_tick(df, tick_col="tick"):
+            if df is not None and not df.empty and tick_col in df.columns:
+                return df[df[tick_col] >= start_tick].copy()
+            return df
+
+        # Filter Rounds and Kills before processing stats
+        dem.rounds = filter_tick(dem.rounds, "end_tick")
+        dem.kills = filter_tick(dem.kills, "tick")
+        # -----------------------------------------------------------
+
         # ── Match metadata ────────────────────────────────────────────
         map_name = dem.header.get("map_name", "unknown")
         # Derive a stable unique ID from the URL (avoids duplicates)

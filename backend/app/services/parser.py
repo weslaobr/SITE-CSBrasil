@@ -53,8 +53,13 @@ class ParserService:
                 match_start_events = self.dem.events["round_announce_match_start"]["tick"].tolist()
             
             # 2. Identify the first firearm kill
-            # Firearms = anything that is not a knife or a decoy (sometimes used for trolling)
-            non_knife_kills = self.dem.kills[~self.dem.kills["weapon"].str.contains("knife", case=False, na=False)]
+            # Firearms = anything that is not a knife or a decoy/utility
+            exclude_weapons = [
+                "knife", "bayonet", "fists", "melee", "hegrenade", "flashbang", 
+                "smokegrenade", "molotov", "incgrenade", "decoy", "inferno", "taser", "zeus"
+            ]
+            exclude_pattern = "|".join(exclude_weapons)
+            non_knife_kills = self.dem.kills[~self.dem.kills["weapon"].str.contains(exclude_pattern, case=False, na=False)]
             first_firearm_kill_tick = non_knife_kills["tick"].min() if not non_knife_kills.empty else float('inf')
             
             # 3. Decision: The match start is the LAST 'round_announce_match_start' 
@@ -64,12 +69,13 @@ class ParserService:
                 start_tick = max(candidate_starts)
             elif first_firearm_kill_tick != float('inf'):
                 # Fallback: find the start of the round that contains the first firearm kill
-                firearm_round = self.dem.rounds[self.dem.rounds["end_tick"] > first_firearm_kill_tick]
-                if not firearm_round.empty:
-                    # CS2 rounds often don't have start_tick in awpy yet, 
-                    # so we approximate by the end of previous round or 0
+                # In CS2, rounds often don't have start_tick, so we use the end of the previous round
+                try:
                     prev_rounds = self.dem.rounds[self.dem.rounds["end_tick"] < first_firearm_kill_tick]
                     start_tick = prev_rounds["end_tick"].max() if not prev_rounds.empty else 0
+                except:
+                    # Very basic fallback if rounds DF is weird
+                    start_tick = 0
             
             logger.info(f"Parser: Strict match start detected at tick {start_tick} (Firearm kill at {first_firearm_kill_tick})")
         except Exception as e:

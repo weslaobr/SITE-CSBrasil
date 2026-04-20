@@ -121,24 +121,38 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         
         first_gun_kill_tick = None
         if df_all_kills is not None and not df_all_kills.empty:
-            # Lista de "armas reais" para ignorar kills de faca no aquecimento/round faca
-            # demoparser2 usa nomes como 'ak47', 'm4a1_s', etc.
-            gun_kills = df_all_kills[~df_all_kills["weapon"].str.contains("knife|bayonet|fists|melee", case=False, na=False)]
+            # Lista extensa de armas não-fogo/utilitários para ignorar no aquecimento/round faca
+            # Inclui facas, melee, grenades, djezuz, etc.
+            exclude_weapons = [
+                "knife", "bayonet", "fists", "melee", "hegrenade", "flashbang", 
+                "smokegrenade", "molotov", "incgrenade", "decoy", "inferno", "taser", "zeus"
+            ]
+            exclude_pattern = "|".join(exclude_weapons)
+            gun_kills = df_all_kills[~df_all_kills["weapon"].str.contains(exclude_pattern, case=False, na=False)]
+            
             if not gun_kills.empty:
                 first_gun_kill_tick = int(gun_kills["tick"].min())
 
         if df_start_events is not None and not df_start_events.empty:
             ticks = sorted(df_start_events["tick"].tolist())
             if first_gun_kill_tick:
-                # O início real é o ÚLTIMO evento de start ANTES da primeira kill de arma
+                # O início real é o ÚLTIMO evento de start ANTES da primeira kill de arma real
                 candidates = [t for t in ticks if t <= first_gun_kill_tick]
                 start_tick = max(candidates) if candidates else ticks[0]
             else:
+                # Se não houver kills de arma, pegamos o último start (pode ser o final do warmup)
                 start_tick = ticks[-1]
-            log_fn(f"🏁 Início real detectado no tick {start_tick} (baseado em kills e eventos).")
+            log_fn(f"🏁 Início real detectado no tick {start_tick} (baseado em kills e eventos de restart).")
         elif first_gun_kill_tick:
-            start_tick = first_gun_kill_tick
-            log_fn(f"⚠️  Mensagem de start não encontrada. Usando primeira kill de arma no tick {start_tick}.")
+            # Fallback: Se não houver evento de Match Start, usamos o início do round que contém a primeira kill de arma
+            try:
+                df_re_all = parser.parse_event("round_end")
+                # O round da primeira kill começou após o fim do round anterior
+                prev_rounds = df_re_all[df_re_all["tick"] < first_gun_kill_tick]
+                start_tick = int(prev_rounds["tick"].max()) if not prev_rounds.empty else 0
+            except:
+                start_tick = first_gun_kill_tick
+            log_fn(f"⚠️  Mensagem de start não encontrada. Retrocedendo para tick {start_tick} (pistol round).")
     except Exception as e:
         log_fn(f"⚠️  Erro ao detectar início da partida: {e}")
 
@@ -269,11 +283,16 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     # ── Rounds jogados ───────────────────────
     try:
         df_rounds = parser.parse_event("round_officially_ended")
-        rounds = len(df_rounds) if df_rounds is not None else 0
+        # Filtrar rounds para contar apenas os da partida real (para ADR)
+        df_rounds_filtered = filter_tick(df_rounds)
+        rounds = len(df_rounds_filtered) if df_rounds_filtered is not None else 0
+        
         if rounds == 0:
             df_rounds2 = parser.parse_event("round_end")
-            rounds = len(df_rounds2) if df_rounds2 is not None else 30
-        log_fn(f"🔄 {rounds} rounds detectados.")
+            df_rounds2_filtered = filter_tick(df_rounds2)
+            rounds = len(df_rounds2_filtered) if df_rounds2_filtered is not None else 30
+            
+        log_fn(f"🔄 {rounds} rounds competitivos detectados (pós-warmup/faca).")
     except Exception:
         rounds = 30  # fallback padrão
 
@@ -429,17 +448,20 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         df_rs = filter_tick(df_rs)
         if df_k is not None and not df_k.empty and "tick" in df_k.columns:
             df_k = df_k.sort_values(by="tick")
-            round_starts = sorted(df_rs["tick"].tolist()) if (df_rs is not None and not df_rs.empty and "tick" in df_rs.columns) else [start_tick]
+            # Garantir que round_starts comece no start_tick se o primeiro round_start estiver depois
+            round_starts = sorted(df_rs["tick"].tolist()) if (df_rs is not None and not df_rs.empty and "tick" in df_rs.columns) else []
+            if not round_starts or round_starts[0] > start_tick:
+                round_starts = sorted(list(set([start_tick] + round_starts)))
             
             def get_round(t):
-                # Retorna em qual round este tick pertence
+                # Retorna em qual round este tick pertence (1-based)
                 r = 0
                 for start in round_starts:
                     if t >= start:
                         r += 1
-                return r
+                return max(1, r)
 
-            df_k["round_num"] = df_k["tick"].apply(get_round) if round_starts else [1] * len(df_k)
+            df_k["round_num"] = df_k["tick"].apply(get_round)
 
             # --- NOVO: Log de Confrontos Detalhado ---
             round_summaries = {} # round_num -> {kills: [], damage: {}, winner: "", reason: ""}
