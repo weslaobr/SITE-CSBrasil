@@ -52,6 +52,18 @@ const SidebarItem = ({ icon, label, active, collapsed, href }: { icon: any, labe
     </Link>
 );
 
+const SidebarSectionLabel = ({ label, collapsed }: { label: string, collapsed: boolean }) => (
+    <div className={`px-4 mt-6 mb-2 flex items-center ${collapsed ? 'justify-center' : 'justify-start'}`}>
+        {collapsed ? (
+            <div className="w-8 h-[1px] bg-white/10" />
+        ) : (
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">
+                {label}
+            </span>
+        )}
+    </div>
+);
+
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [collapsed, setCollapsed] = useState(false);
     const pathname = usePathname();
@@ -61,12 +73,12 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const isAdmin = mySteamId === "76561198024691636";
     const isPlayerRoute = pathname.startsWith('/player/');
     const viewedPlayerId = isPlayerRoute ? pathname.split('/')[2] : null;
-    
+
     // Logic to distinguish 'Meu Perfil' from 'Perfil do Jogador'
     const isViewingOtherPlayer = isPlayerRoute && viewedPlayerId && viewedPlayerId !== mySteamId;
     const profileLabel = isViewingOtherPlayer ? "Perfil do Jogador" : "Meu Perfil";
-    const profileHref = isViewingOtherPlayer 
-        ? `/player/${viewedPlayerId}` 
+    const profileHref = isViewingOtherPlayer
+        ? `/player/${viewedPlayerId}`
         : (mySteamId ? `/player/${mySteamId}` : "/profile");
 
     return (
@@ -87,8 +99,9 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     </div>
                 </div>
 
-                {/* Navigation */}
-                <div className="flex-1 space-y-2">
+                {/* Navigation Scrollable Area */}
+                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-1">
+                    <SidebarSectionLabel label="Principal" collapsed={collapsed} />
                     <SidebarItem
                         icon={<LayoutDashboard size={20} />}
                         label="Dashboard"
@@ -110,22 +123,8 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         collapsed={collapsed}
                         href="/jogar"
                     />
-                    {isAdmin && (
-                        <SidebarItem
-                            icon={<Terminal size={20} />}
-                            label="Painel Admin"
-                            active={pathname === '/painel'}
-                            collapsed={collapsed}
-                            href="/painel"
-                        />
-                    )}
-                    <SidebarItem
-                        icon={<Wind size={20} />}
-                        label="Utilidades"
-                        active={pathname === '/tools'}
-                        collapsed={collapsed}
-                        href="/tools"
-                    />
+
+                    <SidebarSectionLabel label="Competitivo" collapsed={collapsed} />
                     <SidebarItem
                         icon={<Users size={20} />}
                         label="Mix 5x5"
@@ -134,11 +133,11 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         href="/lobby"
                     />
                     <SidebarItem
-                        icon={<Users size={20} />}
-                        label="Gerador de Times"
-                        active={pathname.startsWith('/team-builder')}
+                        icon={<Medal size={20} />}
+                        label="Torneios"
+                        active={pathname.startsWith('/tournaments')}
                         collapsed={collapsed}
-                        href="/team-builder"
+                        href="/tournaments"
                     />
                     <SidebarItem
                         icon={<Gamepad2 size={20} />}
@@ -147,13 +146,8 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         collapsed={collapsed}
                         href="/map-veto"
                     />
-                    <SidebarItem
-                        icon={<MessageSquareQuote size={20} />}
-                        label="Resenha"
-                        active={pathname.startsWith('/resenha')}
-                        collapsed={collapsed}
-                        href="/resenha"
-                    />
+
+                    <SidebarSectionLabel label="Análise & Tools" collapsed={collapsed} />
                     <SidebarItem
                         icon={<Map size={20} />}
                         label="Stats de Mapas"
@@ -169,11 +163,27 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         href="/compare"
                     />
                     <SidebarItem
-                        icon={<Medal size={20} />}
-                        label="Torneios"
-                        active={pathname.startsWith('/tournaments')}
+                        icon={<Users size={20} />}
+                        label="Gerador de Times"
+                        active={pathname.startsWith('/team-builder')}
                         collapsed={collapsed}
-                        href="/tournaments"
+                        href="/team-builder"
+                    />
+                    <SidebarItem
+                        icon={<Wind size={20} />}
+                        label="Utilidades"
+                        active={pathname === '/tools'}
+                        collapsed={collapsed}
+                        href="/tools"
+                    />
+
+                    <SidebarSectionLabel label="Comunidade" collapsed={collapsed} />
+                    <SidebarItem
+                        icon={<MessageSquareQuote size={20} />}
+                        label="Resenha"
+                        active={pathname.startsWith('/resenha')}
+                        collapsed={collapsed}
+                        href="/resenha"
                     />
                     <a
                         href="https://discord.gg/QGGckW8EAN"
@@ -186,10 +196,24 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         </div>
                         {!collapsed && <span className="font-bold text-sm tracking-tight">Discord</span>}
                     </a>
+
+                    {isAdmin && (
+                        <>
+                            <SidebarSectionLabel label="Administração" collapsed={collapsed} />
+                            <SidebarItem
+                                icon={<Terminal size={20} />}
+                                label="Painel Admin"
+                                active={pathname === '/painel'}
+                                collapsed={collapsed}
+                                href="/painel"
+                            />
+                        </>
+                    )}
                 </div>
 
-                {/* Footer Sidebar */}
-                <div className="mt-auto pt-6 border-t border-white/5 space-y-2">
+                {/* Footer Sidebar (User Specific) */}
+                <div className="mt-auto pt-4 border-t border-white/5 space-y-1">
+                    <SidebarSectionLabel label="Sua Conta" collapsed={collapsed} />
                     <SidebarItem
                         icon={<UserIcon size={20} />}
                         label={profileLabel}
@@ -222,7 +246,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         active={pathname === '/settings'}
                         href="/settings"
                     />
-                    <button className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-black border-4 border-zinc-950 focus:outline-none"
+                    <button className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-black border-4 border-zinc-950 focus:outline-none z-[60]"
                         onClick={() => setCollapsed(!collapsed)}
                     >
                         {collapsed ? <ChevronRight size={14} fill="currentColor" /> : <ChevronLeft size={14} fill="currentColor" />}
