@@ -4,7 +4,8 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
     Cpu, HardDrive, Play, Square, RefreshCw, Terminal,
     Network, WifiOff, Loader2, Send, Copy, Check, AlertTriangle,
-    Clock, Server
+    Clock, Server, Users, Map as MapIcon, Settings, MessageSquare,
+    Zap, Pause, PlayCircle, SkipForward, UserMinus, Bot, RotateCcw
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -24,6 +25,21 @@ interface Resources {
         network_tx_bytes: number;
         uptime: number;
     };
+}
+
+interface Player {
+    id: string; // The numeric ID from the status command
+    name: string;
+    steamId: string;
+    ping: string;
+    connectedTime: string;
+}
+
+interface MapConfig {
+    id: string;
+    name: string;
+    image: string;
+    active: boolean;
 }
 
 // ─────────────────────────────────────────────
@@ -56,6 +72,15 @@ const STATUS_MAP: any = {
     stopping: { label: 'Parando',   color: 'text-orange-400', dot: 'bg-orange-400', border: 'border-orange-500/20', bg: 'bg-orange-500/10' },
     offline:  { label: 'Offline',   color: 'text-red-400',    dot: 'bg-red-400',    border: 'border-red-500/20',    bg: 'bg-red-500/10'    },
 };
+
+const GAME_MODES = [
+    { label: 'Competitivo',    cmd: 'game_type 0; game_mode 1', desc: '5v5 padrão' },
+    { label: 'Braço Direito',  cmd: 'game_type 0; game_mode 2', desc: '2v2 competitivo' },
+    { label: 'Casual',         cmd: 'game_type 0; game_mode 0', desc: '10v10 divertido' },
+    { label: 'Mata-Mata',      cmd: 'game_type 1; game_mode 2', desc: 'Deathmatch total' },
+    { label: 'Corrida Armas',  cmd: 'game_type 1; game_mode 0', desc: 'Gun Game' },
+    { label: 'Demolição',      cmd: 'game_type 1; game_mode 1', desc: 'Objetivo rápido' },
+];
 
 // ─────────────────────────────────────────────
 // Sub-components
@@ -111,11 +136,32 @@ export function ServerDashboard() {
     const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
     const [copiedIp, setCopiedIp] = useState(false);
 
+    // New management state
+    const [players, setPlayers] = useState<Player[]>([]);
+    const [maps, setMaps] = useState<MapConfig[]>([]);
+    const [isRefreshingPlayers, setIsRefreshingPlayers] = useState(false);
+    const [sayMessage, setSayMessage] = useState('');
+    const [activeMgmtTab, setActiveMgmtTab] = useState<'players' | 'server'>('players');
+
     const consoleRef = useRef<HTMLDivElement>(null);
     const socketRef = useRef<WebSocket | null>(null);
     const retryRef = useRef<NodeJS.Timeout | null>(null);
+    const statusBufferRef = useRef<string[]>([]);
+    const parsingStatusRef = useRef(false);
 
-    useEffect(() => { setMounted(true); }, []);
+    useEffect(() => { 
+        setMounted(true);
+        fetchMaps();
+    }, []);
+
+    const fetchMaps = async () => {
+        try {
+            const res = await fetch('/api/admin/maps');
+            if (res.ok) setMaps(await res.json());
+        } catch (e) {
+            console.error('Erro ao buscar mapas:', e);
+        }
+    };
 
     // ── Polling ──────────────────────────────────
     const fetchResources = useCallback(async () => {
@@ -165,7 +211,19 @@ export function ServerDashboard() {
             ws.onmessage = (ev) => {
                 const msg = JSON.parse(ev.data);
                 if (msg.event === 'console output' && msg.args?.[0]) {
-                    setLogs(prev => [...prev.slice(-150), msg.args[0]]);
+                    const line = msg.args[0];
+                    setLogs(prev => [...prev.slice(-150), line]);
+
+                    // Status collection logic
+                    if (line.includes('#      userid name') || parsingStatusRef.current) {
+                        parsingStatusRef.current = true;
+                        statusBufferRef.current.push(line);
+                        
+                        // Detect end of status (usually a line that doesn't start with '#' or is empty after the table)
+                        if (statusBufferRef.current.length > 2 && !line.startsWith('#') && line.trim() !== '') {
+                            finalizeStatusParse();
+                        }
+                    }
                 }
             };
             ws.onclose = () => {
@@ -188,6 +246,49 @@ export function ServerDashboard() {
         if (consoleRef.current) consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
     }, [logs]);
 
+    const finalizeStatusParse = () => {
+        const fullStatus = statusBufferRef.current.join('\n');
+        const playerLines = statusBufferRef.current.filter(l => l.startsWith('#') && !l.includes('userid name'));
+        
+        const parsedPlayers: Player[] = playerLines.map(line => {
+            // Regex for: # 1 2 "Name" STEAM_1:0:1234 01:23 15 0 active
+            const match = line.match(/#\s+\d+\s+(\d+)\s+"(.+)"\s+(STEAM_\d:\d:\d+|BOT)\s+([\d:]+|\w+)\s+(\d+|-)\s+/);
+            if (match) {
+                return {
+                    id: match[1],
+                    name: match[2],
+                    steamId: match[3],
+                    connectedTime: match[4],
+                    ping: match[5]
+                };
+            }
+            return null;
+        }).filter(Boolean) as Player[];
+
+        setPlayers(parsedPlayers);
+        statusBufferRef.current = [];
+        parsingStatusRef.current = false;
+        setIsRefreshingPlayers(false);
+    };
+
+    const refreshPlayers = () => {
+        if (!socketRef.current || socketRef.current.readyState !== 1) return;
+        setIsRefreshingPlayers(true);
+        statusBufferRef.current = [];
+        socketRef.current.send(JSON.stringify({ event: 'send command', args: ['status'] }));
+        // Timeout to stop loading if no response
+        setTimeout(() => setIsRefreshingPlayers(false), 5000);
+    };
+
+    // Auto refresh players every 15s
+    useEffect(() => {
+        if (wsStatus === 'connected' && activeMgmtTab === 'players') {
+            refreshPlayers();
+            const iv = setInterval(refreshPlayers, 15000);
+            return () => clearInterval(iv);
+        }
+    }, [wsStatus, activeMgmtTab]);
+
     // ── Power ─────────────────────────────────────
     const handlePower = async (signal: string) => {
         setPowerLoading(signal);
@@ -205,11 +306,16 @@ export function ServerDashboard() {
         finally { setPowerLoading(null); }
     };
 
+    const sendCommandRaw = (cmd: string) => {
+        if (!socketRef.current || socketRef.current.readyState !== 1) return;
+        socketRef.current.send(JSON.stringify({ event: 'send command', args: [cmd] }));
+        setLogs(prev => [...prev, `> ${cmd}`]);
+    };
+
     const sendCommand = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!command.trim() || !socketRef.current || socketRef.current.readyState !== 1) return;
-        socketRef.current.send(JSON.stringify({ event: 'send command', args: [command] }));
-        setLogs(prev => [...prev, `> ${command}`]);
+        if (!command.trim()) return;
+        sendCommandRaw(command);
         setCommand('');
     };
 
@@ -416,6 +522,165 @@ export function ServerDashboard() {
                         </div>
                         {wsStatus !== 'connected' && <p className="text-[10px] text-red-400/60 mt-1.5 px-1">WebSocket desconectado — comandos indisponíveis</p>}
                     </form>
+                </div>
+            </div>
+
+            {/* ── MANAGEMENT SECTION ───────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                
+                {/* Players Management */}
+                <div className="bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden flex flex-col min-h-[400px]">
+                    <div className="p-5 border-b border-white/5 flex items-center justify-between bg-zinc-900/40">
+                        <div className="flex items-center gap-3">
+                            <Users size={16} className="text-yellow-500" />
+                            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Controle de Jogadores</h3>
+                        </div>
+                        <button 
+                            onClick={refreshPlayers}
+                            disabled={isRefreshingPlayers || wsStatus !== 'connected'}
+                            className="bg-white/5 hover:bg-white/10 p-2 rounded-xl transition-all disabled:opacity-30"
+                        >
+                            <RefreshCw size={14} className={`${isRefreshingPlayers ? 'animate-spin' : ''} text-zinc-400`} />
+                        </button>
+                    </div>
+
+                    <div className="p-0 flex-1 overflow-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-white/5 text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                                    <th className="px-6 py-4">ID</th>
+                                    <th className="px-6 py-4">Nome</th>
+                                    <th className="px-6 py-4">Ping</th>
+                                    <th className="px-6 py-4 text-right">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {players.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-12 text-center text-zinc-600 text-xs font-bold uppercase tracking-widest">
+                                            {isRefreshingPlayers ? 'Buscando jogadores...' : 'Nenhum jogador no servidor'}
+                                        </td>
+                                    </tr>
+                                ) : players.map(p => (
+                                    <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group">
+                                        <td className="px-6 py-4 text-[10px] font-mono text-zinc-500">#{p.id}</td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-xs font-black text-white">{p.name}</p>
+                                            <p className="text-[9px] font-mono text-zinc-600 truncate max-w-[120px]">{p.steamId}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-1 h-3 rounded-full ${parseInt(p.ping) < 50 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                                                <span className="text-xs font-mono text-zinc-400">{p.ping}ms</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button 
+                                                onClick={() => {
+                                                    if(confirm(`Expulsar ${p.name}?`)) sendCommandRaw(`kickid ${p.id}`);
+                                                }}
+                                                className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-black rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                title="Kick Player"
+                                            >
+                                                <UserMinus size={14} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Quick Say */}
+                    <div className="p-4 border-t border-white/5 bg-zinc-900/10">
+                        <form onSubmit={(e) => { e.preventDefault(); if(sayMessage) { sendCommandRaw(`say ${sayMessage}`); setSayMessage(''); } }} className="flex gap-2">
+                            <input 
+                                type="text"
+                                value={sayMessage}
+                                onChange={e => setSayMessage(e.target.value)}
+                                placeholder="Falar no chat global..."
+                                className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-yellow-500/50"
+                            />
+                            <button className="bg-yellow-500 hover:bg-yellow-400 text-black p-2 rounded-xl transition-all">
+                                <MessageSquare size={16} />
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                {/* Server Controls */}
+                <div className="space-y-5">
+                    
+                    {/* Game Mode & Map */}
+                    <div className="bg-zinc-900/30 border border-white/5 rounded-3xl p-5 space-y-6">
+                        <div>
+                            <div className="flex items-center gap-3 mb-4">
+                                <Zap size={16} className="text-yellow-500" />
+                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Comandos de Jogo</h3>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3 mb-6">
+                                {GAME_MODES.map(mode => (
+                                    <button 
+                                        key={mode.label}
+                                        onClick={() => {
+                                            if(confirm(`Mudar modo para ${mode.label}? (Isso vai reiniciar o mapa)`)) {
+                                                sendCommandRaw(mode.cmd);
+                                                sendCommandRaw('mp_restartgame 1');
+                                            }
+                                        }}
+                                        className="bg-white/5 hover:bg-white/10 border border-white/5 p-3 rounded-2xl text-left transition-all hover:scale-[1.02] active:scale-95 group"
+                                    >
+                                        <p className="text-[10px] font-black uppercase text-yellow-500 mb-0.5">{mode.label}</p>
+                                        <p className="text-[9px] text-zinc-500 group-hover:text-zinc-400">{mode.desc}</p>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2">
+                                <button onClick={() => sendCommandRaw('mp_restartgame 1')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-400 group">
+                                    <RotateCcw size={12} className="group-hover:rotate-180 transition-transform duration-500" /> Reiniciar
+                                </button>
+                                <button onClick={() => sendCommandRaw('mp_pause_match')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                                    <Pause size={12} /> Pausar
+                                </button>
+                                <button onClick={() => sendCommandRaw('mp_unpause_match')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                                    <PlayCircle size={12} /> Despausar
+                                </button>
+                                <button onClick={() => sendCommandRaw('mp_warmup_start')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                                    Aquecer
+                                </button>
+                                <button onClick={() => sendCommandRaw('mp_warmup_end')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                                    Pular Aquec.
+                                </button>
+                                <button onClick={() => sendCommandRaw('bot_kick')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                                    Limpar Bots
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Map Quick Change */}
+                        <div className="pt-6 border-t border-white/5">
+                            <div className="flex items-center gap-3 mb-4">
+                                <MapIcon size={16} className="text-yellow-500" />
+                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Troca Rápida de Mapa</h3>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2">
+                                {maps.filter(m => m.active).slice(0, 8).map(map => (
+                                    <button 
+                                        key={map.id}
+                                        onClick={() => { if(confirm(`Mudar para ${map.name}?`)) sendCommandRaw(`map ${map.id}`); }}
+                                        className="relative aspect-video rounded-lg overflow-hidden group border border-white/5"
+                                    >
+                                        <img src={map.image} alt={map.name} className="object-cover w-full h-full opacity-60 group-hover:opacity-100 transition-opacity" />
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                            <span className="text-[8px] font-black uppercase text-white tracking-widest drop-shadow-md">{map.name}</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
