@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw, Copy, Check, ClipboardList, Send, Loader2, Pencil } from "lucide-react";
+import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw, Copy, Check, ClipboardList, Send, Loader2, Pencil, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Player {
@@ -254,6 +254,15 @@ export default function TeamBuilderPage() {
 
     const handleResetTeams = () => {
         setSelectedPlayers(prev => prev.map(p => ({ ...p, assignment: "unassigned" })));
+    };
+
+    const handleClearLobby = () => {
+        if (window.confirm("Deseja realmente remover todos os jogadores e limpar o saguão?")) {
+            setSelectedPlayers([]);
+            setVetoMaps({});
+            setVetoTurn("A");
+            setVetoHistory([]);
+        }
     };
 
     const handleCopyTeam = (team: "A" | "B" | "both") => {
@@ -575,6 +584,14 @@ export default function TeamBuilderPage() {
                                 title="Voltar times para o Saguão"
                             >
                                 <Users size={16} />
+                            </button>
+                            <button 
+                                onClick={handleClearLobby}
+                                disabled={selectedPlayers.length === 0}
+                                className={`flex items-center justify-center p-4 rounded-xl font-black transition-all shrink-0 border ${selectedPlayers.length > 0 ? 'bg-red-900/20 hover:bg-red-900/40 text-red-500 hover:text-red-400 border-red-500/20 hover:border-red-500/40 active:scale-95 shadow-md' : 'bg-white/5 text-zinc-700 border-white/5 cursor-not-allowed'}`}
+                                title="Limpar todo o Saguão"
+                            >
+                                <Trash2 size={16} />
                             </button>
                             <button 
                                 onClick={() => handleCopyTeam("both")}
