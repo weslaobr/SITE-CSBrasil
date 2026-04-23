@@ -74,6 +74,12 @@ function BracketView({ tournament, dbPlayers, onClose, onUpdateMatch, onRefresh 
     const getWins = (teamId: string) =>
         tournament.matches.filter(m => m.winnerId === teamId).length;
 
+    const getTeamAvgRating = (players: TeamPlayer[]) => {
+        if (!players || !Array.isArray(players)) return null;
+        const valid = players.map(p => p.rating).filter(r => typeof r === 'number' && r > 0) as number[];
+        return valid.length > 0 ? Math.round(valid.reduce((a, b) => a + b, 0) / valid.length) : null;
+    };
+
     return (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
             <motion.div
@@ -148,7 +154,14 @@ function BracketView({ tournament, dbPlayers, onClose, onUpdateMatch, onRefresh 
                                             <div className="flex flex-col md:flex-row gap-6">
                                                 {/* Jogadores Atuais */}
                                                 <div className="flex-1 space-y-2">
-                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-2">Jogadores no Time ({editingTeam.players.length})</h4>
+                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-2 flex items-center gap-2">
+                                                        Jogadores no Time ({editingTeam.players.length})
+                                                        {getTeamAvgRating(editingTeam.players) && (
+                                                            <span className="text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded font-mono text-[9px]">
+                                                                {getTeamAvgRating(editingTeam.players)} SR Médio
+                                                            </span>
+                                                        )}
+                                                    </h4>
                                                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10">
                                                         {editingTeam.players.map((p, i) => (
                                                             <div key={p.steamId || i} className="flex items-center justify-between p-2 bg-zinc-950 border border-white/5 rounded-xl group hover:border-white/10 transition-colors">
@@ -247,7 +260,14 @@ function BracketView({ tournament, dbPlayers, onClose, onUpdateMatch, onRefresh 
                                     ) : (
                                         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
                                             <div className="flex-1">
-                                                <h4 className="text-base font-black text-white italic uppercase tracking-tight">{team.name}</h4>
+                                                <h4 className="text-base font-black text-white italic uppercase tracking-tight flex items-center gap-2">
+                                                    {team.name}
+                                                    {getTeamAvgRating(team.playerIds) && (
+                                                        <span className="text-[10px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 rounded-lg font-mono not-italic tracking-normal">
+                                                            Média: {getTeamAvgRating(team.playerIds)} SR
+                                                        </span>
+                                                    )}
+                                                </h4>
                                                 <div className="flex flex-wrap gap-1 mt-2">
                                                     {(team.playerIds || []).length > 0 ? (
                                                         (team.playerIds || []).map((p, i) => (
