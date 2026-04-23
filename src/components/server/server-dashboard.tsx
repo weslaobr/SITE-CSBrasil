@@ -74,14 +74,11 @@ const STATUS_MAP: any = {
 };
 
 const GAME_MODES = [
-    { label: 'Competitivo',   icon: '🏆', cmd: 'game_type 0; game_mode 1; mp_restartgame 3', desc: '5v5 padrão MR12', color: 'yellow' },
-    { label: 'Braço Direito', icon: '⚔️',  cmd: 'game_type 0; game_mode 2; mp_restartgame 3', desc: '2v2 Wingman',      color: 'orange' },
-    { label: 'Arena',         icon: '🎯', cmd: 'game_type 0; game_mode 6; mp_restartgame 3', desc: '1v1 Arena',        color: 'red'    },
-    { label: 'Casual',        icon: '😎', cmd: 'game_type 0; game_mode 0; mp_restartgame 3', desc: '10v10 divertido',  color: 'green'  },
-    { label: 'Deathmatch',    icon: '💀', cmd: 'game_type 1; game_mode 2; mp_restartgame 3', desc: 'DM total',         color: 'blue'   },
-    { label: 'Gun Game',      icon: '🔫', cmd: 'game_type 1; game_mode 0; mp_restartgame 3', desc: 'Corrida de armas', color: 'purple' },
-    { label: 'Demolição',     icon: '💣', cmd: 'game_type 1; game_mode 1; mp_restartgame 3', desc: 'Objetivo rápido',  color: 'pink'   },
-    { label: 'Retake',        icon: '♻️',  cmd: 'game_type 0; game_mode 0; exec retake; mp_restartgame 3', desc: 'Retake plugin', color: 'cyan' },
+    { label: 'Competitivo', icon: '🏆', cmd: 'say !1', desc: 'Plugin: !1', color: 'yellow' },
+    { label: 'Arena',       icon: '🎯', cmd: 'say !2', desc: 'Plugin: !2', color: 'red' },
+    { label: '1v1',         icon: '⚔️',  cmd: 'say !3', desc: 'Plugin: !3', color: 'orange' },
+    { label: 'Retake',      icon: '♻️',  cmd: 'say !4', desc: 'Plugin: !4', color: 'cyan' },
+    { label: 'DeathMatch',  icon: '💀', cmd: 'say !5', desc: 'Plugin: !5', color: 'blue' },
 ];
 
 const MODE_COLOR: Record<string, string> = {
@@ -649,11 +646,12 @@ export function ServerDashboard() {
                                         <button
                                             key={mode.label}
                                             onClick={() => {
-                                                if (confirm(`Mudar para modo ${mode.label}?\n\n${mode.desc}\n\nO servidor será reiniciado.`)) {
-                                                    const cmds = mode.cmd.split(';').map(c => c.trim()).filter(Boolean);
-                                                    cmds.forEach((c, i) => setTimeout(() => sendCommandRaw(c), i * 300));
-                                                    setActiveMode(mode.label);
-                                                }
+                                            if (confirm(`Mudar para modo ${mode.label}?\n\nO servidor executará o comando do plugin.`)) {
+                                                sendCommandRaw(mode.cmd);
+                                                // Caso o plugin suporte comandos de console do CounterStrikeSharp
+                                                sendCommandRaw(`css_${mode.cmd.replace('say !', '')}`);
+                                                setActiveMode(mode.label);
+                                            }
                                             }}
                                             className={`relative flex items-center gap-3 p-3.5 rounded-2xl border transition-all active:scale-95 text-left ${
                                                 activeMode === mode.label
