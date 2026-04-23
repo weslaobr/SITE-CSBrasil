@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw, Copy, Check, ClipboardList, Send, Loader2 } from "lucide-react";
+import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw, Copy, Check, ClipboardList, Send, Loader2, Pencil } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Player {
@@ -10,6 +10,8 @@ interface Player {
     avatar: string;
     rating: number;
     resenhaRating?: number;
+    tempRating?: number;
+    tempResenhaRating?: number;
     gcLevel?: number;
     faceitLevel?: number;
     isGuest?: boolean;
@@ -31,8 +33,28 @@ const FALLBACK_MAP_POOL = [
 ];
 
 // Subcomponents
-function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMoveLeft, side, balanceMode }: { player: Player, pos: number, onRemove: ()=>void, onMoveUnassigned: ()=>void, onMoveRight?: ()=>void, onMoveLeft?: ()=>void, side: "left"|"right", balanceMode: "standard"|"resenha" }) {
-    const displayRating = balanceMode === "resenha" ? `${(player.resenhaRating || 5).toFixed(1)} ★` : `${player.rating} SR`;
+function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMoveLeft, side, balanceMode, onEditRating }: { player: Player, pos: number, onRemove: ()=>void, onMoveUnassigned: ()=>void, onMoveRight?: ()=>void, onMoveLeft?: ()=>void, side: "left"|"right", balanceMode: "standard"|"resenha", onEditRating: (field: "sr"|"resenha", value: number)=>void }) {
+    const [editingField, setEditingField] = React.useState<"sr"|"resenha"|null>(null);
+    const [editVal, setEditVal] = React.useState("");
+
+    const srVal = player.tempRating !== undefined ? player.tempRating : player.rating;
+    const resenhaVal = player.tempResenhaRating !== undefined ? player.tempResenhaRating : (player.resenhaRating || 5);
+    const displayRating = balanceMode === "resenha" ? `${resenhaVal.toFixed(1)} ★` : `${srVal} SR`;
+    const isOverridden = balanceMode === "resenha" ? player.tempResenhaRating !== undefined : player.tempRating !== undefined;
+
+    const startEdit = () => {
+        const field = balanceMode === "resenha" ? "resenha" : "sr";
+        setEditingField(field);
+        setEditVal(field === "sr" ? String(srVal) : resenhaVal.toFixed(1));
+    };
+
+    const commitEdit = () => {
+        if (editingField) {
+            const num = parseFloat(editVal);
+            if (!isNaN(num) && num > 0) onEditRating(editingField, num);
+        }
+        setEditingField(null);
+    };
     
     return (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} layout
@@ -43,14 +65,30 @@ function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMo
                     <img src={player.avatar} className="w-8 h-8 rounded-md border border-white/10 shrink-0" />
                     <div className="flex flex-col flex-1 min-w-0 ml-3">
                         <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.nickname} {player.isGuest && <span className="ml-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>}</p>
-                        <p className="text-[10px] font-mono text-zinc-400 font-bold mt-0.5">{displayRating}</p>
+                        {editingField ? (
+                            <input autoFocus type="number" value={editVal} onChange={e => setEditVal(e.target.value)}
+                                onBlur={commitEdit} onKeyDown={e => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingField(null); }}
+                                className="w-20 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none mt-0.5" />
+                        ) : (
+                            <button onClick={startEdit} className={`flex items-center gap-1 text-[10px] font-mono font-bold mt-0.5 w-fit hover:text-purple-400 transition-colors ${isOverridden ? "text-purple-400" : "text-zinc-400"}`} title="Editar pontuação temporária">
+                                {displayRating}{isOverridden && <Pencil size={8} />}
+                            </button>
+                        )}
                     </div>
                 </>
             ) : (
                 <>
-                    <div className="flex flex-col flex-1 min-w-0 mr-3 text-right">
+                    <div className="flex flex-col flex-1 min-w-0 mr-3 text-right items-end">
                         <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.isGuest && <span className="mr-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>} {player.nickname}</p>
-                        <p className="text-[10px] font-mono text-zinc-400 font-bold mt-0.5">{displayRating}</p>
+                        {editingField ? (
+                            <input autoFocus type="number" value={editVal} onChange={e => setEditVal(e.target.value)}
+                                onBlur={commitEdit} onKeyDown={e => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingField(null); }}
+                                className="w-20 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none mt-0.5 text-right" />
+                        ) : (
+                            <button onClick={startEdit} className={`flex items-center gap-1 text-[10px] font-mono font-bold mt-0.5 w-fit hover:text-purple-400 transition-colors ${isOverridden ? "text-purple-400" : "text-zinc-400"}`} title="Editar pontuação temporária">
+                                {isOverridden && <Pencil size={8} />}{displayRating}
+                            </button>
+                        )}
                     </div>
                     <img src={player.avatar} className="w-8 h-8 rounded-md border border-white/10 shrink-0" />
                 </>
@@ -97,6 +135,7 @@ export default function TeamBuilderPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [copiedTeam, setCopiedTeam] = useState<"A" | "B" | "both" | null>(null);
     const [discordStatus, setDiscordStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+    const [editingUnassigned, setEditingUnassigned] = useState<{ steamId: string, field: "sr"|"resenha", value: string } | null>(null);
     const [loading, setLoading] = useState(true);
     const [mapPool, setMapPool] = useState<{id: string, name: string, image: string, active?: boolean}[]>(FALLBACK_MAP_POOL);
 
@@ -323,15 +362,24 @@ export default function TeamBuilderPage() {
     const teamA = selectedPlayers.filter(p => p.assignment === "A");
     const teamB = selectedPlayers.filter(p => p.assignment === "B");
 
-    const getPlayerRating = (p: Player) => balanceMode === "resenha" ? (p.resenhaRating || 5) : p.rating;
+    const getPlayerRating = (p: Player) => balanceMode === "resenha"
+        ? (p.tempResenhaRating !== undefined ? p.tempResenhaRating : (p.resenhaRating || 5))
+        : (p.tempRating !== undefined ? p.tempRating : p.rating);
 
-    const avgA = teamA.length > 0 ? (balanceMode === "resenha" 
-        ? Math.round((teamA.reduce((acc, p) => acc + (p.resenhaRating || 5), 0) / teamA.length) * 10) / 10
-        : Math.round(teamA.reduce((acc, p) => acc + p.rating, 0) / teamA.length)) : 0;
-    
+    const avgA = teamA.length > 0 ? (balanceMode === "resenha"
+        ? Math.round((teamA.reduce((acc, p) => acc + getPlayerRating(p), 0) / teamA.length) * 10) / 10
+        : Math.round(teamA.reduce((acc, p) => acc + getPlayerRating(p), 0) / teamA.length)) : 0;
+
     const avgB = teamB.length > 0 ? (balanceMode === "resenha"
-        ? Math.round((teamB.reduce((acc, p) => acc + (p.resenhaRating || 5), 0) / teamB.length) * 10) / 10
-        : Math.round(teamB.reduce((acc, p) => acc + p.rating, 0) / teamB.length)) : 0;
+        ? Math.round((teamB.reduce((acc, p) => acc + getPlayerRating(p), 0) / teamB.length) * 10) / 10
+        : Math.round(teamB.reduce((acc, p) => acc + getPlayerRating(p), 0) / teamB.length)) : 0;
+
+    const handleTempRating = (steamId: string, field: "sr" | "resenha", value: number) => {
+        setSelectedPlayers(prev => prev.map(p => p.steamId === steamId
+            ? { ...p, ...(field === "sr" ? { tempRating: value } : { tempResenhaRating: value }) }
+            : p
+        ));
+    };
 
     const availableDbPlayers = dbPlayers.filter(dbP => !selectedPlayers.some(sp => sp.steamId === dbP.steamId));
     const filteredDbPool = availableDbPlayers.filter(p => p.nickname.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -593,8 +641,28 @@ export default function TeamBuilderPage() {
                                         <div className="flex flex-col ml-3 group-hover:opacity-20 transition-all min-w-0">
                                             <p className="font-bold text-sm text-white truncate">{p.nickname}</p>
                                             <div className="flex items-center gap-2 mt-0.5">
-                                                <p className={`text-[10px] font-mono font-bold ${balanceMode === 'standard' ? 'text-yellow-500' : 'text-zinc-500'}`}>{p.rating} SR</p>
-                                                <p className={`text-[10px] font-mono font-bold ${balanceMode === 'resenha' ? 'text-purple-400' : 'text-zinc-500'}`}>{(p.resenhaRating || 5).toFixed(1)} ★</p>
+                                                {editingUnassigned?.steamId === p.steamId && editingUnassigned.field === "sr" ? (
+                                                    <input autoFocus type="number" value={editingUnassigned.value}
+                                                        onChange={e => setEditingUnassigned({ ...editingUnassigned, value: e.target.value })}
+                                                        onBlur={() => { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "sr", n); setEditingUnassigned(null); }}
+                                                        onKeyDown={e => { if (e.key === "Enter") { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "sr", n); setEditingUnassigned(null); } if (e.key === "Escape") setEditingUnassigned(null); }}
+                                                        className="w-20 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none" />
+                                                ) : (
+                                                    <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "sr", value: String(p.tempRating ?? p.rating) }); }} className={`text-[10px] font-mono font-bold hover:text-yellow-400 transition-colors flex items-center gap-0.5 ${p.tempRating !== undefined ? 'text-purple-400' : balanceMode === 'standard' ? 'text-yellow-500' : 'text-zinc-500'}`} title="Editar SR">
+                                                        {p.tempRating ?? p.rating} SR{p.tempRating !== undefined && <Pencil size={7} />}
+                                                    </button>
+                                                )}
+                                                {editingUnassigned?.steamId === p.steamId && editingUnassigned.field === "resenha" ? (
+                                                    <input autoFocus type="number" step="0.1" value={editingUnassigned.value}
+                                                        onChange={e => setEditingUnassigned({ ...editingUnassigned, value: e.target.value })}
+                                                        onBlur={() => { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "resenha", n); setEditingUnassigned(null); }}
+                                                        onKeyDown={e => { if (e.key === "Enter") { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "resenha", n); setEditingUnassigned(null); } if (e.key === "Escape") setEditingUnassigned(null); }}
+                                                        className="w-16 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none" />
+                                                ) : (
+                                                    <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "resenha", value: (p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1) }); }} className={`text-[10px] font-mono font-bold hover:text-purple-300 transition-colors flex items-center gap-0.5 ${p.tempResenhaRating !== undefined ? 'text-purple-400' : balanceMode === 'resenha' ? 'text-purple-400' : 'text-zinc-500'}`} title="Editar Resenha">
+                                                        {(p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1)} ★{p.tempResenhaRating !== undefined && <Pencil size={7} />}
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                         
@@ -646,7 +714,7 @@ export default function TeamBuilderPage() {
                             </div>
                             <div className="p-4 space-y-2 min-h-[300px]">
                                 {teamA.map((p, idx) => (
-                                    <PlayerCard key={p.steamId} player={p} pos={idx+1} onRemove={() => handleRemovePlayer(p.steamId)} onMoveUnassigned={() => handleAssign(p.steamId, "unassigned")} onMoveRight={() => handleAssign(p.steamId, "B")} side="left" balanceMode={balanceMode} />
+                                    <PlayerCard key={p.steamId} player={p} pos={idx+1} onRemove={() => handleRemovePlayer(p.steamId)} onMoveUnassigned={() => handleAssign(p.steamId, "unassigned")} onMoveRight={() => handleAssign(p.steamId, "B")} side="left" balanceMode={balanceMode} onEditRating={(field, val) => handleTempRating(p.steamId, field, val)} />
                                 ))}
                                 {Array.from({ length: 5 - teamA.length }).map((_, i) => (
                                     <EmptySlot key={`empty-a-${i}`} team="A" onClick={() => {
@@ -685,7 +753,7 @@ export default function TeamBuilderPage() {
                             </div>
                             <div className="p-4 space-y-2 min-h-[300px]">
                                 {teamB.map((p, idx) => (
-                                    <PlayerCard key={p.steamId} player={p} pos={idx+1} onRemove={() => handleRemovePlayer(p.steamId)} onMoveUnassigned={() => handleAssign(p.steamId, "unassigned")} onMoveLeft={() => handleAssign(p.steamId, "A")} side="right" balanceMode={balanceMode} />
+                                    <PlayerCard key={p.steamId} player={p} pos={idx+1} onRemove={() => handleRemovePlayer(p.steamId)} onMoveUnassigned={() => handleAssign(p.steamId, "unassigned")} onMoveLeft={() => handleAssign(p.steamId, "A")} side="right" balanceMode={balanceMode} onEditRating={(field, val) => handleTempRating(p.steamId, field, val)} />
                                 ))}
                                 {Array.from({ length: 5 - teamB.length }).map((_, i) => (
                                     <EmptySlot key={`empty-b-${i}`} team="B" onClick={() => {
