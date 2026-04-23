@@ -74,11 +74,11 @@ const STATUS_MAP: any = {
 };
 
 const GAME_MODES = [
-    { label: 'Competitivo', icon: '🏆', cmd: 'exec comp.cfg',  desc: 'Config: comp.cfg', color: 'yellow' },
-    { label: 'Arena',       icon: '🎯', cmd: 'exec arena.cfg', desc: 'Config: arena.cfg', color: 'red' },
-    { label: '1v1',         icon: '⚔️',  cmd: 'exec 1v1.cfg',   desc: 'Config: 1v1.cfg', color: 'orange' },
-    { label: 'Retake',      icon: '♻️',  cmd: 'exec retake.cfg',desc: 'Config: retake.cfg', color: 'cyan' },
-    { label: 'DeathMatch',  icon: '💀', cmd: 'exec dm.cfg',    desc: 'Config: dm.cfg', color: 'blue' },
+    { label: 'Competitivo', icon: '🏆', cmd: 'exec comp.cfg; map de_mirage',  desc: 'Config: comp.cfg', color: 'yellow' },
+    { label: 'Arena',       icon: '🎯', cmd: 'exec arena.cfg; host_workshop_map 3232758809', desc: 'Config: arena.cfg', color: 'red' },
+    { label: '1v1',         icon: '⚔️',  cmd: 'exec 1v1.cfg; host_workshop_map 3070549948',   desc: 'Config: 1v1.cfg', color: 'orange' },
+    { label: 'Retake',      icon: '♻️',  cmd: 'exec retake.cfg; map de_mirage',desc: 'Config: retake.cfg', color: 'cyan' },
+    { label: 'DeathMatch',  icon: '💀', cmd: 'exec dm.cfg; map de_mirage',    desc: 'Config: dm.cfg', color: 'blue' },
 ];
 
 const MODE_COLOR: Record<string, string> = {
@@ -646,10 +646,8 @@ export function ServerDashboard() {
                                         <button
                                             key={mode.label}
                                             onClick={() => {
-                                            if (confirm(`Mudar para modo ${mode.label}?\n\nAs configurações serão carregadas imediatamente.`)) {
+                                            if (confirm(`Mudar para modo ${mode.label}?\n\nAs configurações serão carregadas e o mapa será trocado imediatamente.`)) {
                                                 sendCommandRaw(mode.cmd);
-                                                // Restart the map optionally, though some configs might do it themselves
-                                                sendCommandRaw("mp_restartgame 1");
                                                 setActiveMode(mode.label);
                                             }
                                             }}

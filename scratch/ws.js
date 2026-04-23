@@ -24,8 +24,7 @@ async function main() {
     ws.on('message', (data) => {
         const msg = JSON.parse(data);
         if (msg.event === 'auth success') {
-            ws.send(JSON.stringify({ event: 'send command', args: ['exec arena.cfg'] }));
-            ws.send(JSON.stringify({ event: 'send command', args: ['mp_restartgame 1'] }));
+            ws.send(JSON.stringify({ event: 'send command', args: ['host_workshop_map 3232758809'] }));
             
             setTimeout(() => {
                 ws.close();
