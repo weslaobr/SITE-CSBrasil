@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw } from "lucide-react";
+import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw, Copy, Check, ClipboardList } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Player {
@@ -95,6 +95,7 @@ export default function TeamBuilderPage() {
     const [dbPlayers, setDbPlayers] = useState<Player[]>([]);
     const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
+    const [copiedTeam, setCopiedTeam] = useState<"A" | "B" | "both" | null>(null);
     const [loading, setLoading] = useState(true);
     const [mapPool, setMapPool] = useState<{id: string, name: string, image: string, active?: boolean}[]>(FALLBACK_MAP_POOL);
 
@@ -213,6 +214,23 @@ export default function TeamBuilderPage() {
 
     const handleResetTeams = () => {
         setSelectedPlayers(prev => prev.map(p => ({ ...p, assignment: "unassigned" })));
+    };
+
+    const handleCopyTeam = (team: "A" | "B" | "both") => {
+        let text = "";
+        if (team === "both") {
+            const listA = teamA.map(p => p.nickname).join("\n");
+            const listB = teamB.map(p => p.nickname).join("\n");
+            text = `Time A:\n${listA || "(vazio)"}\n\nTime B:\n${listB || "(vazio)"}`;
+        } else if (team === "A") {
+            text = teamA.map(p => p.nickname).join("\n");
+        } else {
+            text = teamB.map(p => p.nickname).join("\n");
+        }
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedTeam(team);
+            setTimeout(() => setCopiedTeam(null), 2000);
+        });
     };
 
     const handleAutoBalance = () => {
@@ -485,6 +503,21 @@ export default function TeamBuilderPage() {
                                 <Users size={16} />
                             </button>
                             <button 
+                                onClick={() => handleCopyTeam("both")}
+                                disabled={teamA.length === 0 && teamB.length === 0}
+                                className={`flex items-center gap-2 px-4 py-4 rounded-xl font-black uppercase text-xs transition-all shadow-lg shrink-0 border ${
+                                    copiedTeam === "both"
+                                        ? 'bg-green-600 text-white border-green-500/50 shadow-green-500/20'
+                                        : (teamA.length > 0 || teamB.length > 0)
+                                            ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border-white/10 hover:border-white/30 active:scale-95'
+                                            : 'bg-white/5 text-zinc-600 cursor-not-allowed border-white/5'
+                                }`}
+                                title="Copiar nomes dos dois times"
+                            >
+                                {copiedTeam === "both" ? <Check size={16} /> : <ClipboardList size={16} />}
+                                <span className="hidden sm:inline">{copiedTeam === "both" ? "Copiado!" : "Copiar"}</span>
+                            </button>
+                            <button 
                                 onClick={handleAutoBalance}
                                 disabled={selectedPlayers.length !== 10}
                                 className={`flex items-center gap-2 px-6 py-4 rounded-xl font-black uppercase text-xs transition-all shadow-lg shrink-0 ${selectedPlayers.length === 10 ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/20 active:scale-95 border border-purple-400/50' : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'}`}
@@ -536,7 +569,24 @@ export default function TeamBuilderPage() {
                         {/* TEAM A */}
                         <div className="bg-zinc-900/60 rounded-3xl border border-yellow-500/20 overflow-hidden ring-1 ring-inset ring-transparent hover:ring-yellow-500/30 transition-all h-full">
                             <div className="bg-gradient-to-br from-yellow-500/20 to-transparent p-6 border-b border-yellow-500/10">
-                                <h3 className="text-2xl font-black italic uppercase tracking-tighter text-yellow-500 drop-shadow-md">Time A</h3>
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-yellow-500 drop-shadow-md">Time A</h3>
+                                    <button
+                                        onClick={() => handleCopyTeam("A")}
+                                        disabled={teamA.length === 0}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${
+                                            copiedTeam === "A"
+                                                ? 'bg-green-600/20 text-green-400 border-green-500/30'
+                                                : teamA.length > 0
+                                                    ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20 active:scale-95'
+                                                    : 'bg-white/5 text-zinc-600 border-white/5 cursor-not-allowed'
+                                        }`}
+                                        title="Copiar nomes do Time A"
+                                    >
+                                        {copiedTeam === "A" ? <Check size={12} /> : <Copy size={12} />}
+                                        {copiedTeam === "A" ? "Copiado" : "Copiar"}
+                                    </button>
+                                </div>
                                 <div className="flex items-center gap-2 mt-2">
                                     <Medal size={14} className="text-zinc-400" />
                                     <p className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-widest">
@@ -559,9 +609,26 @@ export default function TeamBuilderPage() {
 
                         {/* TEAM B */}
                         <div className="bg-zinc-900/60 rounded-3xl border border-blue-500/20 overflow-hidden ring-1 ring-inset ring-transparent hover:ring-blue-500/30 transition-all h-full">
-                            <div className="bg-gradient-to-bl from-blue-500/20 to-transparent p-6 border-b border-blue-500/10 flex flex-col items-end text-right">
-                                <h3 className="text-2xl font-black italic uppercase tracking-tighter text-blue-500 drop-shadow-md">Time B</h3>
-                                <div className="flex items-center gap-2 mt-2">
+                            <div className="bg-gradient-to-bl from-blue-500/20 to-transparent p-6 border-b border-blue-500/10">
+                                <div className="flex items-center justify-between">
+                                    <button
+                                        onClick={() => handleCopyTeam("B")}
+                                        disabled={teamB.length === 0}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${
+                                            copiedTeam === "B"
+                                                ? 'bg-green-600/20 text-green-400 border-green-500/30'
+                                                : teamB.length > 0
+                                                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20 active:scale-95'
+                                                    : 'bg-white/5 text-zinc-600 border-white/5 cursor-not-allowed'
+                                        }`}
+                                        title="Copiar nomes do Time B"
+                                    >
+                                        {copiedTeam === "B" ? <Check size={12} /> : <Copy size={12} />}
+                                        {copiedTeam === "B" ? "Copiado" : "Copiar"}
+                                    </button>
+                                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-blue-500 drop-shadow-md">Time B</h3>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2 justify-end text-right">
                                     <p className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-widest"><span className="text-white text-sm">{avgB}{balanceMode === "resenha" ? " ★" : ""}</span> :{balanceMode === "resenha" ? "Resenha" : "SR"} Média</p>
                                     <Medal size={14} className="text-zinc-400" />
                                 </div>
