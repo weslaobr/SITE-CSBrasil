@@ -74,13 +74,26 @@ const STATUS_MAP: any = {
 };
 
 const GAME_MODES = [
-    { label: 'Competitivo',    cmd: 'game_type 0; game_mode 1', desc: '5v5 padrão' },
-    { label: 'Braço Direito',  cmd: 'game_type 0; game_mode 2', desc: '2v2 competitivo' },
-    { label: 'Casual',         cmd: 'game_type 0; game_mode 0', desc: '10v10 divertido' },
-    { label: 'Mata-Mata',      cmd: 'game_type 1; game_mode 2', desc: 'Deathmatch total' },
-    { label: 'Corrida Armas',  cmd: 'game_type 1; game_mode 0', desc: 'Gun Game' },
-    { label: 'Demolição',      cmd: 'game_type 1; game_mode 1', desc: 'Objetivo rápido' },
+    { label: 'Competitivo',   icon: '🏆', cmd: 'game_type 0; game_mode 1; mp_restartgame 3', desc: '5v5 padrão MR12', color: 'yellow' },
+    { label: 'Braço Direito', icon: '⚔️',  cmd: 'game_type 0; game_mode 2; mp_restartgame 3', desc: '2v2 Wingman',      color: 'orange' },
+    { label: 'Arena',         icon: '🎯', cmd: 'game_type 0; game_mode 6; mp_restartgame 3', desc: '1v1 Arena',        color: 'red'    },
+    { label: 'Casual',        icon: '😎', cmd: 'game_type 0; game_mode 0; mp_restartgame 3', desc: '10v10 divertido',  color: 'green'  },
+    { label: 'Deathmatch',    icon: '💀', cmd: 'game_type 1; game_mode 2; mp_restartgame 3', desc: 'DM total',         color: 'blue'   },
+    { label: 'Gun Game',      icon: '🔫', cmd: 'game_type 1; game_mode 0; mp_restartgame 3', desc: 'Corrida de armas', color: 'purple' },
+    { label: 'Demolição',     icon: '💣', cmd: 'game_type 1; game_mode 1; mp_restartgame 3', desc: 'Objetivo rápido',  color: 'pink'   },
+    { label: 'Retake',        icon: '♻️',  cmd: 'game_type 0; game_mode 0; exec retake; mp_restartgame 3', desc: 'Retake plugin', color: 'cyan' },
 ];
+
+const MODE_COLOR: Record<string, string> = {
+    yellow: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20',
+    orange: 'bg-orange-500/10 border-orange-500/20 text-orange-400 hover:bg-orange-500/20',
+    red:    'bg-red-500/10    border-red-500/20    text-red-400    hover:bg-red-500/20',
+    green:  'bg-green-500/10  border-green-500/20  text-green-400  hover:bg-green-500/20',
+    blue:   'bg-blue-500/10   border-blue-500/20   text-blue-400   hover:bg-blue-500/20',
+    purple: 'bg-purple-500/10 border-purple-500/20 text-purple-400 hover:bg-purple-500/20',
+    pink:   'bg-pink-500/10   border-pink-500/20   text-pink-400   hover:bg-pink-500/20',
+    cyan:   'bg-cyan-500/10   border-cyan-500/20   text-cyan-400   hover:bg-cyan-500/20',
+};
 
 // ─────────────────────────────────────────────
 // Sub-components
@@ -142,6 +155,8 @@ export function ServerDashboard() {
     const [isRefreshingPlayers, setIsRefreshingPlayers] = useState(false);
     const [sayMessage, setSayMessage] = useState('');
     const [activeMgmtTab, setActiveMgmtTab] = useState<'players' | 'server'>('players');
+    const [activeMode, setActiveMode] = useState<string | null>(null);
+    const [serverControlTab, setServerControlTab] = useState<'modes' | 'maps' | 'controls'>('modes');
 
     const consoleRef = useRef<HTMLDivElement>(null);
     const socketRef = useRef<WebSocket | null>(null);
@@ -610,76 +625,135 @@ export function ServerDashboard() {
 
                 {/* Server Controls */}
                 <div className="space-y-5">
-                    
-                    {/* Game Mode & Map */}
-                    <div className="bg-zinc-900/30 border border-white/5 rounded-3xl p-5 space-y-6">
-                        <div>
-                            <div className="flex items-center gap-3 mb-4">
-                                <Zap size={16} className="text-yellow-500" />
-                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Comandos de Jogo</h3>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-3 mb-6">
-                                {GAME_MODES.map(mode => (
-                                    <button 
-                                        key={mode.label}
-                                        onClick={() => {
-                                            if(confirm(`Mudar modo para ${mode.label}? (Isso vai reiniciar o mapa)`)) {
-                                                sendCommandRaw(mode.cmd);
-                                                sendCommandRaw('mp_restartgame 1');
-                                            }
-                                        }}
-                                        className="bg-white/5 hover:bg-white/10 border border-white/5 p-3 rounded-2xl text-left transition-all hover:scale-[1.02] active:scale-95 group"
-                                    >
-                                        <p className="text-[10px] font-black uppercase text-yellow-500 mb-0.5">{mode.label}</p>
-                                        <p className="text-[9px] text-zinc-500 group-hover:text-zinc-400">{mode.desc}</p>
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-2">
-                                <button onClick={() => sendCommandRaw('mp_restartgame 1')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-400 group">
-                                    <RotateCcw size={12} className="group-hover:rotate-180 transition-transform duration-500" /> Reiniciar
+                    <div className="bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden">
+                        {/* Tab bar */}
+                        <div className="flex border-b border-white/5">
+                            {(['modes', 'maps', 'controls'] as const).map(tab => (
+                                <button key={tab} onClick={() => setServerControlTab(tab)}
+                                    className={`flex-1 py-3.5 text-[9px] font-black uppercase tracking-widest transition-all ${
+                                        serverControlTab === tab
+                                            ? 'text-yellow-400 border-b-2 border-yellow-500 bg-yellow-500/5'
+                                            : 'text-zinc-500 hover:text-zinc-300'
+                                    }`}>
+                                    {tab === 'modes' ? '🎮 Modos' : tab === 'maps' ? '🗺️ Mapas' : '⚙️ Controles'}
                                 </button>
-                                <button onClick={() => sendCommandRaw('mp_pause_match')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                                    <Pause size={12} /> Pausar
-                                </button>
-                                <button onClick={() => sendCommandRaw('mp_unpause_match')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                                    <PlayCircle size={12} /> Despausar
-                                </button>
-                                <button onClick={() => sendCommandRaw('mp_warmup_start')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                                    Aquecer
-                                </button>
-                                <button onClick={() => sendCommandRaw('mp_warmup_end')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                                    Pular Aquec.
-                                </button>
-                                <button onClick={() => sendCommandRaw('bot_kick')} className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                                    Limpar Bots
-                                </button>
-                            </div>
+                            ))}
                         </div>
 
-                        {/* Map Quick Change */}
-                        <div className="pt-6 border-t border-white/5">
-                            <div className="flex items-center gap-3 mb-4">
-                                <MapIcon size={16} className="text-yellow-500" />
-                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Troca Rápida de Mapa</h3>
+                        {/* MODES TAB */}
+                        {serverControlTab === 'modes' && (
+                            <div className="p-5 space-y-3">
+                                <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mb-4">Selecione o modo — o servidor reiniciará automaticamente</p>
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    {GAME_MODES.map(mode => (
+                                        <button
+                                            key={mode.label}
+                                            onClick={() => {
+                                                if (confirm(`Mudar para modo ${mode.label}?\n\n${mode.desc}\n\nO servidor será reiniciado.`)) {
+                                                    const cmds = mode.cmd.split(';').map(c => c.trim()).filter(Boolean);
+                                                    cmds.forEach((c, i) => setTimeout(() => sendCommandRaw(c), i * 300));
+                                                    setActiveMode(mode.label);
+                                                }
+                                            }}
+                                            className={`relative flex items-center gap-3 p-3.5 rounded-2xl border transition-all active:scale-95 text-left ${
+                                                activeMode === mode.label
+                                                    ? 'ring-2 ring-yellow-500/50 ' + MODE_COLOR[mode.color]
+                                                    : MODE_COLOR[mode.color]
+                                            }`}
+                                        >
+                                            <span className="text-xl shrink-0">{mode.icon}</span>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-black uppercase tracking-wide leading-tight">{mode.label}</p>
+                                                <p className="text-[9px] opacity-60 mt-0.5 leading-tight">{mode.desc}</p>
+                                            </div>
+                                            {activeMode === mode.label && (
+                                                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                            <div className="grid grid-cols-4 gap-2">
-                                {maps.filter(m => m.active).slice(0, 8).map(map => (
-                                    <button 
-                                        key={map.id}
-                                        onClick={() => { if(confirm(`Mudar para ${map.name}?`)) sendCommandRaw(`map ${map.id}`); }}
-                                        className="relative aspect-video rounded-lg overflow-hidden group border border-white/5"
-                                    >
-                                        <img src={map.image} alt={map.name} className="object-cover w-full h-full opacity-60 group-hover:opacity-100 transition-opacity" />
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                            <span className="text-[8px] font-black uppercase text-white tracking-widest drop-shadow-md">{map.name}</span>
-                                        </div>
-                                    </button>
-                                ))}
+                        )}
+
+                        {/* MAPS TAB */}
+                        {serverControlTab === 'maps' && (
+                            <div className="p-5">
+                                <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mb-4">Clique para trocar o mapa imediatamente (changelevel)</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {maps.filter(m => m.active).map(map => (
+                                        <button
+                                            key={map.id}
+                                            onClick={() => {
+                                                if (confirm(`Trocar para ${map.name}?`)) {
+                                                    sendCommandRaw(`changelevel ${map.id}`);
+                                                }
+                                            }}
+                                            className="relative aspect-video rounded-xl overflow-hidden group border border-white/5 hover:border-yellow-500/40 transition-all active:scale-95"
+                                        >
+                                            <img src={map.image} alt={map.name} className="object-cover w-full h-full opacity-50 group-hover:opacity-90 group-hover:scale-110 transition-all duration-500" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                                            <div className="absolute bottom-0 left-0 right-0 p-2">
+                                                <p className="text-[9px] font-black uppercase text-white tracking-widest drop-shadow">{map.name}</p>
+                                                <p className="text-[8px] text-zinc-400 font-mono">{map.id}</p>
+                                            </div>
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                                <span className="bg-yellow-500 text-black text-[9px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl">Trocar</span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                    {maps.filter(m => m.active).length === 0 && (
+                                        <p className="col-span-2 text-center text-zinc-600 text-xs py-8 font-bold uppercase tracking-widest">Nenhum mapa ativo no pool</p>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        )}
+
+                        {/* CONTROLS TAB */}
+                        {serverControlTab === 'controls' && (
+                            <div className="p-5 space-y-4">
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { label: '🔄 Reiniciar Round',   cmd: 'mp_restartgame 1',           cls: 'yellow' },
+                                        { label: '⏸️ Pausar Partida',    cmd: 'mp_pause_match',             cls: 'blue'   },
+                                        { label: '▶️ Despausar',         cmd: 'mp_unpause_match',           cls: 'green'  },
+                                        { label: '🌡️ Iniciar Warmup',    cmd: 'mp_warmup_start',            cls: 'orange' },
+                                        { label: '⏭️ Pular Warmup',      cmd: 'mp_warmup_end',              cls: 'orange' },
+                                        { label: '🤖 Limpar Bots',       cmd: 'bot_kick',                   cls: 'red'    },
+                                        { label: '🔪 Faca apenas',       cmd: 'mp_give_player_c4 0; mp_buy_allow_knives 1; mp_startmoney 0; mp_restartgame 1', cls: 'purple' },
+                                        { label: '💰 Reset Dinheiro',    cmd: 'mp_startmoney 16000; mp_restartgame 1', cls: 'cyan' },
+                                        { label: '💡 God Mode',          cmd: 'sv_cheats 1; god',           cls: 'pink'   },
+                                        { label: '🚫 Sem cheats',        cmd: 'sv_cheats 0',                cls: 'red'    },
+                                        { label: '📢 Anunciar no chat',  cmd: '__custom_say__',             cls: 'zinc'   },
+                                        { label: '🔁 Trocar de lado',    cmd: 'mp_swapteams; mp_restartgame 1', cls: 'yellow' },
+                                    ].map(ctrl => (
+                                        <button key={ctrl.label}
+                                            onClick={() => {
+                                                if (ctrl.cmd === '__custom_say__') {
+                                                    const msg = prompt('Mensagem para anunciar no chat:');
+                                                    if (msg) sendCommandRaw(`say ${msg}`);
+                                                } else {
+                                                    const cmds = ctrl.cmd.split(';').map(c => c.trim()).filter(Boolean);
+                                                    cmds.forEach((c, i) => setTimeout(() => sendCommandRaw(c), i * 200));
+                                                }
+                                            }}
+                                            className={`p-3 rounded-xl border text-[9px] font-black uppercase tracking-wide text-left transition-all active:scale-95 ${
+                                                ctrl.cls === 'yellow' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20' :
+                                                ctrl.cls === 'blue'   ? 'bg-blue-500/10   border-blue-500/20   text-blue-400   hover:bg-blue-500/20' :
+                                                ctrl.cls === 'green'  ? 'bg-green-500/10  border-green-500/20  text-green-400  hover:bg-green-500/20' :
+                                                ctrl.cls === 'orange' ? 'bg-orange-500/10 border-orange-500/20 text-orange-400 hover:bg-orange-500/20' :
+                                                ctrl.cls === 'red'    ? 'bg-red-500/10    border-red-500/20    text-red-400    hover:bg-red-500/20' :
+                                                ctrl.cls === 'purple' ? 'bg-purple-500/10 border-purple-500/20 text-purple-400 hover:bg-purple-500/20' :
+                                                ctrl.cls === 'cyan'   ? 'bg-cyan-500/10   border-cyan-500/20   text-cyan-400   hover:bg-cyan-500/20' :
+                                                ctrl.cls === 'pink'   ? 'bg-pink-500/10   border-pink-500/20   text-pink-400   hover:bg-pink-500/20' :
+                                                'bg-white/5 border-white/10 text-zinc-400 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            {ctrl.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
