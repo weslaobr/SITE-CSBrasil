@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Plus, Shield, Users, X, ChevronRight, Crown, Swords, Clock, Edit2, Save, Trash } from "lucide-react";
+import { Trophy, Plus, Shield, Users, X, ChevronRight, Crown, Swords, Clock, Edit2, Save, Trash, Search, UserPlus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
-interface Team { id: string; name: string; playerIds: string[]; }
+interface TeamPlayer { steamId?: string; nickname: string; rating?: number; isGuest?: boolean; avatar?: string; }
+interface Team { id: string; name: string; playerIds: TeamPlayer[]; }
 interface TMatch { id: string; teamAId: string; teamBId: string; winnerId: string | null; scoreA: number | null; scoreB: number | null; round: number; status: string; mapName: string | null; teamA: Team; teamB: Team; winner: Team | null; }
 interface Tournament { id: string; name: string; description: string | null; format: string; status: string; createdAt: string; teams: Team[]; matches: TMatch[]; }
 
@@ -58,13 +59,17 @@ function TournamentCard({ t, onOpen }: { t: Tournament; onOpen: () => void }) {
     );
 }
 
-function BracketView({ tournament, onClose, onUpdateMatch, onRefresh }: { tournament: Tournament; onClose: () => void; onUpdateMatch: (matchId: string, winnerId: string, scoreA: number, scoreB: number) => void; onRefresh: () => void }) {
+function BracketView({ tournament, dbPlayers, onClose, onUpdateMatch, onRefresh }: { tournament: Tournament; dbPlayers: any[]; onClose: () => void; onUpdateMatch: (matchId: string, winnerId: string, scoreA: number, scoreB: number) => void; onRefresh: () => void }) {
     const rounds = [...new Set(tournament.matches.map(m => m.round))].sort((a, b) => a - b);
     const [scoring, setScoring] = useState<{ matchId: string; scoreA: string; scoreB: string } | null>(null);
     const [viewMode, setViewMode] = useState<'BRACKET' | 'TEAMS'>('BRACKET');
-    const [editingTeam, setEditingTeam] = useState<{ id: string; name: string; playerIds: string } | null>(null);
+    const [editingTeam, setEditingTeam] = useState<{ id: string; name: string; players: TeamPlayer[] } | null>(null);
     const [newTeamName, setNewTeamName] = useState('');
     const [isSavingTeam, setIsSavingTeam] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [guestName, setGuestName] = useState('');
+    const [guestRating, setGuestRating] = useState('');
+    const [showGuestForm, setShowGuestForm] = useState(false);
 
     const getWins = (teamId: string) =>
         tournament.matches.filter(m => m.winnerId === teamId).length;
@@ -102,67 +107,168 @@ function BracketView({ tournament, onClose, onUpdateMatch, onRefresh }: { tourna
                         </div>
                         <div className="grid gap-3">
                             {tournament.teams.map((team) => (
-                                <div key={team.id} className="bg-white/[0.03] border border-white/[0.05] rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                                <div key={team.id} className="bg-white/[0.03] border border-white/[0.05] rounded-2xl p-4">
                                     {editingTeam?.id === team.id ? (
-                                        <div className="flex-1 flex flex-col md:flex-row gap-3 w-full">
-                                            <input 
-                                                className="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-yellow-500/40 w-full md:w-1/3" 
-                                                placeholder="Nome do Time" 
-                                                value={editingTeam.name} 
-                                                onChange={e => setEditingTeam({ ...editingTeam, name: e.target.value })} 
-                                            />
-                                            <input 
-                                                className="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-yellow-500/40 w-full flex-1" 
-                                                placeholder="Jogadores (separados por vírgula)" 
-                                                value={editingTeam.playerIds} 
-                                                onChange={e => setEditingTeam({ ...editingTeam, playerIds: e.target.value })} 
-                                            />
+                                        <div className="space-y-4">
+                                            <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between border-b border-white/5 pb-4">
+                                                <input 
+                                                    className="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-yellow-500/40 w-full md:w-1/2" 
+                                                    placeholder="Nome do Time" 
+                                                    value={editingTeam.name} 
+                                                    onChange={e => setEditingTeam({ ...editingTeam, name: e.target.value })} 
+                                                />
+                                                <div className="flex items-center gap-2 w-full md:w-auto">
+                                                    <button 
+                                                        disabled={isSavingTeam}
+                                                        onClick={async () => {
+                                                            setIsSavingTeam(true);
+                                                            try {
+                                                                await fetch(`/api/tournaments/${tournament.id}/teams`, {
+                                                                    method: 'PATCH',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({ teamId: team.id, name: editingTeam.name, playerIds: editingTeam.players })
+                                                                });
+                                                                setEditingTeam(null);
+                                                                onRefresh();
+                                                            } finally {
+                                                                setIsSavingTeam(false);
+                                                            }
+                                                        }}
+                                                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-yellow-500 text-black hover:bg-yellow-400 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                                    >
+                                                        <Save size={14} /> Salvar
+                                                    </button>
+                                                    <button onClick={() => setEditingTeam(null)} className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all">
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Gerenciador de Jogadores do Time */}
+                                            <div className="flex flex-col md:flex-row gap-6">
+                                                {/* Jogadores Atuais */}
+                                                <div className="flex-1 space-y-2">
+                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-2">Jogadores no Time ({editingTeam.players.length})</h4>
+                                                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10">
+                                                        {editingTeam.players.map((p, i) => (
+                                                            <div key={p.steamId || i} className="flex items-center justify-between p-2 bg-zinc-950 border border-white/5 rounded-xl group hover:border-white/10 transition-colors">
+                                                                <div className="flex items-center gap-2">
+                                                                    {p.avatar ? (
+                                                                        <img src={p.avatar} className="w-6 h-6 rounded-md border border-white/10" />
+                                                                    ) : (
+                                                                        <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-zinc-600"><Users size={10} /></div>
+                                                                    )}
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-xs font-bold text-white leading-tight">{p.nickname}</span>
+                                                                        {p.rating !== undefined && <span className="text-[9px] text-zinc-500 font-mono font-bold leading-tight">{p.rating} SR</span>}
+                                                                    </div>
+                                                                </div>
+                                                                <button 
+                                                                    onClick={() => setEditingTeam({ ...editingTeam, players: editingTeam.players.filter((_, idx) => idx !== i) })}
+                                                                    className="w-6 h-6 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                                                                >
+                                                                    <Trash size={12} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                        {editingTeam.players.length === 0 && (
+                                                            <p className="text-xs text-zinc-600 italic">Nenhum jogador adicionado.</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Adicionar Jogadores */}
+                                                <div className="flex-1 bg-black/20 p-3 rounded-2xl border border-white/5 space-y-4">
+                                                    <div className="flex flex-col gap-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Adicionar Jogador</h4>
+                                                            <button 
+                                                                onClick={() => setShowGuestForm(!showGuestForm)}
+                                                                className={`p-1.5 rounded-lg transition-all border text-[10px] uppercase font-black tracking-widest flex items-center gap-1 ${showGuestForm ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10'}`}
+                                                            >
+                                                                <UserPlus size={10} /> Manual
+                                                            </button>
+                                                        </div>
+
+                                                        {showGuestForm && (
+                                                            <div className="bg-zinc-950 p-3 rounded-xl border border-yellow-500/20 space-y-2">
+                                                                <input 
+                                                                    type="text" placeholder="Nome do Jogador" value={guestName} onChange={e => setGuestName(e.target.value)}
+                                                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-1.5 text-xs focus:border-yellow-500/40 outline-none"
+                                                                />
+                                                                <div className="flex gap-2">
+                                                                    <input 
+                                                                        type="number" placeholder="Rating Premier" value={guestRating} onChange={e => setGuestRating(e.target.value)}
+                                                                        className="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-1.5 text-xs focus:border-yellow-500/40 outline-none"
+                                                                    />
+                                                                    <button 
+                                                                        onClick={() => {
+                                                                            if (!guestName.trim()) return;
+                                                                            const ratingNum = parseInt(guestRating) || 5000;
+                                                                            const newP: TeamPlayer = { steamId: `guest_${Date.now()}`, nickname: guestName, rating: ratingNum, isGuest: true, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=" + guestName };
+                                                                            setEditingTeam({ ...editingTeam, players: [...editingTeam.players, newP] });
+                                                                            setGuestName(''); setGuestRating(''); setShowGuestForm(false);
+                                                                        }}
+                                                                        className="bg-yellow-500 hover:bg-yellow-400 text-black px-3 py-1.5 rounded-lg font-black text-[10px] uppercase"
+                                                                    >
+                                                                        Add
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="relative">
+                                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                                                            <input
+                                                                type="text" placeholder="Buscar no banco..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                                                                className="w-full bg-zinc-950 border border-white/10 rounded-xl py-1.5 pl-8 pr-3 text-xs focus:outline-none focus:border-yellow-500/40"
+                                                            />
+                                                        </div>
+
+                                                        <div className="max-h-[200px] overflow-y-auto space-y-1 pr-1 scrollbar-thin scrollbar-thumb-white/10">
+                                                            {dbPlayers.filter(p => !editingTeam.players.some(tp => tp.steamId === p.steamId)).filter(p => p.nickname.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
+                                                                <div key={p.steamId} 
+                                                                    onClick={() => setEditingTeam({ ...editingTeam, players: [...editingTeam.players, { steamId: p.steamId, nickname: p.nickname, rating: p.rating, avatar: p.avatar }] })}
+                                                                    className="flex items-center gap-2 p-1.5 bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/5 rounded-xl cursor-pointer transition-colors"
+                                                                >
+                                                                    <img src={p.avatar} className="w-5 h-5 rounded-md" />
+                                                                    <div className="flex-1 min-w-0 flex justify-between items-center">
+                                                                        <span className="text-[11px] font-bold text-white truncate">{p.nickname}</span>
+                                                                        <span className="text-[9px] text-yellow-500 font-mono font-bold bg-black/40 px-1 rounded">{p.rating} SR</span>
+                                                                    </div>
+                                                                    <Plus size={12} className="text-zinc-500" />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     ) : (
-                                        <div className="flex-1">
-                                            <h4 className="text-sm font-black text-white">{team.name}</h4>
-                                            <p className="text-xs text-zinc-500 mt-1">
-                                                {team.playerIds && team.playerIds.length > 0 ? team.playerIds.join(', ') : 'Nenhum jogador adicionado'}
-                                            </p>
-                                        </div>
-                                    )}
-                                    <div className="flex items-center gap-2">
-                                        {editingTeam?.id === team.id ? (
-                                            <>
-                                                <button 
-                                                    disabled={isSavingTeam}
-                                                    onClick={async () => {
-                                                        setIsSavingTeam(true);
-                                                        try {
-                                                            const pIds = editingTeam.playerIds.split(',').map(s => s.trim()).filter(Boolean);
-                                                            await fetch(`/api/tournaments/${tournament.id}/teams`, {
-                                                                method: 'PATCH',
-                                                                headers: { 'Content-Type': 'application/json' },
-                                                                body: JSON.stringify({ teamId: team.id, name: editingTeam.name, playerIds: pIds })
-                                                            });
-                                                            setEditingTeam(null);
-                                                            onRefresh();
-                                                        } finally {
-                                                            setIsSavingTeam(false);
-                                                        }
-                                                    }}
-                                                    className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                                                >
-                                                    <Save size={14} /> Salvar
-                                                </button>
-                                                <button onClick={() => setEditingTeam(null)} className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all">
-                                                    <X size={14} />
-                                                </button>
-                                            </>
-                                        ) : (
+                                        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
+                                            <div className="flex-1">
+                                                <h4 className="text-base font-black text-white italic uppercase tracking-tight">{team.name}</h4>
+                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                    {(team.playerIds || []).length > 0 ? (
+                                                        (team.playerIds || []).map((p, i) => (
+                                                            <span key={i} className="inline-flex items-center gap-1.5 bg-black/40 border border-white/5 px-2 py-1 rounded-lg text-[10px] font-bold text-zinc-300">
+                                                                {p.avatar && <img src={p.avatar} className="w-3 h-3 rounded shadow-sm" />}
+                                                                {p.nickname} {p.rating !== undefined && <span className="text-yellow-500/80 font-mono">{p.rating}</span>}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-xs text-zinc-600">Nenhum jogador adicionado</span>
+                                                    )}
+                                                </div>
+                                            </div>
                                             <button 
-                                                onClick={() => setEditingTeam({ id: team.id, name: team.name, playerIds: (team.playerIds || []).join(', ') })}
-                                                className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all"
+                                                onClick={() => setEditingTeam({ id: team.id, name: team.name, players: Array.isArray(team.playerIds) ? [...team.playerIds] : [] })}
+                                                className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all shrink-0"
                                             >
                                                 <Edit2 size={14} />
                                             </button>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -361,6 +467,7 @@ export default function TournamentsPage() {
     const [loading, setLoading] = useState(true);
     const [selected, setSelected] = useState<Tournament | null>(null);
     const [creating, setCreating] = useState(false);
+    const [dbPlayers, setDbPlayers] = useState<any[]>([]);
 
     const fetchTournaments = () => {
         fetch('/api/tournaments')
@@ -370,7 +477,20 @@ export default function TournamentsPage() {
             .finally(() => setLoading(false));
     };
 
-    useEffect(() => { fetchTournaments(); }, []);
+    const fetchDbPlayers = () => {
+        fetch('/api/ranking')
+            .then(r => r.json())
+            .then(d => {
+                const playersList = d.players || d;
+                if (Array.isArray(playersList)) setDbPlayers(playersList);
+            })
+            .catch(console.error);
+    };
+
+    useEffect(() => { 
+        fetchTournaments(); 
+        fetchDbPlayers();
+    }, []);
 
     const handleCreate = async (data: any) => {
         const res = await fetch('/api/tournaments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -457,6 +577,7 @@ export default function TournamentsPage() {
                 {selected && (
                     <BracketView
                         tournament={selected}
+                        dbPlayers={dbPlayers}
                         onClose={() => setSelected(null)}
                         onUpdateMatch={(matchId, wId, sA, sB) => handleUpdateMatch(selected.id, matchId, wId, sA, sB)}
                         onRefresh={() => refreshSelectedTournament(selected.id)}
