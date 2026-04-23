@@ -74,11 +74,11 @@ const STATUS_MAP: any = {
 };
 
 const GAME_MODES = [
-    { label: 'Competitivo', icon: '🏆', cmd: 'say !1', desc: 'Plugin: !1', color: 'yellow' },
-    { label: 'Arena',       icon: '🎯', cmd: 'say !2', desc: 'Plugin: !2', color: 'red' },
-    { label: '1v1',         icon: '⚔️',  cmd: 'say !3', desc: 'Plugin: !3', color: 'orange' },
-    { label: 'Retake',      icon: '♻️',  cmd: 'say !4', desc: 'Plugin: !4', color: 'cyan' },
-    { label: 'DeathMatch',  icon: '💀', cmd: 'say !5', desc: 'Plugin: !5', color: 'blue' },
+    { label: 'Competitivo', icon: '🏆', cmd: 'css_gamemode "Competitivo"', desc: 'GameModeManager: Competitivo', color: 'yellow' },
+    { label: 'Arena',       icon: '🎯', cmd: 'css_gamemode "Arena"',       desc: 'GameModeManager: Arena', color: 'red' },
+    { label: '1v1',         icon: '⚔️',  cmd: 'css_gamemode "1v1"',         desc: 'GameModeManager: 1v1', color: 'orange' },
+    { label: 'Retake',      icon: '♻️',  cmd: 'css_gamemode "Retake"',      desc: 'GameModeManager: Retake', color: 'cyan' },
+    { label: 'DeathMatch',  icon: '💀', cmd: 'css_gamemode "DeathMatch"',  desc: 'GameModeManager: DeathMatch', color: 'blue' },
 ];
 
 const MODE_COLOR: Record<string, string> = {
@@ -648,8 +648,6 @@ export function ServerDashboard() {
                                             onClick={() => {
                                             if (confirm(`Mudar para modo ${mode.label}?\n\nO servidor executará o comando do plugin.`)) {
                                                 sendCommandRaw(mode.cmd);
-                                                // Caso o plugin suporte comandos de console do CounterStrikeSharp
-                                                sendCommandRaw(`css_${mode.cmd.replace('say !', '')}`);
                                                 setActiveMode(mode.label);
                                             }
                                             }}
