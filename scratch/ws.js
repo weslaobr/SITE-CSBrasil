@@ -12,28 +12,20 @@ async function main() {
         }
     });
     
-    if (!res.ok) {
-        console.error("Failed to get websocket credentials");
-        return;
-    }
+    if (!res.ok) return;
     
     const creds = await res.json();
     const ws = new WebSocket(creds.data.socket, { origin: BASE_URL });
     
     ws.on('open', () => {
-        console.log("Connected to WS");
         ws.send(JSON.stringify({ event: 'auth', args: [creds.data.token] }));
     });
     
     ws.on('message', (data) => {
         const msg = JSON.parse(data);
         if (msg.event === 'auth success') {
-            console.log("Auth success. Sending commands...");
-            ws.send(JSON.stringify({ event: 'send command', args: ['css_gamemode Competitivo'] }));
-            ws.send(JSON.stringify({ event: 'send command', args: ['css_mode Competitivo'] }));
-            ws.send(JSON.stringify({ event: 'send command', args: ['css_modes'] }));
-            ws.send(JSON.stringify({ event: 'send command', args: ['sm_gamemode Competitivo'] }));
-            ws.send(JSON.stringify({ event: 'send command', args: ['css_plugins list'] }));
+            ws.send(JSON.stringify({ event: 'send command', args: ['exec arena.cfg'] }));
+            ws.send(JSON.stringify({ event: 'send command', args: ['mp_restartgame 1'] }));
             
             setTimeout(() => {
                 ws.close();
