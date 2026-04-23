@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw, Copy, Check, ClipboardList } from "lucide-react";
+import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw, Copy, Check, ClipboardList, Send, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Player {
@@ -96,6 +96,7 @@ export default function TeamBuilderPage() {
     const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [copiedTeam, setCopiedTeam] = useState<"A" | "B" | "both" | null>(null);
+    const [discordStatus, setDiscordStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
     const [loading, setLoading] = useState(true);
     const [mapPool, setMapPool] = useState<{id: string, name: string, image: string, active?: boolean}[]>(FALLBACK_MAP_POOL);
 
@@ -231,6 +232,31 @@ export default function TeamBuilderPage() {
             setCopiedTeam(team);
             setTimeout(() => setCopiedTeam(null), 2000);
         });
+    };
+
+    const handleSendDiscord = async () => {
+        if (teamA.length === 0 && teamB.length === 0) return;
+        setDiscordStatus("sending");
+        try {
+            const res = await fetch("/api/discord/team-announce", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ teamA, teamB, avgA, avgB, balanceMode }),
+            });
+            if (res.ok) {
+                setDiscordStatus("sent");
+                setTimeout(() => setDiscordStatus("idle"), 3000);
+            } else {
+                const data = await res.json();
+                console.error("Discord error:", data);
+                setDiscordStatus("error");
+                setTimeout(() => setDiscordStatus("idle"), 4000);
+            }
+        } catch (err) {
+            console.error(err);
+            setDiscordStatus("error");
+            setTimeout(() => setDiscordStatus("idle"), 4000);
+        }
     };
 
     const handleAutoBalance = () => {
@@ -523,6 +549,30 @@ export default function TeamBuilderPage() {
                                 className={`flex items-center gap-2 px-6 py-4 rounded-xl font-black uppercase text-xs transition-all shadow-lg shrink-0 ${selectedPlayers.length === 10 ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/20 active:scale-95 border border-purple-400/50' : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'}`}
                             >
                                 <Shuffle size={16} /> Auto-Balance
+                            </button>
+                            <button
+                                onClick={handleSendDiscord}
+                                disabled={discordStatus === "sending" || (teamA.length === 0 && teamB.length === 0)}
+                                className={`flex items-center gap-2 px-4 py-4 rounded-xl font-black uppercase text-xs transition-all shadow-lg shrink-0 border ${
+                                    discordStatus === "sent"
+                                        ? 'bg-green-600 text-white border-green-500/50 shadow-green-500/20'
+                                        : discordStatus === "error"
+                                            ? 'bg-red-700 text-white border-red-500/50'
+                                            : discordStatus === "sending"
+                                                ? 'bg-indigo-700 text-white border-indigo-500/50 cursor-wait'
+                                                : (teamA.length > 0 || teamB.length > 0)
+                                                    ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-400/50 active:scale-95'
+                                                    : 'bg-white/5 text-zinc-600 cursor-not-allowed border-white/5'
+                                }`}
+                                title="Enviar times para o Discord"
+                            >
+                                {discordStatus === "sending" && <Loader2 size={16} className="animate-spin" />}
+                                {discordStatus === "sent" && <Check size={16} />}
+                                {discordStatus === "error" && <X size={16} />}
+                                {discordStatus === "idle" && <Send size={16} />}
+                                <span className="hidden sm:inline">
+                                    {discordStatus === "sending" ? "Enviando..." : discordStatus === "sent" ? "Enviado!" : discordStatus === "error" ? "Erro" : "Discord"}
+                                </span>
                             </button>
                         </div>
                     </div>
