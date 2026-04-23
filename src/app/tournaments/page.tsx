@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Plus, Shield, Users, X, ChevronRight, Crown, Swords, Clock } from "lucide-react";
+import { Trophy, Plus, Shield, Users, X, ChevronRight, Crown, Swords, Clock, Edit2, Save, Trash } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
@@ -58,9 +58,13 @@ function TournamentCard({ t, onOpen }: { t: Tournament; onOpen: () => void }) {
     );
 }
 
-function BracketView({ tournament, onClose, onUpdateMatch }: { tournament: Tournament; onClose: () => void; onUpdateMatch: (matchId: string, winnerId: string, scoreA: number, scoreB: number) => void }) {
+function BracketView({ tournament, onClose, onUpdateMatch, onRefresh }: { tournament: Tournament; onClose: () => void; onUpdateMatch: (matchId: string, winnerId: string, scoreA: number, scoreB: number) => void; onRefresh: () => void }) {
     const rounds = [...new Set(tournament.matches.map(m => m.round))].sort((a, b) => a - b);
     const [scoring, setScoring] = useState<{ matchId: string; scoreA: string; scoreB: string } | null>(null);
+    const [viewMode, setViewMode] = useState<'BRACKET' | 'TEAMS'>('BRACKET');
+    const [editingTeam, setEditingTeam] = useState<{ id: string; name: string; playerIds: string } | null>(null);
+    const [newTeamName, setNewTeamName] = useState('');
+    const [isSavingTeam, setIsSavingTeam] = useState(false);
 
     const getWins = (teamId: string) =>
         tournament.matches.filter(m => m.winnerId === teamId).length;
@@ -80,12 +84,125 @@ function BracketView({ tournament, onClose, onUpdateMatch }: { tournament: Tourn
                             {tournament.format} • {tournament.teams.length} Times • {STATUS_BADGES[tournament.status]?.label}
                         </p>
                     </div>
-                    <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-500 hover:text-white transition-all">
-                        <X size={14} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setViewMode(v => v === 'BRACKET' ? 'TEAMS' : 'BRACKET')} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all">
+                            {viewMode === 'BRACKET' ? <Users size={14} /> : <Trophy size={14} />}
+                            {viewMode === 'BRACKET' ? 'Gerenciar Times' : 'Ver Chaveamento'}
+                        </button>
+                        <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-500 hover:text-white transition-all">
+                            <X size={14} />
+                        </button>
+                    </div>
                 </div>
 
-                {/* Standings */}
+                {viewMode === 'TEAMS' ? (
+                    <div className="p-6 space-y-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Times do Torneio</h3>
+                        </div>
+                        <div className="grid gap-3">
+                            {tournament.teams.map((team) => (
+                                <div key={team.id} className="bg-white/[0.03] border border-white/[0.05] rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                                    {editingTeam?.id === team.id ? (
+                                        <div className="flex-1 flex flex-col md:flex-row gap-3 w-full">
+                                            <input 
+                                                className="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-yellow-500/40 w-full md:w-1/3" 
+                                                placeholder="Nome do Time" 
+                                                value={editingTeam.name} 
+                                                onChange={e => setEditingTeam({ ...editingTeam, name: e.target.value })} 
+                                            />
+                                            <input 
+                                                className="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-yellow-500/40 w-full flex-1" 
+                                                placeholder="Jogadores (separados por vírgula)" 
+                                                value={editingTeam.playerIds} 
+                                                onChange={e => setEditingTeam({ ...editingTeam, playerIds: e.target.value })} 
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="flex-1">
+                                            <h4 className="text-sm font-black text-white">{team.name}</h4>
+                                            <p className="text-xs text-zinc-500 mt-1">
+                                                {team.playerIds && team.playerIds.length > 0 ? team.playerIds.join(', ') : 'Nenhum jogador adicionado'}
+                                            </p>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                        {editingTeam?.id === team.id ? (
+                                            <>
+                                                <button 
+                                                    disabled={isSavingTeam}
+                                                    onClick={async () => {
+                                                        setIsSavingTeam(true);
+                                                        try {
+                                                            const pIds = editingTeam.playerIds.split(',').map(s => s.trim()).filter(Boolean);
+                                                            await fetch(`/api/tournaments/${tournament.id}/teams`, {
+                                                                method: 'PATCH',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ teamId: team.id, name: editingTeam.name, playerIds: pIds })
+                                                            });
+                                                            setEditingTeam(null);
+                                                            onRefresh();
+                                                        } finally {
+                                                            setIsSavingTeam(false);
+                                                        }
+                                                    }}
+                                                    className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                                >
+                                                    <Save size={14} /> Salvar
+                                                </button>
+                                                <button onClick={() => setEditingTeam(null)} className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all">
+                                                    <X size={14} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button 
+                                                onClick={() => setEditingTeam({ id: team.id, name: team.name, playerIds: (team.playerIds || []).join(', ') })}
+                                                className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all"
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        <div className="pt-6 border-t border-white/[0.05]">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-3">Adicionar Novo Time</h4>
+                            <div className="flex flex-col md:flex-row gap-3">
+                                <input 
+                                    className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-4 py-2 text-sm font-bold outline-none focus:border-yellow-500/40 flex-1" 
+                                    placeholder="Nome do Novo Time" 
+                                    value={newTeamName} 
+                                    onChange={e => setNewTeamName(e.target.value)} 
+                                />
+                                <button 
+                                    disabled={!newTeamName.trim() || isSavingTeam}
+                                    onClick={async () => {
+                                        setIsSavingTeam(true);
+                                        try {
+                                            await fetch(`/api/tournaments/${tournament.id}/teams`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ name: newTeamName, playerIds: [] })
+                                            });
+                                            setNewTeamName('');
+                                            onRefresh();
+                                        } finally {
+                                            setIsSavingTeam(false);
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                                >
+                                    <Plus size={14} /> Adicionar Time
+                                </button>
+                            </div>
+                            <p className="text-[10px] text-zinc-500 mt-2">* Adicionar um time criará novas partidas contra todos os times já existentes.</p>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        {/* Standings */}
                 <div className="p-6 border-b border-white/[0.05]">
                     <h3 className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-3">Classificação</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -184,7 +301,9 @@ function BracketView({ tournament, onClose, onUpdateMatch }: { tournament: Tourn
                             </div>
                         </div>
                     ))}
-                </div>
+                    </div>
+                    </>
+                )}
             </motion.div>
         </div>
     );
@@ -270,11 +389,14 @@ export default function TournamentsPage() {
             body: JSON.stringify({ matchId, winnerId, scoreA, scoreB, status: 'DONE' }),
         });
         if (res.ok) {
-            fetchTournaments();
-            // Re-fetch selected tournament
-            const refreshed = await fetch(`/api/tournaments/${tournamentId}`).then(r => r.json());
-            setSelected(refreshed);
+            refreshSelectedTournament(tournamentId);
         }
+    };
+
+    const refreshSelectedTournament = async (tournamentId: string) => {
+        fetchTournaments();
+        const refreshed = await fetch(`/api/tournaments/${tournamentId}`).then(r => r.json());
+        setSelected(refreshed);
     };
 
     return (
@@ -337,6 +459,7 @@ export default function TournamentsPage() {
                         tournament={selected}
                         onClose={() => setSelected(null)}
                         onUpdateMatch={(matchId, wId, sA, sB) => handleUpdateMatch(selected.id, matchId, wId, sA, sB)}
+                        onRefresh={() => refreshSelectedTournament(selected.id)}
                     />
                 )}
                 {creating && <CreateModal onClose={() => setCreating(false)} onCreate={handleCreate} />}
