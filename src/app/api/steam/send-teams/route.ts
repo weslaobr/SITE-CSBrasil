@@ -35,17 +35,26 @@ Boa sorte e bom jogo! 🚀
         for (const player of allPlayers) {
             if (player.steamId && !player.isGuest) {
                 try {
-                    console.log(`➡️ Tentando enviar para: ${player.nickname} (${player.steamId})`);
+                    // Pequeno delay para não sobrecarregar o bot ou ser bloqueado pela Steam
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                    console.log(`➡️ Enviando para: ${player.nickname} (${player.steamId})`);
                     const botRes = await axios.post(`${STEAM_BOT_URL}/send-message`, {
                         steamId: player.steamId,
                         message: message
                     });
                     results.push({ nickname: player.nickname, success: true, data: botRes.data });
-                    console.log(`✅ Sucesso para ${player.nickname}`);
+                    console.log(`✅ Sucesso para ${player.nickname}:`, botRes.data.message || 'OK');
                 } catch (err: any) {
                     const errorMsg = err.response?.data?.error || err.message;
-                    console.error(`❌ Erro para ${player.nickname}:`, errorMsg);
-                    results.push({ nickname: player.nickname, success: false, error: errorMsg });
+                    const relationship = err.response?.data?.relationship;
+                    console.error(`❌ Erro para ${player.nickname}:`, errorMsg, relationship ? `(Rel: ${relationship})` : '');
+                    results.push({ 
+                        nickname: player.nickname, 
+                        success: false, 
+                        error: errorMsg,
+                        relationship: relationship 
+                    });
                 }
             } else {
                 console.log(`⏩ Pulando ${player.nickname} (Guest ou sem SteamID)`);
