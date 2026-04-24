@@ -688,6 +688,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     <th className="px-3 py-3.5 text-center">A</th>
                                     <th className="px-3 py-3.5 text-center">ADR</th>
                                     <th className="px-3 py-3.5 text-center">HS%</th>
+                                    <th className="px-3 py-3.5 text-center">KAST</th>
                                     <th className="px-3 py-3.5 text-center">Rating</th>
                                     <th className="px-3 py-3.5 text-center">Replay</th>
                                     <th className="px-5 py-3.5 text-right">Data</th>
@@ -866,6 +867,16 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                              : match.metadata?.hs_percentage ? Math.round(Number(match.metadata.hs_percentage)) : null;
                                                     return hs !== null ? (
                                                         <span className={`font-bold text-sm ${ hs >= 50 ? 'text-rose-400' : hs >= 30 ? 'text-zinc-400' : 'text-zinc-600'}`}>{hs}%</span>
+                                                    ) : <span className="text-zinc-700">—</span>;
+                                                })()}
+                                            </td>
+                                            {/* KAST */}
+                                            <td className="px-3 py-4 text-center">
+                                                {(() => {
+                                                    const kast = match.kast ?? match.metadata?.kast ?? match.metadata?.kast_percent ?? match.metadata?.kast_percentage;
+                                                    const val = kast != null ? (kast > 1 ? Math.round(kast) : Math.round(kast * 100)) : null;
+                                                    return val !== null ? (
+                                                        <span className={`font-bold text-sm ${ val >= 75 ? 'text-blue-400' : val >= 65 ? 'text-zinc-400' : 'text-zinc-600'}`}>{val}%</span>
                                                     ) : <span className="text-zinc-700">—</span>;
                                                 })()}
                                             </td>

@@ -72,7 +72,14 @@ export async function GET(req: NextRequest) {
                 hsPercentage = Number(meta.hs_percentage);
             }
 
-            return { ...m, kills, deaths, assists, adr, hsPercentage };
+            // KAST: handle both ratio (0.72) and full percent (72.0)
+            let kast = (m as any).kast;
+            if ((kast == null || kast <= 0) && (meta.kast != null || meta.kast_percent != null || meta.kast_percentage != null)) {
+                const raw = Number(meta.kast ?? meta.kast_percent ?? meta.kast_percentage);
+                kast = raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
+            }
+
+            return { ...m, kills, deaths, assists, adr, hsPercentage, kast };
         });
 
         // Format Global Matches to match the old Match schema for the frontend
@@ -93,6 +100,7 @@ export async function GET(req: NextRequest) {
                 matchDate: gmp.match.matchDate,
                 hsPercentage: gmp.hsPercentage,
                 adr: gmp.adr,
+                kast: (gmp.metadata as any)?.kast ?? (gmp.metadata as any)?.kast_percent ?? (gmp.metadata as any)?.kast_percentage,
                 metadata: gmp.metadata
             };
         });

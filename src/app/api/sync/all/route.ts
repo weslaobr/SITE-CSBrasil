@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
                     }
 
                     // Fetch full match details to get kills/deaths/assists/adr for the user
-                    let kills = 0, deaths = 0, assists = 0, adr: number | null = null;
+                    let kills = 0, deaths = 0, assists = 0, adr: number | null = null, kast: number | null = null;
                     let matchMetaExtra: any = {};
                     try {
                         const detailRes = await axios.get(`${LEETIFY_BASE_URL}/v2/matches/${m.id}`, {
@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
                             deaths = playerStat.total_deaths ?? playerStat.deaths ?? 0;
                             assists = playerStat.total_assists ?? playerStat.assists ?? 0;
                             adr = playerStat.dpr ?? playerStat.adr ?? playerStat.average_damage_per_round ?? null;
+                            kast = playerStat.kast ?? playerStat.kast_percent ?? playerStat.kast_percentage ?? null;
 
                             // accuracy_head in match detail is a 0-1 ratio (e.g. 0.2979 = 29.79%)
                             if (hsPercentage == null && playerStat.accuracy_head != null) {
@@ -159,7 +160,7 @@ export async function POST(req: NextRequest) {
                         hsPercentage,
                         result,
                         matchDate,
-                        metadata: { ...m, ...matchMetaExtra, source_detail: 'leetify' }
+                        metadata: { ...m, ...matchMetaExtra, kast, source_detail: 'leetify' }
                     };
 
                     await prisma.match.upsert({
