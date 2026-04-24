@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import axios from 'axios';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
 export async function GET() {
@@ -50,6 +53,64 @@ export async function GET() {
             } catch (steamError) {
                 console.error("[RankingAPI] Steam API Error:", steamError);
             }
+        }
+
+        // NOVO: Consultar "na hora" dados de players que não têm stats (Faceit/Premier) para eles não sumirem do site
+        const playersNeedingStats = players.filter(p => !p.Stats || (!p.Stats.faceitLevel && !p.Stats.premierRating));
+        
+        if (playersNeedingStats.length > 0) {
+            const { getFaceitPlayerBySteamId } = require("@/services/faceit-service");
+            const { getCS2SpacePlayerInfo } = require("@/services/cs2space-service");
+            
+            // Limit to 5 to avoid blocking the API for too long on first load
+            const toUpdate = playersNeedingStats.slice(0, 5);
+            
+            await Promise.all(toUpdate.map(async (player) => {
+                let currentStats = player.Stats;
+                if (!currentStats) {
+                    currentStats = await (prisma as any).stats.create({
+                        data: { playerId: player.id, steamId: player.steamId }
+                    });
+                    (player as any).Stats = currentStats;
+                }
+                
+                const updateData: any = {};
+                let faceitNeedsUpdate = !currentStats.faceitLevel || currentStats.faceitLevel === 0;
+                let premierNeedsUpdate = !currentStats.premierRating || currentStats.premierRating === 0;
+
+                try {
+                    const cs2space = await getCS2SpacePlayerInfo(player.steamId);
+                    if (cs2space) {
+                        if (premierNeedsUpdate && cs2space.ranks?.premier) {
+                            updateData.premierRating = cs2space.ranks.premier;
+                        }
+                        if (faceitNeedsUpdate && cs2space.faceit) {
+                            updateData.faceitLevel = cs2space.faceit.level || 0;
+                            updateData.faceitElo = cs2space.faceit.elo || 0;
+                            faceitNeedsUpdate = false;
+                        }
+                    }
+
+                    if (faceitNeedsUpdate) {
+                        const faceitData = await getFaceitPlayerBySteamId(player.steamId);
+                        const faceitGame = faceitData?.games?.cs2 || (faceitData?.games as any)?.csgo;
+                        if (faceitGame) {
+                            updateData.faceitLevel = faceitGame.skill_level || 0;
+                            updateData.faceitElo = faceitGame.faceit_elo || 0;
+                        }
+                    }
+
+                    if (Object.keys(updateData).length > 0) {
+                        const updatedStats = await (prisma as any).stats.update({
+                            where: { id: currentStats.id },
+                            data: updateData
+                        });
+                        (player as any).Stats = updatedStats;
+                    }
+                } catch (e) {
+                    console.error("[RankingAPI] Auto-sync error for", player.steamId, e);
+                }
+            }));
         }
 
         // 3. Buscar Users correspondentes
