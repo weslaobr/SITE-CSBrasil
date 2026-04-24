@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
 const STEAM_BOT_PORT = process.env.STEAM_BOT_PORT || '8080';
-const STEAM_BOT_URL = process.env.STEAM_BOT_URL || `http://localhost:${STEAM_BOT_PORT}`;
+const STEAM_BOT_URL = process.env.STEAM_BOT_URL || process.env.NEXT_PUBLIC_BOT_API_URL || `http://localhost:${STEAM_BOT_PORT}`;
 
 export async function POST(request: NextRequest) {
     try {
@@ -29,24 +29,39 @@ Boa sorte e bom jogo! 🚀
         const allPlayers = [...teamA, ...teamB];
         const results = [];
 
+        console.log(`📡 [API Steam] Iniciando envio para ${allPlayers.length} jogadores em: ${STEAM_BOT_URL}`);
+
         // Enviar para todos os jogadores que possuem SteamId e não são "guests"
         for (const player of allPlayers) {
             if (player.steamId && !player.isGuest) {
                 try {
-                    await axios.post(`${STEAM_BOT_URL}/send-message`, {
+                    console.log(`➡️ Tentando enviar para: ${player.nickname} (${player.steamId})`);
+                    const botRes = await axios.post(`${STEAM_BOT_URL}/send-message`, {
                         steamId: player.steamId,
                         message: message
                     });
-                    results.push({ nickname: player.nickname, success: true });
+                    results.push({ nickname: player.nickname, success: true, data: botRes.data });
+                    console.log(`✅ Sucesso para ${player.nickname}`);
                 } catch (err: any) {
-                    console.error(`❌ Erro ao enviar mensagem Steam para ${player.nickname}:`, err.message);
-                    results.push({ nickname: player.nickname, success: false, error: err.message });
+                    const errorMsg = err.response?.data?.error || err.message;
+                    console.error(`❌ Erro para ${player.nickname}:`, errorMsg);
+                    results.push({ nickname: player.nickname, success: false, error: errorMsg });
                 }
+            } else {
+                console.log(`⏩ Pulando ${player.nickname} (Guest ou sem SteamID)`);
             }
         }
 
         const successCount = results.filter(r => r.success).length;
         
+        if (successCount === 0 && allPlayers.length > 0) {
+            return NextResponse.json({ 
+                success: false, 
+                message: 'Nenhuma mensagem pôde ser enviada. Verifique se o bot está online e se os jogadores são amigos dele.',
+                results 
+            }, { status: 500 });
+        }
+
         return NextResponse.json({ 
             success: true, 
             message: `Tentativa de envio concluída (${successCount}/${results.length} sucesso)`,
@@ -54,7 +69,7 @@ Boa sorte e bom jogo! 🚀
         });
 
     } catch (error: any) {
-        console.error('❌ Erro na rota /api/steam/send-teams:', error.message);
+        console.error('❌ Erro crítico na rota /api/steam/send-teams:', error.message);
         return NextResponse.json({ error: 'Erro ao processar envio de mensagens' }, { status: 500 });
     }
 }
