@@ -135,6 +135,7 @@ export default function TeamBuilderPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [copiedTeam, setCopiedTeam] = useState<"A" | "B" | "both" | null>(null);
     const [discordStatus, setDiscordStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+    const [steamStatus, setSteamStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
     const [editingUnassigned, setEditingUnassigned] = useState<{ steamId: string, field: "sr"|"resenha", value: string } | null>(null);
     const [loading, setLoading] = useState(true);
     const [mapPool, setMapPool] = useState<{id: string, name: string, image: string, active?: boolean}[]>(FALLBACK_MAP_POOL);
@@ -306,6 +307,30 @@ export default function TeamBuilderPage() {
             setTimeout(() => setDiscordStatus("idle"), 4000);
         }
     };
+
+    const handleSendSteam = async () => {
+        if (teamA.length === 0 && teamB.length === 0) return;
+        setSteamStatus("sending");
+        try {
+            const res = await fetch("/api/steam/send-teams", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ teamA, teamB, avgA, avgB }),
+            });
+            if (res.ok) {
+                setSteamStatus("sent");
+                setTimeout(() => setSteamStatus("idle"), 3000);
+            } else {
+                setSteamStatus("error");
+                setTimeout(() => setSteamStatus("idle"), 4000);
+            }
+        } catch (err) {
+            console.error(err);
+            setSteamStatus("error");
+            setTimeout(() => setSteamStatus("idle"), 4000);
+        }
+    };
+
 
     const handleAutoBalance = () => {
         if (selectedPlayers.length !== 10) {
@@ -639,6 +664,30 @@ export default function TeamBuilderPage() {
                                 {discordStatus === "idle" && <Send size={16} />}
                                 <span className="hidden sm:inline">
                                     {discordStatus === "sending" ? "Enviando..." : discordStatus === "sent" ? "Enviado!" : discordStatus === "error" ? "Erro" : "Discord"}
+                                </span>
+                            </button>
+                            <button
+                                onClick={handleSendSteam}
+                                disabled={steamStatus === "sending" || (teamA.length === 0 && teamB.length === 0)}
+                                className={`flex items-center gap-2 px-4 py-4 rounded-xl font-black uppercase text-xs transition-all shadow-lg shrink-0 border ${
+                                    steamStatus === "sent"
+                                        ? 'bg-green-600 text-white border-green-500/50 shadow-green-500/20'
+                                        : steamStatus === "error"
+                                            ? 'bg-red-700 text-white border-red-500/50'
+                                            : steamStatus === "sending"
+                                                ? 'bg-yellow-700 text-white border-yellow-500/50 cursor-wait'
+                                                : (teamA.length > 0 || teamB.length > 0)
+                                                    ? 'bg-zinc-800 hover:bg-zinc-700 text-white border-white/10 active:scale-95'
+                                                    : 'bg-white/5 text-zinc-600 cursor-not-allowed border-white/5'
+                                }`}
+                                title="Enviar times para a Steam dos jogadores"
+                            >
+                                {steamStatus === "sending" && <Loader2 size={16} className="animate-spin" />}
+                                {steamStatus === "sent" && <Check size={16} />}
+                                {steamStatus === "error" && <X size={16} />}
+                                {steamStatus === "idle" && <Send size={16} className="text-yellow-500" />}
+                                <span className="hidden sm:inline">
+                                    {steamStatus === "sending" ? "Enviando..." : steamStatus === "sent" ? "Enviado!" : steamStatus === "error" ? "Erro" : "Steam"}
                                 </span>
                             </button>
                         </div>

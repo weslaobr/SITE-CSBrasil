@@ -17,6 +17,8 @@ app.use((req, res, next) => {
     next();
 });
 
+app.use(express.json());
+
 const user = new SteamUser();
 const cs2 = new CS2(user);
 
@@ -243,6 +245,29 @@ app.get('/item-details', (req, res) => {
             full_item: item // Opcional: retornar tudo para debug
         });
     });
+});
+
+// API para envio de mensagens via chat da Steam
+app.post('/send-message', (req, res) => {
+    const { steamId, message } = req.body;
+
+    if (!steamId || !message) {
+        return res.status(400).json({ error: 'steamId e message são obrigatórios' });
+    }
+
+    if (!user.steamID) {
+        return res.status(503).json({ error: 'Bot offline na Steam' });
+    }
+
+    try {
+        console.log(`💬 Enviando mensagem para ${steamId}`);
+        // A biblioteca steam-user permite enviar mesmo que a pessoa esteja offline
+        user.chat.sendFriendMessage(steamId, message);
+        res.json({ success: true, message: 'Mensagem enviada ou na fila de envio' });
+    } catch (err) {
+        console.error(`❌ Erro ao enviar mensagem para ${steamId}:`, err);
+        res.status(500).json({ error: 'Erro ao enviar mensagem', details: err.message });
+    }
 });
 
 app.listen(port, () => {
