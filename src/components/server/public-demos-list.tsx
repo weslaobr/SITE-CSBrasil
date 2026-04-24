@@ -154,27 +154,30 @@ export function PublicDemosList() {
                     <p className="text-zinc-600 font-bold uppercase tracking-widest text-[10px]">Nenhuma demo disponível</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4">
-                    {filteredDemos.slice(0, 10).map((demo) => (
-                        <div key={demo.name} className="bg-zinc-900/40 border border-white/5 hover:border-yellow-500/20 rounded-2xl p-4 flex items-center justify-between group transition-all">
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center text-zinc-600 group-hover:text-yellow-500 transition-colors border border-white/5 flex-shrink-0">
-                                    <FileText size={20} />
+                <div className="flex flex-col gap-3 pb-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
+                    {filteredDemos.map((demo) => (
+                        <div key={demo.name} className="bg-zinc-900/40 border border-white/5 hover:border-yellow-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group transition-all">
+                            <div className="flex items-start gap-4 min-w-0">
+                                <div className="w-12 h-12 rounded-xl bg-black/40 flex items-center justify-center text-zinc-600 group-hover:text-yellow-500 transition-colors border border-white/5 flex-shrink-0 mt-1">
+                                    <FileText size={24} />
                                 </div>
-                                <div className="min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-[11px] font-black text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight truncate">
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <p className="text-sm font-black text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight">
                                             {formatDemoName(demo.name).title}
                                         </p>
                                         {formatDemoName(demo.name).mapDisplay && (
-                                            <span className="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 text-[9px] font-bold text-yellow-400 uppercase flex-shrink-0">
+                                            <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold text-yellow-400 uppercase flex-shrink-0">
                                                 {formatDemoName(demo.name).mapDisplay}
                                             </span>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-3 mt-1 text-[9px] font-bold text-zinc-500 uppercase">
-                                        <span className="flex items-center gap-1"><Clock size={10} /> {formatDate(demo.modifiedAt)}</span>
-                                        <span className="flex items-center gap-1"><HardDrive size={10} /> {formatSize(demo.size)}</span>
+                                    <p className="text-[10px] font-mono text-zinc-500 break-all leading-relaxed">
+                                        <span className="text-zinc-400 font-bold">Arquivo:</span> {demo.name}
+                                    </p>
+                                    <div className="flex flex-wrap items-center gap-4 mt-2 text-[10px] font-bold text-zinc-500 uppercase">
+                                        <span className="flex items-center gap-1.5"><Clock size={12} className="text-zinc-600" /> {formatDate(demo.modifiedAt)}</span>
+                                        <span className="flex items-center gap-1.5"><HardDrive size={12} className="text-zinc-600" /> {formatSize(demo.size)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -182,13 +185,14 @@ export function PublicDemosList() {
                             <button 
                                 onClick={() => handleDownload(demo)}
                                 disabled={downloadingFile === demo.name}
-                                className="flex-shrink-0 p-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl transition-all shadow-lg shadow-yellow-500/10 active:scale-95 disabled:opacity-50"
+                                className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl transition-all shadow-lg shadow-yellow-500/10 active:scale-95 disabled:opacity-50 font-black uppercase tracking-widest text-[10px] w-full sm:w-auto"
                             >
                                 {downloadingFile === demo.name ? (
                                     <Loader2 size={16} className="animate-spin" />
                                 ) : (
                                     <Download size={16} />
                                 )}
+                                {downloadingFile === demo.name ? 'Gerando...' : 'Baixar'}
                             </button>
                         </div>
                     ))}
