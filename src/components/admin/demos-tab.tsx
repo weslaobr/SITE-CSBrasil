@@ -86,6 +86,23 @@ export default function DemosTab() {
         demo.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const formatDemoName = (name: string) => {
+        let cleanName = name.replace(/\.dem$/i, '');
+        const mapMatch = cleanName.match(/(de_[a-zA-Z0-9]+|cs_[a-zA-Z0-9]+)/i);
+        const map = mapMatch ? mapMatch[0] : null;
+        
+        if (map) {
+            cleanName = cleanName.replace(map, '').replace(/[-_]+/g, ' ').trim();
+        } else {
+            cleanName = cleanName.replace(/[-_]+/g, ' ').trim();
+        }
+
+        return {
+            title: cleanName || "Partida",
+            mapDisplay: map ? map.replace(/^(de_|cs_)/i, '').charAt(0).toUpperCase() + map.replace(/^(de_|cs_)/i, '').slice(1) : null
+        };
+    };
+
     if (loading) return (
         <div className="flex flex-col items-center justify-center p-20 gap-4">
             <Loader2 className="w-10 h-10 text-yellow-500 animate-spin" />
@@ -175,10 +192,19 @@ export default function DemosTab() {
                                                 <FileText size={16} />
                                             </div>
                                             <div>
-                                                <p className="text-[11px] font-bold text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[11px] font-bold text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight">
+                                                        {formatDemoName(demo.name).title}
+                                                    </p>
+                                                    {formatDemoName(demo.name).mapDisplay && (
+                                                        <span className="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 text-[9px] font-bold text-yellow-400 uppercase">
+                                                            {formatDemoName(demo.name).mapDisplay}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-[9px] font-mono text-zinc-600 mt-0.5 truncate max-w-[200px]" title={demo.name}>
                                                     {demo.name}
                                                 </p>
-                                                <p className="text-[9px] font-mono text-zinc-600 mt-0.5 truncate max-w-[200px]" title={demo.path}>{demo.path.split('/').slice(0, -1).join('/')}/</p>
                                             </div>
                                         </div>
                                     </td>
