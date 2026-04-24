@@ -38,7 +38,7 @@ Boa sorte e bom jogo! 🚀
                     // Pequeno delay para não sobrecarregar o bot ou ser bloqueado pela Steam
                     await new Promise(resolve => setTimeout(resolve, 500));
 
-                    console.log(`➡️ Enviando para: ${player.nickname} (${player.steamId})`);
+                    console.log(`➡️ Enviando para: ${player.nickname} (ID: ${player.steamId}, Tipo: ${typeof player.steamId})`);
                     const botRes = await axios.post(`${STEAM_BOT_URL}/send-message`, {
                         steamId: player.steamId,
                         message: message

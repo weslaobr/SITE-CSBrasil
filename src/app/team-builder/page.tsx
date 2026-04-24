@@ -310,6 +310,8 @@ export default function TeamBuilderPage() {
 
     const handleSendSteam = async () => {
         if (teamA.length === 0 && teamB.length === 0) return;
+        console.log("DEBUG Steam Send - Team A:", teamA.map(p => ({ n: p.nickname, id: p.steamId, type: typeof p.steamId })));
+        console.log("DEBUG Steam Send - Team B:", teamB.map(p => ({ n: p.nickname, id: p.steamId, type: typeof p.steamId })));
         setSteamStatus("sending");
         try {
             const res = await fetch("/api/steam/send-teams", {
