@@ -313,7 +313,9 @@ export default function TeamBuilderPage() {
             return;
         }
 
-        const getRating = (p: Player) => balanceMode === "resenha" ? (p.resenhaRating || 5) : p.rating;
+        const getRating = (p: Player) => balanceMode === "resenha"
+            ? (p.tempResenhaRating !== undefined ? p.tempResenhaRating : (p.resenhaRating || 5))
+            : (p.tempRating !== undefined ? p.tempRating : p.rating);
 
         const sorted = [...selectedPlayers].sort((a, b) => getRating(b) - getRating(a));
         let tA = 0;
