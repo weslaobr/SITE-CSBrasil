@@ -21,8 +21,7 @@ export async function POST(req: NextRequest) {
             if (!currentStats) {
                 currentStats = await (prisma as any).stats.create({
                     data: {
-                        playerId: player.id,
-                        steamId: player.steamId,
+                        playerId: player.id
                     }
                 });
             }

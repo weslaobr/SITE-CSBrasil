@@ -68,7 +68,7 @@ export async function GET() {
                 let currentStats = player.Stats;
                 if (!currentStats) {
                     currentStats = await (prisma as any).stats.create({
-                        data: { playerId: player.id, steamId: player.steamId }
+                        data: { playerId: player.id }
                     });
                     (player as any).Stats = currentStats;
                 }
