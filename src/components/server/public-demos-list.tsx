@@ -155,47 +155,78 @@ export function PublicDemosList() {
                 </div>
             ) : (
                 <div className="flex flex-col gap-3 pb-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
-                    {filteredDemos.map((demo) => (
-                        <div key={demo.name} className="bg-zinc-900/40 border border-white/5 hover:border-yellow-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group transition-all">
-                            <div className="flex items-start gap-4 min-w-0">
-                                <div className="w-12 h-12 rounded-xl bg-black/40 flex items-center justify-center text-zinc-600 group-hover:text-yellow-500 transition-colors border border-white/5 flex-shrink-0 mt-1">
-                                    <FileText size={24} />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <p className="text-sm font-black text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight">
-                                            {formatDemoName(demo.name).title}
-                                        </p>
-                                        {formatDemoName(demo.name).mapDisplay && (
-                                            <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold text-yellow-400 uppercase flex-shrink-0">
-                                                {formatDemoName(demo.name).mapDisplay}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-[10px] font-mono text-zinc-500 break-all leading-relaxed">
-                                        <span className="text-zinc-400 font-bold">Arquivo:</span> {demo.name}
-                                    </p>
-                                    <div className="flex flex-wrap items-center gap-4 mt-2 text-[10px] font-bold text-zinc-500 uppercase">
-                                        <span className="flex items-center gap-1.5"><Clock size={12} className="text-zinc-600" /> {formatDate(demo.modifiedAt)}</span>
-                                        <span className="flex items-center gap-1.5"><HardDrive size={12} className="text-zinc-600" /> {formatSize(demo.size)}</span>
-                                    </div>
-                                </div>
-                            </div>
+                    {filteredDemos
+                        .sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime())
+                        .map((demo, index, array) => {
+                            let showSeparator = false;
+                            let gapText = "";
+                            if (index > 0) {
+                                const prevDate = new Date(array[index - 1].modifiedAt).getTime();
+                                const currDate = new Date(demo.modifiedAt).getTime();
+                                const diffHours = (prevDate - currDate) / (1000 * 60 * 60);
+                                if (diffHours > 4) {
+                                    showSeparator = true;
+                                    if (diffHours > 48) {
+                                        gapText = `Jogos de ${Math.floor(diffHours / 24)} dias atrás`;
+                                    } else if (diffHours > 24) {
+                                        gapText = `Jogos do dia anterior`;
+                                    } else {
+                                        gapText = `Sessões Anteriores (+${Math.floor(diffHours)}h atrás)`;
+                                    }
+                                }
+                            }
 
-                            <button 
-                                onClick={() => handleDownload(demo)}
-                                disabled={downloadingFile === demo.name}
-                                className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl transition-all shadow-lg shadow-yellow-500/10 active:scale-95 disabled:opacity-50 font-black uppercase tracking-widest text-[10px] w-full sm:w-auto"
-                            >
-                                {downloadingFile === demo.name ? (
-                                    <Loader2 size={16} className="animate-spin" />
-                                ) : (
-                                    <Download size={16} />
-                                )}
-                                {downloadingFile === demo.name ? 'Gerando...' : 'Baixar'}
-                            </button>
-                        </div>
-                    ))}
+                            return (
+                                <React.Fragment key={demo.name}>
+                                    {showSeparator && (
+                                        <div className="flex items-center gap-4 mt-6 mb-2">
+                                            <div className="h-px bg-white/10 flex-1" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 bg-zinc-900/50 px-4 py-1.5 rounded-full border border-white/5">{gapText}</span>
+                                            <div className="h-px bg-white/10 flex-1" />
+                                        </div>
+                                    )}
+                                    <div className="bg-zinc-900/40 border border-white/5 hover:border-yellow-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group transition-all">
+                                        <div className="flex items-start gap-4 min-w-0">
+                                            <div className="w-12 h-12 rounded-xl bg-black/40 flex items-center justify-center text-zinc-600 group-hover:text-yellow-500 transition-colors border border-white/5 flex-shrink-0 mt-1">
+                                                <FileText size={24} />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <p className="text-sm font-black text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight">
+                                                        {formatDemoName(demo.name).title}
+                                                    </p>
+                                                    {formatDemoName(demo.name).mapDisplay && (
+                                                        <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold text-yellow-400 uppercase flex-shrink-0">
+                                                            {formatDemoName(demo.name).mapDisplay}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] font-mono text-zinc-500 break-all leading-relaxed">
+                                                    <span className="text-zinc-400 font-bold">Arquivo:</span> {demo.name}
+                                                </p>
+                                                <div className="flex flex-wrap items-center gap-4 mt-2 text-[10px] font-bold text-zinc-500 uppercase">
+                                                    <span className="flex items-center gap-1.5"><Clock size={12} className="text-zinc-600" /> {formatDate(demo.modifiedAt)}</span>
+                                                    <span className="flex items-center gap-1.5"><HardDrive size={12} className="text-zinc-600" /> {formatSize(demo.size)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <button 
+                                            onClick={() => handleDownload(demo)}
+                                            disabled={downloadingFile === demo.name}
+                                            className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl transition-all shadow-lg shadow-yellow-500/10 active:scale-95 disabled:opacity-50 font-black uppercase tracking-widest text-[10px] w-full sm:w-auto"
+                                        >
+                                            {downloadingFile === demo.name ? (
+                                                <Loader2 size={16} className="animate-spin" />
+                                            ) : (
+                                                <Download size={16} />
+                                            )}
+                                            {downloadingFile === demo.name ? 'Gerando...' : 'Baixar'}
+                                        </button>
+                                    </div>
+                                </React.Fragment>
+                            );
+                        })}
                 </div>
             )}
 
