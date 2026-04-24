@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
-const STEAM_BOT_URL = process.env.STEAM_BOT_URL || 'http://localhost:3005';
+const STEAM_BOT_PORT = process.env.STEAM_BOT_PORT || '8080';
+const STEAM_BOT_URL = process.env.STEAM_BOT_URL || `http://localhost:${STEAM_BOT_PORT}`;
 
 export async function POST(request: NextRequest) {
     try {
