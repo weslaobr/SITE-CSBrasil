@@ -1,5 +1,5 @@
 import type { Metadata, ResolvingMetadata } from "next";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 type Props = {
   params: Promise<{ id: string }>;

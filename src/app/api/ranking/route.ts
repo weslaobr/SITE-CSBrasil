@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import axios from 'axios';
+import { getFaceitPlayerBySteamId } from "@/services/faceit-service";
+import { getCS2SpacePlayerInfo } from "@/services/cs2space-service";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -59,9 +61,6 @@ export async function GET() {
         const playersNeedingStats = players.filter(p => !p.Stats || (!p.Stats.faceitLevel && !p.Stats.premierRating));
         
         if (playersNeedingStats.length > 0) {
-            const { getFaceitPlayerBySteamId } = require("@/services/faceit-service");
-            const { getCS2SpacePlayerInfo } = require("@/services/cs2space-service");
-            
             // Limit to 5 to avoid blocking the API for too long on first load
             const toUpdate = playersNeedingStats.slice(0, 5);
             
