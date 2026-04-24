@@ -16,7 +16,6 @@ export async function GET() {
             include: {
                 Stats: true,
             },
-            take: 100,
         });
 
         // 2. Identificar players que precisam de atualização de perfil
