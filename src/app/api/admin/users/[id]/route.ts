@@ -33,3 +33,31 @@ export async function PATCH(
         return new NextResponse("Internal Error", { status: 500 });
     }
 }
+
+export async function DELETE(
+    req: Request,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const session = await getServerSession(getAuthOptions());
+        const { id } = params;
+        
+        if (!(session?.user as any)?.isAdmin) {
+            return new NextResponse("Unauthorized", { status: 401 });
+        }
+
+        // Evita que o admin se delete
+        if ((session.user as any).id === id) {
+            return new NextResponse("Não é possível deletar sua própria conta", { status: 400 });
+        }
+
+        await prisma.user.delete({
+            where: { id }
+        });
+
+        return new NextResponse(null, { status: 204 });
+    } catch (error) {
+        console.error("[USER_DELETE]", error);
+        return new NextResponse("Internal Error", { status: 500 });
+    }
+}

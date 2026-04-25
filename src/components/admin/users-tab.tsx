@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Users, Shield, ShieldCheck, ShieldAlert, Search, Loader2 } from 'lucide-react';
+import { Users, Shield, ShieldCheck, ShieldAlert, Search, Loader2, Trash2 } from 'lucide-react';
 import { toast } from "sonner";
 
 interface User {
@@ -56,6 +56,31 @@ export default function UsersTab() {
             } else {
                 const text = await res.text();
                 toast.error(text || "Erro ao atualizar permissões");
+            }
+        } catch (error) {
+            toast.error("Erro na requisição");
+        } finally {
+            setUpdating(null);
+        }
+    };
+
+    const deleteUser = async (userId: string, userName: string) => {
+        if (!confirm(`Tem certeza que deseja deletar o usuário "${userName}"? Esta ação é irreversível.`)) {
+            return;
+        }
+
+        setUpdating(userId);
+        try {
+            const res = await fetch(`/api/admin/users/${userId}`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                toast.success("Usuário deletado com sucesso");
+                setUsers(users.filter(u => u.id !== userId));
+            } else {
+                const text = await res.text();
+                toast.error(text || "Erro ao deletar usuário");
             }
         } catch (error) {
             toast.error("Erro na requisição");
@@ -141,20 +166,33 @@ export default function UsersTab() {
                                 </div>
                             </div>
 
-                            <button
-                                onClick={() => toggleAdmin(user.id, user.isAdmin)}
-                                disabled={updating === user.id}
-                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${user.isAdmin ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white' : 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-black'}`}
-                            >
-                                {updating === user.id ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : user.isAdmin ? (
-                                    <ShieldAlert size={12} />
-                                ) : (
-                                    <Shield size={12} />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => toggleAdmin(user.id, user.isAdmin)}
+                                    disabled={updating === user.id}
+                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${user.isAdmin ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white' : 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-black'}`}
+                                >
+                                    {updating === user.id ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : user.isAdmin ? (
+                                        <ShieldAlert size={12} />
+                                    ) : (
+                                        <Shield size={12} />
+                                    )}
+                                    {user.isAdmin ? 'Remover Admin' : 'Tornar Admin'}
+                                </button>
+
+                                {!user.isAdmin && (
+                                    <button
+                                        onClick={() => deleteUser(user.id, user.name)}
+                                        disabled={updating === user.id}
+                                        className="p-2.5 rounded-xl bg-white/5 text-zinc-500 hover:bg-red-500 hover:text-white transition-all"
+                                        title="Excluir Usuário"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
                                 )}
-                                {user.isAdmin ? 'Remover Admin' : 'Tornar Admin'}
-                            </button>
+                            </div>
                         </div>
                     </div>
                 ))}
