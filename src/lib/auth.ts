@@ -54,7 +54,6 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
                     (session.user as any).steamId = (user as any).steamId;
                     (session.user as any).faceitNickname = (user as any).faceitNickname;
                     (session.user as any).isAdmin = (user as any).isAdmin || (user as any).steamId === process.env.ADMIN_STEAM_ID;
-                    (session.user as any).isModerator = (user as any).isModerator || (session.user as any).isAdmin;
                 }
                 return session;
             },

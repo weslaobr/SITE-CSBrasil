@@ -42,7 +42,6 @@ model User {
   image                String?
   steamId              String?             @unique
   isAdmin              Boolean             @default(false)
-  isModerator          Boolean             @default(false)
   steamMatchAuthCode   String?
   steamLatestMatchCode String?
   faceitNickname       String?
