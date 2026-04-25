@@ -803,7 +803,8 @@ export function ServerDashboard() {
                                                 <button 
                                                     onClick={() => {
                                                         if (confirm(`Trocar para ${map.name} agora?`)) {
-                                                            sendCommandRaw(`changelevel ${map.id}`);
+                                                            setLogs(prev => [...prev.slice(-150), `>>> Trocando para o mapa: ${map.id}`]);
+                                                            sendCommandRaw(`map ${map.id}`);
                                                         }
                                                     }}
                                                     disabled={!map.active}
