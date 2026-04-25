@@ -235,9 +235,11 @@ export function ServerDashboard() {
             const ws = new WebSocket(data.socket);
             socketRef.current = ws;
 
+            console.log("Tentando conexão WSS:", data.socket);
+
             ws.onopen = () => {
+                console.log("WSS Aberto, enviando token...");
                 ws.send(JSON.stringify({ event: 'auth', args: [data.token] }));
-                // Pterodactyl needs sometimes a second to process auth
                 setWsStatus('connected');
                 setLogs(prev => [...prev.slice(-150), ">>> Conexão estabelecida. Autenticando..."]);
             };
@@ -261,11 +263,18 @@ export function ServerDashboard() {
                         const line = msg.args[0];
                         setLogs(prev => [...prev.slice(-150), line]);
 
-                        if (line.includes('#      userid name') || parsingStatusRef.current) {
+                        // NEW CS2 status detection
+                        if (line.includes('---------players--------')) {
                             parsingStatusRef.current = true;
-                            statusBufferRef.current.push(line);
-                            if (statusBufferRef.current.length > 2 && !line.startsWith('#') && line.trim() !== '') {
+                            statusBufferRef.current = [];
+                            return;
+                        }
+                        
+                        if (parsingStatusRef.current) {
+                            if (line.includes('#end')) {
                                 finalizeStatusParse();
+                            } else {
+                                statusBufferRef.current.push(line);
                             }
                         }
                     }
@@ -320,26 +329,26 @@ export function ServerDashboard() {
     }, [logs]);
 
     const finalizeStatusParse = () => {
-        const playerLines = statusBufferRef.current.filter(l => l.startsWith('#') && !l.includes('userid name'));
-        
-        const parsedPlayers: Player[] = playerLines.map(line => {
-            // Robust regex to handle names with or without quotes
-            // Format: # userid name uniqueid connected ping loss state adr
-            // Example: # 2 1 "weslao" STEAM_1:0:1234 01:23 15 0 active
-            const match = line.match(/#\s+\d+\s+(\d+)\s+(?:"(.+?)"|(.+?))\s+(STEAM_\d:\d:\d+|BOT|\[U:\d:\d+\])\s+([\d:]+|\w+)\s+(\d+|-)\s+/);
-            if (match) {
-                return {
-                    id: match[1],
-                    name: match[2] || match[3],
-                    steamId: match[4],
-                    connectedTime: match[5],
-                    ping: match[6]
-                };
-            }
-            return null;
-        }).filter(Boolean) as Player[];
+        const lines = statusBufferRef.current;
+        const parsedPlayers: Player[] = [];
 
-        setPlayers(parsedPlayers);
+        lines.forEach(line => {
+            // New CS2 Status Format: 65280    11:10    4    0     active 786432 187.94.13.238:54864 'weslao123'
+            const match = line.match(/^\s*(\d+)\s+([\d:]+|BOT)\s+(\d+)\s+(\d+)\s+(\w+)\s+(\d+)\s+([\d.:]+|)\s+'(.+?)'/);
+            if (match) {
+                parsedPlayers.push({
+                    id: match[1],
+                    name: match[8],
+                    ping: match[3],
+                    connectedTime: match[2],
+                    steamId: match[7] || "In-game"
+                });
+            }
+        });
+
+        if (parsedPlayers.length > 0) {
+            setPlayers(parsedPlayers);
+        }
         statusBufferRef.current = [];
         parsingStatusRef.current = false;
         setIsRefreshingPlayers(false);
@@ -347,17 +356,12 @@ export function ServerDashboard() {
 
     const refreshPlayers = async () => {
         setIsRefreshingPlayers(true);
-        try {
-            const res = await fetch('/api/server/players');
-            if (res.ok) {
-                const data = await res.json();
-                setPlayers(data);
-            }
-        } catch (e) {
-            console.error('Erro ao buscar jogadores via Steam Query:', e);
-        } finally {
-            setIsRefreshingPlayers(false);
-        }
+        statusBufferRef.current = [];
+        parsingStatusRef.current = true;
+        // Request status via REST API
+        await sendCommandRaw('status');
+        // We still need the logs to appear to parse them, 
+        // but if WSS is blocked, we'll try to fetch the latest logs via API if possible
     };
 
     // Auto refresh players every 15s
