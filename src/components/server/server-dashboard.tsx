@@ -277,14 +277,22 @@ export function ServerDashboard() {
                 setWsStatus('disconnected');
                 socketRef.current = null;
                 
-                let reason = "Conexão perdida";
-                if (event.code === 1006) reason = "Servidor recusou a conexão (1006)";
-                if (event.code === 4000) reason = "Token de autenticação inválido (4000)";
-                
-                if (event.code !== 1000) {
-                    setLogs(prev => [...prev.slice(-150), `>>> ${reason}. Código: ${event.code}. Tentando em 6s...`]);
+                // 1006 is often a network/firewall block for WSS on non-standard ports
+                if (event.code === 1006) {
+                    setLogs(prev => [...prev.slice(-150), ">>> Logs em tempo real indisponíveis (Bloqueio de Rede/Porta)."]);
+                    // Retry much slower for 1006
                     if (retryRef.current) clearTimeout(retryRef.current);
-                    retryRef.current = setTimeout(connectWs, 6000);
+                    retryRef.current = setTimeout(connectWs, 30000);
+                    return;
+                }
+
+                if (event.code !== 1000) {
+                    let reason = "Conexão perdida";
+                    if (event.code === 4000) reason = "Token de autenticação inválido";
+                    
+                    setLogs(prev => [...prev.slice(-150), `>>> ${reason}. Código: ${event.code}. Tentando em 10s...`]);
+                    if (retryRef.current) clearTimeout(retryRef.current);
+                    retryRef.current = setTimeout(connectWs, 10000);
                 }
             };
 
