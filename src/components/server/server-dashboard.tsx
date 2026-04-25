@@ -803,9 +803,8 @@ export function ServerDashboard() {
                                                 <button 
                                                     onClick={() => {
                                                         if (confirm(`Trocar para ${map.name} agora?`)) {
-                                                            const cmd = `say !map ${map.id}`;
-                                                            setLogs(prev => [...prev.slice(-150), `>>> Solicitando troca via MatchZy Chat: ${cmd}`]);
-                                                            sendCommandRaw(cmd);
+                                                            setLogs(prev => [...prev.slice(-150), `>>> Solicitando troca para o mapa: ${map.id}`]);
+                                                            sendCommandRaw(`map ${map.id}`);
                                                         }
                                                     }}
                                                     disabled={!map.active}
