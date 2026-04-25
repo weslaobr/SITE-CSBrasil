@@ -155,6 +155,7 @@ export function ServerDashboard() {
     const [activeMgmtTab, setActiveMgmtTab] = useState<'players' | 'server' | 'settings'>('players');
     const [activeMode, setActiveMode] = useState<string | null>(null);
     const [serverControlTab, setServerControlTab] = useState<'modes' | 'maps' | 'controls' | 'config'>('modes');
+    const [spectatorMessage, setSpectatorMessage] = useState("<font color='#ffb000'><b>★ TROPA DO CS2 ★</b></font><br/><font color='#ffffff' size='14'>www.tropacs.com.br</font>");
 
     const consoleRef = useRef<HTMLDivElement>(null);
     const socketRef = useRef<WebSocket | null>(null);
@@ -1010,6 +1011,51 @@ export function ServerDashboard() {
                                                     sendCommandRaw(`sv_password "${val}"`);
                                                 }} className="bg-white/5 hover:bg-white/10 text-white px-3 py-1 rounded-xl text-[9px] font-black uppercase border border-white/5 transition-all">Definir</button>
                                             </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 border-t border-white/5 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40">Banner de Espectador (HUD)</h4>
+                                        <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-500 text-[8px] font-black rounded-full uppercase">Estilo GamersClub</span>
+                                    </div>
+                                    
+                                    <div className="space-y-3">
+                                        <div className="bg-black/40 border border-white/5 rounded-2xl p-4 space-y-3">
+                                            <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Pré-visualização (Aproximada)</p>
+                                            <div className="bg-zinc-950 border border-white/5 rounded-xl p-6 flex flex-col items-center justify-center text-center min-h-[100px] relative overflow-hidden">
+                                                {/* Simulação de fundo de jogo */}
+                                                <div className="absolute inset-0 opacity-10 bg-[url('https://wallpaperaccess.com/full/1520448.jpg')] bg-cover bg-center" />
+                                                <div className="relative z-10" dangerouslySetInnerHTML={{ __html: spectatorMessage }} />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Texto do Banner (Suporta HTML básico do CS2)</label>
+                                            <textarea 
+                                                value={spectatorMessage}
+                                                onChange={(e) => setSpectatorMessage(e.target.value)}
+                                                rows={3}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[11px] font-mono text-zinc-300 focus:outline-none focus:border-yellow-500/50"
+                                                placeholder="Ex: <font color='#ffb000'><b>★ SITE-CSBRASIL ★</b></font>"
+                                            />
+                                            <p className="text-[8px] text-zinc-600">Dica: Use as tags &lt;font color='#hex'&gt;, &lt;b&gt; e &lt;br/&gt; para formatar.</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button 
+                                                onClick={() => sendCommandRaw(`css_say "${spectatorMessage}"`)}
+                                                className="py-3 bg-white/5 hover:bg-white/10 text-white text-[9px] font-black uppercase rounded-xl border border-white/5 transition-all"
+                                            >
+                                                Testar no Chat
+                                            </button>
+                                            <button 
+                                                onClick={() => sendCommandRaw(`css_asay "${spectatorMessage}"`)}
+                                                className="py-3 bg-yellow-500 text-black text-[9px] font-black uppercase rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/10"
+                                            >
+                                                Aplicar ao HUD
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
