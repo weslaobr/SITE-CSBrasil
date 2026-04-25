@@ -35,34 +35,34 @@ model Session {
 }
 
 model User {
-  id                                         String              @id @default(cuid())
-  name                                       String?
-  email                                      String?             @unique
-  emailVerified                              DateTime?
-  image                                      String?
-  steamId                                    String?             @unique
-  steamMatchAuthCode                         String?
-  steamLatestMatchCode                       String?
-  faceitNickname                             String?
-  gcNickname                                 String?
-  gcLevel                                    Int?
-  cs2Rank                                    String?
-  adr                                        Float?
-  hsPercentage                               Float?
-  winRate                                    Float?
-  matchesPlayed                              Int                 @default(0)
-  isAdmin                                    Boolean?            @default(false)
-  isModerator                                Boolean             @default(false)
-  accounts                                   Account[]
-  evaluationLists                            EvaluationList[]    @relation("EvaluationCreator")
-  globalMatchPlayers                         GlobalMatchPlayer[]
-  lobbiesCreated                             Lobby[]             @relation("LobbyCreator")
-  lobbyParticipations                        LobbyPlayer[]
-  MapVetoLobby_MapVetoLobby_creatorIdToUser  MapVetoLobby[]      @relation("MapVetoLobby_creatorIdToUser")
-  MapVetoLobby_MapVetoLobby_opponentIdToUser MapVetoLobby[]      @relation("MapVetoLobby_opponentIdToUser")
-  matches                                    Match[]
-  sessions                                   Session[]
-  inventoryItems                             UserInventoryItem[]
+  id                   String              @id @default(cuid())
+  name                 String?
+  email                String?             @unique
+  emailVerified        DateTime?
+  image                String?
+  steamId              String?             @unique
+  isAdmin              Boolean             @default(false)
+  isModerator          Boolean             @default(false)
+  steamMatchAuthCode   String?
+  steamLatestMatchCode String?
+  faceitNickname       String?
+  gcNickname           String?
+  gcLevel              Int?
+  cs2Rank              String?
+  adr                  Float?
+  hsPercentage         Float?
+  winRate              Float?
+  matchesPlayed        Int                 @default(0)
+  accounts             Account[]
+  lobbiesCreated       Lobby[]             @relation("LobbyCreator")
+  lobbyParticipations  LobbyPlayer[]
+  matches              Match[]
+  sessions             Session[]
+  inventoryItems       UserInventoryItem[]
+  mapVetoesCreated     MapVetoLobby[]      @relation("MapVetoCreator")
+  mapVetoesParticipated MapVetoLobby[]     @relation("MapVetoOpponent")
+  globalMatchPlayers   GlobalMatchPlayer[]
+  evaluationLists      EvaluationList[]    @relation("EvaluationCreator")
 }
 
 model VerificationToken {
@@ -104,10 +104,10 @@ model Lobby {
   leaderAId  String?
   leaderBId  String?
   turn       String        @default("A")
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
   rpsEnabled Boolean       @default(false)
   rpsState   String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
   creator    User          @relation("LobbyCreator", fields: [creatorId], references: [id])
   players    LobbyPlayer[]
 }
@@ -126,21 +126,19 @@ model LobbyPlayer {
 }
 
 model GuildConfig {
-  id                   String            @id
-  logChannelId         String?
-  auditChannelId       String?
-  enableAudit          Boolean           @default(true)
-  enableVoice          Boolean           @default(true)
-  updatedAt            DateTime          @updatedAt
-  enableInvites        Boolean           @default(true)
-  invitesChannelId     String?
-  rankingChannelId     String?
-  rankingMessageId     String?
-  enableRoleSync       Boolean           @default(false)
-  matchReportChannelId String?
-  AuditLogSetting      AuditLogSetting[]
-  AutoClearConfig      AutoClearConfig[]
-  RoleMapping          RoleMapping[]
+  id               String            @id
+  logChannelId     String?
+  auditChannelId   String?
+  enableAudit      Boolean           @default(true)
+  enableVoice      Boolean           @default(true)
+  updatedAt        DateTime          @updatedAt
+  enableInvites    Boolean           @default(true)
+  invitesChannelId String?
+  rankingChannelId String?
+  rankingMessageId String?
+  enableRoleSync   Boolean           @default(false)
+  AuditLogSetting  AuditLogSetting[]
+  RoleMapping      RoleMapping[]
 }
 
 model Player {
@@ -217,50 +215,83 @@ model AuditLogSetting {
   @@unique([guildId, key])
 }
 
-model GlobalMatch {
-  id        String              @id
-  source    String              @default("matchmaking")
-  mapName   String
-  duration  String?
-  matchDate DateTime            @default(now())
-  scoreA    Int?
-  scoreB    Int?
-  metadata  Json?               @default("{}")
-  players   GlobalMatchPlayer[]
+model MapVetoLobby {
+  id          String   @id @default(cuid())
+  creatorId   String
+  opponentId  String?
+  format      String   @default("BO3")
+  status      String   @default("WAITING")
+  turn        String?
+  rpsState    Json?    @default("{}")
+  mapPool     Json?    @default("[\"Mirage\", \"Inferno\", \"Nuke\", \"Overpass\", \"Ancient\", \"Anubis\", \"Dust2\"]")
+  knifeRound  Boolean  @default(false)
+  vetoHistory Json?    @default("[]")
+  timerStart  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  creator     User     @relation("MapVetoCreator", fields: [creatorId], references: [id])
+  opponent    User?    @relation("MapVetoOpponent", fields: [opponentId], references: [id])
 }
 
+// Uma partida que ocorreu. Não pertence a apenas um User.
+model GlobalMatch {
+  id           String             @id // Ex: match_id da Valve ou Faceit
+  source       String             @default("matchmaking") // matchmaking, faceit, mix
+  mapName      String
+  duration     String?
+  matchDate    DateTime           @default(now())
+  scoreA       Int?
+  scoreB       Int?
+  metadata     Json?              @default("{}") // Demo URL, etc.
+  players      GlobalMatchPlayer[]
+}
+
+// O resultado de UM jogador dentro daquela partida (Serão 10 registros por GlobalMatch)
 model GlobalMatchPlayer {
-  id            String      @id @default(uuid())
-  globalMatchId String
-  steamId       String
-  userId        String?
-  team          String
-  kills         Int
-  deaths        Int
-  assists       Int
-  score         Int
-  mvps          Int
-  adr           Float?
-  hsPercentage  Float?
-  matchResult   String
-  metadata      Json?       @default("{}")
-  match         GlobalMatch @relation(fields: [globalMatchId], references: [id], onDelete: Cascade)
-  user          User?       @relation(fields: [userId], references: [id])
+  id               String      @id @default(uuid())
+  globalMatchId    String
+  steamId          String      // Salvamos o SteamID, independente se ele já é um "User" do bot
+  userId           String?     // Opcional, caso ele já tenha conta logada no site/bot
+  team             String      // CT ou T, Equipe A ou B
+  kills            Int
+  deaths           Int
+  assists          Int
+  score            Int
+  mvps             Int
+  adr              Float?
+  hsPercentage     Float?
+  matchResult      String      // win, loss, tie
+  metadata         Json?       @default("{}") // Armazena fk, fd, utilDmg, flashAssists, etc.
+  
+  match            GlobalMatch @relation(fields: [globalMatchId], references: [id], onDelete: Cascade)
+  user             User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([globalMatchId, steamId])
 }
 
+// Snapshot de rating de um jogador para histórico de evolução
+model RatingSnapshot {
+  id        Int      @id @default(autoincrement())
+  steamId   String
+  rating    Int
+  source    String   @default("premier") // premier | faceit
+  createdAt DateTime @default(now())
+
+  @@index([steamId, createdAt])
+}
+
+// Sistema de Torneios Internos
 model Tournament {
-  id          String            @id @default(cuid())
+  id          String           @id @default(cuid())
   name        String
   description String?
-  format      String            @default("BO1")
-  status      String            @default("OPEN")
+  format      String           @default("BO1")   // BO1 | BO3 | BO5
+  status      String           @default("OPEN")   // OPEN | RUNNING | FINISHED
   creatorId   String
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @default(now()) @updatedAt
-  matches     TournamentMatch[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   teams       TournamentTeam[]
+  matches     TournamentMatch[]
 }
 
 model TournamentTeam {
@@ -269,10 +300,10 @@ model TournamentTeam {
   name         String
   playerIds    Json              @default("[]")
   createdAt    DateTime          @default(now())
+  tournament   Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   matchesA     TournamentMatch[] @relation("TeamA")
   matchesB     TournamentMatch[] @relation("TeamB")
   wins         TournamentMatch[] @relation("Winner")
-  tournament   Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model TournamentMatch {
@@ -284,13 +315,13 @@ model TournamentMatch {
   scoreA       Int?
   scoreB       Int?
   round        Int             @default(1)
-  status       String          @default("PENDING")
+  status       String          @default("PENDING") // PENDING | RUNNING | DONE
   mapName      String?
   createdAt    DateTime        @default(now())
-  teamA        TournamentTeam  @relation("TeamA", fields: [teamAId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  teamB        TournamentTeam  @relation("TeamB", fields: [teamBId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  tournament   Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  winner       TournamentTeam? @relation("Winner", fields: [winnerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tournament   Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamA        TournamentTeam  @relation("TeamA", fields: [teamAId], references: [id])
+  teamB        TournamentTeam  @relation("TeamB", fields: [teamBId], references: [id])
+  winner       TournamentTeam? @relation("Winner", fields: [winnerId], references: [id])
 }
 
 model EvaluationList {
@@ -300,7 +331,7 @@ model EvaluationList {
   description String?
   isPublic    Boolean            @default(true)
   createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @default(now()) @updatedAt
+  updatedAt   DateTime           @updatedAt
   creator     User               @relation("EvaluationCreator", fields: [creatorId], references: [id], onDelete: Cascade)
   evaluations PlayerEvaluation[]
 }
@@ -319,40 +350,19 @@ model PlayerEvaluation {
   overallScore        Float
   notes               String?
   createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @default(now()) @updatedAt
+  updatedAt           DateTime       @updatedAt
   list                EvaluationList @relation(fields: [listId], references: [id], onDelete: Cascade)
 
   @@unique([listId, evaluatedPlayerName])
 }
 
-model AutoClearConfig {
-  id           Int         @id @default(autoincrement())
-  guildId      String
-  channelId    String
-  interval     Int
-  amount       Int         @default(100)
-  ignorePinned Boolean     @default(true)
-  enabled      Boolean     @default(true)
-  lastRun      DateTime?
-  GuildConfig  GuildConfig @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@unique([guildId, channelId])
+model MapPool {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  gameId    String   @unique // ex: de_cache
+  image     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model MapVetoLobby {
-  id                                 String    @id
-  creatorId                          String
-  opponentId                         String?
-  format                             String    @default("BO3")
-  status                             String    @default("WAITING")
-  turn                               String?
-  rpsState                           Json?     @default("{}")
-  mapPool                            Json?     @default("[\"Mirage\", \"Inferno\", \"Nuke\", \"Vertigo\", \"Ancient\", \"Anubis\", \"Dust2\"]")
-  vetoHistory                        Json?     @default("[]")
-  createdAt                          DateTime  @default(now())
-  updatedAt                          DateTime
-  timerStart                         DateTime?
-  knifeRound                         Boolean?  @default(false)
-  User_MapVetoLobby_creatorIdToUser  User      @relation("MapVetoLobby_creatorIdToUser", fields: [creatorId], references: [id])
-  User_MapVetoLobby_opponentIdToUser User?     @relation("MapVetoLobby_opponentIdToUser", fields: [opponentId], references: [id])
-}
