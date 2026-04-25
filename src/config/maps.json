@@ -9,6 +9,6 @@
   { "id": "de_overpass", "name": "Overpass", "image": "/img/maps/Overpass.webp", "active": true },
   { "id": "de_train", "name": "Train", "image": "/img/maps/Train.webp", "active": true },
   { "id": "ar_pool_day", "name": "Pool Day", "image": "/img/maps/PoolDay.webp", "active": true },
-  { "id": "de_cbble_united", "name": "Cobblestone", "image": "/img/maps/Cobblestone.png", "active": true },
-  { "id": "de_cache", "name": "Cache", "image": "/img/maps/Cache.png", "active": true }
+  { "id": "workshop/3437319455/de_cbble", "name": "Cobblestone", "image": "/img/maps/Cobblestone.png", "active": true },
+  { "id": "workshop/3437809122/de_cache", "name": "Cache", "image": "/img/maps/Cache.png", "active": true }
 ]
