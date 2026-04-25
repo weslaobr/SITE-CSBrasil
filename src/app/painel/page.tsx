@@ -18,9 +18,10 @@ export default async function PainelPage() {
     }
 
     const isAdmin = (session.user as any).isAdmin;
+    const isModerator = (session.user as any).isModerator;
     const steamId = (session.user as any).steamId;
 
-    if (!isAdmin) {
+    if (!isModerator) {
         return (
             <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
                 {/* Background effects */}
@@ -37,7 +38,7 @@ export default async function PainelPage() {
                         </h1>
                         <p className="text-zinc-500 text-sm leading-relaxed">
                             Você não tem permissão para acessar o Painel Administrativo.
-                            Certifique-se de que está logado com a conta Steam de Admin.
+                            Certifique-se de que está logado com uma conta Steam de Admin ou Moderador.
                         </p>
                     </div>
                     <div className="px-4 py-2 bg-white/5 border border-white/5 rounded-xl inline-block">
