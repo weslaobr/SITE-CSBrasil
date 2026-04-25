@@ -934,12 +934,30 @@ export function ServerDashboard() {
                                         { label: '🚫 Sem cheats',        cmd: 'sv_cheats 0',                cls: 'red'    },
                                         { label: '📢 Anunciar no chat',  cmd: '__custom_say__',             cls: 'zinc'   },
                                         { label: '🔁 Trocar de lado',    cmd: 'mp_swapteams; mp_restartgame 1', cls: 'yellow' },
+                                        { label: '▶️ Forçar Início',    cmd: 'css_start',                  cls: 'green'  },
+                                        { label: '⏪ Restaurar Round',  cmd: '__custom_restore__',         cls: 'blue'   },
+                                        { label: '🔪 Round de Faca',    cmd: 'css_roundknife',             cls: 'purple' },
+                                        { label: '⏭️ Pular Veto',       cmd: 'css_skipveto',               cls: 'orange' },
+                                        { label: '🤝 Fogo Amigo ON',    cmd: 'mp_friendlyfire 1',          cls: 'red'    },
+                                        { label: '🤝 Fogo Amigo OFF',   cmd: 'mp_friendlyfire 0',          cls: 'zinc'   },
+                                        { label: '🗣️ AllTalk ON',       cmd: 'sv_alltalk 1',               cls: 'blue'   },
+                                        { label: '🤫 AllTalk OFF',      cmd: 'sv_alltalk 0',               cls: 'zinc'   },
+                                        { label: '🛠️ Modo Prática',     cmd: 'css_prac',                   cls: 'cyan'   },
+                                        { label: '🚪 Sair do Treino',   cmd: 'css_exitprac',               cls: 'zinc'   },
+                                        { label: '🌑 Limpar Granadas',  cmd: 'css_clear',                  cls: 'pink'   },
+                                        { label: '🔄 Refazer Granada',  cmd: 'css_rethrow',                cls: 'purple' },
+                                        { label: '♾️ Mun. Infinita',    cmd: 'sv_infinite_ammo 1',         cls: 'yellow' },
+                                        { label: '🎯 Apenas HS',        cmd: 'mp_damage_headshot_only 1',  cls: 'red'    },
+                                        { label: '🏁 Próximo Mapa',     cmd: 'mp_endmatch',                cls: 'orange' },
                                     ].map(ctrl => (
                                         <button key={ctrl.label}
                                             onClick={() => {
                                                 if (ctrl.cmd === '__custom_say__') {
                                                     const msg = prompt('Mensagem para anunciar no chat:');
                                                     if (msg) sendCommandRaw(`say ${msg}`);
+                                                } else if (ctrl.cmd === '__custom_restore__') {
+                                                    const round = prompt('Número do round para restaurar:');
+                                                    if (round) sendCommandRaw(`css_restore ${round}`);
                                                 } else {
                                                     const cmds = ctrl.cmd.split(';').map(c => c.trim()).filter(Boolean);
                                                     cmds.forEach((c, i) => setTimeout(() => sendCommandRaw(c), i * 200));
