@@ -345,12 +345,19 @@ export function ServerDashboard() {
         setIsRefreshingPlayers(false);
     };
 
-    const refreshPlayers = () => {
+    const refreshPlayers = async () => {
         setIsRefreshingPlayers(true);
-        statusBufferRef.current = [];
-        sendCommandRaw('status');
-        // Timeout to stop loading if no response
-        setTimeout(() => setIsRefreshingPlayers(false), 5000);
+        try {
+            const res = await fetch('/api/server/players');
+            if (res.ok) {
+                const data = await res.json();
+                setPlayers(data);
+            }
+        } catch (e) {
+            console.error('Erro ao buscar jogadores via Steam Query:', e);
+        } finally {
+            setIsRefreshingPlayers(false);
+        }
     };
 
     // Auto refresh players every 15s
@@ -665,21 +672,21 @@ export function ServerDashboard() {
                                         <td className="px-6 py-4 text-right">
                                              <div className="flex items-center justify-end gap-1.5">
                                                  <button 
-                                                     onClick={() => sendCommandRaw(`css_team ${p.id} 2`)}
+                                                     onClick={() => sendCommandRaw(`css_team "${p.name}" 2`)}
                                                      className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-black rounded-lg transition-all text-[8px] font-black uppercase"
                                                      title="Mudar para TR"
                                                  >
                                                      TR
                                                  </button>
                                                  <button 
-                                                     onClick={() => sendCommandRaw(`css_team ${p.id} 3`)}
+                                                     onClick={() => sendCommandRaw(`css_team "${p.name}" 3`)}
                                                      className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-black rounded-lg transition-all text-[8px] font-black uppercase"
                                                      title="Mudar para CT"
                                                  >
                                                      CT
                                                  </button>
                                                  <button 
-                                                     onClick={() => sendCommandRaw(`css_team ${p.id} 1`)}
+                                                     onClick={() => sendCommandRaw(`css_team "${p.name}" 1`)}
                                                      className="p-1.5 bg-zinc-500/10 text-zinc-400 hover:bg-zinc-500 hover:text-black rounded-lg transition-all text-[8px] font-black uppercase"
                                                      title="Mudar para SPEC"
                                                  >
