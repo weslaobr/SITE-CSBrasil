@@ -693,17 +693,24 @@ export function ServerDashboard() {
                 
                 {/* Players Management */}
                 <div className="bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden flex flex-col min-h-[400px]">
-                    <div className="p-5 border-b border-white/5 flex items-center justify-between bg-zinc-900/40">
+                    <div className="p-5 border-b border-white/5 flex items-center justify-between bg-yellow-500/10">
                         <div className="flex items-center gap-3">
-                            <Users size={16} className="text-yellow-500" />
-                            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Controle de Jogadores</h3>
+                            <div className="relative">
+                                <Users size={18} className="text-yellow-500" />
+                                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                            </div>
+                            <div>
+                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-yellow-500">Controle de Jogadores</h3>
+                                <p className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest">Status em tempo real</p>
+                            </div>
                         </div>
                         <button 
                             onClick={refreshPlayers}
-                            disabled={isRefreshingPlayers || wsStatus !== 'connected'}
-                            className="bg-white/5 hover:bg-white/10 p-2 rounded-xl transition-all disabled:opacity-30"
+                            disabled={isRefreshingPlayers}
+                            className="bg-yellow-500/10 hover:bg-yellow-500 text-yellow-500 hover:text-black p-2.5 rounded-xl transition-all disabled:opacity-30 flex items-center gap-2"
                         >
-                            <RefreshCw size={14} className={`${isRefreshingPlayers ? 'animate-spin' : ''} text-zinc-400`} />
+                            <span className="text-[9px] font-black uppercase">Atualizar</span>
+                            <RefreshCw size={14} className={`${isRefreshingPlayers ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
 
