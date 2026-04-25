@@ -373,6 +373,31 @@ export function ServerDashboard() {
         }
     }, [activeMgmtTab]);
 
+    const fetchLogsFallback = async () => {
+        if (wsStatus === 'connected') return;
+        try {
+            const res = await fetch('/api/server/logs');
+            if (res.ok) {
+                const newLogs = await res.json();
+                if (newLogs.length > 0) {
+                    setLogs(newLogs);
+                    // Try to parse status if we are in players tab
+                    if (activeMgmtTab === 'players' && parsingStatusRef.current) {
+                        statusBufferRef.current = newLogs;
+                        finalizeStatusParse();
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Erro ao buscar logs via túnel:", e);
+        }
+    };
+
+    useEffect(() => {
+        const iv = setInterval(fetchLogsFallback, 4000);
+        return () => clearInterval(iv);
+    }, [wsStatus, activeMgmtTab]);
+
     // ── Power ─────────────────────────────────────
     const handlePower = async (signal: string) => {
         setPowerLoading(signal);
