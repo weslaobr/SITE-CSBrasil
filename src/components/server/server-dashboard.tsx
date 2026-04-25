@@ -402,12 +402,28 @@ export function ServerDashboard() {
             const res = await fetch('/api/server/logs');
             if (res.ok) {
                 const newLogs = await res.json();
-                if (newLogs.length > 0) {
+                if (Array.isArray(newLogs) && newLogs.length > 0) {
                     setLogs(newLogs);
-                    // Try to parse status if we are in players tab
-                    if (activeMgmtTab === 'players' && parsingStatusRef.current) {
-                        statusBufferRef.current = newLogs;
-                        finalizeStatusParse();
+                    
+                    // Always try to extract players from logs if in players tab
+                    if (activeMgmtTab === 'players') {
+                        const detectedPlayers: Player[] = [];
+                        newLogs.forEach(line => {
+                            const match = line.match(/^\s*(\d+)\s+([\d:]+|BOT)\s+(\d+)\s+(\d+)\s+(\w+)\s+(\d+)\s+([\d.:]+|)\s+'(.+?)'/);
+                            if (match) {
+                                detectedPlayers.push({
+                                    id: match[1],
+                                    name: match[8],
+                                    ping: match[3],
+                                    connectedTime: match[2],
+                                    steamId: match[7] || "In-game"
+                                });
+                            }
+                        });
+                        
+                        if (detectedPlayers.length > 0) {
+                            setPlayers(detectedPlayers);
+                        }
                     }
                 }
             }
