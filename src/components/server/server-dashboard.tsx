@@ -803,9 +803,8 @@ export function ServerDashboard() {
                                                 <button 
                                                     onClick={() => {
                                                         if (confirm(`Trocar para ${map.name} agora?`)) {
-                                                            const isCustom = map.id.includes('/') || /^\d+$/.test(map.id) || map.id.includes('cbble');
-                                                            const cmd = isCustom ? `css_map ${map.id}` : `map ${map.id}`;
-                                                            setLogs(prev => [...prev.slice(-150), `>>> Solicitando troca via CSSharp: ${cmd}`]);
+                                                            const cmd = `say !map ${map.id}`;
+                                                            setLogs(prev => [...prev.slice(-150), `>>> Solicitando troca via MatchZy Chat: ${cmd}`]);
                                                             sendCommandRaw(cmd);
                                                         }
                                                     }}
