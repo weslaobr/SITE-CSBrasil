@@ -113,75 +113,77 @@ export default function MapPoolManager() {
             )}
 
             {/* Map Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                 {maps.map(map => (
-                    <div key={map.id} className={`relative group overflow-hidden rounded-2xl border transition-all ${map.active ? 'bg-zinc-900/40 border-white/10' : 'bg-black/40 border-white/5 opacity-50 grayscale'}`}>
+                    <div key={map.id} className={`relative group overflow-hidden rounded-xl border transition-all ${map.active ? 'bg-zinc-900/40 border-white/10' : 'bg-black/40 border-white/5 opacity-40 grayscale'}`}>
                         {/* Map Preview */}
-                        <div className="aspect-[16/9] relative overflow-hidden">
+                        <div className="aspect-video relative overflow-hidden">
                             <img 
                                 src={map.image || '/img/maps/placeholder.webp'} 
                                 alt={map.name} 
                                 className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                             
-                            {/* Toggle Status Overlay */}
-                            <button 
-                                onClick={() => toggleMap(map.id)}
-                                className="absolute top-3 right-3 p-2 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-white hover:text-yellow-500 transition-colors"
-                            >
-                                {map.active ? <Eye size={16} /> : <EyeOff size={16} />}
-                            </button>
-                        </div>
-
-                        {/* Map Info */}
-                        <div className="p-4 flex items-center justify-between">
-                            <div>
-                                <p className="font-black text-xs uppercase text-white tracking-widest">{map.name}</p>
-                                <p className="text-[9px] font-mono text-zinc-500 mt-0.5">{map.id}</p>
+                            {/* Actions Overlay (Top) */}
+                            <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button 
+                                    onClick={() => toggleMap(map.id)}
+                                    className="p-1.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-white hover:text-yellow-500 transition-colors"
+                                    title={map.active ? 'Ocultar no site' : 'Mostrar no site'}
+                                >
+                                    {map.active ? <Eye size={12} /> : <EyeOff size={12} />}
+                                </button>
+                                <button 
+                                    onClick={() => removeMap(map.id)}
+                                    className="p-1.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-white hover:text-red-500 transition-colors"
+                                    title="Remover Mapa"
+                                >
+                                    <Trash2 size={12} />
+                                </button>
                             </div>
-                            <button 
-                                onClick={() => removeMap(map.id)}
-                                className="p-2 text-zinc-600 hover:text-red-500 transition-colors"
-                            >
-                                <Trash2 size={14} />
-                            </button>
+
+                            {/* Info Overlay (Bottom) */}
+                            <div className="absolute bottom-2 left-2 right-2">
+                                <p className="font-black text-[10px] uppercase text-white tracking-widest truncate leading-tight">{map.name}</p>
+                                <p className="text-[7px] font-mono text-zinc-500 truncate">{map.id}</p>
+                            </div>
                         </div>
                     </div>
                 ))}
 
                 {/* Add New Map Card */}
-                <div className="bg-zinc-900/20 border-2 border-dashed border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 hover:border-yellow-500/20 transition-all group">
-                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-zinc-600 group-hover:text-yellow-500 group-hover:bg-yellow-500/10 transition-all">
-                        <Plus size={24} />
+                <div className="bg-zinc-900/10 border-2 border-dashed border-white/5 rounded-xl p-3 flex flex-col items-center justify-center min-h-[80px] hover:border-yellow-500/20 transition-all group">
+                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-600 group-hover:text-yellow-500 group-hover:bg-yellow-500/10 transition-all">
+                        <Plus size={16} />
                     </div>
-                    <p className="text-[10px] font-black uppercase text-zinc-600 tracking-widest group-hover:text-zinc-400">Novo Mapa</p>
+                    <p className="text-[8px] font-black uppercase text-zinc-600 tracking-widest mt-2 group-hover:hidden">Novo Mapa</p>
 
-                    <form onSubmit={addMap} className="w-full space-y-3 mt-2 hidden group-hover:block">
+                    <form onSubmit={addMap} className="w-full space-y-2 mt-2 hidden group-hover:block">
                         <input 
                             type="text" 
-                            placeholder="Nome (Ex: Cache)"
+                            placeholder="Nome"
                             value={newMap.name}
                             onChange={e => setNewMap({...newMap, name: e.target.value})}
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white focus:outline-none focus:border-yellow-500/40 font-bold"
+                            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-[9px] text-white focus:outline-none focus:border-yellow-500/40 font-bold"
                             required
                         />
                         <input 
                             type="text" 
-                            placeholder="ID (Ex: cache)"
+                            placeholder="ID"
                             value={newMap.id}
                             onChange={e => setNewMap({...newMap, id: e.target.value.toLowerCase().replace(/\s+/g, '')})}
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white focus:outline-none focus:border-yellow-500/40 font-mono"
+                            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-[9px] text-white focus:outline-none focus:border-yellow-500/40 font-mono"
                             required
                         />
                         <input 
                             type="text" 
-                            placeholder="URL da Imagem"
+                            placeholder="URL Imagem"
                             value={newMap.image}
                             onChange={e => setNewMap({...newMap, image: e.target.value})}
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white focus:outline-none focus:border-yellow-500/40"
+                            className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-[9px] text-white focus:outline-none focus:border-yellow-500/40"
                         />
-                        <button type="submit" className="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">
+                        <button type="submit" className="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all">
                             Adicionar
                         </button>
                     </form>

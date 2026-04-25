@@ -863,34 +863,35 @@ export function ServerDashboard() {
                                     </button>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                     {maps.map(map => (
-                                        <div key={map.id} className={`flex flex-col rounded-2xl border overflow-hidden transition-all ${map.active ? 'border-white/10 bg-white/5' : 'border-white/5 bg-black/20 opacity-60'}`}>
-                                            <div className="relative aspect-video">
-                                                <img src={map.image} alt={map.name} className={`object-cover w-full h-full ${map.active ? 'opacity-60' : 'opacity-20 grayscale'}`} />
-                                                
-                                                {/* Toggle Lock */}
-                                                <button 
-                                                    onClick={() => {
-                                                        const newMaps = maps.map(m => m.id === map.id ? { ...m, active: !m.active } : m);
-                                                        setMaps(newMaps);
-                                                    }}
-                                                    className={`absolute top-2 right-2 p-2 rounded-xl border backdrop-blur-md z-30 transition-all ${
-                                                        map.active ? 'bg-green-500/20 border-green-500/40 text-green-400 hover:bg-green-500/30' : 'bg-red-500/20 border-red-500/40 text-red-400 hover:bg-red-500/30'
-                                                    }`}
-                                                >
-                                                    {map.active ? <ShieldCheck size={14} /> : <Lock size={14} />}
-                                                </button>
-
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
-                                                
-                                                <div className="absolute bottom-2 left-3">
-                                                    <p className={`text-[10px] font-black uppercase tracking-widest ${map.active ? 'text-white' : 'text-zinc-500'}`}>{map.name}</p>
-                                                    <p className="text-[8px] text-zinc-500 font-mono">{map.id}</p>
-                                                </div>
-                                            </div>
+                                        <div key={map.id} className={`group relative aspect-video rounded-xl border overflow-hidden transition-all ${map.active ? 'border-white/10 bg-white/5' : 'border-white/5 bg-black/20 opacity-40 grayscale'}`}>
+                                            <img src={map.image} alt={map.name} className="object-cover w-full h-full" />
                                             
-                                            <div className="p-2 bg-black/20">
+                                            {/* Gradient Overlay */}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+
+                                            {/* Status Badge */}
+                                            <button 
+                                                onClick={() => {
+                                                    const newMaps = maps.map(m => m.id === map.id ? { ...m, active: !m.active } : m);
+                                                    setMaps(newMaps);
+                                                }}
+                                                className={`absolute top-1.5 right-1.5 p-1 rounded-lg border backdrop-blur-md z-30 transition-all ${
+                                                    map.active ? 'bg-green-500/20 border-green-500/40 text-green-400' : 'bg-red-500/20 border-red-500/40 text-red-400'
+                                                }`}
+                                            >
+                                                {map.active ? <ShieldCheck size={10} /> : <Lock size={10} />}
+                                            </button>
+
+                                            {/* Map Info (Visible Always) */}
+                                            <div className="absolute bottom-1.5 left-2 right-2">
+                                                <p className="text-[9px] font-black uppercase text-white truncate">{map.name}</p>
+                                                <p className="text-[7px] text-zinc-500 font-mono truncate">{map.id}</p>
+                                            </div>
+
+                                            {/* Change Map Button (Visible on Hover) */}
+                                            <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center p-3">
                                                 <button 
                                                     onClick={() => {
                                                         if (confirm(`Trocar para ${map.name} agora?`)) {
@@ -905,11 +906,7 @@ export function ServerDashboard() {
                                                         }
                                                     }}
                                                     disabled={!map.active}
-                                                    className={`w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                                                        map.active 
-                                                            ? 'bg-white/5 hover:bg-yellow-500 hover:text-black text-white border border-white/5' 
-                                                            : 'bg-transparent text-zinc-700 border border-transparent cursor-not-allowed'
-                                                    }`}
+                                                    className="w-full py-1.5 bg-yellow-500 text-black text-[9px] font-black uppercase rounded-lg hover:bg-yellow-400 transition-all active:scale-95 disabled:opacity-50"
                                                 >
                                                     {map.active ? 'Trocar Mapa' : 'Inativo'}
                                                 </button>
