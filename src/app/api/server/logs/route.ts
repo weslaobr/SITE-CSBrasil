@@ -2,60 +2,48 @@
 import { NextResponse } from 'next/server';
 import WebSocket from 'ws';
 
-// Global cache to avoid rate limiting
-let cachedLogs: string[] = [];
-let lastFetchTime = 0;
-let isFetching = false;
+// Persist logs in memory
+let logBuffer: string[] = [];
+let lastFetch = 0;
 
 export async function GET() {
     const now = Date.now();
     
-    // If we have a recent cache (last 15s), return it immediately
-    if (cachedLogs.length > 0 && (now - lastFetchTime) < 15000) {
-        return NextResponse.json(cachedLogs);
-    }
-
-    // Prevent multiple simultaneous fetches
-    if (isFetching) {
-        return NextResponse.json(cachedLogs);
-    }
-
-    isFetching = true;
-    try {
-        const authRes = await fetch(`${process.env.PTERODACTYL_PANEL_URL}/api/client/servers/${process.env.PTERODACTYL_SERVER_ID}/websocket`, {
-            headers: { 'Authorization': `Bearer ${process.env.PTERODACTYL_API_KEY}` }
-        });
-        
-        if (!authRes.ok) throw new Error("Pterodactyl Auth Failed");
-        
-        const { data } = await authRes.json();
-        const ws = new WebSocket(data.socket);
-        
-        await new Promise((resolve) => {
-            ws.on('open', () => {
-                ws.send(JSON.stringify({ event: 'auth', args: [data.token] }));
+    // Refresh buffer if more than 5s passed
+    if (now - lastFetch > 5000) {
+        lastFetch = now;
+        try {
+            const authRes = await fetch(`${process.env.PTERODACTYL_PANEL_URL}/api/client/servers/${process.env.PTERODACTYL_SERVER_ID}/websocket`, {
+                headers: { 'Authorization': `Bearer ${process.env.PTERODACTYL_API_KEY}` }
             });
+            const { data } = await authRes.json();
 
-            ws.on('message', (buf) => {
-                const msg = JSON.parse(buf.toString());
-                if (msg.event === 'console output') {
-                    cachedLogs.push(msg.args[0]);
-                    if (cachedLogs.length > 100) cachedLogs.shift();
-                }
+            const ws = new WebSocket(data.socket);
+            
+            await new Promise((resolve) => {
+                ws.on('open', () => {
+                    ws.send(JSON.stringify({ event: 'auth', args: [data.token] }));
+                    // Request status as soon as we connect to ensure it appears in THIS tunnel session
+                    ws.send(JSON.stringify({ event: 'send command', args: ['status'] }));
+                });
+
+                ws.on('message', (buf) => {
+                    const msg = JSON.parse(buf.toString());
+                    if (msg.event === 'console output') {
+                        const line = msg.args[0];
+                        logBuffer.push(line);
+                        if (logBuffer.length > 300) logBuffer.shift();
+                    }
+                });
+
+                // Stay connected for 4 seconds to catch the 'status' output
+                setTimeout(() => {
+                    ws.close();
+                    resolve(true);
+                }, 4000);
             });
-
-            // Wait 2s to collect logs
-            setTimeout(() => {
-                ws.close();
-                lastFetchTime = Date.now();
-                resolve(true);
-            }, 2000);
-        });
-    } catch (e) {
-        console.error("Erro no Túnel de Logs:", e);
-    } finally {
-        isFetching = false;
+        } catch (e) {}
     }
 
-    return NextResponse.json(cachedLogs);
+    return NextResponse.json(logBuffer);
 }

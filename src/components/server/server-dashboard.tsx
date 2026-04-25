@@ -363,25 +363,8 @@ export function ServerDashboard() {
     const refreshPlayers = async () => {
         setIsRefreshingPlayers(true);
         try {
-            // Priority 1: Use our Steam Query API (Fast & Independent)
-            const res = await fetch('/api/server/players');
-            if (res.ok) {
-                const data = await res.json();
-                if (Array.isArray(data) && data.length > 0) {
-                    setPlayers(data);
-                    setIsRefreshingPlayers(false);
-                    return;
-                }
-            }
-            
-            // Priority 2: Force status command via API even if WSS is disconnected
-            statusBufferRef.current = [];
-            parsingStatusRef.current = true;
-            await sendCommandRaw('status');
-            
-            // Priority 3: Trigger an immediate log fetch to try and get the response faster
-            setTimeout(fetchLogsFallback, 2000);
-            setTimeout(fetchLogsFallback, 5000);
+            // Force a log fetch which now includes 'status' command internally
+            await fetchLogsFallback();
         } catch (e) {
             console.error('Erro ao buscar jogadores:', e);
         } finally {
@@ -435,7 +418,7 @@ export function ServerDashboard() {
     };
 
     useEffect(() => {
-        const iv = setInterval(fetchLogsFallback, 10000);
+        const iv = setInterval(fetchLogsFallback, 7000);
         return () => clearInterval(iv);
     }, [wsStatus, activeMgmtTab]);
 
