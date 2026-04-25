@@ -803,8 +803,11 @@ export function ServerDashboard() {
                                                 <button 
                                                     onClick={() => {
                                                         if (confirm(`Trocar para ${map.name} agora?`)) {
-                                                            setLogs(prev => [...prev.slice(-150), `>>> Solicitando troca para o mapa: ${map.id}`]);
-                                                            sendCommandRaw(`map ${map.id}`);
+                                                            const isCustom = map.id.includes('/') || /^\d+$/.test(map.id);
+                                                            // Tentando matchzy_map primeiro se for custom, depois css_map, depois map
+                                                            const cmd = isCustom ? `matchzy_map ${map.id}` : `map ${map.id}`;
+                                                            setLogs(prev => [...prev.slice(-150), `>>> Solicitando troca via MatchZy: ${cmd}`]);
+                                                            sendCommandRaw(cmd);
                                                         }
                                                     }}
                                                     disabled={!map.active}
