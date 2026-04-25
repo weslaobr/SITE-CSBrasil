@@ -4,15 +4,14 @@ import { getAuthOptions } from '@/lib/auth';
 import fs from 'fs/promises';
 import path from 'path';
 
-const ADMIN_STEAM_ID = "76561198024691636";
 const CONFIG_PATH = path.join(process.cwd(), 'src/config/maps.json');
 
 async function ensureAdmin(req: NextRequest) {
     const session = await getServerSession(getAuthOptions(req));
     if (!session?.user) return { error: 'Não autorizado', status: 401 };
     
-    const steamId = (session.user as any).steamId;
-    if (steamId !== ADMIN_STEAM_ID) return { error: 'Acesso negado', status: 403 };
+    const isAdmin = (session.user as any).isAdmin;
+    if (!isAdmin) return { error: 'Acesso negado', status: 403 };
     
     return { user: session.user };
 }

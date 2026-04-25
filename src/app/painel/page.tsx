@@ -4,8 +4,6 @@ import { ShieldAlert, Lock } from "lucide-react";
 import { getAuthOptions } from "@/lib/auth";
 import { PainelTabs } from "@/components/admin/painel-tabs";
 
-const ADMIN_STEAM_ID = "76561198024691636";
-
 export const metadata = {
     title: "Painel Admin · TropaCS",
     description: "Painel de gerenciamento do servidor CS2 da TropaCS.",
@@ -19,9 +17,10 @@ export default async function PainelPage() {
         redirect("/api/auth/signin/steam");
     }
 
+    const isAdmin = (session.user as any).isAdmin;
     const steamId = (session.user as any).steamId;
 
-    if (steamId !== ADMIN_STEAM_ID) {
+    if (!isAdmin) {
         return (
             <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
                 {/* Background effects */}

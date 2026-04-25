@@ -13,6 +13,11 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Não autorizado. Faça login com a Steam.' }, { status: 401 });
         }
 
+        const isAdmin = (session.user as any).isAdmin;
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Acesso negado. Você não é Admin.' }, { status: 403 });
+        }
+
         const apiKey = process.env.PTERODACTYL_API_KEY;
         const serverId = process.env.PTERODACTYL_SERVER_ID;
         const panelUrl = process.env.PTERODACTYL_PANEL_URL;
@@ -76,4 +81,3 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Erro interno ao buscar demos', message: error.message }, { status: 500 });
     }
 }
-

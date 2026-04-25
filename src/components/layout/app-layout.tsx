@@ -69,8 +69,8 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const pathname = usePathname();
     const { data: session } = useSession();
 
-    const mySteamId = session?.user ? (session.user as any).steamId : null;
-    const isAdmin = mySteamId === "76561198024691636";
+    const mySteamId = (session?.user as any)?.steamId;
+    const isAdmin = (session?.user as any)?.isAdmin;
     const isPlayerRoute = pathname.startsWith('/player/');
     const viewedPlayerId = isPlayerRoute ? pathname.split('/')[2] : null;
 
@@ -267,7 +267,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                             <>
                                 <div className="text-right">
                                     <p className="text-xs font-bold text-white">{session.user?.name}</p>
-                                    <p className="text-[10px] text-yellow-500 font-bold uppercase">Jogador</p>
+                                    <p className="text-[10px] text-yellow-500 font-bold uppercase">{(session.user as any).isAdmin ? 'Administrador' : 'Jogador'}</p>
                                 </div>
                                 <img
                                     src={session.user?.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=fallback"}

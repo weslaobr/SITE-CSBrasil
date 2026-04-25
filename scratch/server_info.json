@@ -1,0 +1,224 @@
+{
+  "object": "server",
+  "attributes": {
+    "server_owner": true,
+    "identifier": "09821a19",
+    "__deprecated_uuid_short": "09821a19",
+    "server_identifier": "serv_bgbbugjucfftlgxvflfanicjbi",
+    "internal_id": 80,
+    "uuid": "09821a19-3411-4b35-9af5-2aca06a0490a",
+    "name": "TROPA CS",
+    "node": "NODE",
+    "is_node_under_maintenance": false,
+    "sftp_details": {
+      "ip": "painel3.firegamesnetwork.com",
+      "port": 2022
+    },
+    "description": "Entrem no nosso site www.tropacs.com.br!",
+    "limits": {
+      "memory": 4000,
+      "swap": 0,
+      "disk": 70000,
+      "io": 500,
+      "cpu": 0,
+      "threads": null,
+      "oom_disabled": true
+    },
+    "invocation": "./game/cs2.sh  -dedicated +ip 0.0.0.0 -port 27272 +map de_inferno -maxplayers [hidden] +sv_setsteamaccount  -insecure +game_type 0 +game_mode 1 +tv_port 27372 +mapgroup mg_comp -authkey \"5DDD7AF67AA45553E0FDC1C9751B39AA\" +exec cs2server.cfg",
+    "docker_image": "ghcr.io/k4ryuu/cs2-egg:latest",
+    "egg_features": [],
+    "feature_limits": {
+      "databases": 1,
+      "allocations": 0,
+      "backups": 0
+    },
+    "status": null,
+    "is_suspended": false,
+    "is_installing": false,
+    "is_transferring": false,
+    "relationships": {
+      "allocations": {
+        "object": "list",
+        "data": [
+          {
+            "object": "allocation",
+            "attributes": {
+              "id": 272,
+              "ip": "103.14.27.41",
+              "ip_alias": null,
+              "port": 27272,
+              "notes": null,
+              "is_default": true
+            }
+          },
+          {
+            "object": "allocation",
+            "attributes": {
+              "id": 372,
+              "ip": "103.14.27.41",
+              "ip_alias": null,
+              "port": 27372,
+              "notes": null,
+              "is_default": false
+            }
+          }
+        ]
+      },
+      "variables": {
+        "object": "list",
+        "data": [
+          {
+            "object": "egg_variable",
+            "attributes": {
+              "name": "Game Server Login Token (GSLT)",
+              "description": "The Steam Game Server Login Token (GSLT) used to publicly list your server. Optional, but recommended for increased visibility and access to additional features. Learn more: https://steamcommunity.com/dev/managegameservers",
+              "env_variable": "STEAM_ACC",
+              "default_value": "",
+              "server_value": "",
+              "is_editable": true,
+              "rules": "max:32|nullable"
+            }
+          },
+          {
+            "object": "egg_variable",
+            "attributes": {
+              "name": "Map",
+              "description": "The default map for the server.",
+              "env_variable": "SRCDS_MAP",
+              "default_value": "de_mirage",
+              "server_value": "de_inferno",
+              "is_editable": true,
+              "rules": "required|string|alpha_dash"
+            }
+          },
+          {
+            "object": "egg_variable",
+            "attributes": {
+              "name": "Game Type",
+              "description": "",
+              "env_variable": "GAME_TYPE",
+              "default_value": "0",
+              "server_value": "0",
+              "is_editable": true,
+              "rules": "required|numeric|in:0,1,2,3,4,5,6"
+            }
+          },
+          {
+            "object": "egg_variable",
+            "attributes": {
+              "name": "Game Mode",
+              "description": "",
+              "env_variable": "GAME_MODE",
+              "default_value": "1",
+              "server_value": "0",
+              "is_editable": true,
+              "rules": "required|numeric|in:0,1,2,3,4"
+            }
+          },
+          {
+            "object": "egg_variable",
+            "attributes": {
+              "name": "MetaMod:Source",
+              "description": "Base plugin framework required by CounterStrikeSharp. Compatible with all frameworks. Auto-enabled if CSS is selected. Automatically updates on server restart while enabled.",
+              "env_variable": "INSTALL_METAMOD",
+              "default_value": "0",
+              "server_value": "0",
+              "is_editable": true,
+              "rules": "required|boolean"
+            }
+          },
+          {
+            "object": "egg_variable",
+            "attributes": {
+              "name": "CounterStrikeSharp",
+              "description": "C# scripting platform for CS2 plugins. Requires MetaMod:Source (auto-enabled). Compatible with SwiftlyS2. Incompatible with ModSharp. Automatically updates on server restart while enabled.",
+              "env_variable": "INSTALL_CSS",
+              "default_value": "0",
+              "server_value": "0",
+              "is_editable": true,
+              "rules": "required|boolean"
+            }
+          },
+          {
+            "object": "egg_variable",
+            "attributes": {
+              "name": "SwiftlyS2",
+              "description": "Standalone C# framework for Source Engine 2 servers (no MetaMod required). Compatible with CSS. Incompatible with ModSharp. Automatically updates on server restart while enabled.",
+              "env_variable": "INSTALL_SWIFTLY",
+              "default_value": "0",
+              "server_value": "0",
+              "is_editable": true,
+              "rules": "required|boolean"
+            }
+          },
+          {
+            "object": "egg_variable",
+            "attributes": {
+              "name": "ModSharp",
+              "description": "Standalone C# scripting platform with .NET 9 runtime. Compatible with MetaMod only. Incompatible with CSS and SwiftlyS2 (auto-disabled if enabled). Automatically updates on server restart while enabled.",
+              "env_variable": "INSTALL_MODSHARP",
+              "default_value": "0",
+              "server_value": "0",
+              "is_editable": true,
+              "rules": "required|boolean"
+            }
+          },
+          {
+            "object": "egg_variable",
+            "attributes": {
+              "name": "Allow Prerelease Updates",
+              "description": "Allow downloading prerelease/beta versions of frameworks (CSS, SwiftlyS2, ModSharp) from GitHub. Warning: Prereleases may be unstable.",
+              "env_variable": "PRERELEASE",
+              "default_value": "0",
+              "server_value": "0",
+              "is_editable": true,
+              "rules": "required|boolean"
+            }
+          },
+          {
+            "object": "egg_variable",
+            "attributes": {
+              "name": "Console Filter",
+              "description": "Filter unwanted console messages. Configure filter patterns in /egg/configs/console-filter.json",
+              "env_variable": "ENABLE_FILTER",
+              "default_value": "0",
+              "server_value": "0",
+              "is_editable": true,
+              "rules": "required|boolean"
+            }
+          },
+          {
+            "object": "egg_variable",
+            "attributes": {
+              "name": "Custom Parameters",
+              "description": "Custom startup parameters to add to the command line.",
+              "env_variable": "CUSTOM_PARAMS",
+              "default_value": "",
+              "server_value": "",
+              "is_editable": true,
+              "rules": "string|nullable"
+            }
+          },
+          {
+            "object": "egg_variable",
+            "attributes": {
+              "name": "Auto Cleanup",
+              "description": "Automatically cleans up old logs, demos, and backup files. Configure cleanup intervals in /egg/configs/cleanup.json",
+              "env_variable": "CLEANUP_ENABLED",
+              "default_value": "1",
+              "server_value": "1",
+              "is_editable": true,
+              "rules": "required|boolean"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "meta": {
+    "is_server_owner": true,
+    "user_permissions": [
+      "*"
+    ]
+  }
+}

@@ -151,9 +151,9 @@ export function ServerDashboard() {
     const [maps, setMaps] = useState<MapConfig[]>([]);
     const [isRefreshingPlayers, setIsRefreshingPlayers] = useState(false);
     const [sayMessage, setSayMessage] = useState('');
-    const [activeMgmtTab, setActiveMgmtTab] = useState<'players' | 'server'>('players');
+    const [activeMgmtTab, setActiveMgmtTab] = useState<'players' | 'server' | 'settings'>('players');
     const [activeMode, setActiveMode] = useState<string | null>(null);
-    const [serverControlTab, setServerControlTab] = useState<'modes' | 'maps' | 'controls'>('modes');
+    const [serverControlTab, setServerControlTab] = useState<'modes' | 'maps' | 'controls' | 'config'>('modes');
 
     const consoleRef = useRef<HTMLDivElement>(null);
     const socketRef = useRef<WebSocket | null>(null);
@@ -209,41 +209,81 @@ export function ServerDashboard() {
 
     // ── WebSocket ─────────────────────────────────
     const connectWs = useCallback(async () => {
+        if (socketRef.current?.readyState === WebSocket.CONNECTING) return;
+        
         setWsStatus('connecting');
+        if (retryRef.current) clearTimeout(retryRef.current);
+
         try {
             const res = await fetch('/api/server/console');
-            if (!res.ok) { setWsStatus('disconnected'); return; }
-            const { data } = await res.json();
+            if (!res.ok) { 
+                setWsStatus('disconnected');
+                retryRef.current = setTimeout(connectWs, 10000);
+                return; 
+            }
+            
+            const json = await res.json();
+            const { data } = json;
+            
+            if (!data?.socket || !data?.token) {
+                setWsStatus('disconnected');
+                retryRef.current = setTimeout(connectWs, 10000);
+                return;
+            }
+
             const ws = new WebSocket(data.socket);
             socketRef.current = ws;
+
             ws.onopen = () => {
                 ws.send(JSON.stringify({ event: 'auth', args: [data.token] }));
                 setWsStatus('connected');
+                setLogs(prev => [...prev.slice(-150), ">>> Conexão estabelecida com o servidor."]);
             };
-            ws.onmessage = (ev) => {
-                const msg = JSON.parse(ev.data);
-                if (msg.event === 'console output' && msg.args?.[0]) {
-                    const line = msg.args[0];
-                    setLogs(prev => [...prev.slice(-150), line]);
 
-                    // Status collection logic
-                    if (line.includes('#      userid name') || parsingStatusRef.current) {
-                        parsingStatusRef.current = true;
-                        statusBufferRef.current.push(line);
-                        
-                        // Detect end of status (usually a line that doesn't start with '#' or is empty after the table)
-                        if (statusBufferRef.current.length > 2 && !line.startsWith('#') && line.trim() !== '') {
-                            finalizeStatusParse();
+            ws.onmessage = (ev) => {
+                try {
+                    const msg = JSON.parse(ev.data);
+                    
+                    if (msg.event === 'token expiring' || msg.event === 'token expired') {
+                        setLogs(prev => [...prev.slice(-150), ">>> Token expirando, reconectando..."]);
+                        ws.close();
+                        return;
+                    }
+
+                    if (msg.event === 'console output' && msg.args?.[0]) {
+                        const line = msg.args[0];
+                        setLogs(prev => [...prev.slice(-150), line]);
+
+                        if (line.includes('#      userid name') || parsingStatusRef.current) {
+                            parsingStatusRef.current = true;
+                            statusBufferRef.current.push(line);
+                            if (statusBufferRef.current.length > 2 && !line.startsWith('#') && line.trim() !== '') {
+                                finalizeStatusParse();
+                            }
                         }
                     }
+                } catch (e) {
+                    console.error("Error parsing WS message:", e);
                 }
             };
-            ws.onclose = () => {
+
+            ws.onclose = (event) => {
                 setWsStatus('disconnected');
-                retryRef.current = setTimeout(connectWs, 6000);
+                socketRef.current = null;
+                if (event.code !== 1000) { // Not normal closure
+                    setLogs(prev => [...prev.slice(-150), ">>> Conexão perdida. Tentando reconectar em 6s..."]);
+                    retryRef.current = setTimeout(connectWs, 6000);
+                }
             };
-            ws.onerror = () => ws.close();
-        } catch { setWsStatus('disconnected'); }
+
+            ws.onerror = () => {
+                setWsStatus('disconnected');
+                ws.close();
+            };
+        } catch (err) { 
+            setWsStatus('disconnected'); 
+            retryRef.current = setTimeout(connectWs, 10000);
+        }
     }, []);
 
     useEffect(() => {
@@ -623,16 +663,15 @@ export function ServerDashboard() {
                 {/* Server Controls */}
                 <div className="space-y-5">
                     <div className="bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden">
-                        {/* Tab bar */}
                         <div className="flex border-b border-white/5">
-                            {(['modes', 'maps', 'controls'] as const).map(tab => (
+                            {(['modes', 'maps', 'controls', 'config'] as const).map(tab => (
                                 <button key={tab} onClick={() => setServerControlTab(tab)}
                                     className={`flex-1 py-3.5 text-[9px] font-black uppercase tracking-widest transition-all ${
                                         serverControlTab === tab
                                             ? 'text-yellow-400 border-b-2 border-yellow-500 bg-yellow-500/5'
                                             : 'text-zinc-500 hover:text-zinc-300'
                                     }`}>
-                                    {tab === 'modes' ? '🎮 Modos' : tab === 'maps' ? '🗺️ Mapas' : '⚙️ Controles'}
+                                    {tab === 'modes' ? '🎮 Modos' : tab === 'maps' ? '🗺️ Mapas' : tab === 'controls' ? '⚙️ Comandos' : '📝 Config'}
                                 </button>
                             ))}
                         </div>
@@ -747,6 +786,49 @@ export function ServerDashboard() {
                                             {ctrl.label}
                                         </button>
                                     ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* CONFIG TAB */}
+                        {serverControlTab === 'config' && (
+                            <div className="p-5 space-y-6">
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40">Configurações Gerais</h4>
+                                    
+                                    <div className="space-y-3">
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Nome do Servidor (hostname)</label>
+                                            <div className="flex gap-2">
+                                                <input id="cfg-hostname" type="text" placeholder="Tropa do CS2" className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-yellow-500/50" />
+                                                <button onClick={() => {
+                                                    const val = (document.getElementById('cfg-hostname') as HTMLInputElement).value;
+                                                    if(val) sendCommandRaw(`hostname "${val}"`);
+                                                }} className="bg-white/5 hover:bg-white/10 text-white px-3 py-1 rounded-xl text-[9px] font-black uppercase border border-white/5 transition-all">Definir</button>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Senha de Acesso (sv_password)</label>
+                                            <div className="flex gap-2">
+                                                <input id="cfg-password" type="text" placeholder="Vazio para sem senha" className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-yellow-500/50" />
+                                                <button onClick={() => {
+                                                    const val = (document.getElementById('cfg-password') as HTMLInputElement).value;
+                                                    sendCommandRaw(`sv_password "${val}"`);
+                                                }} className="bg-white/5 hover:bg-white/10 text-white px-3 py-1 rounded-xl text-[9px] font-black uppercase border border-white/5 transition-all">Definir</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 border-t border-white/5 space-y-4">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40">Configurações do MatchZy</h4>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button onClick={() => sendCommandRaw('css_lo3')} className="p-3 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl text-[9px] font-black uppercase hover:bg-green-500/20 transition-all">Forçar LO3</button>
+                                        <button onClick={() => sendCommandRaw('css_endmatch')} className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-[9px] font-black uppercase hover:bg-red-500/20 transition-all">Encerrar Partida</button>
+                                        <button onClick={() => sendCommandRaw('getall')} className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl text-[9px] font-black uppercase hover:bg-blue-500/20 transition-all">Get All (MatchZy)</button>
+                                        <button onClick={() => sendCommandRaw('css_pause')} className="p-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 rounded-xl text-[9px] font-black uppercase hover:bg-yellow-500/20 transition-all">Pausar MatchZy</button>
+                                    </div>
                                 </div>
                             </div>
                         )}

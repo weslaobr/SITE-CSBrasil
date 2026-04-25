@@ -2,8 +2,6 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getAuthOptions } from '@/lib/auth';
 
-const ADMIN_STEAM_ID = "76561198024691636";
-
 export async function GET(req: NextRequest) {
     try {
         const session = await getServerSession(getAuthOptions(req));
@@ -12,8 +10,8 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Não autorizado. Faça login com a Steam.' }, { status: 401 });
         }
 
-        const steamId = (session.user as any).steamId;
-        if (steamId !== ADMIN_STEAM_ID) {
+        const isAdmin = (session.user as any).isAdmin;
+        if (!isAdmin) {
             return NextResponse.json({ error: 'Acesso negado. Você não é Admin.' }, { status: 403 });
         }
 
@@ -40,7 +38,7 @@ export async function GET(req: NextRequest) {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             return NextResponse.json({
-                error: `Pterodactyl respondeu com erro ${response.status}`,
+                error: `Pterodactyl respondeu with erro ${response.status}`,
                 details: errorData
             }, { status: response.status });
         }
