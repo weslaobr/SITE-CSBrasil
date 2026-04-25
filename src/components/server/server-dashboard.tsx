@@ -217,9 +217,15 @@ export function ServerDashboard() {
 
         try {
             const res = await fetch('/api/server/console');
+            if (res.status === 429) {
+                setWsStatus('disconnected');
+                setLogs(prev => [...prev.slice(-150), ">>> Muitas requisições. Aguardando 60s..."]);
+                retryRef.current = setTimeout(connectWs, 60000);
+                return;
+            }
             if (!res.ok) { 
                 setWsStatus('disconnected');
-                retryRef.current = setTimeout(connectWs, 10000);
+                retryRef.current = setTimeout(connectWs, 30000);
                 return; 
             }
             
@@ -228,7 +234,7 @@ export function ServerDashboard() {
             
             if (!data?.socket || !data?.token) {
                 setWsStatus('disconnected');
-                retryRef.current = setTimeout(connectWs, 10000);
+                retryRef.current = setTimeout(connectWs, 30000);
                 return;
             }
 
@@ -394,7 +400,7 @@ export function ServerDashboard() {
     };
 
     useEffect(() => {
-        const iv = setInterval(fetchLogsFallback, 4000);
+        const iv = setInterval(fetchLogsFallback, 10000);
         return () => clearInterval(iv);
     }, [wsStatus, activeMgmtTab]);
 
