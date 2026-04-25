@@ -374,12 +374,14 @@ export function ServerDashboard() {
                 }
             }
             
-            // Priority 2: Use status command only if WSS is connected
-            if (wsStatus === 'connected') {
-                statusBufferRef.current = [];
-                parsingStatusRef.current = true;
-                sendCommandRaw('status');
-            }
+            // Priority 2: Force status command via API even if WSS is disconnected
+            statusBufferRef.current = [];
+            parsingStatusRef.current = true;
+            await sendCommandRaw('status');
+            
+            // Priority 3: Trigger an immediate log fetch to try and get the response faster
+            setTimeout(fetchLogsFallback, 2000);
+            setTimeout(fetchLogsFallback, 5000);
         } catch (e) {
             console.error('Erro ao buscar jogadores:', e);
         } finally {
