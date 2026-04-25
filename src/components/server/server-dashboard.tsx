@@ -394,7 +394,8 @@ export function ServerDashboard() {
                     if (activeMgmtTab === 'players') {
                         const detectedPlayers: Player[] = [];
                         newLogs.forEach(line => {
-                            const match = line.match(/^\s*(\d+)\s+([\d:]+|BOT)\s+(\d+)\s+(\d+)\s+(\w+)\s+(\d+)\s+([\d.:]+|)\s+'(.+?)'/);
+                            // Even more flexible regex for names with any characters
+                            const match = line.match(/^\s*(\d+)\s+([\d:]+|BOT)\s+(\d+)\s+(\d+)\s+(\w+)\s+(\d+)\s+([\d.:]+|)\s+'(.+)'/);
                             if (match) {
                                 detectedPlayers.push({
                                     id: match[1],
