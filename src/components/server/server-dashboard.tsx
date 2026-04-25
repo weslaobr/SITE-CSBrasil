@@ -803,8 +803,14 @@ export function ServerDashboard() {
                                                 <button 
                                                     onClick={() => {
                                                         if (confirm(`Trocar para ${map.name} agora?`)) {
-                                                            setLogs(prev => [...prev.slice(-150), `>>> Solicitando troca para o mapa: ${map.id}`]);
-                                                            sendCommandRaw(`map ${map.id}`);
+                                                            let cmd = `map ${map.id}`;
+                                                            if (map.id.startsWith('workshop/')) {
+                                                                const parts = map.id.split('/');
+                                                                const workshopId = parts[1];
+                                                                cmd = `host_workshop_map ${workshopId}`;
+                                                            }
+                                                            setLogs(prev => [...prev.slice(-150), `>>> Solicitando troca: ${cmd}`]);
+                                                            sendCommandRaw(cmd);
                                                         }
                                                     }}
                                                     disabled={!map.active}
