@@ -362,12 +362,29 @@ export function ServerDashboard() {
 
     const refreshPlayers = async () => {
         setIsRefreshingPlayers(true);
-        statusBufferRef.current = [];
-        parsingStatusRef.current = true;
-        // Request status via REST API
-        await sendCommandRaw('status');
-        // We still need the logs to appear to parse them, 
-        // but if WSS is blocked, we'll try to fetch the latest logs via API if possible
+        try {
+            // Priority 1: Use our Steam Query API (Fast & Independent)
+            const res = await fetch('/api/server/players');
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    setPlayers(data);
+                    setIsRefreshingPlayers(false);
+                    return;
+                }
+            }
+            
+            // Priority 2: Use status command only if WSS is connected
+            if (wsStatus === 'connected') {
+                statusBufferRef.current = [];
+                parsingStatusRef.current = true;
+                sendCommandRaw('status');
+            }
+        } catch (e) {
+            console.error('Erro ao buscar jogadores:', e);
+        } finally {
+            setIsRefreshingPlayers(false);
+        }
     };
 
     // Auto refresh players every 15s
