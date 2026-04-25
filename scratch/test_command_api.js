@@ -4,10 +4,9 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 async function testCommand() {
-    const command = 'say Teste de Comando via API';
+    const command = 'maps *';
     console.log(`Testando envio de comando: ${command}`);
     
-    // Simulating the API logic
     const apiKey = process.env.PTERODACTYL_API_KEY;
     const serverId = process.env.PTERODACTYL_SERVER_ID;
     const panelUrl = process.env.PTERODACTYL_PANEL_URL;
@@ -23,9 +22,9 @@ async function testCommand() {
                 }
             }
         );
-        console.log("Resposta do Pterodactyl:", response.status, response.data || "Sem corpo");
+        console.log("Resposta do Pterodactyl:", response.status);
     } catch (e) {
-        console.error("Erro no teste:", e.response ? e.response.status : e.message, e.response ? e.response.data : "");
+        console.error("Erro no teste:", e.message);
     }
 }
 
