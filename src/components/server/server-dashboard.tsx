@@ -320,19 +320,20 @@ export function ServerDashboard() {
     }, [logs]);
 
     const finalizeStatusParse = () => {
-        const fullStatus = statusBufferRef.current.join('\n');
         const playerLines = statusBufferRef.current.filter(l => l.startsWith('#') && !l.includes('userid name'));
         
         const parsedPlayers: Player[] = playerLines.map(line => {
-            // Regex for: # 1 2 "Name" STEAM_1:0:1234 01:23 15 0 active
-            const match = line.match(/#\s+\d+\s+(\d+)\s+"(.+)"\s+(STEAM_\d:\d:\d+|BOT)\s+([\d:]+|\w+)\s+(\d+|-)\s+/);
+            // Robust regex to handle names with or without quotes
+            // Format: # userid name uniqueid connected ping loss state adr
+            // Example: # 2 1 "weslao" STEAM_1:0:1234 01:23 15 0 active
+            const match = line.match(/#\s+\d+\s+(\d+)\s+(?:"(.+?)"|(.+?))\s+(STEAM_\d:\d:\d+|BOT|\[U:\d:\d+\])\s+([\d:]+|\w+)\s+(\d+|-)\s+/);
             if (match) {
                 return {
                     id: match[1],
-                    name: match[2],
-                    steamId: match[3],
-                    connectedTime: match[4],
-                    ping: match[5]
+                    name: match[2] || match[3],
+                    steamId: match[4],
+                    connectedTime: match[5],
+                    ping: match[6]
                 };
             }
             return null;
@@ -345,22 +346,21 @@ export function ServerDashboard() {
     };
 
     const refreshPlayers = () => {
-        if (!socketRef.current || socketRef.current.readyState !== 1) return;
         setIsRefreshingPlayers(true);
         statusBufferRef.current = [];
-        socketRef.current.send(JSON.stringify({ event: 'send command', args: ['status'] }));
+        sendCommandRaw('status');
         // Timeout to stop loading if no response
         setTimeout(() => setIsRefreshingPlayers(false), 5000);
     };
 
     // Auto refresh players every 15s
     useEffect(() => {
-        if (wsStatus === 'connected' && activeMgmtTab === 'players') {
+        if (activeMgmtTab === 'players') {
             refreshPlayers();
             const iv = setInterval(refreshPlayers, 15000);
             return () => clearInterval(iv);
         }
-    }, [wsStatus, activeMgmtTab]);
+    }, [activeMgmtTab]);
 
     // ── Power ─────────────────────────────────────
     const handlePower = async (signal: string) => {
@@ -663,16 +663,39 @@ export function ServerDashboard() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button 
-                                                onClick={() => {
-                                                    if(confirm(`Expulsar ${p.name}?`)) sendCommandRaw(`kickid ${p.id}`);
-                                                }}
-                                                className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-black rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                                title="Kick Player"
-                                            >
-                                                <UserMinus size={14} />
-                                            </button>
-                                        </td>
+                                             <div className="flex items-center justify-end gap-1.5">
+                                                 <button 
+                                                     onClick={() => sendCommandRaw(`css_team ${p.id} 2`)}
+                                                     className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-black rounded-lg transition-all text-[8px] font-black uppercase"
+                                                     title="Mudar para TR"
+                                                 >
+                                                     TR
+                                                 </button>
+                                                 <button 
+                                                     onClick={() => sendCommandRaw(`css_team ${p.id} 3`)}
+                                                     className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-black rounded-lg transition-all text-[8px] font-black uppercase"
+                                                     title="Mudar para CT"
+                                                 >
+                                                     CT
+                                                 </button>
+                                                 <button 
+                                                     onClick={() => sendCommandRaw(`css_team ${p.id} 1`)}
+                                                     className="p-1.5 bg-zinc-500/10 text-zinc-400 hover:bg-zinc-500 hover:text-black rounded-lg transition-all text-[8px] font-black uppercase"
+                                                     title="Mudar para SPEC"
+                                                 >
+                                                     SPEC
+                                                 </button>
+                                                 <button 
+                                                     onClick={() => {
+                                                         if(confirm(`Expulsar ${p.name}?`)) sendCommandRaw(`kickid ${p.id}`);
+                                                     }}
+                                                     className="p-1.5 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white rounded-lg transition-all ml-2"
+                                                     title="Expulsar Jogador"
+                                                 >
+                                                     <UserMinus size={14} />
+                                                 </button>
+                                             </div>
+                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
