@@ -236,16 +236,22 @@ export function ServerDashboard() {
 
             ws.onopen = () => {
                 ws.send(JSON.stringify({ event: 'auth', args: [data.token] }));
+                // Pterodactyl needs sometimes a second to process auth
                 setWsStatus('connected');
-                setLogs(prev => [...prev.slice(-150), ">>> Conexão estabelecida com o servidor."]);
+                setLogs(prev => [...prev.slice(-150), ">>> Conexão estabelecida. Autenticando..."]);
             };
 
             ws.onmessage = (ev) => {
                 try {
                     const msg = JSON.parse(ev.data);
                     
+                    if (msg.event === 'auth success') {
+                        setLogs(prev => [...prev.slice(-150), ">>> Autenticado com sucesso!"]);
+                        return;
+                    }
+
                     if (msg.event === 'token expiring' || msg.event === 'token expired') {
-                        setLogs(prev => [...prev.slice(-150), ">>> Token expirando, reconectando..."]);
+                        setLogs(prev => [...prev.slice(-150), ">>> Token expirado. Reconectando..."]);
                         ws.close();
                         return;
                     }
@@ -270,8 +276,14 @@ export function ServerDashboard() {
             ws.onclose = (event) => {
                 setWsStatus('disconnected');
                 socketRef.current = null;
-                if (event.code !== 1000) { // Not normal closure
-                    setLogs(prev => [...prev.slice(-150), ">>> Conexão perdida. Tentando reconectar em 6s..."]);
+                
+                let reason = "Conexão perdida";
+                if (event.code === 1006) reason = "Servidor recusou a conexão (1006)";
+                if (event.code === 4000) reason = "Token de autenticação inválido (4000)";
+                
+                if (event.code !== 1000) {
+                    setLogs(prev => [...prev.slice(-150), `>>> ${reason}. Código: ${event.code}. Tentando em 6s...`]);
+                    if (retryRef.current) clearTimeout(retryRef.current);
                     retryRef.current = setTimeout(connectWs, 6000);
                 }
             };
@@ -358,17 +370,32 @@ export function ServerDashboard() {
         finally { setPowerLoading(null); }
     };
 
-    const sendCommandRaw = (cmd: string) => {
-        if (!socketRef.current || socketRef.current.readyState !== 1) return;
-        socketRef.current.send(JSON.stringify({ event: 'send command', args: [cmd] }));
-        setLogs(prev => [...prev, `> ${cmd}`]);
+    const sendCommandRaw = async (cmd: string) => {
+        // Log locally immediately
+        setLogs(prev => [...prev.slice(-150), `> ${cmd}`]);
+        
+        try {
+            const res = await fetch('/api/server/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: cmd })
+            });
+            
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                setLogs(prev => [...prev.slice(-150), `[ERRO] Falha ao enviar comando: ${data.error || res.statusText}`]);
+            }
+        } catch (e) {
+            setLogs(prev => [...prev.slice(-150), `[ERRO] Falha na conexão ao enviar comando.`]);
+        }
     };
 
-    const sendCommand = (e: React.FormEvent) => {
+    const sendCommand = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!command.trim()) return;
-        sendCommandRaw(command);
+        const currentCmd = command;
         setCommand('');
+        await sendCommandRaw(currentCmd);
     };
 
     const copyIp = () => {
