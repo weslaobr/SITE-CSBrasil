@@ -740,32 +740,65 @@ export function ServerDashboard() {
                         {/* MAPS TAB */}
                         {serverControlTab === 'maps' && (
                             <div className="p-5">
-                                <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mb-4">Clique para trocar o mapa imediatamente (changelevel)</p>
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Pool de Mapas & Troca Rápida</p>
+                                    <button 
+                                        onClick={async () => {
+                                            try {
+                                                const res = await fetch('/api/admin/maps', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify(maps)
+                                                });
+                                                if (res.ok) alert('Pool de mapas salvo com sucesso!');
+                                                else alert('Erro ao salvar pool.');
+                                            } catch (e) { alert('Erro de conexão.'); }
+                                        }}
+                                        className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[8px] font-black uppercase rounded-lg hover:bg-yellow-500/20 transition-all"
+                                    >
+                                        Salvar Pool
+                                    </button>
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-3">
-                                    {maps.filter(m => m.active).map(map => (
-                                        <button
-                                            key={map.id}
-                                            onClick={() => {
-                                                if (confirm(`Trocar para ${map.name}?`)) {
-                                                    sendCommandRaw(`changelevel ${map.id}`);
-                                                }
-                                            }}
-                                            className="relative aspect-video rounded-xl overflow-hidden group border border-white/5 hover:border-yellow-500/40 transition-all active:scale-95"
-                                        >
-                                            <img src={map.image} alt={map.name} className="object-cover w-full h-full opacity-50 group-hover:opacity-90 group-hover:scale-110 transition-all duration-500" />
+                                    {maps.map(map => (
+                                        <div key={map.id} className="relative group aspect-video rounded-xl overflow-hidden border border-white/5 transition-all">
+                                            <img src={map.image} alt={map.name} className={`object-cover w-full h-full transition-all duration-500 ${map.active ? 'opacity-40 group-hover:opacity-80' : 'opacity-10 grayscale'}`} />
+                                            
+                                            {/* Toggle Active */}
+                                            <button 
+                                                onClick={() => {
+                                                    const newMaps = maps.map(m => m.id === map.id ? { ...m, active: !m.active } : m);
+                                                    setMaps(newMaps);
+                                                }}
+                                                className={`absolute top-2 right-2 p-1.5 rounded-lg border backdrop-blur-md z-20 transition-all ${
+                                                    map.active ? 'bg-green-500/20 border-green-500/40 text-green-400' : 'bg-red-500/20 border-red-500/40 text-red-400'
+                                                }`}
+                                            >
+                                                {map.active ? <ShieldCheck size={10} /> : <Lock size={10} />}
+                                            </button>
+
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-                                            <div className="absolute bottom-0 left-0 right-0 p-2">
-                                                <p className="text-[9px] font-black uppercase text-white tracking-widest drop-shadow">{map.name}</p>
-                                                <p className="text-[8px] text-zinc-400 font-mono">{map.id}</p>
+                                            
+                                            <div className="absolute bottom-0 left-0 right-0 p-2 z-10">
+                                                <p className={`text-[9px] font-black uppercase tracking-widest ${map.active ? 'text-white' : 'text-zinc-600'}`}>{map.name}</p>
+                                                <p className="text-[7px] text-zinc-500 font-mono">{map.id}</p>
                                             </div>
-                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                                                <span className="bg-yellow-500 text-black text-[9px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl">Trocar</span>
-                                            </div>
-                                        </button>
+
+                                            {map.active && (
+                                                <button 
+                                                    onClick={() => {
+                                                        if (confirm(`Trocar para ${map.name} agora?`)) {
+                                                            sendCommandRaw(`changelevel ${map.id}`);
+                                                        }
+                                                    }}
+                                                    className="absolute inset-0 flex items-center justify-center bg-yellow-500/0 group-hover:bg-yellow-500/10 transition-all"
+                                                >
+                                                    <span className="opacity-0 group-hover:opacity-100 bg-yellow-500 text-black text-[8px] font-black uppercase px-2 py-1 rounded-md shadow-xl transition-all">Trocar</span>
+                                                </button>
+                                            )}
+                                        </div>
                                     ))}
-                                    {maps.filter(m => m.active).length === 0 && (
-                                        <p className="col-span-2 text-center text-zinc-600 text-xs py-8 font-bold uppercase tracking-widest">Nenhum mapa ativo no pool</p>
-                                    )}
                                 </div>
                             </div>
                         )}

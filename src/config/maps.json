@@ -1,13 +1,13 @@
 [
-  { "id": "dust2", "name": "Dust2", "image": "/img/maps/Dust2.webp", "active": true },
-  { "id": "mirage", "name": "Mirage", "image": "/img/maps/Mirage.webp", "active": true },
-  { "id": "inferno", "name": "Inferno", "image": "/img/maps/Inferno.webp", "active": true },
-  { "id": "nuke", "name": "Nuke", "image": "/img/maps/Nuke.webp", "active": true },
-  { "id": "vertigo", "name": "Vertigo", "image": "/img/maps/Vertigo.webp", "active": true },
-  { "id": "ancient", "name": "Ancient", "image": "/img/maps/Ancient.webp", "active": true },
-  { "id": "anubis", "name": "Anubis", "image": "/img/maps/Anubis.webp", "active": true },
-  { "id": "overpass", "name": "Overpass", "image": "/img/maps/Overpass.webp", "active": true },
-  { "id": "cache", "name": "Cache", "image": "/img/maps/Cache.png", "active": true },
-  { "id": "train", "name": "Train", "image": "/img/maps/Train.webp", "active": true },
-  { "id": "cobblestone", "name": "Cobblestone", "image": "/img/maps/Cobblestone.png", "active": true }
+  { "id": "de_mirage", "name": "Mirage", "image": "/img/maps/Mirage.webp", "active": true },
+  { "id": "de_dust2", "name": "Dust2", "image": "/img/maps/Dust2.webp", "active": true },
+  { "id": "de_inferno", "name": "Inferno", "image": "/img/maps/Inferno.webp", "active": true },
+  { "id": "de_nuke", "name": "Nuke", "image": "/img/maps/Nuke.webp", "active": true },
+  { "id": "de_vertigo", "name": "Vertigo", "image": "/img/maps/Vertigo.webp", "active": true },
+  { "id": "de_ancient", "name": "Ancient", "image": "/img/maps/Ancient.webp", "active": true },
+  { "id": "de_anubis", "name": "Anubis", "image": "/img/maps/Anubis.webp", "active": true },
+  { "id": "de_overpass", "name": "Overpass", "image": "/img/maps/Overpass.webp", "active": true },
+  { "id": "de_cache", "name": "Cache", "image": "/img/maps/Cache.png", "active": true },
+  { "id": "de_train", "name": "Train", "image": "/img/maps/Train.webp", "active": true },
+  { "id": "de_cbble", "name": "Cobblestone", "image": "/img/maps/Cobblestone.png", "active": true }
 ]
