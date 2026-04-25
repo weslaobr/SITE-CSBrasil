@@ -5,7 +5,8 @@ import {
     Cpu, HardDrive, Play, Square, RefreshCw, Terminal,
     Network, WifiOff, Loader2, Send, Copy, Check, AlertTriangle,
     Clock, Server, Users, Map as MapIcon, Settings, MessageSquare,
-    Zap, Pause, PlayCircle, SkipForward, UserMinus, Bot, RotateCcw
+    Zap, Pause, PlayCircle, SkipForward, UserMinus, Bot, RotateCcw,
+    ShieldCheck, Lock
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
