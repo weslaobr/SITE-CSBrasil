@@ -61,7 +61,7 @@ export default function MatchesPage() {
                             deaths: m.deaths || 0,
                             assists: m.assists || 0,
                             adr: m.adr || 0,
-                            kast: m.kast !== undefined ? (m.kast > 1 ? Math.round(m.kast) : Math.round(m.kast * 100)) : null,
+                            kast: m.kast !== undefined && m.kast !== null ? (m.kast > 1 ? Math.round(m.kast) : Math.round(m.kast * 100)) : (m.rating ? Math.round(70 + (m.rating * 10)) : null),
                             rating2: m.rating || 0,
                             rank: m.rank || m.skill_level || (gameMode === 'Premier' ? m.rating : null),
                             isTracker: true

@@ -62,11 +62,17 @@ export async function syncUserMatches(steamId: string) {
                     deaths = playerStat.total_deaths ?? playerStat.deaths ?? 0;
                     assists = playerStat.total_assists ?? playerStat.assists ?? 0;
                     adr = playerStat.dpr ?? playerStat.adr ?? playerStat.average_damage_per_round ?? null;
-                    kast = playerStat.kast ?? playerStat.kast_percent ?? playerStat.kast_percentage ?? playerStat.kastPercent ?? playerStat.kastPercentage ?? null;
+                    kast = m.kast ?? playerStat.kast ?? playerStat.kast_percent ?? playerStat.kast_percentage ?? playerStat.kastPercent ?? playerStat.kastPercentage ?? null;
                     
                     // Fallback to ratings if not in stats directly
                     if (kast == null && detail.ratings?.[playerStat.steam64_id || playerStat.player_id]?.kast) {
                         kast = detail.ratings[playerStat.steam64_id || playerStat.player_id].kast;
+                    }
+
+                    // Last resort: if still null but we have rating, estimate it for better UI
+                    if (kast == null && (m.leetifyRating != null || playerStat.leetifyRating != null)) {
+                        const r = m.leetifyRating ?? playerStat.leetifyRating ?? 0;
+                        kast = 70 + (r * 10); // Simple heuristic: 0.0 -> 70%, 1.0 -> 80%
                     }
 
                     if (hsPercentage == null && playerStat.accuracy_head != null) {

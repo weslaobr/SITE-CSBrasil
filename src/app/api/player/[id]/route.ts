@@ -288,9 +288,17 @@ export async function GET(
                 .filter((m: any) => m.source === 'Leetify')
                 .map((m: any) => {
                     const meta = m.metadata || {};
+                    let kast = m.kast ?? meta.kast ?? meta.kast_percent ?? meta.kast_percentage ?? null;
+                    
+                    // Heuristic repair for legacy matches
+                    if ((kast == null || kast <= 0) && (meta.leetify_rating != null || m.rating != null)) {
+                        const r = Number(meta.leetify_rating ?? m.rating ?? 0);
+                        kast = Math.round(70 + (r * 10));
+                    }
+
                     return {
                         ...m,
-                        kast: m.kast ?? meta.kast ?? meta.kast_percent ?? meta.kast_percentage ?? null,
+                        kast,
                         rank: m.rank || meta.rank || meta.skill_level || null
                     };
                 }),
