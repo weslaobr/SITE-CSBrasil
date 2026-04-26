@@ -504,6 +504,7 @@ const CrosshairCard = ({
                 <div className="absolute inset-0 flex items-center justify-center">
                     <CrosshairPreview style={style} scale={5} />
                 </div>
+            </div>
 
             <div className="p-8">
                 <div className="flex items-center justify-between mb-4">
