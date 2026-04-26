@@ -250,6 +250,7 @@ export async function GET(
         // 3. Format Global Matches to match the old Match schema for the frontend
         const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
             const mappedResult = gmp.matchResult === 'win' ? 'Win' : (gmp.matchResult === 'loss' ? 'Loss' : 'Tie');
+            const meta = gmp.metadata as any;
             return {
                 id: gmp.id,
                 externalId: gmp.globalMatchId,
@@ -264,13 +265,19 @@ export async function GET(
                 matchDate: gmp.match.matchDate,
                 hsPercentage: gmp.hsPercentage,
                 adr: gmp.adr,
+                rank: meta?.rank || meta?.skill_level || null,
                 metadata: gmp.metadata
             };
         });
 
         // Merge Leetify matches and Local Demo matches, sort by date
         const allMatches = [
-            ...(dbUser?.matches || []).filter((m: any) => m.source === 'Leetify'),
+            ...(dbUser?.matches || [])
+                .filter((m: any) => m.source === 'Leetify')
+                .map((m: any) => ({
+                    ...m,
+                    rank: m.rank || m.metadata?.rank || m.metadata?.skill_level || null
+                })),
             ...formattedGlobalMatches
         ].sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
 

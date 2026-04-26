@@ -15,18 +15,18 @@ interface ProfileSidebarProps {
 }
 
 const getMMRank = (rankId: number) => {
-    if (!rankId || rankId < 1 || rankId > 18) return { name: "Unranked", icon: null };
+    if (rankId < 0 || rankId > 18) return { name: "Unranked", icon: null };
     const names = [
-        "",
-        "Prata I", "Prata II", "Prata III", "Prata IV", "Prata de Elite", "Prata Mestre",
+        "Unranked",
+        "Prata I", "Prata II", "Prata III", "Prata IV", "Prata Elite", "Prata Mestre",
         "Ouro I", "Ouro II", "Ouro III", "Ouro Mestre",
-        "Mestre Guardião I", "Mestre Guardião II", "Mestre Guardião Elite", "Distinto Mestre Guardião",
-        "Águia Lendária", "Águia Lendária Mestre",
-        "Mestre Supremo", "A Global Elite"
+        "AK I", "AK II", "AK Cruzada", "Xerife",
+        "Águia I", "Águia Mestre",
+        "Supremo", "Global Elite"
     ];
     return {
         name: names[rankId],
-        icon: `https://steamcdn-a.akamaihd.net/apps/730/icons/econ/status_icons/skillgroup${rankId}.png`
+        icon: `https://raw.githubusercontent.com/ItzArty/csgo-rank-icons/master/matchmaking/${rankId}.svg`
     };
 };
 

@@ -343,31 +343,32 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         if (!isGC && !isPremier && rank) {
             // First try ID based mapping
             const rankId = parseInt(rank);
-            const ranks: Record<number, { name: string, icon: string }> = {
-                1: { name: 'Prata I', icon: '1' },
-                2: { name: 'Prata II', icon: '2' },
-                3: { name: 'Prata III', icon: '3' },
-                4: { name: 'Prata IV', icon: '4' },
-                5: { name: 'Prata Elite', icon: '5' },
-                6: { name: 'Prata Elite Mestre', icon: '6' },
-                7: { name: 'Ouro I', icon: '7' },
-                8: { name: 'Ouro II', icon: '8' },
-                9: { name: 'Ouro III', icon: '9' },
-                10: { name: 'Ouro Mestre', icon: '10' },
-                11: { name: 'Mestre de Elite (AK I)', icon: '11' },
-                12: { name: 'Mestre de Elite II (AK II)', icon: '12' },
-                13: { name: 'Mestre de Elite Guardião (AK Cruzada)', icon: '13' },
-                14: { name: 'Distinguidos Estelares (Xerife)', icon: '14' },
-                15: { name: 'Águia Lendária I', icon: '15' },
-                16: { name: 'Águia Lendária Mestre', icon: '16' },
-                17: { name: 'Supremo Mestre de Primeira Classe', icon: '17' },
-                18: { name: 'Elite Global', icon: '18' }
+            const ranks: Record<number, { name: string, icon: number }> = {
+                0: { name: 'Sem Patente', icon: 0 },
+                1: { name: 'Prata I', icon: 1 },
+                2: { name: 'Prata II', icon: 2 },
+                3: { name: 'Prata III', icon: 3 },
+                4: { name: 'Prata IV', icon: 4 },
+                5: { name: 'Prata Elite', icon: 5 },
+                6: { name: 'Prata Mestre', icon: 6 },
+                7: { name: 'Ouro I', icon: 7 },
+                8: { name: 'Ouro II', icon: 8 },
+                9: { name: 'Ouro III', icon: 9 },
+                10: { name: 'Ouro Mestre', icon: 10 },
+                11: { name: 'AK I', icon: 11 },
+                12: { name: 'AK II', icon: 12 },
+                13: { name: 'AK Cruzada', icon: 13 },
+                14: { name: 'Xerife', icon: 14 },
+                15: { name: 'Águia I', icon: 15 },
+                16: { name: 'Águia Mestre', icon: 16 },
+                17: { name: 'Supremo', icon: 17 },
+                18: { name: 'Global Elite', icon: 18 }
             };
 
-            if (ranks[rankId]) {
+            if (ranks[rankId] !== undefined) {
                 return {
                     label: ranks[rankId].name,
-                    icon: `https://www.csstats.gg/images/ranks/${ranks[rankId].icon}.png`,
+                    icon: `https://raw.githubusercontent.com/ItzArty/csgo-rank-icons/master/matchmaking/${ranks[rankId].icon}.svg`,
                     color: 'text-zinc-400',
                     isPremier: false
                 };
@@ -767,11 +768,16 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                                              return (
                                                                                  <>
                                                                                      {rankInfo.icon ? (
-                                                                                         <img 
-                                                                                             src={rankInfo.icon} 
-                                                                                             className="w-9 h-auto filter drop-shadow-[0_0_6px_rgba(255,255,255,0.12)] group-hover/rank:scale-110 transition-transform duration-300" 
-                                                                                             alt={rankInfo.label}
-                                                                                         />
+                                                                                         <div className="flex flex-col items-center">
+                                                                                             <img 
+                                                                                                 src={rankInfo.icon} 
+                                                                                                 className="w-11 h-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.15)] group-hover/rank:scale-110 transition-transform duration-300" 
+                                                                                                 alt={rankInfo.label}
+                                                                                             />
+                                                                                             <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest mt-0.5 group-hover/rank:text-zinc-300 transition-colors">
+                                                                                                 {rankInfo.label}
+                                                                                             </span>
+                                                                                         </div>
                                                                                      ) : rankInfo.isPremier ? (
                                                                                          <div className={`text-base font-black italic tracking-tighter ${rankInfo.color}`}>
                                                                                              {rankInfo.label}
@@ -779,7 +785,6 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                                                      ) : (
                                                                                          <span className="text-zinc-700 font-black italic text-[9px]">—</span>
                                                                                      )}
-                                                                                     {rankInfo.icon && <span className="text-[7px] font-black text-zinc-700 max-w-[60px] text-center leading-tight">{rankInfo.label}</span>}
                                                                                  </>
                                                                              );
                                                                          })()}

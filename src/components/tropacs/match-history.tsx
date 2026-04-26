@@ -49,6 +49,7 @@ export default function MatchHistory({ matches, onSync, loading }: MatchHistoryP
         score: typeof m.score === 'string' 
             ? m.score 
             : (Array.isArray(m.score) ? `${m.score[0]}-${m.score[1]}` : '0-0'),
+        rank: m.rank || m.metadata?.rank || m.metadata?.skill_level || null,
         metadata: m.metadata || {
             leetify_rating: m.leetify_rating
         }
