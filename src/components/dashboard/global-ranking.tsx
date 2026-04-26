@@ -23,6 +23,7 @@ interface RankUser {
     gcLevel: number;
     faceitLevel: number;
     faceitElo: number;
+    hasSync?: boolean;
 }
 
 interface CommunityStats {
@@ -235,6 +236,7 @@ const GlobalRanking: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [sortKey, setSortKey] = useState<SortKey>('rating');
     const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
+    const [syncingSteamId, setSyncingSteamId] = useState<string | null>(null);
 
     const maxRating = users.length > 0 ? Math.max(...users.map(u => u.rating)) : 30000;
 
@@ -258,6 +260,36 @@ const GlobalRanking: React.FC = () => {
         };
         fetchRankings();
     }, []);
+
+    const handleSyncPlayer = async (e: React.MouseEvent, steamId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (syncingSteamId) return;
+
+        setSyncingSteamId(steamId);
+        try {
+            const res = await fetch('/api/sync/player', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ steamId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Refresh data
+                const refreshRes = await fetch('/api/ranking');
+                const refreshData = await refreshRes.json();
+                if (refreshData.players) setUsers(refreshData.players);
+                alert(`Sincronizado com sucesso! ${data.count} novas partidas processadas.`);
+            } else {
+                alert(`Erro: ${data.error}`);
+            }
+        } catch (error) {
+            console.error("Sync error:", error);
+            alert("Erro ao sincronizar jogador.");
+        } finally {
+            setSyncingSteamId(null);
+        }
+    };
 
     const filteredAndSorted = useMemo(() => {
         let result = users.filter(user =>
@@ -734,11 +766,29 @@ const GlobalRanking: React.FC = () => {
                                             ) : <span className="text-zinc-800">—</span>}
                                         </td>
 
-                                        {/* Link */}
+                                        {/* Link & Sync */}
                                         <td className="px-4 py-3.5 text-right">
-                                            <Link href={`/player/${user.steamId}`}>
-                                                <ExternalLink size={13} className="text-zinc-700 group-hover:text-yellow-500 transition-colors" />
-                                            </Link>
+                                            <div className="flex items-center justify-end gap-3">
+                                                {user.hasSync && (
+                                                    <button
+                                                        onClick={(e) => handleSyncPlayer(e, user.steamId)}
+                                                        disabled={syncingSteamId === user.steamId}
+                                                        className={`p-2 rounded-lg transition-all ${
+                                                            syncingSteamId === user.steamId 
+                                                                ? 'bg-yellow-500/20 text-yellow-500 animate-spin' 
+                                                                : 'hover:bg-yellow-500/10 text-zinc-600 hover:text-yellow-500'
+                                                        }`}
+                                                        title="Sincronizar Partidas"
+                                                    >
+                                                        <Flame size={14} className={syncingSteamId === user.steamId ? 'animate-pulse' : ''} />
+                                                    </button>
+                                                )}
+                                                <Link href={`/player/${user.steamId}`}>
+                                                    <div className="p-2 rounded-lg hover:bg-white/5 text-zinc-700 hover:text-white transition-all">
+                                                        <ExternalLink size={13} />
+                                                    </div>
+                                                </Link>
+                                            </div>
                                         </td>
                                     </motion.tr>
                                 );

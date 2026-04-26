@@ -120,7 +120,14 @@ export async function POST(req: NextRequest) {
                                     if (!pSteamId) continue;
                                     
                                     const rawHs = Number(p.accuracy_head ?? p.hs_percentage ?? 0);
+                                    // Tentar encontrar o userId para este steamId se ele for um usuário do site
+                                    const registeredUser = await prisma.user.findUnique({
+                                        where: { steamId: pSteamId },
+                                        select: { id: true }
+                                    });
+
                                     const pData = {
+                                        userId: registeredUser?.id || null,
                                         team: String(p.initial_team_number || p.team_id || p.teamId || p.game_team || 'x'),
                                         kills: p.total_kills ?? p.kills ?? 0,
                                         deaths: p.total_deaths ?? p.deaths ?? 0,

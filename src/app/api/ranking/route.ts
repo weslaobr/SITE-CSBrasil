@@ -125,6 +125,8 @@ export async function GET() {
                 adr: true,
                 hsPercentage: true,
                 matchesPlayed: true,
+                steamMatchAuthCode: true,
+                steamLatestMatchCode: true,
             }
         });
 
@@ -165,7 +167,7 @@ export async function GET() {
             }
             const curr = winMap.get(entry.steamId)!;
             curr.total += entry._count.id;
-            if (entry.matchResult === 'win') curr.wins += entry._count.id;
+            if (entry.matchResult?.toLowerCase() === 'win') curr.wins += entry._count.id;
         });
 
         type MatchStatEntry = {
@@ -227,6 +229,7 @@ export async function GET() {
                     hsPercentage,
                     kdr,
                     matchesPlayed,
+                    hasSync: !!userData?.steamMatchAuthCode && !!userData?.steamLatestMatchCode,
                     trend: 'neutral' as const,
                     gcLevel: stats?.gcLevel || 0,
                     faceitLevel: stats?.faceitLevel || 0,

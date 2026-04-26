@@ -42,6 +42,7 @@ export async function GET() {
             include: {
                 players: {
                     select: {
+                        userId: true,
                         matchResult: true,
                         kills: true,
                         deaths: true,
@@ -84,10 +85,24 @@ export async function GET() {
             const agg = mapAgg[key];
             agg.total += 1;
 
-            // Determinar vitória da tropa: maioria de players com matchResult === 'win'
-            const winCount = match.players.filter((p: any) => p.matchResult === 'win').length;
-            const lossCount = match.players.filter((p: any) => p.matchResult === 'loss').length;
-            if (winCount > lossCount) agg.wins += 1;
+            // Determinar vitória da tropa: 
+            // 1. Se houver membros registrados (userId != null), basta um deles ter ganho
+            // 2. Fallback para dados legados ou se não houver userId: checa se alguém ganhou (menos preciso)
+            const members = match.players.filter((p: any) => p.userId !== null);
+            let isWin = false;
+
+            if (members.length > 0) {
+                isWin = members.some((p: any) => p.matchResult?.toLowerCase() === 'win');
+            } else {
+                // Se não há userId populado (dados antigos), checamos se houve vitória.
+                // Num 5v5 completo, sempre há 5 vitórias, então isso daria 100% WR.
+                // Para evitar isso, vamos ser mais rigorosos no fallback:
+                const winCount = match.players.filter((p: any) => p.matchResult?.toLowerCase() === 'win').length;
+                const lossCount = match.players.filter((p: any) => p.matchResult?.toLowerCase() === 'loss').length;
+                isWin = winCount > lossCount; // Isso geralmente falha (5 v 5), o que é seguro
+            }
+
+            if (isWin) agg.wins += 1;
 
             for (const p of match.players) {
                 agg.totalKills += p.kills || 0;

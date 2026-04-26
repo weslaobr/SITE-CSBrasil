@@ -61,12 +61,23 @@ export default function PlayerProfilePage() {
     const handleSync = async () => {
         setSyncing(true);
         try {
-            const res = await fetch('/api/sync/all', { method: 'POST' });
+            // Usar o endpoint de sync por player, permitindo que terceiros disparem a atualização
+            const res = await fetch('/api/sync/player', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ steamId })
+            });
             if (res.ok) {
+                const data = await res.json();
                 await fetchData();
+                alert(`Sincronizado com sucesso! ${data.count} novas partidas processadas.`);
+            } else {
+                const errData = await res.json();
+                alert(`Erro: ${errData.error || 'Falha ao sincronizar'}`);
             }
         } catch (err) {
             console.error("Sync error:", err);
+            alert("Erro ao sincronizar jogador.");
         } finally {
             setSyncing(false);
         }
@@ -194,8 +205,8 @@ export default function PlayerProfilePage() {
 
                     {/* MAIN DASHBOARD */}
                     <div className="lg:col-span-9 space-y-8">
-                        {/* Sync Actions (Only for owner) */}
-                        {isOwner && (
+                        {/* Sync Actions (Show for owner OR if player has sync codes linked) */}
+                        {(isOwner || (dbUser?.steamMatchAuthCode && dbUser?.steamLatestMatchCode)) && (
                             <motion.div 
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -204,17 +215,22 @@ export default function PlayerProfilePage() {
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 blur-[100px] rounded-full pointer-events-none" />
                                 <div className="z-10 text-center sm:text-left mb-6 sm:mb-0">
                                     <h3 className="font-black italic uppercase text-lg tracking-tighter flex items-center gap-2 justify-center sm:justify-start">
-                                        <Zap className="text-yellow-500" size={18} /> Central de Sincronização
+                                        <Zap className="text-yellow-500" size={18} /> 
+                                        {isOwner ? 'Central de Sincronização' : 'Atualizar Dados do Jogador'}
                                     </h3>
-                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Atualize seus dados do CS2, Leetify e Faceit.</p>
+                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">
+                                        {isOwner ? 'Atualize seus dados do CS2, Leetify e Faceit.' : 'Sincronize as partidas recentes deste jogador com o servidor.'}
+                                    </p>
                                 </div>
                                 <div className="flex items-center gap-3 z-10 w-full sm:w-auto">
-                                    <button 
-                                        onClick={() => window.location.href = '/settings'}
-                                        className="flex-1 sm:flex-none px-6 py-4 bg-white/5 hover:bg-white/10 active:scale-95 transition-all outline-none rounded-xl text-[10px] font-black uppercase text-zinc-300 tracking-widest border border-white/5 text-center"
-                                    >
-                                        Configurações
-                                    </button>
+                                    {isOwner && (
+                                        <button 
+                                            onClick={() => window.location.href = '/settings'}
+                                            className="flex-1 sm:flex-none px-6 py-4 bg-white/5 hover:bg-white/10 active:scale-95 transition-all outline-none rounded-xl text-[10px] font-black uppercase text-zinc-300 tracking-widest border border-white/5 text-center"
+                                        >
+                                            Configurações
+                                        </button>
+                                    )}
                                     <button 
                                         onClick={handleSync}
                                         disabled={syncing}
@@ -226,7 +242,7 @@ export default function PlayerProfilePage() {
                                                 Sincronizando...
                                             </>
                                         ) : (
-                                            <>Sincronizar Agora</>
+                                            <>{isOwner ? 'Sincronizar Agora' : 'Atualizar Perfil'}</>
                                         )}
                                     </button>
                                 </div>
