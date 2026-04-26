@@ -279,23 +279,38 @@ const CrosshairHub: React.FC = () => {
                             <Target className="text-purple-500 w-8 h-8" />
                         </div>
                         <div>
-                            <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter text-white">Database de Miras</h2>
-                            <div className="flex gap-4 mt-2">
+                            <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter text-white mb-4">Database de Miras</h2>
+                            {/* Tab Buttons — redesigned */}
+                            <div className="flex gap-3">
                                 <button 
                                     onClick={() => setActiveSection('pros')}
-                                    className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
-                                        activeSection === 'pros' ? 'text-purple-400' : 'text-zinc-600 hover:text-zinc-400'
+                                    className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl font-black uppercase text-xs tracking-widest transition-all border ${
+                                        activeSection === 'pros' 
+                                            ? 'bg-purple-500 text-black border-purple-400 shadow-lg shadow-purple-500/30' 
+                                            : 'bg-zinc-900 text-zinc-400 border-white/10 hover:border-purple-500/30 hover:text-white'
                                     }`}
                                 >
-                                    <Star size={12} fill={activeSection === 'pros' ? 'currentColor' : 'none'} /> Jogadores Profissionais
+                                    <Star size={13} fill={activeSection === 'pros' ? 'currentColor' : 'none'} />
+                                    Jogadores Pro
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-black ${
+                                        activeSection === 'pros' ? 'bg-black/20' : 'bg-zinc-800'
+                                    }`}>{PRO_CROSSHAIRS.length}</span>
                                 </button>
                                 <button 
                                     onClick={() => setActiveSection('community')}
-                                    className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
-                                        activeSection === 'community' ? 'text-purple-400' : 'text-zinc-600 hover:text-zinc-400'
+                                    className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl font-black uppercase text-xs tracking-widest transition-all border ${
+                                        activeSection === 'community' 
+                                            ? 'bg-purple-500 text-black border-purple-400 shadow-lg shadow-purple-500/30' 
+                                            : 'bg-zinc-900 text-zinc-400 border-white/10 hover:border-purple-500/30 hover:text-white'
                                     }`}
                                 >
-                                    <Globe size={12} /> Miras da Tropa
+                                    <Globe size={13} />
+                                    Miras da Tropa
+                                    {communityCrosshairs.length > 0 && (
+                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-black ${
+                                            activeSection === 'community' ? 'bg-black/20' : 'bg-zinc-800'
+                                        }`}>{communityCrosshairs.length}</span>
+                                    )}
                                 </button>
                             </div>
                         </div>
