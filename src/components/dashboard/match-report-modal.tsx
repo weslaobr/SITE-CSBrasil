@@ -975,40 +975,40 @@ const MatchReportModal: React.FC<Props> = ({
                             <thead className="sticky top-0 z-10">
                                 <tr className="border-b border-white/[0.05] bg-[#0c0f15]/95 backdrop-blur-sm">
                                     {tab === 'placar' && <>
-                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600">Jogador</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">K</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">D</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">A</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">K/D</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">ADR</th>
-                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center">HS%</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600" title="Nome do Jogador">Jogador</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Kills (Eliminações)">K</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Deaths (Mortes)">D</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Assists (Assistências)">A</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Kill/Death Ratio (Média de mortes por vida)">K/D</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Average Damage per Round (Dano médio por rodada)">ADR</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center" title="Headshot Percentage (Porcentagem de tiros na cabeça)">HS%</th>
                                     </>}
                                     {tab === 'desempenho' && <>
-                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600">Jogador</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">Rating</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">KAST</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">HS%</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">Clutch</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">Trade</th>
-                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center">Multikills</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600" title="Nome do Jogador">Jogador</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Performance Rating (Leetify Rating)">Rating</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Kill, Assist, Survived, or Traded (Impacto por round)">KAST</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Headshot Percentage (Porcentagem de tiros na cabeça)">HS%</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Vitórias em situações de desvantagem numérica">Clutch</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Mortes vingadas por aliados ou baixas que vingaram aliados">Trade</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center" title="Múltiplas eliminações no mesmo round (3k, 4k, Ace)">Multikills</th>
                                     </>}
                                     {tab === 'utilitarios' && <>
-                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600">Jogador</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">Dano Util</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">⚡ Flash</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">👁 Cegos</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">💣 HE</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">⚡ Flas.</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">💨 Smoke</th>
-                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center">🔥 Molotov</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600" title="Nome do Jogador">Jogador</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Dano total causado com granadas">Dano Util</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Eliminações de aliados facilitadas por suas flashbangs">Flash Ass.</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Tempo total que inimigos ficaram cegos por suas flashbangs">Cegueira</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Granadas HE lançadas">💣 HE</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Flashbangs lançadas">⚡ Flas.</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Smokes lançadas">💨 Smoke</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center" title="Molotovs lançadas">🔥 Molotov</th>
                                     </>}
                                     {tab === 'confrontos' && <>
-                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600">Jogador</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">🎯 1ª Kill</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">💀 1ª Morte</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">Duelos</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center">Saldo</th>
-                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center">Trocas</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600" title="Nome do Jogador">Jogador</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="First Kills (Primeira eliminação do round)">🎯 1ª Kill</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="First Deaths (Primeira morte do round)">💀 1ª Morte</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Saldo de duelos de abertura">Duelos</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Diferença total de aberturas">Saldo</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center" title="Trocas de kills realizadas">Trocas</th>
                                     </>}
                                 </tr>
                             </thead>
