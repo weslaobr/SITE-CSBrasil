@@ -1,10 +1,9 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Check, Eye, Users, Search, Target, Trophy, Info, Plus, User, Globe, Shield, Star, ExternalLink, Loader2 } from 'lucide-react';
+import { Copy, Check, Users, Search, Target, Info, Plus, User, Globe, Star, Loader2, Pencil, Trash2, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSession } from 'next-auth/react';
-import { parseCrosshairCode } from '@/lib/crosshair-parser';
 
 interface ProCrosshair {
     id: string;
@@ -27,6 +26,7 @@ interface ProCrosshair {
 
 interface CommunityCrosshair {
     id: string;
+    userId: string;
     name: string;
     code: string;
     description?: string;
@@ -451,6 +451,9 @@ const CrosshairHub: React.FC = () => {
                                     isPro={false}
                                     handleCopy={handleCopy}
                                     copiedId={copiedId}
+                                    ownerId={comm.userId}
+                                    sessionUserId={(session?.user as any)?.id}
+                                    onRefresh={fetchCommunity}
                                     previewStyle={{
                                         width: `${Math.max(1, (comm.previewSize ?? 5))}px`,
                                         height: `${Math.max(1, (comm.previewSize ?? 5))}px`,
@@ -459,6 +462,13 @@ const CrosshairHub: React.FC = () => {
                                         dot: comm.previewDot ?? false,
                                         outline: false,
                                         color: comm.previewColor ?? '#00ff00',
+                                    }}
+                                    initialPreview={{
+                                        color: comm.previewColor ?? '#00ff00',
+                                        size: comm.previewSize ?? 5,
+                                        gap: comm.previewGap ?? 0,
+                                        thick: comm.previewThick ?? 1,
+                                        dot: comm.previewDot ?? false,
                                     }}
                                 />
                             ))
@@ -487,9 +497,65 @@ const CrosshairPreview = ({ style, scale = 1 }: { style: any; scale?: number }) 
 
 // Subcomponent for the Card to avoid repetition
 const CrosshairCard = ({ 
-    id, title, subtitle, userImage, code, description, previewStyle, isPro, handleCopy, copiedId 
+    id, title, subtitle, userImage, code, description, previewStyle,
+    isPro, handleCopy, copiedId, ownerId, sessionUserId, onRefresh, initialPreview
 }: any) => {
-    const style = previewStyle;
+    const [style, setStyle] = useState(previewStyle);
+    const [editMode, setEditMode] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    // Editable slider state (only for owner)
+    const [eColor, setEColor] = useState(initialPreview?.color ?? '#00ff00');
+    const [eSize, setESize]   = useState(initialPreview?.size ?? 5);
+    const [eGap, setEGap]     = useState(initialPreview?.gap ?? 0);
+    const [eThick, setEThick] = useState(initialPreview?.thick ?? 1);
+    const [eDot, setEDot]     = useState(initialPreview?.dot ?? false);
+
+    const liveStyle = {
+        width: `${Math.max(1, eSize)}px`,
+        height: `${Math.max(1, eSize)}px`,
+        gap: `${eGap}px`,
+        thickness: `${Math.max(0.5, eThick)}px`,
+        dot: eDot,
+        outline: false,
+        color: eColor,
+    };
+
+    const isOwner = !isPro && ownerId && sessionUserId && ownerId === sessionUserId;
+
+    const handleSavePreview = async () => {
+        setSaving(true);
+        try {
+            const res = await fetch(`/api/crosshairs/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ previewColor: eColor, previewSize: eSize, previewGap: eGap, previewThick: eThick, previewDot: eDot })
+            });
+            if (res.ok) {
+                setStyle(liveStyle);
+                setEditMode(false);
+                toast.success('Preview atualizado!');
+                if (onRefresh) onRefresh();
+            } else {
+                toast.error('Erro ao salvar.');
+            }
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm('Tem certeza que quer deletar esta mira?')) return;
+        const res = await fetch(`/api/crosshairs/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            toast.success('Mira removida!');
+            if (onRefresh) onRefresh();
+        } else {
+            toast.error('Erro ao deletar.');
+        }
+    };
+
+    const displayStyle = editMode ? liveStyle : style;
 
     return (
         <motion.div
@@ -502,9 +568,79 @@ const CrosshairCard = ({
             <div className="relative aspect-[16/9] bg-[url('https://images.squarespace-cdn.com/content/v1/5e396659e19d7d3d3d3d3d3d/1580822617617-6Z6Z6Z6Z6Z6Z6Z6Z6Z6Z/Mirage_A_Site.jpg')] bg-cover bg-center">
                 <div className="absolute inset-0 bg-black/20" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <CrosshairPreview style={style} scale={5} />
+                    <CrosshairPreview style={displayStyle} scale={5} />
                 </div>
+                {isOwner && (
+                    <div className="absolute top-3 right-3 flex gap-2">
+                        <button onClick={() => setEditMode(!editMode)}
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                                editMode ? 'bg-purple-500 text-black' : 'bg-black/60 text-zinc-400 hover:text-white'
+                            }`}>
+                            <Settings2 size={14} />
+                        </button>
+                        <button onClick={handleDelete}
+                            className="w-8 h-8 rounded-xl flex items-center justify-center bg-black/60 text-zinc-400 hover:text-red-400 transition-all">
+                            <Trash2 size={14} />
+                        </button>
+                    </div>
+                )}
             </div>
+
+            {/* Inline Edit Panel */}
+            <AnimatePresence>
+                {editMode && isOwner && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="bg-zinc-950 border-b border-white/5 overflow-hidden"
+                    >
+                        <div className="p-5 space-y-4">
+                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest">Ajuste o preview até ficar igual à sua mira</p>
+                            {/* Color swatches */}
+                            <div className="flex gap-2 flex-wrap">
+                                {[
+                                    { label: 'Verde', color: '#00ff00' },
+                                    { label: 'Ciano', color: '#00ffff' },
+                                    { label: 'Amarelo', color: '#ffff00' },
+                                    { label: 'Branco', color: '#ffffff' },
+                                    { label: 'Vermelho', color: '#ff4444' },
+                                    { label: 'Azul', color: '#4488ff' },
+                                ].map(c => (
+                                    <button key={c.color} type="button" onClick={() => setEColor(c.color)}
+                                        style={{ backgroundColor: c.color }}
+                                        className={`w-6 h-6 rounded-lg border-2 transition-all ${eColor === c.color ? 'border-white scale-110' : 'border-transparent'}`}
+                                    />
+                                ))}
+                                <input type="color" value={eColor} onChange={(e) => setEColor(e.target.value)}
+                                    className="w-6 h-6 rounded-lg cursor-pointer" />
+                                <button type="button" onClick={() => setEDot(!eDot)}
+                                    className={`px-3 py-1 rounded-lg font-black text-[9px] uppercase transition-all border ml-auto ${
+                                        eDot ? 'bg-purple-500 text-black border-purple-400' : 'bg-zinc-900 text-zinc-400 border-white/5'
+                                    }`}>
+                                    {eDot ? 'Com Ponto' : 'Sem Ponto'}
+                                </button>
+                            </div>
+                            {/* Sliders */}
+                            <div className="space-y-2">
+                                <div><label className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Tamanho: {eSize}px</label>
+                                    <input type="range" min={1} max={20} value={eSize} onChange={(e) => setESize(Number(e.target.value))}
+                                        className="w-full h-1 bg-zinc-800 rounded appearance-none cursor-pointer accent-purple-500" /></div>
+                                <div><label className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Espessura: {eThick}px</label>
+                                    <input type="range" min={0.5} max={5} step={0.5} value={eThick} onChange={(e) => setEThick(Number(e.target.value))}
+                                        className="w-full h-1 bg-zinc-800 rounded appearance-none cursor-pointer accent-purple-500" /></div>
+                                <div><label className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Espaçamento: {eGap}px</label>
+                                    <input type="range" min={-5} max={10} step={0.5} value={eGap} onChange={(e) => setEGap(Number(e.target.value))}
+                                        className="w-full h-1 bg-zinc-800 rounded appearance-none cursor-pointer accent-purple-500" /></div>
+                            </div>
+                            <button onClick={handleSavePreview} disabled={saving}
+                                className="w-full bg-purple-500 text-black py-2 rounded-xl font-black text-[10px] uppercase tracking-widest disabled:opacity-50">
+                                {saving ? <Loader2 size={12} className="animate-spin mx-auto" /> : '💾 Salvar Preview'}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <div className="p-8">
                 <div className="flex items-center justify-between mb-4">
@@ -514,7 +650,7 @@ const CrosshairCard = ({
                                 {title[0].toUpperCase()}
                             </div>
                         ) : (
-                            <img src={userImage || '/img/default-avatar.png'} className="w-10 h-10 rounded-xl border border-white/10" />
+                            <img src={userImage || '/img/default-avatar.png'} className="w-10 h-10 rounded-xl border border-white/10" alt={subtitle} />
                         )}
                         <div>
                             <h4 className="text-xl font-black italic uppercase tracking-tighter text-white truncate max-w-[150px]">{title}</h4>
