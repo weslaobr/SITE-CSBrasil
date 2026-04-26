@@ -44,6 +44,7 @@ export default function MatchHistory({ matches, onSync, loading }: MatchHistoryP
         assists: m.assists || 0,
         hsPercentage: m.hsPercentage || m.hs_percentage || 0,
         adr: m.adr || 0,
+        kast: m.kast,
         matchDate: m.matchDate || m.finished_at || new Date().toISOString(),
         result: m.result || (m.outcome === 'win' ? 'Win' : m.outcome === 'loss' ? 'Loss' : 'Draw'),
         score: typeof m.score === 'string' 

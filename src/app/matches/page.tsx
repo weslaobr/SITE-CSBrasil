@@ -32,7 +32,9 @@ export default function MatchesPage() {
             // 2. Fetch from New Tracker API (FastAPI)
             let trackerMatches = [];
             try {
-                const resTracker = await fetch('http://localhost:8000/api/match/list');
+                const steamId = (session?.user as any)?.steamId;
+                const url = steamId ? `http://localhost:8000/api/match/list?steamid=${steamId}` : 'http://localhost:8000/api/match/list';
+                const resTracker = await fetch(url);
                 if (resTracker.ok) {
                     const rawTracker = await resTracker.json();
                     trackerMatches = rawTracker.map((m: any) => {
@@ -58,9 +60,9 @@ export default function MatchesPage() {
                             kills: m.kills || 0,
                             deaths: m.deaths || 0,
                             assists: m.assists || 0,
-                            adr: m.adr,
-                            kast: m.kast,
-                            rating2: m.rating,
+                            adr: m.adr || 0,
+                            kast: m.kast !== undefined ? (m.kast > 1 ? Math.round(m.kast) : Math.round(m.kast * 100)) : null,
+                            rating2: m.rating || 0,
                             rank: m.rank || m.skill_level || (gameMode === 'Premier' ? m.rating : null),
                             isTracker: true
                         };
@@ -78,7 +80,21 @@ export default function MatchesPage() {
             // Overwrite with Tracker matches (or add if new)
             trackerMatches.forEach((m: any) => {
                 const existing = matchesMap.get(m.id);
-                matchesMap.set(m.id, { ...existing, ...m });
+                if (existing) {
+                    matchesMap.set(m.id, {
+                        ...existing,
+                        ...m,
+                        // Priority for stats: use tracker if > 0, else keep existing
+                        kills: m.kills || existing.kills || 0,
+                        deaths: m.deaths || existing.deaths || 0,
+                        assists: m.assists || existing.assists || 0,
+                        adr: m.adr || existing.adr,
+                        kast: m.kast || existing.kast,
+                        hsPercentage: m.hsPercentage || existing.hsPercentage
+                    });
+                } else {
+                    matchesMap.set(m.id, m);
+                }
             });
 
             const merged = Array.from(matchesMap.values()).sort((a, b) => 

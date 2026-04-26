@@ -108,9 +108,38 @@ async def get_match_ticks(match_id: str, db: AsyncSession = Depends(get_db)):
     return {"ticks": ticks}
 
 @app.get("/api/match/list", tags=["Tracker"])
-async def list_matches(db: AsyncSession = Depends(get_db)):
-    from app.models.tracker import Match
+async def list_matches(steamid: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+    from app.models.tracker import Match, MatchPlayer
     from sqlalchemy import select, desc
+    
+    if steamid:
+        # If steamid is provided, join with MatchPlayer to get stats
+        # Handle both string and int (steamid64 is BigInteger in DB)
+        try:
+            s64 = int(steamid)
+        except:
+            s64 = 0
+            
+        stmt = select(Match, MatchPlayer).join(MatchPlayer).where(MatchPlayer.steamid64 == s64).order_by(desc(Match.parsed_at))
+        result = await db.execute(stmt)
+        rows = result.all()
+        
+        matches_with_stats = []
+        for match, player in rows:
+            m_dict = {c.name: getattr(match, c.name) for c in match.__table__.columns}
+            p_dict = {c.name: getattr(player, c.name) for c in player.__table__.columns}
+            # Merge player stats into match dict
+            m_dict.update({
+                "kills": p_dict.get("kills", 0),
+                "deaths": p_dict.get("deaths", 0),
+                "assists": p_dict.get("assists", 0),
+                "adr": p_dict.get("adr", 0),
+                "kast": p_dict.get("kast", 0),
+                "rating": p_dict.get("rating", 0),
+                "hs_count": p_dict.get("hs_count", 0),
+            })
+            matches_with_stats.append(m_dict)
+        return matches_with_stats
     
     stmt = select(Match).order_by(desc(Match.parsed_at))
     result = await db.execute(stmt)

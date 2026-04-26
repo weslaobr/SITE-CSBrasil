@@ -276,6 +276,7 @@ export async function GET(
                 matchDate: gmp.match.matchDate,
                 hsPercentage: gmp.hsPercentage,
                 adr: gmp.adr,
+                kast: meta?.kast !== undefined ? (meta.kast > 1 ? Math.round(meta.kast) : Math.round(meta.kast * 100)) : (meta?.kast_percent || meta?.kast_percentage || null),
                 rank: meta?.rank || meta?.skill_level || null,
                 metadata: gmp.metadata
             };
@@ -285,10 +286,14 @@ export async function GET(
         const allMatches = [
             ...(dbUser?.matches || [])
                 .filter((m: any) => m.source === 'Leetify')
-                .map((m: any) => ({
-                    ...m,
-                    rank: m.rank || m.metadata?.rank || m.metadata?.skill_level || null
-                })),
+                .map((m: any) => {
+                    const meta = m.metadata || {};
+                    return {
+                        ...m,
+                        kast: m.kast ?? meta.kast ?? meta.kast_percent ?? meta.kast_percentage ?? null,
+                        rank: m.rank || meta.rank || meta.skill_level || null
+                    };
+                }),
             ...formattedGlobalMatches
         ].sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
 

@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
                 matchDate: gmp.match.matchDate,
                 hsPercentage: gmp.hsPercentage,
                 adr: gmp.adr,
-                kast: meta?.kast ?? meta?.kast_percent ?? meta?.kast_percentage,
+                kast: meta?.kast !== undefined ? (meta.kast > 1 ? Math.round(meta.kast) : Math.round(meta.kast * 100)) : (meta?.kast_percent || meta?.kast_percentage || null),
                 rank: meta?.rank || meta?.skill_level || null,
                 metadata: gmp.metadata
             };

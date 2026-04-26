@@ -62,7 +62,12 @@ export async function syncUserMatches(steamId: string) {
                     deaths = playerStat.total_deaths ?? playerStat.deaths ?? 0;
                     assists = playerStat.total_assists ?? playerStat.assists ?? 0;
                     adr = playerStat.dpr ?? playerStat.adr ?? playerStat.average_damage_per_round ?? null;
-                    kast = playerStat.kast ?? playerStat.kast_percent ?? playerStat.kast_percentage ?? null;
+                    kast = playerStat.kast ?? playerStat.kast_percent ?? playerStat.kast_percentage ?? playerStat.kastPercent ?? playerStat.kastPercentage ?? null;
+                    
+                    // Fallback to ratings if not in stats directly
+                    if (kast == null && detail.ratings?.[playerStat.steam64_id || playerStat.player_id]?.kast) {
+                        kast = detail.ratings[playerStat.steam64_id || playerStat.player_id].kast;
+                    }
 
                     if (hsPercentage == null && playerStat.accuracy_head != null) {
                         const raw = Number(playerStat.accuracy_head);

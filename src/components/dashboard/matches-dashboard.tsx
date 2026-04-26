@@ -206,8 +206,11 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         const adrMatches = filteredMatches.filter(m => (m.adr || (m as any).metadata?.adr) != null);
         const totalAdr = adrMatches.reduce((acc, m) => acc + (m.adr || (m as any).metadata?.adr || 0), 0);
 
-        const kastMatches = filteredMatches.filter(m => (m.kast || (m as any).metadata?.kast) != null);
-        const totalKast = kastMatches.reduce((acc, m) => acc + (m.kast || (m as any).metadata?.kast || 0), 0);
+        const kastMatches = filteredMatches.filter(m => (m.kast ?? m.metadata?.kast ?? m.metadata?.kast_percent ?? m.metadata?.kast_percentage) != null);
+        const totalKast = kastMatches.reduce((acc, m) => {
+            const k = Number(m.kast ?? m.metadata?.kast ?? m.metadata?.kast_percent ?? m.metadata?.kast_percentage ?? 0);
+            return acc + (k > 1 ? k : k * 100);
+        }, 0);
 
         const hsMatches = filteredMatches.filter(m => m.hsPercentage != null && m.hsPercentage > 0);
         const totalHs = hsMatches.reduce((acc, m) => acc + (m.hsPercentage ?? 0), 0);
