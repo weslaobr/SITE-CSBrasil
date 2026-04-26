@@ -358,13 +358,18 @@ model AutoClearConfig {
 }
 
 model Crosshair {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  code        String
-  description String?
-  isPublic    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  code          String
+  description   String?
+  isPublic      Boolean  @default(true)
+  previewColor  String?  @default("#00ff00")
+  previewSize   Float?   @default(5)
+  previewGap    Float?   @default(0)
+  previewThick  Float?   @default(1)
+  previewDot    Boolean? @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

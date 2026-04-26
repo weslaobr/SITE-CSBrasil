@@ -9,23 +9,18 @@ export async function GET(req: NextRequest) {
         const userId = searchParams.get("userId");
 
         if (userId) {
-            // Get specific user crosshairs
-            const crosshairs = await prisma.crosshair.findMany({
+            const crosshairs = await (prisma as any).crosshair.findMany({
                 where: { userId },
                 orderBy: { createdAt: "desc" }
             });
             return NextResponse.json(crosshairs);
         }
 
-        // Get public community crosshairs
-        const crosshairs = await prisma.crosshair.findMany({
+        const crosshairs = await (prisma as any).crosshair.findMany({
             where: { isPublic: true },
             include: {
                 user: {
-                    select: {
-                        name: true,
-                        image: true
-                    }
+                    select: { name: true, image: true }
                 }
             },
             orderBy: { createdAt: "desc" },
@@ -47,19 +42,27 @@ export async function POST(req: NextRequest) {
         }
 
         const userId = (session.user as any).id;
-        const { name, code, description, isPublic } = await req.json();
+        const {
+            name, code, description, isPublic,
+            previewColor, previewSize, previewGap, previewThick, previewDot
+        } = await req.json();
 
         if (!name || !code) {
             return NextResponse.json({ error: "Name and Code are required" }, { status: 400 });
         }
 
-        const crosshair = await prisma.crosshair.create({
+        const crosshair = await (prisma as any).crosshair.create({
             data: {
                 userId,
                 name,
                 code,
                 description,
-                isPublic: isPublic ?? true
+                isPublic: isPublic ?? true,
+                previewColor: previewColor ?? '#00ff00',
+                previewSize: previewSize ?? 5,
+                previewGap: previewGap ?? 0,
+                previewThick: previewThick ?? 1,
+                previewDot: previewDot ?? false,
             }
         });
 

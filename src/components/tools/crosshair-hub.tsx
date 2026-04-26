@@ -30,6 +30,11 @@ interface CommunityCrosshair {
     name: string;
     code: string;
     description?: string;
+    previewColor: string;
+    previewSize: number;
+    previewGap: number;
+    previewThick: number;
+    previewDot: boolean;
     user: {
         name: string;
         image: string;
@@ -155,6 +160,23 @@ const CrosshairHub: React.FC = () => {
     const [newDesc, setNewDesc] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Preview state (user-controlled)
+    const [prevColor, setPrevColor] = useState('#00ff00');
+    const [prevSize, setPrevSize] = useState(5);
+    const [prevGap, setPrevGap] = useState(0);
+    const [prevThick, setPrevThick] = useState(1);
+    const [prevDot, setPrevDot] = useState(false);
+
+    const formPreviewStyle = {
+        width: `${Math.max(1, prevSize)}px`,
+        height: `${Math.max(1, prevSize)}px`,
+        gap: `${prevGap}px`,
+        thickness: `${Math.max(0.5, prevThick)}px`,
+        dot: prevDot,
+        outline: false,
+        color: prevColor,
+    };
+
     const fetchCommunity = async () => {
         setLoadingCommunity(true);
         try {
@@ -187,7 +209,16 @@ const CrosshairHub: React.FC = () => {
             const res = await fetch('/api/crosshairs', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newName, code: newCode, description: newDesc })
+                body: JSON.stringify({
+                    name: newName,
+                    code: newCode,
+                    description: newDesc,
+                    previewColor: prevColor,
+                    previewSize: prevSize,
+                    previewGap: prevGap,
+                    previewThick: prevThick,
+                    previewDot: prevDot,
+                })
             });
             
             if (res.ok) {
@@ -195,6 +226,11 @@ const CrosshairHub: React.FC = () => {
                 setNewName('');
                 setNewCode('');
                 setNewDesc('');
+                setPrevColor('#00ff00');
+                setPrevSize(5);
+                setPrevGap(0);
+                setPrevThick(1);
+                setPrevDot(false);
                 setShowAddForm(false);
                 fetchCommunity();
             } else {
@@ -281,45 +317,91 @@ const CrosshairHub: React.FC = () => {
                             onSubmit={handleAddCrosshair}
                             className="mt-8 pt-8 border-t border-white/5 overflow-hidden"
                         >
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Nome da Mira</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Ex: Mira do One-Tap"
-                                        value={newName}
-                                        onChange={(e) => setNewName(e.target.value)}
-                                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-purple-500 outline-none"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Código de Importação</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="CSGO-XXXXX-XXXXX..."
-                                        value={newCode}
-                                        onChange={(e) => setNewCode(e.target.value)}
-                                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-purple-500 outline-none font-mono"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Descrição (Opcional)</label>
-                                    <div className="flex gap-2">
-                                        <input 
-                                            type="text" 
-                                            placeholder="Ex: Ponto verde esticado"
-                                            value={newDesc}
-                                            onChange={(e) => setNewDesc(e.target.value)}
-                                            className="flex-1 bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-purple-500 outline-none"
-                                        />
-                                        <button 
-                                            type="submit"
-                                            disabled={isSubmitting}
-                                            className="bg-purple-500 hover:bg-purple-400 text-black px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
-                                        >
-                                            {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : 'Postar'}
-                                        </button>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Left: Fields */}
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Nome da Mira</label>
+                                        <input type="text" placeholder="Ex: Mira do One-Tap" value={newName} onChange={(e) => setNewName(e.target.value)} className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-purple-500 outline-none" />
                                     </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Código de Importação</label>
+                                        <input type="text" placeholder="CSGO-XXXXX-XXXXX..." value={newCode} onChange={(e) => setNewCode(e.target.value)} className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-purple-500 outline-none font-mono" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Descrição (Opcional)</label>
+                                        <input type="text" placeholder="Ex: Ponto verde esticado" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-purple-500 outline-none" />
+                                    </div>
+
+                                    {/* Visual Config */}
+                                    <div className="bg-zinc-950 border border-white/5 rounded-2xl p-5 space-y-5">
+                                        <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Configure o Preview da sua Mira</p>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Cor</label>
+                                                <div className="flex gap-2 mt-2 flex-wrap">
+                                                    {[
+                                                        { label: 'Verde', color: '#00ff00' },
+                                                        { label: 'Ciano', color: '#00ffff' },
+                                                        { label: 'Amarelo', color: '#ffff00' },
+                                                        { label: 'Branco', color: '#ffffff' },
+                                                        { label: 'Vermelho', color: '#ff4444' },
+                                                        { label: 'Azul', color: '#4488ff' },
+                                                    ].map(c => (
+                                                        <button key={c.color} type="button" onClick={() => setPrevColor(c.color)}
+                                                            style={{ backgroundColor: c.color }}
+                                                            className={`w-7 h-7 rounded-lg border-2 transition-all ${prevColor === c.color ? 'border-white scale-110' : 'border-transparent'}`}
+                                                            title={c.label}
+                                                        />
+                                                    ))}
+                                                    <input type="color" value={prevColor} onChange={(e) => setPrevColor(e.target.value)}
+                                                        className="w-7 h-7 rounded-lg cursor-pointer bg-zinc-800 border border-white/10" title="Cor personalizada" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Ponto Central</label>
+                                                <button type="button" onClick={() => setPrevDot(!prevDot)}
+                                                    className={`mt-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all border ${
+                                                        prevDot ? 'bg-purple-500 text-black border-purple-400' : 'bg-zinc-900 text-zinc-400 border-white/5'
+                                                    }`}>
+                                                    {prevDot ? 'Com Ponto' : 'Sem Ponto'}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Tamanho: {prevSize}px</label>
+                                                <input type="range" min={1} max={20} value={prevSize} onChange={(e) => setPrevSize(Number(e.target.value))}
+                                                    className="w-full h-1.5 bg-zinc-900 rounded appearance-none cursor-pointer accent-purple-500 mt-1" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Espessura: {prevThick}px</label>
+                                                <input type="range" min={0.5} max={5} step={0.5} value={prevThick} onChange={(e) => setPrevThick(Number(e.target.value))}
+                                                    className="w-full h-1.5 bg-zinc-900 rounded appearance-none cursor-pointer accent-purple-500 mt-1" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Espaçamento: {prevGap}px</label>
+                                                <input type="range" min={-5} max={10} step={0.5} value={prevGap} onChange={(e) => setPrevGap(Number(e.target.value))}
+                                                    className="w-full h-1.5 bg-zinc-900 rounded appearance-none cursor-pointer accent-purple-500 mt-1" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" disabled={isSubmitting}
+                                        className="w-full bg-purple-500 hover:bg-purple-400 text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest disabled:opacity-50 transition-all shadow-lg shadow-purple-500/20">
+                                        {isSubmitting ? <Loader2 size={16} className="animate-spin mx-auto" /> : '🎯 Postar Mira na Tropa'}
+                                    </button>
+                                </div>
+
+                                {/* Right: Live Preview */}
+                                <div className="flex flex-col">
+                                    <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest mb-4">Preview ao Vivo</label>
+                                    <div className="flex-1 bg-black rounded-3xl border border-white/5 flex items-center justify-center min-h-[240px] relative overflow-hidden">
+                                        <div className="absolute inset-0 bg-[url('https://images.squarespace-cdn.com/content/v1/5e396659e19d7d3d3d3d3d3d/1580822617617-6Z6Z6Z6Z6Z6Z6Z6Z6Z6Z/Mirage_A_Site.jpg')] bg-cover bg-center opacity-30" />
+                                        <CrosshairPreview style={formPreviewStyle} scale={3} />
+                                    </div>
+                                    <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mt-3 text-center">Ajuste os sliders até ficar igual à sua mira no jogo</p>
                                 </div>
                             </div>
                         </motion.form>
@@ -366,10 +448,18 @@ const CrosshairHub: React.FC = () => {
                                     userImage={comm.user.image}
                                     code={comm.code}
                                     description={comm.description || 'Mira postada por membro da Tropa.'}
-                                    type="Classic"
                                     isPro={false}
                                     handleCopy={handleCopy}
                                     copiedId={copiedId}
+                                    previewStyle={{
+                                        width: `${Math.max(1, (comm.previewSize ?? 5))}px`,
+                                        height: `${Math.max(1, (comm.previewSize ?? 5))}px`,
+                                        gap: `${comm.previewGap ?? 0}px`,
+                                        thickness: `${Math.max(0.5, (comm.previewThick ?? 1))}px`,
+                                        dot: comm.previewDot ?? false,
+                                        outline: false,
+                                        color: comm.previewColor ?? '#00ff00',
+                                    }}
                                 />
                             ))
                         )
@@ -380,12 +470,26 @@ const CrosshairHub: React.FC = () => {
     );
 };
 
+// CrosshairPreview — componente reutilizável que renderiza a mira
+const CrosshairPreview = ({ style, scale = 1 }: { style: any; scale?: number }) => (
+    <div style={{ transform: `scale(${scale})`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', width: 40, height: 40 }}>
+        {/* Direita */}
+        <div style={{ position: 'absolute', width: style.width, height: style.thickness, backgroundColor: style.color, left: `calc(50% + ${style.gap} + 1px)`, top: '50%', transform: 'translateY(-50%)', boxShadow: style.outline ? '0 0 0 1px black' : 'none' }} />
+        {/* Esquerda */}
+        <div style={{ position: 'absolute', width: style.width, height: style.thickness, backgroundColor: style.color, right: `calc(50% + ${style.gap} + 1px)`, top: '50%', transform: 'translateY(-50%)', boxShadow: style.outline ? '0 0 0 1px black' : 'none' }} />
+        {/* Cima */}
+        <div style={{ position: 'absolute', height: style.width, width: style.thickness, backgroundColor: style.color, bottom: `calc(50% + ${style.gap} + 1px)`, left: '50%', transform: 'translateX(-50%)', boxShadow: style.outline ? '0 0 0 1px black' : 'none' }} />
+        {/* Baixo */}
+        <div style={{ position: 'absolute', height: style.width, width: style.thickness, backgroundColor: style.color, top: `calc(50% + ${style.gap} + 1px)`, left: '50%', transform: 'translateX(-50%)', boxShadow: style.outline ? '0 0 0 1px black' : 'none' }} />
+        {style.dot && <div style={{ position: 'absolute', width: style.thickness, height: style.thickness, backgroundColor: style.color, left: '50%', top: '50%', transform: 'translate(-50%,-50%)', boxShadow: style.outline ? '0 0 0 1px black' : 'none' }} />}
+    </div>
+);
+
 // Subcomponent for the Card to avoid repetition
 const CrosshairCard = ({ 
-    id, title, subtitle, userImage, code, description, type, previewStyle, isPro, handleCopy, copiedId 
+    id, title, subtitle, userImage, code, description, previewStyle, isPro, handleCopy, copiedId 
 }: any) => {
-    // Calcula o estilo dinamicamente com base no código se não houver um estilo pré-definido
-    const style = previewStyle || parseCrosshairCode(code);
+    const style = previewStyle;
 
     return (
         <motion.div
@@ -397,78 +501,9 @@ const CrosshairCard = ({
         >
             <div className="relative aspect-[16/9] bg-[url('https://images.squarespace-cdn.com/content/v1/5e396659e19d7d3d3d3d3d3d/1580822617617-6Z6Z6Z6Z6Z6Z6Z6Z6Z6Z/Mirage_A_Site.jpg')] bg-cover bg-center">
                 <div className="absolute inset-0 bg-black/20" />
-                <div className="absolute inset-0 flex items-center justify-center scale-[2.5]">
-                    <div className="relative">
-                        {/* Horizontal - Right */}
-                        <div 
-                            style={{ 
-                                width: style.width, 
-                                height: style.thickness, 
-                                backgroundColor: style.color,
-                                left: `calc(${style.gap} + 1px)`,
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                boxShadow: style.outline ? '0 0 0 1px black' : 'none'
-                            }} 
-                            className="absolute" 
-                        />
-                        {/* Horizontal - Left */}
-                        <div 
-                            style={{ 
-                                width: style.width, 
-                                height: style.thickness, 
-                                backgroundColor: style.color,
-                                right: `calc(${style.gap} + 1px)`,
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                boxShadow: style.outline ? '0 0 0 1px black' : 'none'
-                            }} 
-                            className="absolute" 
-                        />
-                        {/* Vertical - Top */}
-                        <div 
-                            style={{ 
-                                height: style.width, 
-                                width: style.thickness, 
-                                backgroundColor: style.color,
-                                bottom: `calc(${style.gap} + 1px)`,
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                boxShadow: style.outline ? '0 0 0 1px black' : 'none'
-                            }} 
-                            className="absolute" 
-                        />
-                        {/* Vertical - Bottom */}
-                        <div 
-                            style={{ 
-                                height: style.width, 
-                                width: style.thickness, 
-                                backgroundColor: style.color,
-                                top: `calc(${style.gap} + 1px)`,
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                boxShadow: style.outline ? '0 0 0 1px black' : 'none'
-                            }} 
-                            className="absolute" 
-                        />
-                        {/* Dot */}
-                        {style.dot && (
-                            <div 
-                                style={{ 
-                                    width: style.thickness, 
-                                    height: style.thickness, 
-                                    backgroundColor: style.color,
-                                    left: '50%',
-                                    top: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    boxShadow: style.outline ? '0 0 0 1px black' : 'none'
-                                }} 
-                                className="absolute" 
-                            />
-                        )}
-                    </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <CrosshairPreview style={style} scale={5} />
                 </div>
-            </div>
 
             <div className="p-8">
                 <div className="flex items-center justify-between mb-4">
