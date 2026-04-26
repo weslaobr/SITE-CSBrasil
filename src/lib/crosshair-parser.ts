@@ -11,15 +11,15 @@ for (let i = 0; i < ALPHABET.length; i++) ALPHABET_MAP[ALPHABET[i]] = i;
 function decodeBase58(str: string): Uint8Array {
     let result = BigInt(0);
     for (const char of str) {
+        if (ALPHABET_MAP[char] === undefined) continue;
         result = result * BigInt(58) + BigInt(ALPHABET_MAP[char]);
     }
     
-    let hex = result.toString(16);
-    if (hex.length % 2 !== 0) hex = '0' + hex;
-    
-    const bytes = new Uint8Array(hex.length / 2);
-    for (let i = 0; i < bytes.length; i++) {
-        bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+    // O código da Valve decodificado DEVE ter 18 bytes (144 bits)
+    const bytes = new Uint8Array(18);
+    for (let i = 17; i >= 0; i--) {
+        bytes[i] = Number(result & BigInt(0xff));
+        result >>= BigInt(8);
     }
     return bytes;
 }
@@ -36,32 +36,48 @@ export interface CrosshairStyle {
 
 export function parseCrosshairCode(code: string): CrosshairStyle {
     try {
-        // Limpa o código
+        if (!code || !code.startsWith('CSGO-')) throw new Error('Invalid format');
+        
         const cleanCode = code.replace(/^CSGO-/, '').replace(/-/g, '');
         const bytes = decodeBase58(cleanCode);
 
-        // Mapeamento aproximado (heurística baseada na estrutura da Valve)
-        // Nota: A estrutura real é complexa, usamos uma aproximação visual para o preview
-        const thickness = (bytes[4] || 10) / 10;
-        const size = (bytes[2] || 20) / 10;
-        const gap = (bytes[3] > 128 ? (bytes[3] - 256) : bytes[3]) / 10;
+        // Mapeamento baseado em engenharia reversa da comunidade
+        const size = bytes[2] / 10;
+        const thickness = bytes[4] / 10;
+        const gapByte = bytes[3];
+        const gap = (gapByte > 127 ? gapByte - 256 : gapByte) / 10;
         
-        // Cores (RGB)
-        const r = bytes[bytes.length - 4] || 0;
-        const g = bytes[bytes.length - 3] || 255;
-        const b = bytes[bytes.length - 2] || 0;
+        const dot = (bytes[11] & 1) === 1;
+        const outline = (bytes[12] & 1) === 1;
+        
+        // Cores pré-definidas
+        const colorIndex = bytes[5];
+        let color = '#00ff00'; // Default Green
+        
+        switch(colorIndex) {
+            case 0: color = '#ff0000'; break; // Red
+            case 1: color = '#00ff00'; break; // Green
+            case 2: color = '#ffff00'; break; // Yellow
+            case 3: color = '#0000ff'; break; // Blue
+            case 4: color = '#00ffff'; break; // Cyan
+            case 5: // Custom RGB
+                const r = bytes[13];
+                const g = bytes[14];
+                const b = bytes[15];
+                color = `rgb(${r}, ${g}, ${b})`;
+                break;
+        }
 
         return {
-            width: `${Math.max(1, size)}px`,
-            height: `${Math.max(1, size)}px`, // No CSS de preview usamos width como comprimento do braço
-            gap: `${gap}px`,
-            thickness: `${Math.max(0.5, thickness)}px`,
-            dot: bytes[11] > 0,
-            outline: bytes[12] > 0,
-            color: `rgb(${r}, ${g}, ${b})`
+            width: `${Math.max(1, size * 2)}px`,
+            height: `${Math.max(1, size * 2)}px`,
+            gap: `${gap * 2}px`,
+            thickness: `${Math.max(0.5, thickness * 2)}px`,
+            dot,
+            outline,
+            color
         };
     } catch (e) {
-        // Fallback para mira padrão verde caso falhe
         return {
             width: '5px',
             height: '5px',
