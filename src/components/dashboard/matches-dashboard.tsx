@@ -149,32 +149,45 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         return 'Competitive';
     };
 
-    const handleDownloadDemo = async (e: React.MouseEvent, match: any) => {
+    const handleDownloadDemo = (e: React.MouseEvent, match: any) => {
         e.stopPropagation();
+        e.preventDefault();
         
-        // 1. Prioridade Absoluta: Abrir no CS2 via Steam Match Link
-        // O shareCode pode estar no metadata ou ser o próprio externalId para partidas Steam
-        const shareCode = match.metadata?.sharingCode || match.metadata?.shareCode || (match.source === 'Steam' ? match.externalId : null);
+        // 1. Extração robusta do Share Code
+        const meta = match.metadata || {};
+        const shareCode = meta.sharingCode || meta.shareCode || (match.source === 'Steam' && !match.externalId?.includes('leetify') ? match.externalId : null);
         
+        console.log("Download Demo Click:", { id: match.id, source: match.source, shareCode });
+
+        // 2. Se temos Share Code, abrimos no jogo (+csgo_download_match)
         if (shareCode) {
-            // Protocolo oficial do CS2 para abrir partida diretamente
-            const steamMatchLink = `steam://match/${shareCode}`;
+            const steamMatchLink = `steam://rungame/730/76561202255233023/+csgo_download_match%20${shareCode}`;
             window.location.href = steamMatchLink;
             return;
         }
 
-        // 2. Fallback para demos locais ou via proxy (Mix/Demos Antigas)
-        if (match.source === 'Leetify' || match.source === 'Steam') {
-            // Se chegamos aqui sem shareCode, tentamos ver se há uma URL de download no metadata
-            const demoUrl = match.metadata?.demoUrl || match.metadata?.demo_url;
-            if (!demoUrl || demoUrl.includes('leetify.com')) {
-                toast.error("Link oficial da Valve expirou ou não foi encontrado. Tente atualizar as partidas.");
+        // 3. Se for Faceit, o protocolo é diferente ou precisa de download
+        if (match.source?.toLowerCase().includes('faceit') || match.gameMode?.toLowerCase().includes('faceit')) {
+            if (match.url && match.url.startsWith('http')) {
+                window.open(match.url, '_blank');
                 return;
             }
         }
 
-        const url = `/api/match/${match.id}/demo`;
-        window.open(url, '_blank');
+        // 4. Fallback para Download da Demo (Proxy do Servidor/Mix)
+        const demoProxyUrl = `/api/match/${match.id}/demo`;
+        
+        // Se for Leetify/Valve sem código, avisamos o usuário
+        if ((match.source === 'Leetify' || match.source === 'Steam') && !shareCode) {
+            const demoUrl = meta.demoUrl || meta.demo_url;
+            if (!demoUrl || demoUrl.includes('leetify.com')) {
+                toast.error("Este tipo de partida (Leetify/Valve antiga) só pode ser assistida se você sincronizar os dados novamente.");
+                return;
+            }
+        }
+
+        // Tenta abrir o proxy de download
+        window.open(demoProxyUrl, '_blank');
     };
 
     const filteredMatches = useMemo(() => {
@@ -977,7 +990,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                     )}
                                                     
                                                     {(() => {
-                                                        const shareCode = match.metadata?.sharingCode || (match.source === 'Steam' ? match.externalId : null);
+                                                        const meta = match.metadata || {};
+                                                        const shareCode = meta.sharingCode || meta.shareCode || (match.source === 'Steam' && !match.externalId?.includes('leetify') ? match.externalId : null);
                                                         const canOpenInGame = !!shareCode;
                                                         
                                                         return (

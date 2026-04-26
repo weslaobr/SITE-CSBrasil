@@ -324,10 +324,19 @@ export const getSteamMatchHistory = async (steamId: string, authCode: string, kn
                         // 1. Bate no BOT para obter o link real da demo e placar
                         let botMatchData = null;
                         try {
-                            const botUrl = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:3005';
+                            const botUrl = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:8080';
                             console.log(`[Sync] Consultando BOT para partida ${nextCode}`);
                             const botRes = await axios.get(`${botUrl}/match/${nextCode}`);
                             botMatchData = botRes.data;
+
+                            // Extrair link da demo (.dem.bz2) do protobuf da Valve se disponível
+                            if (botMatchData?.matches?.[0]?.roundstatsall) {
+                                const urlStat = botMatchData.matches[0].roundstatsall.find((s: any) => s.map && s.map.includes('.dem'));
+                                if (urlStat) {
+                                    botMatchData.demo_url = urlStat.map;
+                                    console.log(`[Sync] Demo URL encontrada via Bot: ${urlStat.map}`);
+                                }
+                            }
 
                             // 2. DISPARO PARA O ANALISADOR PYTHON
                             // Se o bot encontrou o link da demo (.dem.bz2), enviamos para o Python processar tudo!

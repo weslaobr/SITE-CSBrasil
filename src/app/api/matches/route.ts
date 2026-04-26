@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
 
             return {
                 id: gmp.id,
-                externalId: gmp.globalMatchId,
+                externalId: gmp.match.externalId || gmp.globalMatchId,
                 source: gmp.match.source || 'mix',
                 gameMode,
                 mapName: gmp.match.mapName,
@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
                 kast: meta?.kast !== undefined ? (meta.kast > 1 ? Math.round(meta.kast) : Math.round(meta.kast * 100)) : (meta?.kast_percent || meta?.kast_percentage || null),
                 rank: meta?.rank || meta?.skill_level || null,
                 url: (gmp.match.metadata as any)?.demoUrl || (gmp.match.metadata as any)?.demo_url || null,
-                metadata: gmp.metadata
+                metadata: { ...(gmp.match.metadata as any || {}), ...meta }
             };
         });
 

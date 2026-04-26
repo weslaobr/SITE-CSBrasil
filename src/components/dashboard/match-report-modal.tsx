@@ -1,7 +1,10 @@
 "use client";
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Download, Calendar, Activity, Target, Zap, Clock, Shield, Search, RefreshCw, X, AlertCircle, Crosshair } from 'lucide-react';
+import { 
+    Play, Download, Calendar, Activity, Target, Zap, Clock, Shield, Search, RefreshCw, X, 
+    AlertCircle, Crosshair, TrendingUp, Star, Flame, Eye, MapPin, Trophy, Swords, Info
+} from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -1093,16 +1096,25 @@ const MatchReportModal: React.FC<Props> = ({
                                     </button>
 
                                     {currentMatch && (() => {
-                                            const shareCode = currentMatch.sharing_code || currentMatch.metadata?.sharingCode || (currentMatch.source === 'Steam' ? currentMatch.externalId : null);
+                                            const meta = currentMatch.metadata || {};
+                                            const shareCode = currentMatch.sharing_code || meta.sharingCode || meta.shareCode || (currentMatch.source === 'Steam' && !currentMatch.externalId?.includes('leetify') ? currentMatch.externalId : null);
                                             const canOpenInGame = !!shareCode;
                                             
-                                            const handleDownloadClick = async (e: React.MouseEvent) => {
+                                            const handleDownloadClick = (e: React.MouseEvent) => {
                                                 e.preventDefault();
-                                                const shareCode = currentMatch.sharing_code || currentMatch.metadata?.sharingCode || (currentMatch.source === 'Steam' ? currentMatch.externalId : null);
+                                                const meta = currentMatch.metadata || {};
+                                                const shareCode = currentMatch.sharing_code || meta.sharingCode || meta.shareCode || (currentMatch.source === 'Steam' && !currentMatch.externalId?.includes('leetify') ? currentMatch.externalId : null);
                                                 
                                                 if (shareCode) {
-                                                    window.location.href = `steam://match/${shareCode}`;
+                                                    window.location.href = `steam://rungame/730/76561202255233023/+csgo_download_match%20${shareCode}`;
                                                     return;
+                                                }
+
+                                                if (currentMatch.source?.toLowerCase().includes('faceit')) {
+                                                    if (currentMatch.url && currentMatch.url.startsWith('http')) {
+                                                        window.open(currentMatch.url, '_blank');
+                                                        return;
+                                                    }
                                                 }
                                                 
                                                 const url = `/api/match/${match?.id}/demo`;
