@@ -99,11 +99,33 @@ export async function GET() {
                     }
 
                     if (Object.keys(updateData).length > 0) {
-                        const updatedStats = await (prisma as any).stats.update({
-                            where: { id: currentStats.id },
-                            data: updateData
-                        });
-                        (player as any).Stats = updatedStats;
+                        // NOVA LÓGICA: Manter sempre o maior valor (Peak Rating)
+                        // Se o novo valor for 0 (expirado) ou menor que o atual, mantemos o atual.
+                        const finalUpdate: any = {};
+                        
+                        if (updateData.premierRating !== undefined) {
+                            finalUpdate.premierRating = Math.max(currentStats.premierRating || 0, updateData.premierRating);
+                        }
+                        
+                        if (updateData.faceitElo !== undefined) {
+                            finalUpdate.faceitElo = Math.max(currentStats.faceitElo || 0, updateData.faceitElo);
+                        }
+
+                        if (updateData.faceitLevel !== undefined) {
+                            finalUpdate.faceitLevel = Math.max(currentStats.faceitLevel || 0, updateData.faceitLevel);
+                        }
+
+                        if (updateData.gcLevel !== undefined) {
+                            finalUpdate.gcLevel = Math.max(currentStats.gcLevel || 0, updateData.gcLevel);
+                        }
+
+                        if (Object.keys(finalUpdate).length > 0) {
+                            const updatedStats = await (prisma as any).stats.update({
+                                where: { id: currentStats.id },
+                                data: finalUpdate
+                            });
+                            (player as any).Stats = updatedStats;
+                        }
                     }
                 } catch (e) {
                     console.error("[RankingAPI] Auto-sync error for", player.steamId, e);

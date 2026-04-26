@@ -168,3 +168,69 @@ export async function syncUserMatches(steamId: string) {
 
     return syncedCount;
 }
+
+export async function syncUserStats(steamId: string) {
+    const player = await prisma.player.findUnique({
+        where: { steamId },
+        include: { Stats: true }
+    });
+
+    if (!player) return null;
+
+    let currentStats = player.Stats;
+    if (!currentStats) {
+        currentStats = await (prisma as any).stats.create({
+            data: { playerId: player.id }
+        });
+    }
+
+    const { getCS2SpacePlayerInfo } = require("@/services/cs2space-service");
+    const { getFaceitPlayerBySteamId } = require("@/services/faceit-service");
+
+    const updateData: any = {};
+    try {
+        const cs2space = await getCS2SpacePlayerInfo(steamId);
+        if (cs2space) {
+            if (cs2space.ranks?.premier) {
+                updateData.premierRating = cs2space.ranks.premier;
+            }
+            if (cs2space.faceit) {
+                updateData.faceitLevel = cs2space.faceit.level || 0;
+                updateData.faceitElo = cs2space.faceit.elo || 0;
+            }
+            // Leetify often has GC level in its ranks data via cs2space or direct
+            if (cs2space.leetify?.gamersClubLevel) {
+                updateData.gcLevel = cs2space.leetify.gamersClubLevel;
+            }
+        }
+
+        // Faceit direct fallback
+        if (!updateData.faceitLevel) {
+            const faceitData = await getFaceitPlayerBySteamId(steamId);
+            const faceitGame = faceitData?.games?.cs2 || (faceitData?.games as any)?.csgo;
+            if (faceitGame) {
+                updateData.faceitLevel = faceitGame.skill_level || 0;
+                updateData.faceitElo = faceitGame.faceit_elo || 0;
+            }
+        }
+
+        // Peak Rating logic
+        if (Object.keys(updateData).length > 0) {
+            const finalUpdate: any = {};
+            finalUpdate.premierRating = Math.max(currentStats.premierRating || 0, updateData.premierRating || 0);
+            finalUpdate.faceitElo = Math.max(currentStats.faceitElo || 0, updateData.faceitElo || 0);
+            finalUpdate.faceitLevel = Math.max(currentStats.faceitLevel || 0, updateData.faceitLevel || 0);
+            finalUpdate.gcLevel = Math.max(currentStats.gcLevel || 0, updateData.gcLevel || 0);
+
+            await (prisma as any).stats.update({
+                where: { id: currentStats.id },
+                data: finalUpdate
+            });
+            return finalUpdate;
+        }
+    } catch (e) {
+        console.error(`[SyncService] Stats sync failed for ${steamId}:`, e);
+    }
+    return null;
+}
+

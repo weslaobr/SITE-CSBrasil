@@ -17,7 +17,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "SteamID is required" }, { status: 400 });
         }
 
-        const syncedCount = await syncUserMatches(steamId);
+        const [syncedCount] = await Promise.all([
+            syncUserMatches(steamId),
+            syncUserStats(steamId)
+        ]);
 
         return NextResponse.json({ success: true, count: syncedCount });
     } catch (error: any) {

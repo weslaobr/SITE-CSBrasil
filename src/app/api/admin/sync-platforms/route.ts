@@ -74,12 +74,28 @@ export async function POST(req: NextRequest) {
                     }
                 }
 
-                // Efetuar Update
+                // Efetuar Update com lógica de Peak Rating
                 if (updated) {
-                    await (prisma as any).stats.update({
-                        where: { id: currentStats.id },
-                        data: updateData
-                    });
+                    const finalUpdate: any = {};
+                    if (updateData.premierRating !== undefined) {
+                        finalUpdate.premierRating = Math.max(currentStats.premierRating || 0, updateData.premierRating);
+                    }
+                    if (updateData.faceitElo !== undefined) {
+                        finalUpdate.faceitElo = Math.max(currentStats.faceitElo || 0, updateData.faceitElo);
+                    }
+                    if (updateData.faceitLevel !== undefined) {
+                        finalUpdate.faceitLevel = Math.max(currentStats.faceitLevel || 0, updateData.faceitLevel);
+                    }
+                    if (updateData.gcLevel !== undefined) {
+                        finalUpdate.gcLevel = Math.max(currentStats.gcLevel || 0, updateData.gcLevel);
+                    }
+
+                    if (Object.keys(finalUpdate).length > 0) {
+                        await (prisma as any).stats.update({
+                            where: { id: currentStats.id },
+                            data: finalUpdate
+                        });
+                    }
 
                     // Snapshot para o Premier Rating se foi preenchido
                     if (updateData.premierRating && updateData.premierRating > 0) {
