@@ -236,7 +236,7 @@ export async function GET() {
                     faceitElo: stats?.faceitElo || 0,
                 };
             })
-            .filter(user => !user.steamId.endsWith('_temp') && user.rating > 0);
+            .filter(user => !user.steamId.endsWith('_temp'));
 
         // Ordenar por rating decrescente
         rankedUsers.sort((a, b) => b.rating - a.rating);

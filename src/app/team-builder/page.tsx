@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw, Copy, Check, ClipboardList, Send, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw, Copy, Check, ClipboardList, Send, Loader2, Pencil, Trash2, Flame } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Player {
@@ -138,6 +138,7 @@ export default function TeamBuilderPage() {
     const [steamStatus, setSteamStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
     const [editingUnassigned, setEditingUnassigned] = useState<{ steamId: string, field: "sr"|"resenha", value: string } | null>(null);
     const [loading, setLoading] = useState(true);
+    const [syncingSteamId, setSyncingSteamId] = useState<string | null>(null);
     const [mapPool, setMapPool] = useState<{id: string, name: string, image: string, active?: boolean}[]>(FALLBACK_MAP_POOL);
 
     const [guestName, setGuestName] = useState("");
@@ -204,6 +205,42 @@ export default function TeamBuilderPage() {
         fetchAll();
         fetchMaps();
     }, []);
+
+    const handleSyncPlayer = async (steamId: string) => {
+        if (syncingSteamId) return;
+        setSyncingSteamId(steamId);
+        try {
+            const res = await fetch('/api/sync/player', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ steamId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Refresh specific player data in the list
+                const refreshRes = await fetch(`/api/player/${steamId}`);
+                const playerData = await refreshRes.json();
+                
+                if (playerData && !playerData.error) {
+                    setDbPlayers(prev => prev.map(p => p.steamId === steamId ? {
+                        ...p,
+                        rating: playerData.playerStats?.premierRating || 0,
+                        gcLevel: playerData.playerStats?.gcLevel || 0,
+                        faceitLevel: playerData.playerStats?.faceitLevel || 0,
+                        hasSync: !!playerData.dbUser?.steamMatchAuthCode && !!playerData.dbUser?.steamLatestMatchCode
+                    } : p));
+                    alert(`Sincronizado! ${data.count} novas partidas. Rating atualizado.`);
+                }
+            } else {
+                alert(`Erro: ${data.error}`);
+            }
+        } catch (error) {
+            console.error("Sync error:", error);
+            alert("Erro ao sincronizar.");
+        } finally {
+            setSyncingSteamId(null);
+        }
+    };
 
     const handleSelectPlayer = (player: Player) => {
         if (selectedPlayers.length >= 10) {
@@ -533,8 +570,27 @@ export default function TeamBuilderPage() {
                                                 <span className={`text-[10px] bg-black/50 ${balanceMode === 'resenha' ? 'text-purple-400' : 'text-zinc-500'} px-1.5 py-0.5 rounded font-mono font-bold`}>{(p.resenhaRating || 5).toFixed(1)} ★</span>
                                             </div>
                                         </div>
-                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 group-hover:bg-purple-500 group-hover:text-black transition-all">
-                                            <Plus size={16} />
+                                        <div className="flex items-center gap-1.5">
+                                            {(p as any).hasSync && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleSyncPlayer(p.steamId);
+                                                    }}
+                                                    disabled={syncingSteamId === p.steamId}
+                                                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                                                        syncingSteamId === p.steamId 
+                                                            ? 'bg-yellow-500/20 text-yellow-500 animate-spin' 
+                                                            : 'bg-white/5 text-zinc-500 hover:text-yellow-500 hover:bg-yellow-500/10'
+                                                    }`}
+                                                    title="Sincronizar Partidas"
+                                                >
+                                                    <Flame size={14} className={syncingSteamId === p.steamId ? 'animate-pulse' : ''} />
+                                                </button>
+                                            )}
+                                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 group-hover:bg-purple-500 group-hover:text-black transition-all">
+                                                <Plus size={16} />
+                                            </div>
                                         </div>
                                     </div>
                                 ))
