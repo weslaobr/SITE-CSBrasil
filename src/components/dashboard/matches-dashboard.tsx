@@ -691,20 +691,20 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                             <thead>
                                 <tr className="text-[9px] uppercase font-black text-zinc-600 tracking-[0.15em] border-b border-white/[0.05] bg-black/50 sticky top-0 z-10 backdrop-blur-md">
                                     <th className="w-1 p-0" />
-                                    <th className="px-5 py-3.5">Mapa</th>
-                                    <th className="px-3 py-3.5 text-center">Placar</th>
-                                    <th className="px-3 py-3.5 text-center">Patente</th>
-                                    <th className="px-3 py-3.5 text-center">Modo</th>
-                                    <th className="px-2 py-3.5 text-center">ID</th>
-                                    <th className="px-3 py-3.5 text-center">K</th>
-                                    <th className="px-3 py-3.5 text-center">D</th>
-                                    <th className="px-3 py-3.5 text-center">A</th>
-                                    <th className="px-3 py-3.5 text-center">ADR</th>
-                                    <th className="px-3 py-3.5 text-center">HS%</th>
-                                    <th className="px-3 py-3.5 text-center">KAST</th>
-                                    <th className="px-3 py-3.5 text-center">Rating</th>
-                                    <th className="px-3 py-3.5 text-center">Replay</th>
-                                    <th className="px-5 py-3.5 text-right">Data</th>
+                                    <th className="px-5 py-3.5" title="Nome do mapa jogado">Mapa</th>
+                                    <th className="px-3 py-3.5 text-center" title="Pontuação final da partida (Seu Time vs Adversários)">Placar</th>
+                                    <th className="px-3 py-3.5 text-center" title="Patente ou Rating da partida">Patente</th>
+                                    <th className="px-3 py-3.5 text-center" title="Modo de jogo (Competitivo, Premier, Faceit, etc)">Modo</th>
+                                    <th className="px-2 py-3.5 text-center" title="ID único da partida">ID</th>
+                                    <th className="px-3 py-3.5 text-center" title="Kills (Eliminações)">K</th>
+                                    <th className="px-3 py-3.5 text-center" title="Deaths (Mortes)">D</th>
+                                    <th className="px-3 py-3.5 text-center" title="Assists (Assistências)">A</th>
+                                    <th className="px-3 py-3.5 text-center" title="Average Damage per Round (Dano médio por rodada)">ADR</th>
+                                    <th className="px-3 py-3.5 text-center" title="Headshot Percentage (Porcentagem de eliminações com tiro na cabeça)">HS%</th>
+                                    <th className="px-3 py-3.5 text-center" title="Kill, Assist, Survived, or Traded (Porcentagem de rounds com impacto direto)">KAST</th>
+                                    <th className="px-3 py-3.5 text-center" title="Performance Rating (Leetify Rating ou K/D)">Rating</th>
+                                    <th className="px-3 py-3.5 text-center" title="Assistir replay da partida (Demo)">Replay</th>
+                                    <th className="px-5 py-3.5 text-right" title="Data e hora da partida">Data</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -780,15 +780,12 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                                              return (
                                                                                  <>
                                                                                      {rankInfo.icon ? (
-                                                                                         <div className="flex flex-col items-center">
+                                                                                         <div className="flex flex-col items-center" title={rankInfo.label}>
                                                                                              <img 
                                                                                                  src={rankInfo.icon} 
-                                                                                                 className="w-11 h-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.15)] group-hover/rank:scale-110 transition-transform duration-300" 
+                                                                                                 className="w-14 h-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.15)] group-hover/rank:scale-110 transition-transform duration-300" 
                                                                                                  alt={rankInfo.label}
                                                                                              />
-                                                                                             <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest mt-0.5 group-hover/rank:text-zinc-300 transition-colors">
-                                                                                                 {rankInfo.label}
-                                                                                             </span>
                                                                                          </div>
                                                                                      ) : rankInfo.isPremier ? (
                                                                                          <div className={`text-base font-black italic tracking-tighter ${rankInfo.color}`}>

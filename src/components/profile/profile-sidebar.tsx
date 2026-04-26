@@ -14,7 +14,7 @@ interface ProfileSidebarProps {
     playerStats?: any;
 }
 
-const getMMRank = (rankId: number) => {
+const getMMRank = (rankId: number, type: 'matchmaking' | 'wingman' = 'matchmaking') => {
     if (rankId < 0 || rankId > 18) return { name: "Unranked", icon: null };
     const names = [
         "Unranked",
@@ -26,7 +26,7 @@ const getMMRank = (rankId: number) => {
     ];
     return {
         name: names[rankId],
-        icon: `https://raw.githubusercontent.com/ItzArty/csgo-rank-icons/main/matchmaking/${rankId}.svg`
+        icon: `https://raw.githubusercontent.com/ItzArty/csgo-rank-icons/main/${type}/${rankId}.svg`
     };
 };
 
@@ -55,6 +55,10 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
     // Rank máximo de Competitivo (entre todos os mapas via CS2.space)
     const maxCompRankId = playerStats?.maxCompetitiveRank || leetifyData?.ranks?.matchmaking || 0;
     const maxCompRank = getMMRank(maxCompRankId);
+
+    // Braço Direito (Wingman)
+    const wingmanRankId = leetifyData?.ranks?.wingmanElo || 0;
+    const wingmanRank = getMMRank(wingmanRankId, 'wingman');
 
     // Premier Rating — prioridade: DB > cs2space (já dentro de playerStats) > leetifyData
     const premierRating = playerStats?.premierRating
@@ -215,7 +219,7 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                         </div>
 
                         {/* Competitivo clássico — Rank Máximo */}
-                        <div className="col-span-2 bg-sky-500/10 p-4 rounded-2xl border border-sky-500/20 text-center flex flex-col justify-center group hover:bg-sky-500/15 transition-all">
+                        <div className="bg-sky-500/10 p-4 rounded-2xl border border-sky-500/20 text-center flex flex-col justify-center group hover:bg-sky-500/15 transition-all">
                             <div className="flex items-center justify-between mb-2">
                                 <p className="text-[9px] text-sky-400/70 uppercase font-black italic tracking-widest leading-none">Competitivo</p>
                                 <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-400">
@@ -223,23 +227,36 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                                 </span>
                             </div>
                             {maxCompRank.icon ? (
-                                <div className="flex items-center justify-center gap-3 mt-1">
+                                <div className="flex items-center justify-center mt-1" title={`Rank: ${maxCompRank.name}`}>
                                     <img
                                         src={maxCompRank.icon}
                                         alt={maxCompRank.name}
-                                        className="h-14 w-auto object-contain drop-shadow-lg group-hover:scale-110 transition-transform"
+                                        className="h-20 w-auto object-contain drop-shadow-lg group-hover:scale-110 transition-transform"
                                     />
-                                    <div className="flex flex-col items-start leading-none gap-1">
-                                        <span className="text-lg font-black italic uppercase leading-none tracking-tight text-white">
-                                            {maxCompRank.name}
-                                        </span>
-                                        <span className="text-[9px] text-sky-400 font-black uppercase tracking-widest opacity-80">
-                                            Rank Competitivo
-                                        </span>
-                                    </div>
                                 </div>
                             ) : (
                                 <p className="text-[11px] mt-2 font-black text-sky-400/60 italic uppercase">Sem ranking</p>
+                            )}
+                        </div>
+
+                        {/* Braço Direito (Wingman) */}
+                        <div className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20 text-center flex flex-col justify-center group hover:bg-emerald-500/15 transition-all">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-[9px] text-emerald-400/70 uppercase font-black italic tracking-widest leading-none">Braço Direito</p>
+                                <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+                                    Wingman
+                                </span>
+                            </div>
+                            {wingmanRank.icon ? (
+                                <div className="flex items-center justify-center mt-1" title={`Rank: ${wingmanRank.name}`}>
+                                    <img
+                                        src={wingmanRank.icon}
+                                        alt={wingmanRank.name}
+                                        className="h-20 w-auto object-contain drop-shadow-lg group-hover:scale-110 transition-transform"
+                                    />
+                                </div>
+                            ) : (
+                                <p className="text-[11px] mt-2 font-black text-emerald-400/60 italic uppercase">Sem ranking</p>
                             )}
                         </div>
 
