@@ -26,7 +26,7 @@ interface PlayerStats {
     triples: number;
     quads: number;
     aces: number;
-    clutches: number;
+    clutches: number | null;
     trades: number;
     // Campos extras do Leetify v2 para aba Confrontos
     tradeKillOpp: number;    // trade_kill_opportunities (oportunidades de abrir round com trade)
@@ -332,7 +332,16 @@ const MatchReportModal: React.FC<Props> = ({
             quads: Number(p.quads ?? p.multi4k ?? p.quadro_kills ?? p.quad_kills ?? p.quadKills ?? 0),
             aces: Number(p.aces ?? p.multi5k ?? p.penta_kills ?? p.ace_kills ?? p.pentaKills ?? 0),
             // Misc
-            clutches: Number(p.clutches ?? p.clutch_count ?? p.clutchesWon ?? 0),
+            // Clutches: sum of 1vX wins or direct count. Use null if data is completely missing.
+            clutches: (() => {
+                const direct = p.clutches ?? p.clutches_won ?? p.clutchesWon ?? p.clutch_count;
+                if (direct !== undefined && direct !== null) return Number(direct);
+                const sumV = (p.clutch_v1_wins ?? 0) + (p.clutch_v2_wins ?? 0) + (p.clutch_v3_wins ?? 0) + (p.clutch_v4_wins ?? 0) + (p.clutch_v5_wins ?? 0);
+                if (sumV > 0) return sumV;
+                // Se temos dados de multikills mas nada de clutch, é provável que clutches não existam nesta fonte
+                if (p.multi3k !== undefined || p.triples !== undefined) return 0;
+                return null;
+            })(),
             // Trades: Leetify v2 usa trade_kills_succeed
             trades: Number(p.trades ?? p.trade_kills_succeed ?? p.trade_count ?? p.tradeKills ?? 0),
             // Campos extra do Leetify v2 para aba Confrontos
@@ -786,7 +795,11 @@ const MatchReportModal: React.FC<Props> = ({
                     </div>
                 </td>
                 <td className="py-2.5 px-2 text-center">
-                    {p.clutches > 0 ? <span className="text-xs font-black text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-lg">{p.clutches}×</span> : <span className="text-zinc-700">—</span>}
+                    {p.clutches !== null
+                        ? (p.clutches > 0 
+                            ? <span className="text-xs font-black text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-lg">{p.clutches}×</span> 
+                            : <span className="text-zinc-500 text-xs">0</span>)
+                        : <span className="text-zinc-700 text-xs">—</span>}
                 </td>
                 <td className="py-2.5 px-2 text-center">
                     {p.trades > 0 ? <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-lg">{p.trades}</span> : <span className="text-zinc-700">—</span>}

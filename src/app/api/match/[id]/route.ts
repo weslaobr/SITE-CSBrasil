@@ -171,8 +171,16 @@ export async function GET(
                     aces: p.multi5k ?? p.penta_kills ?? p.pentaKills ?? p.ace_kills ?? 0,
                     // Trades: campo real da v2
                     trades: p.trade_kills_succeed ?? p.trade_count ?? p.tradeKills ?? p.trades ?? 0,
-                    // Clutches: não disponível na v2
-                    clutches: p.clutch_count ?? p.clutches_won ?? p.clutchesWon ?? 0,
+                    // Clutches: try multiple sources
+                    clutches: p.clutch_count ?? p.clutches_won ?? p.clutchesWon ?? p.clutches ?? 
+                             ((p.clutch_v1_wins ?? 0) + (p.clutch_v2_wins ?? 0) + (p.clutch_v3_wins ?? 0) + (p.clutch_v4_wins ?? 0) + (p.clutch_v5_wins ?? 0)) ?? 0,
+                    clutches_won: p.clutch_count ?? p.clutches_won ?? p.clutchesWon ?? p.clutches ?? 
+                                 ((p.clutch_v1_wins ?? 0) + (p.clutch_v2_wins ?? 0) + (p.clutch_v3_wins ?? 0) + (p.clutch_v4_wins ?? 0) + (p.clutch_v5_wins ?? 0)) ?? 0,
+                    clutch_v1_wins: p.clutch_v1_wins ?? 0,
+                    clutch_v2_wins: p.clutch_v2_wins ?? 0,
+                    clutch_v3_wins: p.clutch_v3_wins ?? 0,
+                    clutch_v4_wins: p.clutch_v4_wins ?? 0,
+                    clutch_v5_wins: p.clutch_v5_wins ?? 0,
                     // FK/FD: não disponível na v2
                     fk: p.fk_count ?? p.first_kill_count ?? p.firstKills ?? 0,
                     fd: p.fd_count ?? p.first_death_count ?? p.firstDeaths ?? 0,
