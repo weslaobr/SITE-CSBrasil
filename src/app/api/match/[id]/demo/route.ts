@@ -12,21 +12,36 @@ export async function GET(
     console.log(`[DEMO_PROXY] Starting download request for match: ${matchId}`);
 
     try {
-        // 1. Fetch match info from Prisma to check source and metadata
-        const localMatch = await prisma.globalMatch.findUnique({
+        // 1. Fetch match info from Prisma
+        let localMatch = await prisma.globalMatch.findUnique({
             where: { id: matchId }
-        });
+        }) as any;
 
+        let legacyMatch = null;
         if (!localMatch) {
-            console.warn(`[DEMO_PROXY] Match ${matchId} not found in GlobalMatch table.`);
+            // Try searching by cuid or externalId in legacy Match table
+            legacyMatch = await prisma.match.findFirst({
+                where: {
+                    OR: [
+                        { id: matchId },
+                        { externalId: matchId },
+                        { externalId: `leetify-${matchId}` }
+                    ]
+                }
+            });
+        }
+
+        if (!localMatch && !legacyMatch) {
+            console.warn(`[DEMO_PROXY] Match ${matchId} not found in any table.`);
         } else {
-            console.log(`[DEMO_PROXY] Match found. Source: ${localMatch.source}`);
+            console.log(`[DEMO_PROXY] Match found. Source: ${localMatch?.source || legacyMatch?.source}`);
         }
 
         // 2. Handle Mix matches using Firegames/Pterodactyl API
-        const isMix = localMatch && (localMatch.source === 'mix' || localMatch.source === 'vanilla');
+        const matchSource = (localMatch?.source || legacyMatch?.source || '').toLowerCase();
+        const isMix = matchSource === 'mix' || matchSource === 'vanilla';
         if (isMix) {
-            const meta = (localMatch?.metadata as any) || {};
+            const meta = (localMatch?.metadata as any) || (legacyMatch?.metadata as any) || {};
             let filePath = meta.demoUrl || meta.demo_url || meta.filePath;
 
             console.log(`[DEMO_PROXY] Mix match detected. Identifying filePath...`);
@@ -100,19 +115,38 @@ export async function GET(
             });
         } catch (error: any) {
             console.log(`[DEMO_PROXY] Tracker check failed: ${error.message}`);
-            // 4. Final Fallback: If Python fails or returns 404, check Prisma for a direct URL
-            const meta = (localMatch?.metadata as any) || {};
-            const demoUrl = meta.demoUrl || meta.demo_url;
+
+            // 3.5. Try Bot API as a last resort
+            try {
+                const botUrl = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:8080';
+                console.log(`[DEMO_PROXY] Checking Bot API for match ${matchId}...`);
+                const botRes = await axios.get(`${botUrl}/match/${matchId}`);
+                if (botRes.data && botRes.data.demo_url) {
+                    console.log(`[DEMO_PROXY] Found demo URL in Bot API. Redirecting...`);
+                    return NextResponse.redirect(botRes.data.demo_url);
+                }
+            } catch (botErr) {
+                console.log(`[DEMO_PROXY] Bot API check failed.`);
+            }
+
+            // 4. Final Fallback: Check metadata for a direct demo URL (excluding scoreboard links)
+            const meta = (localMatch?.metadata as any) || (legacyMatch?.metadata as any) || {};
+            let demoUrl = meta.demoUrl || meta.demo_url;
+
+            // If the only URL we have is a Leetify scoreboard, don't use it as a 'demo download'
+            if (demoUrl && demoUrl.includes('leetify.com/app/match-details')) {
+                demoUrl = null;
+            }
 
             if (demoUrl && demoUrl.startsWith('http')) {
                 console.log(`[DEMO_PROXY] Falling back to direct URL redirect: ${demoUrl}`);
                 return NextResponse.redirect(demoUrl);
             }
 
-            console.error(`[DEMO_PROXY] All download attempts failed for match ${matchId}`);
+            console.error(`[DEMO_PROXY] No demo file or link found for match ${matchId}`);
             return NextResponse.json(
-                { error: "Demo file not found or backend unavailable." },
-                { status: error.response?.status || 500 }
+                { error: "Arquivo de demo não encontrado para esta partida." },
+                { status: 404 }
             );
         }
     } catch (globalError: any) {

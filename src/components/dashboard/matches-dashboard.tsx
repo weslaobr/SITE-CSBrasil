@@ -24,8 +24,10 @@ import {
     Check,
     Shield,
     Play,
-    Download
+    Download,
+    AlertCircle
 } from 'lucide-react';
+import { toast } from 'sonner';
 import MatchReportModal from './match-report-modal';
 import Link from 'next/link';
 
@@ -145,6 +147,34 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             return 'Premier';
         }
         return 'Competitive';
+    };
+
+    const handleDownloadDemo = async (e: React.MouseEvent, match: any) => {
+        e.stopPropagation();
+        
+        // 1. Prioridade Absoluta: Abrir no CS2 via Steam Match Link
+        // O shareCode pode estar no metadata ou ser o próprio externalId para partidas Steam
+        const shareCode = match.metadata?.sharingCode || match.metadata?.shareCode || (match.source === 'Steam' ? match.externalId : null);
+        
+        if (shareCode) {
+            // Protocolo oficial do CS2 para abrir partida diretamente
+            const steamMatchLink = `steam://match/${shareCode}`;
+            window.location.href = steamMatchLink;
+            return;
+        }
+
+        // 2. Fallback para demos locais ou via proxy (Mix/Demos Antigas)
+        if (match.source === 'Leetify' || match.source === 'Steam') {
+            // Se chegamos aqui sem shareCode, tentamos ver se há uma URL de download no metadata
+            const demoUrl = match.metadata?.demoUrl || match.metadata?.demo_url;
+            if (!demoUrl || demoUrl.includes('leetify.com')) {
+                toast.error("Link oficial da Valve expirou ou não foi encontrado. Tente atualizar as partidas.");
+                return;
+            }
+        }
+
+        const url = `/api/match/${match.id}/demo`;
+        window.open(url, '_blank');
     };
 
     const filteredMatches = useMemo(() => {
@@ -946,16 +976,20 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                         </Link>
                                                     )}
                                                     
-                                                    <a 
-                                                        href={`/api/match/${match.id}/demo`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-sky-500/10 hover:bg-sky-500 text-sky-500 hover:text-white transition-all group/download shadow-lg shadow-sky-500/5 active:scale-90 border border-sky-500/10 hover:border-sky-500"
-                                                        title="Baixar Demo"
-                                                    >
-                                                        <Download size={16} />
-                                                    </a>
+                                                    {(() => {
+                                                        const shareCode = match.metadata?.sharingCode || (match.source === 'Steam' ? match.externalId : null);
+                                                        const canOpenInGame = !!shareCode;
+                                                        
+                                                        return (
+                                                            <button 
+                                                                onClick={(e) => handleDownloadDemo(e, match)}
+                                                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-sky-500/10 hover:bg-sky-500 text-sky-500 hover:text-white transition-all group/download shadow-lg shadow-sky-500/5 active:scale-90 border border-sky-500/10 hover:border-sky-500"
+                                                                title={canOpenInGame ? "Abrir no CS2" : "Baixar Demo"}
+                                                            >
+                                                                {canOpenInGame ? <Play size={16} /> : <Download size={16} />}
+                                                            </button>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4 text-right">

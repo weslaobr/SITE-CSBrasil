@@ -44,6 +44,7 @@ export async function syncUserMatches(steamId: string) {
 
             let kills = 0, deaths = 0, assists = 0, adr: number | null = null, kast: number | null = null;
             let matchMetaExtra: any = {};
+            let demoUrl: string | null = null;
             try {
                 const detailRes = await axios.get(`${LEETIFY_BASE_URL}/v2/matches/${m.id}`, {
                     headers: { '_leetify_key': LEETIFY_API_KEY },
@@ -81,10 +82,14 @@ export async function syncUserMatches(steamId: string) {
                     }
                 }
 
+                demoUrl = detail.demo_url || detail.demoUrl || null;
+
                 matchMetaExtra = {
                     leetify_ratings: detail.ratings,
                     teamA: detail.teamA,
-                    teamB: detail.teamB
+                    teamB: detail.teamB,
+                    demoUrl: detail.demo_url || detail.demoUrl || null,
+                    sharingCode: detail.sharingCode || detail.matchSharingCode || null
                 };
 
                 // Global Match Cache
@@ -167,7 +172,7 @@ export async function syncUserMatches(steamId: string) {
                     mapName: mapName.charAt(0).toUpperCase() + mapName.slice(1),
                     mvps: m.mvps ?? 0,
                     duration: m.match_duration ? `${Math.round(m.match_duration / 60)} min` : '45 min',
-                    url: m.id ? `https://leetify.com/app/match-details/${m.id}/scoreboard` : null,
+                    url: demoUrl || (m.id ? `https://leetify.com/app/match-details/${m.id}/scoreboard` : null),
                     ...sharedData
                 }
             });

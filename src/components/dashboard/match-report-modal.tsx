@@ -1,11 +1,8 @@
 "use client";
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-    X, Calendar, MapPin, Shield, Target, Activity,
-    Zap, TrendingUp, Crosshair, Star, Flame, Eye, RefreshCw, AlertCircle,
-    Clock, Download
-} from 'lucide-react';
+import { Play, Download, Calendar, Activity, Target, Zap, Clock, Shield, Search, RefreshCw, X, AlertCircle, Crosshair } from 'lucide-react';
+import { toast } from 'sonner';
 import axios from 'axios';
 
 // ── TYPES ────────────────────────────────────────────────────────────────────
@@ -1095,18 +1092,34 @@ const MatchReportModal: React.FC<Props> = ({
                                         <span className="hidden sm:inline">{isSyncing ? 'Atualizando...' : 'Atualizar'}</span>
                                     </button>
 
-                                    {currentMatch && (
-                                        <a
-                                            href={`/api/match/${match?.id}/demo`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="h-8 px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 hover:text-sky-300 flex items-center gap-2 border border-sky-500/20 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest"
-                                            title="Baixar demo da partida para assistir"
-                                        >
-                                            <Download size={12} />
-                                            <span className="hidden lg:inline">Assistir Demo</span>
-                                        </a>
-                                    )}
+                                    {currentMatch && (() => {
+                                            const shareCode = currentMatch.sharing_code || currentMatch.metadata?.sharingCode || (currentMatch.source === 'Steam' ? currentMatch.externalId : null);
+                                            const canOpenInGame = !!shareCode;
+                                            
+                                            const handleDownloadClick = async (e: React.MouseEvent) => {
+                                                e.preventDefault();
+                                                const shareCode = currentMatch.sharing_code || currentMatch.metadata?.sharingCode || (currentMatch.source === 'Steam' ? currentMatch.externalId : null);
+                                                
+                                                if (shareCode) {
+                                                    window.location.href = `steam://match/${shareCode}`;
+                                                    return;
+                                                }
+                                                
+                                                const url = `/api/match/${match?.id}/demo`;
+                                                window.open(url, '_blank');
+                                            };
+
+                                            return (
+                                                <button
+                                                    onClick={handleDownloadClick}
+                                                    className="h-8 px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 hover:text-sky-300 flex items-center gap-2 border border-sky-500/20 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest"
+                                                    title={canOpenInGame ? "Abrir no CS2" : "Baixar demo da partida para assistir"}
+                                                >
+                                                    {canOpenInGame ? <Play size={12} /> : <Download size={12} />}
+                                                    <span className="hidden lg:inline">{canOpenInGame ? 'Abrir no CS2' : 'Assistir Demo'}</span>
+                                                </button>
+                                            );
+                                        })()}
                                     
                                     {userData && (
                                         <div className="hidden md:flex items-center gap-2.5 bg-black/30 border border-white/5 rounded-xl px-3 py-1.5">

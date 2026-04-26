@@ -209,6 +209,8 @@ export async function GET(
 
                 };
             });
+            data.demo_url = data.demo_url || data.demoUrl || null;
+            data.sharing_code = data.sharingCode || data.matchSharingCode || null;
             data.stats = await fetchAvatars(data.stats);
         }
 
