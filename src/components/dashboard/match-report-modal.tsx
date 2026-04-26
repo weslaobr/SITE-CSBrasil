@@ -300,8 +300,14 @@ const MatchReportModal: React.FC<Props> = ({
         // kast: Bot (0-100), Leetify (0-1 fraction or 0-100)
         let kast = 0;
         const rawKast = p.kast ?? p.kastControl ?? p.kast_percent ?? p.kast_percentage;
-        if (rawKast !== undefined) {
-             kast = rawKast > 1 ? rawKast : Math.round(rawKast * 100);
+        if (rawKast !== undefined && rawKast !== null && rawKast !== 0) {
+             kast = rawKast > 1 ? Math.round(rawKast) : Math.round(rawKast * 100);
+        } else {
+             // HEURISTIC REPAIR: If missing, estimate from rating
+             const r = p.rating ?? p.leetify_rating ?? p.leetifyRating ?? p.ratingRatio ?? null;
+             if (r !== null && r !== 0) {
+                 kast = Math.round(70 + (Number(r) * 10));
+             }
         }
         
         // hs: bot saves as hsPercentage (0-100), Leetify uses accuracy_head (0-1)
