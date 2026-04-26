@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Check, Eye, Users, Search, Target, Trophy, Info, Plus, User, Globe, Shield, Star, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSession } from 'next-auth/react';
+import { parseCrosshairCode } from '@/lib/crosshair-parser';
 
 interface ProCrosshair {
     id: string;
@@ -383,8 +384,8 @@ const CrosshairHub: React.FC = () => {
 const CrosshairCard = ({ 
     id, title, subtitle, userImage, code, description, type, previewStyle, isPro, handleCopy, copiedId 
 }: any) => {
-    // Default style for community crosshairs if not provided
-    const style = previewStyle || { width: '5px', height: '1.5px', gap: '0px', thickness: '1px', dot: false, outline: true, color: '#00ff00' };
+    // Calcula o estilo dinamicamente com base no código se não houver um estilo pré-definido
+    const style = previewStyle || parseCrosshairCode(code);
 
     return (
         <motion.div
@@ -396,13 +397,75 @@ const CrosshairCard = ({
         >
             <div className="relative aspect-[16/9] bg-[url('https://images.squarespace-cdn.com/content/v1/5e396659e19d7d3d3d3d3d3d/1580822617617-6Z6Z6Z6Z6Z6Z6Z6Z6Z6Z/Mirage_A_Site.jpg')] bg-cover bg-center">
                 <div className="absolute inset-0 bg-black/20" />
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center scale-[2.5]">
                     <div className="relative">
-                        <div style={{ width: `calc(${style.width} * 4)`, height: `calc(${style.thickness} * 2)`, backgroundColor: style.color, left: `calc(${style.gap} * 2 + 4px)`, boxShadow: style.outline ? '0 0 0 1px black' : 'none' }} className="absolute top-1/2 -translate-y-1/2" />
-                        <div style={{ width: `calc(${style.width} * 4)`, height: `calc(${style.thickness} * 2)`, backgroundColor: style.color, right: `calc(${style.gap} * 2 + 4px)`, boxShadow: style.outline ? '0 0 0 1px black' : 'none' }} className="absolute top-1/2 -translate-y-1/2" />
-                        <div style={{ height: `calc(${style.width} * 4)`, width: `calc(${style.thickness} * 2)`, backgroundColor: style.color, top: `calc(${style.gap} * 2 + 4px)`, boxShadow: style.outline ? '0 0 0 1px black' : 'none' }} className="absolute left-1/2 -translate-x-1/2" />
-                        <div style={{ height: `calc(${style.width} * 4)`, width: `calc(${style.thickness} * 2)`, backgroundColor: style.color, bottom: `calc(${style.gap} * 2 + 4px)`, boxShadow: style.outline ? '0 0 0 1px black' : 'none' }} className="absolute left-1/2 -translate-x-1/2" />
-                        {style.dot && <div style={{ width: `calc(${style.thickness} * 2)`, height: `calc(${style.thickness} * 2)`, backgroundColor: style.color, boxShadow: style.outline ? '0 0 0 1px black' : 'none' }} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />}
+                        {/* Horizontal - Right */}
+                        <div 
+                            style={{ 
+                                width: style.width, 
+                                height: style.thickness, 
+                                backgroundColor: style.color,
+                                left: `calc(${style.gap} + 1px)`,
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                boxShadow: style.outline ? '0 0 0 1px black' : 'none'
+                            }} 
+                            className="absolute" 
+                        />
+                        {/* Horizontal - Left */}
+                        <div 
+                            style={{ 
+                                width: style.width, 
+                                height: style.thickness, 
+                                backgroundColor: style.color,
+                                right: `calc(${style.gap} + 1px)`,
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                boxShadow: style.outline ? '0 0 0 1px black' : 'none'
+                            }} 
+                            className="absolute" 
+                        />
+                        {/* Vertical - Top */}
+                        <div 
+                            style={{ 
+                                height: style.width, 
+                                width: style.thickness, 
+                                backgroundColor: style.color,
+                                bottom: `calc(${style.gap} + 1px)`,
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                boxShadow: style.outline ? '0 0 0 1px black' : 'none'
+                            }} 
+                            className="absolute" 
+                        />
+                        {/* Vertical - Bottom */}
+                        <div 
+                            style={{ 
+                                height: style.width, 
+                                width: style.thickness, 
+                                backgroundColor: style.color,
+                                top: `calc(${style.gap} + 1px)`,
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                boxShadow: style.outline ? '0 0 0 1px black' : 'none'
+                            }} 
+                            className="absolute" 
+                        />
+                        {/* Dot */}
+                        {style.dot && (
+                            <div 
+                                style={{ 
+                                    width: style.thickness, 
+                                    height: style.thickness, 
+                                    backgroundColor: style.color,
+                                    left: '50%',
+                                    top: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    boxShadow: style.outline ? '0 0 0 1px black' : 'none'
+                                }} 
+                                className="absolute" 
+                            />
+                        )}
                     </div>
                 </div>
             </div>
