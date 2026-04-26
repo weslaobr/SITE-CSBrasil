@@ -251,11 +251,22 @@ export async function GET(
         const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
             const mappedResult = gmp.matchResult === 'win' ? 'Win' : (gmp.matchResult === 'loss' ? 'Loss' : 'Tie');
             const meta = gmp.metadata as any;
+            const sourceMode = (gmp.match as any).gameMode?.toLowerCase() || '';
+            let gameMode = 'Competitive';
+            
+            if (['mix', 'demo', 'local'].some(s => (gmp.match.source || 'mix').toLowerCase().includes(s))) {
+                gameMode = 'Mix';
+            } else if (sourceMode.includes('wingman') || sourceMode.includes('2v2')) {
+                gameMode = 'Wingman';
+            } else if (sourceMode.includes('premier')) {
+                gameMode = 'Premier';
+            }
+
             return {
                 id: gmp.id,
                 externalId: gmp.globalMatchId,
                 source: gmp.match.source || 'mix',
-                gameMode: ['mix', 'demo', 'local'].some(s => (gmp.match.source || 'mix').toLowerCase().includes(s)) ? 'Mix' : 'Competitive',
+                gameMode,
                 mapName: gmp.match.mapName,
                 kills: gmp.kills,
                 deaths: gmp.deaths,

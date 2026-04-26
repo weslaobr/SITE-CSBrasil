@@ -79,18 +79,33 @@ export async function GET(req: NextRequest) {
                 kast = raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
             }
 
-            return { ...m, kills, deaths, assists, adr, hsPercentage, kast };
+            // Rank extraction
+            const rank = meta.rank || meta.skill_level || meta.matchmaking_rank || null;
+
+            return { ...m, kills, deaths, assists, adr, hsPercentage, kast, rank };
         });
 
         // Format Global Matches to match the old Match schema for the frontend
         const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
             const res = (gmp.matchResult || '').toLowerCase();
             const mappedResult = res === 'win' ? 'Win' : (res === 'loss' ? 'Loss' : 'Tie');
+            const sourceMode = (gmp.match as any).gameMode?.toLowerCase() || '';
+            const meta = gmp.metadata as any;
+            let gameMode = 'Competitive';
+            
+            if (['mix', 'demo', 'local'].some(s => (gmp.match.source || 'mix').toLowerCase().includes(s))) {
+                gameMode = 'Mix';
+            } else if (sourceMode.includes('wingman') || sourceMode.includes('2v2')) {
+                gameMode = 'Wingman';
+            } else if (sourceMode.includes('premier')) {
+                gameMode = 'Premier';
+            }
+
             return {
                 id: gmp.id,
                 externalId: gmp.globalMatchId,
                 source: gmp.match.source || 'mix',
-                gameMode: ['mix', 'demo', 'local'].some(s => (gmp.match.source || 'mix').toLowerCase().includes(s)) ? 'Mix' : 'Competitive',
+                gameMode,
                 mapName: gmp.match.mapName,
                 kills: gmp.kills,
                 deaths: gmp.deaths,
@@ -100,7 +115,8 @@ export async function GET(req: NextRequest) {
                 matchDate: gmp.match.matchDate,
                 hsPercentage: gmp.hsPercentage,
                 adr: gmp.adr,
-                kast: (gmp.metadata as any)?.kast ?? (gmp.metadata as any)?.kast_percent ?? (gmp.metadata as any)?.kast_percentage,
+                kast: meta?.kast ?? meta?.kast_percent ?? meta?.kast_percentage,
+                rank: meta?.rank || meta?.skill_level || null,
                 metadata: gmp.metadata
             };
         });

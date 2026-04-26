@@ -35,22 +35,36 @@ export default function MatchesPage() {
                 const resTracker = await fetch('http://localhost:8000/api/match/list');
                 if (resTracker.ok) {
                     const rawTracker = await resTracker.json();
-                    trackerMatches = rawTracker.map((m: any) => ({
-                        ...m,
-                        id: m.match_id || m.id, // match_id from FastAPI
-                        source: m.source || 'Tracker',
-                        gameMode: (m.source === 'mix' || m.source === 'demo') ? 'Mix' : (m.game_mode || 'Competitive'),
-                        result: m.result === 'Win' ? 'Win' : m.result === 'Loss' ? 'Loss' : 'Tie',
-                        mapName: m.map_name,
-                        matchDate: m.parsed_at, // Use parse date as proxy if match date missing
-                        kills: m.kills || 0,
-                        deaths: m.deaths || 0,
-                        assists: m.assists || 0,
-                        adr: m.adr,
-                        kast: m.kast,
-                        rating2: m.rating,
-                        isTracker: true
-                    }));
+                    trackerMatches = rawTracker.map((m: any) => {
+                        const sourceMode = (m.game_mode || '').toLowerCase();
+                        let gameMode = 'Competitive';
+                        
+                        if (m.source === 'mix' || m.source === 'demo') {
+                            gameMode = 'Mix';
+                        } else if (sourceMode.includes('wingman') || sourceMode.includes('2v2')) {
+                            gameMode = 'Wingman';
+                        } else if (sourceMode.includes('premier') || (m.rating && m.rating > 1000)) {
+                            gameMode = 'Premier';
+                        }
+
+                        return {
+                            ...m,
+                            id: m.match_id || m.id,
+                            source: m.source || 'Tracker',
+                            gameMode,
+                            result: m.result === 'Win' ? 'Win' : m.result === 'Loss' ? 'Loss' : 'Tie',
+                            mapName: m.map_name,
+                            matchDate: m.parsed_at,
+                            kills: m.kills || 0,
+                            deaths: m.deaths || 0,
+                            assists: m.assists || 0,
+                            adr: m.adr,
+                            kast: m.kast,
+                            rating2: m.rating,
+                            rank: m.rank || m.skill_level || (gameMode === 'Premier' ? m.rating : null),
+                            isTracker: true
+                        };
+                    });
                 }
             } catch (err) {
                 console.warn("Tracker API not available:", err);

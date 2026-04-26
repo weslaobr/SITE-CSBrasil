@@ -26,7 +26,7 @@ const getMMRank = (rankId: number) => {
     ];
     return {
         name: names[rankId],
-        icon: `https://raw.githubusercontent.com/ItzArty/csgo-rank-icons/master/matchmaking/${rankId}.svg`
+        icon: `https://raw.githubusercontent.com/ItzArty/csgo-rank-icons/main/matchmaking/${rankId}.svg`
     };
 };
 

@@ -121,7 +121,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
     // Helper to detect the platform/mode of a match
-    const detectMode = (m: Match): 'GamersClub' | 'Faceit' | 'Premier' | 'Mix' | 'Competitive' => {
+    const detectMode = (m: Match): 'GamersClub' | 'Faceit' | 'Premier' | 'Mix' | 'Competitive' | 'Wingman' => {
         const src = (m.source || '').toLowerCase();
         const mode = (m.gameMode || '').toLowerCase();
         const meta = (m.metadata?.source || m.metadata?.data_source || '').toLowerCase();
@@ -132,6 +132,9 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         }
         if (src === 'faceit' || mode.includes('faceit') || meta.includes('faceit')) {
             return 'Faceit';
+        }
+        if (src.includes('wingman') || mode.includes('wingman') || meta.includes('wingman') || mode.includes('2v2')) {
+            return 'Wingman';
         }
         if (src.includes('mix') || src.includes('demo') || src.includes('local') || mode.includes('mix') || meta.includes('mix')) {
             return 'Mix';
@@ -339,10 +342,11 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             };
         }
 
-        // 3. Competitive Rank Logic (Mapping IDs 1-18)
-        if (!isGC && !isPremier && rank) {
+        // 3. Competitive Rank Logic (Mapping IDs 0-18)
+        if (!isGC && !isPremier && rank !== null && rank !== undefined) {
             // First try ID based mapping
             const rankId = parseInt(rank);
+            const isWingman = normMode.includes('wingman') || (metadata?.gameMode || '').toLowerCase().includes('wingman');
             const ranks: Record<number, { name: string, icon: number }> = {
                 0: { name: 'Sem Patente', icon: 0 },
                 1: { name: 'Prata I', icon: 1 },
@@ -366,10 +370,11 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             };
 
             if (ranks[rankId] !== undefined) {
+                const folder = isWingman ? 'wingman' : 'matchmaking';
                 return {
                     label: ranks[rankId].name,
-                    icon: `https://raw.githubusercontent.com/ItzArty/csgo-rank-icons/master/matchmaking/${ranks[rankId].icon}.svg`,
-                    color: 'text-zinc-400',
+                    icon: `https://raw.githubusercontent.com/ItzArty/csgo-rank-icons/main/${folder}/${ranks[rankId].icon}.svg`,
+                    color: isWingman ? 'text-emerald-400' : 'text-zinc-400',
                     isPremier: false
                 };
             }
@@ -385,9 +390,12 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             }
         }
 
+        const isUnranked = !rank || rank === 'unranked' || rank === '0' || rank === 0;
+        const folder = normMode.includes('wingman') ? 'wingman' : 'matchmaking';
+
         return {
-            label: (rank && rank !== 'unranked' && isNaN(parseInt(rank))) ? rank : 'Sub-Tenente',
-            icon: null,
+            label: isUnranked ? 'Sem Patente' : ((rank && isNaN(parseInt(rank))) ? rank : 'Sem Patente'),
+            icon: isUnranked ? `https://raw.githubusercontent.com/ItzArty/csgo-rank-icons/main/${folder}/0.svg` : null,
             color: 'text-zinc-600',
             isPremier: false
         };
@@ -619,9 +627,10 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 <div className="flex items-center gap-1 bg-zinc-950/60 border border-white/[0.06] p-1 rounded-xl">
                     {[
                         { id: 'all',         label: 'Todos' },
-                        { id: 'Competitive', label: '🎮 Comp' },
+                        { id: 'Competitive', label: '🎮 Competitivo' },
                         { id: 'Premier',     label: '⭐ Premier' },
                         { id: 'Faceit',      label: '🔴 Faceit' },
+                        { id: 'Wingman',     label: '👥 Braço Direito' },
                         { id: 'GamersClub',  label: '🛡 GC' },
                         { id: 'Mix',         label: '⚔️ Mix' },
                     ].map(({ id, label }) => (
@@ -796,11 +805,12 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                                             isGamersClub ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                                                                             isFaceit ? 'bg-orange-600/10 text-orange-400 border-orange-600/20' :
                                                                             isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                                                                            matchMode === 'Wingman' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
                                                                             isMix ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' :
                                                                             'bg-yellow-500/5 text-yellow-500/70 border-yellow-500/15'
                                                                         }`}>
-                                                                            <span>{isGamersClub ? '🛡' : isFaceit ? '🔴' : isPremier ? '⭐' : isMix ? '⚔️' : '🎮'}</span>
-                                                                            <span>{isGamersClub ? 'GC' : isFaceit ? 'Faceit' : isPremier ? 'Premier' : isMix ? 'Mix' : 'Comp'}</span>
+                                                                            <span>{isGamersClub ? '🛡' : isFaceit ? '🔴' : isPremier ? '⭐' : matchMode === 'Wingman' ? '👥' : isMix ? '⚔️' : '🎮'}</span>
+                                                                            <span>{isGamersClub ? 'GC' : isFaceit ? 'Faceit' : isPremier ? 'Premier' : matchMode === 'Wingman' ? 'Braço Direito' : isMix ? 'Mix' : 'Competitivo'}</span>
                                                                         </div>
                                                     {isPremier && match.metadata?.rank_delta && (
                                                         <div className={`flex items-center gap-0.5 text-[8px] font-black ${match.metadata.rank_delta > 0 ? 'text-yellow-500' : 'text-red-400'}`}>
