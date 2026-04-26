@@ -194,6 +194,21 @@ const CrosshairHub: React.FC = () => {
         if (activeSection === 'community') fetchCommunity();
     }, [activeSection]);
 
+    // Auto-detecta o preview quando o usuário cola o código
+    useEffect(() => {
+        if (!newCode.startsWith('CSGO-') || newCode.length < 20) return;
+        try {
+            const parsed = parseCrosshairCode(newCode);
+            setPrevColor(parsed.color);
+            setPrevSize(parseFloat(parsed.width));
+            setPrevGap(parseFloat(parsed.gap));
+            setPrevThick(parseFloat(parsed.thickness));
+            setPrevDot(parsed.dot);
+        } catch {
+            // Código incompleto ainda sendo digitado, ignora
+        }
+    }, [newCode]);
+
     const handleCopy = (code: string, id: string) => {
         navigator.clipboard.writeText(code);
         setCopiedId(id);
@@ -327,7 +342,25 @@ const CrosshairHub: React.FC = () => {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Código de Importação</label>
-                                        <input type="text" placeholder="CSGO-XXXXX-XXXXX..." value={newCode} onChange={(e) => setNewCode(e.target.value)} className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-purple-500 outline-none font-mono" />
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                placeholder="CSGO-XXXXX-XXXXX..."
+                                                value={newCode}
+                                                onChange={(e) => setNewCode(e.target.value)}
+                                                className={`w-full bg-zinc-950 border rounded-xl px-4 py-3 text-sm outline-none font-mono transition-all ${
+                                                    newCode.startsWith('CSGO-') && newCode.length >= 20
+                                                        ? 'border-green-500/50 focus:border-green-500'
+                                                        : 'border-white/10 focus:border-purple-500'
+                                                }`}
+                                            />
+                                            {newCode.startsWith('CSGO-') && newCode.length >= 20 && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                                                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                                    <span className="text-[9px] font-black uppercase text-green-400 tracking-widest">Detectado</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Descrição (Opcional)</label>
@@ -336,7 +369,12 @@ const CrosshairHub: React.FC = () => {
 
                                     {/* Visual Config */}
                                     <div className="bg-zinc-950 border border-white/5 rounded-2xl p-5 space-y-5">
-                                        <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Configure o Preview da sua Mira</p>
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Ajuste Fino do Preview</p>
+                                            {newCode.startsWith('CSGO-') && newCode.length >= 20 && (
+                                                <span className="text-[9px] text-green-400 font-black uppercase tracking-widest">✓ Auto-detectado</span>
+                                            )}
+                                        </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Cor</label>
