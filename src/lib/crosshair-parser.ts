@@ -69,10 +69,10 @@ export function parseCrosshairCode(code: string): CrosshairStyle {
         }
 
         return {
-            width: `${Math.max(1, size * 2)}px`,
-            height: `${Math.max(1, size * 2)}px`,
-            gap: `${gap * 2}px`,
-            thickness: `${Math.max(0.5, thickness * 2)}px`,
+            width: `${Math.max(1, size * 1.5)}px`,
+            height: `${Math.max(1, size * 1.5)}px`,
+            gap: `${gap * 1.5}px`,
+            thickness: `${Math.max(0.5, thickness * 0.8)}px`,
             dot,
             outline,
             color
