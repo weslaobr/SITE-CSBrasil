@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Check, Users, Search, Target, Info, Plus, User, Globe, Star, Loader2, Pencil, Trash2, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSession } from 'next-auth/react';
+import { parseCrosshairCode } from '@/lib/crosshair-parser';
 
 interface ProCrosshair {
     id: string;
@@ -439,39 +440,55 @@ const CrosshairHub: React.FC = () => {
                                 <p className="text-zinc-500 font-black uppercase tracking-widest text-xs">Nenhuma mira da comunidade encontrada.</p>
                             </div>
                         ) : (
-                            filteredCommunity.map((comm) => (
-                                <CrosshairCard 
-                                    key={comm.id} 
-                                    id={comm.id}
-                                    title={comm.name} 
-                                    subtitle={comm.user.name}
-                                    userImage={comm.user.image}
-                                    code={comm.code}
-                                    description={comm.description || 'Mira postada por membro da Tropa.'}
-                                    isPro={false}
-                                    handleCopy={handleCopy}
-                                    copiedId={copiedId}
-                                    ownerId={comm.userId}
-                                    sessionUserId={(session?.user as any)?.id}
-                                    onRefresh={fetchCommunity}
-                                    previewStyle={{
-                                        width: `${Math.max(1, (comm.previewSize ?? 5))}px`,
-                                        height: `${Math.max(1, (comm.previewSize ?? 5))}px`,
-                                        gap: `${comm.previewGap ?? 0}px`,
-                                        thickness: `${Math.max(0.5, (comm.previewThick ?? 1))}px`,
-                                        dot: comm.previewDot ?? false,
-                                        outline: false,
-                                        color: comm.previewColor ?? '#00ff00',
-                                    }}
-                                    initialPreview={{
-                                        color: comm.previewColor ?? '#00ff00',
-                                        size: comm.previewSize ?? 5,
-                                        gap: comm.previewGap ?? 0,
-                                        thick: comm.previewThick ?? 1,
-                                        dot: comm.previewDot ?? false,
-                                    }}
-                                />
-                            ))
+                            filteredCommunity.map((comm) => {
+                                // Se o usuário nunca configurou manualmente, decodifica o código automaticamente
+                                const hasManualConfig = comm.previewSize != null;
+                                const autoStyle = hasManualConfig ? null : parseCrosshairCode(comm.code);
+
+                                const previewStyle = autoStyle ?? {
+                                    width: `${Math.max(1, (comm.previewSize ?? 5))}px`,
+                                    height: `${Math.max(1, (comm.previewSize ?? 5))}px`,
+                                    gap: `${comm.previewGap ?? 0}px`,
+                                    thickness: `${Math.max(0.5, (comm.previewThick ?? 1))}px`,
+                                    dot: comm.previewDot ?? false,
+                                    outline: false,
+                                    color: comm.previewColor ?? '#00ff00',
+                                };
+
+                                const initialPreview = autoStyle ? {
+                                    color: autoStyle.color,
+                                    size: parseFloat(autoStyle.width),
+                                    gap: parseFloat(autoStyle.gap),
+                                    thick: parseFloat(autoStyle.thickness),
+                                    dot: autoStyle.dot,
+                                } : {
+                                    color: comm.previewColor ?? '#00ff00',
+                                    size: comm.previewSize ?? 5,
+                                    gap: comm.previewGap ?? 0,
+                                    thick: comm.previewThick ?? 1,
+                                    dot: comm.previewDot ?? false,
+                                };
+
+                                return (
+                                    <CrosshairCard
+                                        key={comm.id}
+                                        id={comm.id}
+                                        title={comm.name}
+                                        subtitle={comm.user.name}
+                                        userImage={comm.user.image}
+                                        code={comm.code}
+                                        description={comm.description || 'Mira postada por membro da Tropa.'}
+                                        isPro={false}
+                                        handleCopy={handleCopy}
+                                        copiedId={copiedId}
+                                        ownerId={comm.userId}
+                                        sessionUserId={(session?.user as any)?.id}
+                                        onRefresh={fetchCommunity}
+                                        previewStyle={previewStyle}
+                                        initialPreview={initialPreview}
+                                    />
+                                );
+                            })
                         )
                     )}
                 </AnimatePresence>

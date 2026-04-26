@@ -1,25 +1,23 @@
-/**
- * Decodificador básico para códigos de mira do CS2 (CSGO-XXXXX)
- * O código é Base58. Após decodificar, ele contém bytes que mapeiam para:
- * Gap, Outline, Red, Green, Blue, Alpha, Size, Thickness, Dot, etc.
- */
+// Alfabeto CORRETO da Valve para share codes (Base57, não Base58)
+const SHARECODE_ALPHABET = 'ABCDEFGHJKLMNOPQRSTUVWXYZabcdefhijkmnopqrstuvwxyz23456789';
 
-const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-const ALPHABET_MAP: Record<string, number> = {};
-for (let i = 0; i < ALPHABET.length; i++) ALPHABET_MAP[ALPHABET[i]] = i;
+function decodeCrosshairCode(code: string): Uint8Array {
+    const cleaned = code.replace(/^CSGO-/, '').replace(/-/g, '');
+    // CRÍTICO: a string deve ser INVERTIDA antes de decodificar
+    const reversed = cleaned.split('').reverse().join('');
 
-function decodeBase58(str: string): Uint8Array {
-    let result = BigInt(0);
-    for (const char of str) {
-        if (ALPHABET_MAP[char] === undefined) continue;
-        result = result * BigInt(58) + BigInt(ALPHABET_MAP[char]);
+    let value = BigInt(0);
+    for (const char of reversed) {
+        const idx = SHARECODE_ALPHABET.indexOf(char);
+        if (idx === -1) throw new Error(`Caractere inválido: ${char}`);
+        value = value * BigInt(57) + BigInt(idx);
     }
-    
-    // O código da Valve decodificado DEVE ter 18 bytes (144 bits)
+
+    // Extrair 18 bytes em little-endian
     const bytes = new Uint8Array(18);
-    for (let i = 17; i >= 0; i--) {
-        bytes[i] = Number(result & BigInt(0xff));
-        result >>= BigInt(8);
+    for (let i = 0; i < 18; i++) {
+        bytes[i] = Number(value & BigInt(0xff));
+        value >>= BigInt(8);
     }
     return bytes;
 }
@@ -36,48 +34,52 @@ export interface CrosshairStyle {
 
 export function parseCrosshairCode(code: string): CrosshairStyle {
     try {
-        if (!code || !code.startsWith('CSGO-')) throw new Error('Invalid format');
-        
-        const cleanCode = code.replace(/^CSGO-/, '').replace(/-/g, '');
-        const bytes = decodeBase58(cleanCode);
+        if (!code || !code.startsWith('CSGO-')) throw new Error('Formato inválido');
 
-        // Mapeamento baseado em engenharia reversa da comunidade
-        const size = bytes[2] / 10;
-        const thickness = bytes[4] / 10;
-        const gapByte = bytes[3];
-        const gap = (gapByte > 127 ? gapByte - 256 : gapByte) / 10;
-        
-        const dot = (bytes[11] & 1) === 1;
-        const outline = (bytes[12] & 1) === 1;
-        
-        // Cores pré-definidas
-        const colorIndex = bytes[5];
-        let color = '#00ff00'; // Default Green
-        
-        switch(colorIndex) {
-            case 0: color = '#ff0000'; break; // Red
-            case 1: color = '#00ff00'; break; // Green
-            case 2: color = '#ffff00'; break; // Yellow
-            case 3: color = '#0000ff'; break; // Blue
-            case 4: color = '#00ffff'; break; // Cyan
-            case 5: // Custom RGB
-                const r = bytes[13];
-                const g = bytes[14];
-                const b = bytes[15];
-                color = `rgb(${r}, ${g}, ${b})`;
-                break;
-        }
+        const bytes = decodeCrosshairCode(code);
+
+        // Mapeamento correto dos bytes (CS2 crosshair share code format)
+        // Size: bytes[1..2] como uint16
+        const size = ((bytes[2] << 8) | bytes[1]) / 10;
+        // Thickness: bytes[3..4] como uint16
+        const thickness = ((bytes[4] << 8) | bytes[3]) / 10;
+        // Gap: bytes[5..6] como int16 (pode ser negativo)
+        let rawGap = (bytes[6] << 8) | bytes[5];
+        if (rawGap > 32767) rawGap -= 65536;
+        const gap = rawGap / 10;
+
+        // Color index: byte[8] (0=red, 1=green, 2=yellow, 3=blue, 4=cyan, 5=custom)
+        const colorIndex = bytes[8];
+        // Flags: byte[9] (bit0=dot, bit1=outline)
+        const dot = (bytes[9] & 1) === 1;
+        const outline = (bytes[9] & 2) === 2;
+        // Custom RGB: bytes[11], [12], [13]
+        const r = bytes[11];
+        const g = bytes[12];
+        const b = bytes[13];
+
+        const PRESET_COLORS: Record<number, string> = {
+            0: '#ff3333',
+            1: '#00ff00',
+            2: '#ffff00',
+            3: '#4488ff',
+            4: '#00ffff',
+        };
+
+        const color = colorIndex === 5
+            ? `rgb(${r}, ${g}, ${b})`
+            : (PRESET_COLORS[colorIndex] ?? '#00ff00');
 
         return {
-            width: `${Math.max(1, size * 1.5)}px`,
-            height: `${Math.max(1, size * 1.5)}px`,
-            gap: `${gap * 1.5}px`,
-            thickness: `${Math.max(0.5, thickness * 0.8)}px`,
+            width: `${Math.max(0.5, size)}px`,
+            height: `${Math.max(0.5, size)}px`,
+            gap: `${gap}px`,
+            thickness: `${Math.max(0.5, thickness)}px`,
             dot,
             outline,
-            color
+            color,
         };
-    } catch (e) {
+    } catch {
         return {
             width: '5px',
             height: '5px',
@@ -85,7 +87,7 @@ export function parseCrosshairCode(code: string): CrosshairStyle {
             thickness: '1px',
             dot: false,
             outline: true,
-            color: '#00ff00'
+            color: '#00ff00',
         };
     }
 }
