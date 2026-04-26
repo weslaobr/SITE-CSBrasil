@@ -17,15 +17,24 @@ export async function generateMetadata(
       where: { steamId: id }
     });
 
-    if (!player) {
-      return {
-        title: "Jogador Não Encontrado | TropaCS",
-      };
+    let playerName = player?.steamName;
+
+    // Fallback para o modelo User se o Player não tiver nome
+    if (!playerName) {
+      const user = await prisma.user.findUnique({
+        where: { steamId: id },
+        select: { name: true }
+      });
+      playerName = user?.name;
     }
 
-    const title = `${player.name} - Stats & Análise | TropaCS`;
-    const description = `Confira as estatísticas completas, rating e histórico de partidas de ${player.name} no CS2 pela TropaCS.`;
-    const ogImage = player.avatar || '/favicon.png';
+    if (!playerName) {
+      playerName = `Jogador #${id.slice(-4)}`;
+    }
+
+    const title = `${playerName} - Stats & Análise | TropaCS`;
+    const description = `Confira as estatísticas completas, rating e histórico de partidas de ${playerName} no CS2 pela TropaCS.`;
+    const ogImage = player?.steamAvatar || '/favicon.png';
 
     return {
       title,
