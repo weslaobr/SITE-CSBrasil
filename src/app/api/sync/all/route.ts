@@ -105,7 +105,10 @@ export async function POST(req: NextRequest) {
                                 matchDate: matchDate,
                                 scoreA: scoreArr[0] || 0,
                                 scoreB: scoreArr[1] || 0,
-                                metadata: { ...matchMetaExtra }
+                                metadata: { 
+                                    ...matchMetaExtra,
+                                    data_source: m.data_source || 'Matchmaking'
+                                }
                             };
 
                             await prisma.globalMatch.upsert({

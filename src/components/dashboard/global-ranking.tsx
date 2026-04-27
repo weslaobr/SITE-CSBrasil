@@ -314,7 +314,7 @@ const GlobalRanking: React.FC = () => {
 
         return [...result].sort((a, b) => {
             // Se o filtro for uma plataforma específica, ordenamos pelos dados DAQUELA plataforma
-            if (platformFilter !== 'all' && u.stats?.[platformFilter]) {
+            if (platformFilter !== 'all' && a.stats?.[platformFilter]) {
                 const valA = a.stats?.[platformFilter]?.[sortKey as keyof typeof a.stats.all] ?? a[sortKey as keyof typeof a];
                 const valB = b.stats?.[platformFilter]?.[sortKey as keyof typeof b.stats.all] ?? b[sortKey as keyof typeof b];
                 return (valB as number) - (valA as number);
