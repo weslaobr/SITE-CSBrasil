@@ -1,4 +1,4 @@
-demoparser2
+demoparser2>=0.41.2
 pandas
 psycopg2-binary
 python-dotenv

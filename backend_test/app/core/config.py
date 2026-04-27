@@ -8,16 +8,16 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     
     # Database
-    DATABASE_URL: str = "postgresql://csbrasil:%40Nenezinho1995@csbrasil.postgres.uhserver.com:5432/csbrasil?sslmode=disable&search_path=public"
+    DATABASE_URL: str
     REDIS_URL: str = "redis://localhost:6379/0"
     
     # Steam API
-    STEAM_API_KEY: str = "75753DB88FD3EC75CA4A63681C3C4DFC"
+    STEAM_API_KEY: str
     
     # Storage
     DEMO_PATH: str = "./demos"
     
-    model_config = SettingsConfigDict(env_file=(".env", "../.env"), extra="ignore")
+    model_config = SettingsConfigDict(env_file="../.env", extra="ignore")
 
 settings = Settings()
 

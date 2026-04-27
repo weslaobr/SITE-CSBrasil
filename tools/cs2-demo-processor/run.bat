@@ -17,9 +17,11 @@ if not exist "venv\" (
 :: Ativa o venv
 call venv\Scripts\activate.bat
 
-:: Instala dependencias
-echo [INFO] Instalando dependencias...
-pip install -q -r requirements.txt
+:: Instala/atualiza dependencias (garante demoparser2>=0.41.2 para AnimGraph 2)
+echo [INFO] Instalando/atualizando dependencias...
+pip install -q --upgrade -r requirements.txt
+echo [INFO] Versao do demoparser2:
+pip show demoparser2 | findstr Version
 
 :: Roda o aplicativo (chama python explicitamente de dentro do venv)
 echo [INFO] Iniciando processador de demos...

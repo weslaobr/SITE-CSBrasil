@@ -3,5 +3,5 @@ psutil
 pyautogui
 pygetwindow
 pywin32
-demoparser2
+demoparser2>=0.41.2
 pandas

@@ -150,10 +150,17 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         df_pi = df_pi[df_pi["name"].str.lower() != "gotv"]
 
         for _, row in df_pi.iterrows():
-            sid = str(row.get("steamid", row.get("steam_id", "0")))
+            # AnimGraph 2: steamid pode vir como 'steamid', 'xuid', 'steam_id', ou 'steamid64'
+            sid = str(
+                row.get("steamid")
+                or row.get("xuid")
+                or row.get("steam_id")
+                or row.get("steamid64")
+                or "0"
+            ).split(".")[0]  # Remove casas decimais de floats (ex: "76561198...0.0" → "76561198...")
             name = str(row.get("name", "")).strip()
-            team_raw = str(row.get("team_name", row.get("team_number", ""))).strip()
-            if name and sid != "0":
+            team_raw = str(row.get("team_name", row.get("team_number", row.get("team", "")))).strip()
+            if name and name.lower() not in ("gotv", "") and sid not in ("0", "None", ""):
                 player_info[sid] = {"name": name, "team": normalize_team(team_raw)}
 
         log_fn(f"👥 {len(player_info)} jogadores detectados via parse_player_info.")
@@ -198,6 +205,12 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     except Exception as _e:
         log_fn(f"⚠️  Não foi possível listar eventos: {_e}")
 
+    try:
+        _updated_fields = parser.list_updated_fields()
+        log_fn(f"📋 Campos disponíveis (amostra): {sorted(_updated_fields)[:30]}")
+    except Exception as _e:
+        log_fn(f"⚠️  list_updated_fields não disponível: {_e}")
+
     # Testa se parse_ticks funciona com campo mínimo
     _ticks_work = False
     try:
@@ -212,27 +225,30 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
 
     # ── Helper: parse_event robusto para demos de servidor local ──────
     def safe_parse_event(event_name):
-        """Tenta parse_event com diferentes configurações para demoparser2 v0.41+."""
-        # Com demoparser2 >= 0.41, player_props=[] desliga a junção de entidades
-        attempts = [
-            {},                                     # padrão
-            {"player_props": []},                   # sem player entity join
-            {"player_props": [], "other_props": []}, # completamente minimal
-        ]
-        for kwargs in attempts:
+        """Tenta parse_event compatível com demoparser2 >= 0.41.2 (AnimGraph 2).
+
+        BREAKING CHANGE em 0.41.2: player_props/other_props renomeados para player/other.
+        Tenta a nova API primeiro, cai no fallback sem kwargs se TypeError.
+        """
+        # Tentativa 1: nova API 0.41.2 — sem player entities (mais leve e compatível
+        # com demos AnimGraph 2 onde entidades de jogador podem não ter o mapeamento antigo)
+        for kwargs in [
+            {"player": [], "other": []},  # 0.41.2+: minimal, sem entity join
+            {"player": []},               # 0.41.2+: sem player entity join
+            {},                           # padrão: deixa o parser decidir
+        ]:
             try:
                 df = parser.parse_event(event_name, **kwargs)
-                # Aceita mesmo se vazio — chamador decide o que fazer
-                return df
+                return df  # Aceita mesmo vazio — o chamador decide
             except TypeError:
-                # kwarg não suportado nessa versão, tenta sem kwargs
-                try:
-                    return parser.parse_event(event_name)
-                except Exception:
-                    return None
+                continue  # kwarg não suportado, tenta próximo
             except Exception:
                 continue
-        return None
+        # Último recurso: sem nenhum kwarg
+        try:
+            return parser.parse_event(event_name)
+        except Exception:
+            return None
 
     # ── Kills → KDA + HS% ─────────────────────
     # Estrutura: {steamId: {kills, deaths, assists, hs_kills}}
@@ -245,9 +261,9 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         df_kills = filter_tick(df_kills)
         if not is_empty(df_kills):
             # Descobrir colunas de steamid (variam entre versões/formatos)
-            att_col = next((c for c in ["attacker_steamid", "attacker_steamid64"] if c in df_kills.columns), None)
-            vic_col = next((c for c in ["user_steamid", "victim_steamid", "victim_steamid64"] if c in df_kills.columns), None)
-            ass_col = next((c for c in ["assister_steamid", "assister_steamid64"] if c in df_kills.columns), None)
+            att_col = next((c for c in ["attacker_steamid", "attacker_steamid64", "attacker"] if c in df_kills.columns), None)
+            vic_col = next((c for c in ["victim_steamid", "victim_steamid64", "user_steamid", "user"] if c in df_kills.columns), None)
+            ass_col = next((c for c in ["assister_steamid", "assister_steamid64", "assister"] if c in df_kills.columns), None)
             log_fn(f"💀 player_death colunas: {list(df_kills.columns)}")
             for _, row in df_kills.iterrows():
                 attacker = str(row.get(att_col, "0")) if att_col else "0"
@@ -310,8 +326,8 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     if df_dmg is not None:
         df_dmg = filter_tick(df_dmg)
         if not is_empty(df_dmg):
-            dmg_col = next((c for c in ["dmg_health", "damage", "health_damage"] if c in df_dmg.columns), None)
-            att_col = next((c for c in ["attacker_steamid", "attacker_steamid64"] if c in df_dmg.columns), None)
+            dmg_col = next((c for c in ["dmg_health", "damage", "health_damage", "dmg"] if c in df_dmg.columns), None)
+            att_col = next((c for c in ["attacker_steamid", "attacker_steamid64", "attacker"] if c in df_dmg.columns), None)
             if dmg_col and att_col:
                 for _, row in df_dmg.iterrows():
                     sid = str(row.get(att_col, "0"))
@@ -482,35 +498,58 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
     } for sid in player_info}
     
 
-    # Granadas Lançadas
+    # Granadas Lançadas — tenta parse_grenades() (nativo 0.41.x) antes dos eventos individuais
     try:
-        events_to_parse = [
-            ("hegrenade_detonate", "he"),
-            ("flashbang_detonate", "flash"),
-            ("smokegrenade_detonate", "smoke"),
-            ("inferno_startburn", "molotov")
-        ]
-        for ev, g_type in events_to_parse:
-            df_g = safe_parse_event(ev)
-            if df_g is None: continue
-            df_g = filter_tick(df_g)
-            if not is_empty(df_g):
-                t_col = next((c for c in ["userid", "user_steamid", "thrower_steamid", "attacker_steamid"] if c in df_g.columns), None)
-                if t_col:
-                    for _, row in df_g.iterrows():
-                        sid = str(row[t_col])
-                        if sid in adv_stats:
-                            adv_stats[sid][g_type] += 1
-    except Exception as e:
-        log_fn(f"⚠️  Granadas (lançadas) não extraídas: {e}")
+        _grenade_type_map = {
+            "hegrenade": "he", "flashbang": "flash",
+            "smokegrenade": "smoke", "molotov": "molotov", "incgrenade": "molotov",
+            "decoy": "other",
+        }
+        df_grenades_native = parser.parse_grenades()
+        if not is_empty(df_grenades_native):
+            log_fn(f"💣 parse_grenades colunas: {list(df_grenades_native.columns)}")
+            _sid_col = next((c for c in ["thrower_steamid", "thrower", "steamid", "user_steamid"] if c in df_grenades_native.columns), None)
+            _type_col = next((c for c in ["grenade_type", "type", "weapon"] if c in df_grenades_native.columns), None)
+            if _sid_col and _type_col:
+                for _, row in df_grenades_native.iterrows():
+                    sid = str(row[_sid_col] or "0").split(".")[0]
+                    gtype_raw = str(row[_type_col]).lower().replace("weapon_", "")
+                    gtype = _grenade_type_map.get(gtype_raw)
+                    if sid in adv_stats and gtype and gtype in adv_stats[sid]:
+                        adv_stats[sid][gtype] += 1
+                log_fn("💣 Granadas via parse_grenades() (nativo).")
+        else:
+            raise ValueError("parse_grenades() retornou vazio — tentando fallback por eventos")
+    except Exception as _eg:
+        log_fn(f"⚠️  parse_grenades falhou ({_eg}), tentando eventos individuais...")
+        try:
+            events_to_parse = [
+                ("hegrenade_detonate", "he"),
+                ("flashbang_detonate", "flash"),
+                ("smokegrenade_detonate", "smoke"),
+                ("inferno_startburn", "molotov")
+            ]
+            for ev, g_type in events_to_parse:
+                df_g = safe_parse_event(ev)
+                if df_g is None: continue
+                df_g = filter_tick(df_g)
+                if not is_empty(df_g):
+                    t_col = next((c for c in ["userid", "user_steamid", "thrower_steamid", "attacker_steamid", "attacker_steamid64", "thrower"] if c in df_g.columns), None)
+                    if t_col:
+                        for _, row in df_g.iterrows():
+                            sid = str(row[t_col] or "0").split(".")[0]
+                            if sid in adv_stats:
+                                adv_stats[sid][g_type] += 1
+        except Exception as e:
+            log_fn(f"⚠️  Granadas (lançadas) não extraídas: {e}")
 
     # Blind Time (Segundos cegando inimigos)
     df_fa = safe_parse_event("player_blind")
     if df_fa is not None:
         df_fa = filter_tick(df_fa)
         if not is_empty(df_fa):
-            att_col = next((c for c in ["attacker_steamid", "thrower_steamid"] if c in df_fa.columns), None)
-            vic_col = next((c for c in ["user_steamid", "victim_steamid"] if c in df_fa.columns), None)
+            att_col = next((c for c in ["attacker_steamid", "attacker_steamid64", "thrower_steamid", "thrower"] if c in df_fa.columns), None)
+            vic_col = next((c for c in ["victim_steamid", "victim_steamid64", "user_steamid", "user"] if c in df_fa.columns), None)
             dur_col = next((c for c in ["blind_duration", "blind_time", "duration"] if c in df_fa.columns), None)
             if att_col and vic_col and dur_col:
                 for _, row in df_fa.iterrows():
@@ -530,8 +569,8 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
             df_ud = filter_tick(df_dmg)  # reutiliza player_hurt já carregado
             if not is_empty(df_ud):
                 util_weapons = {"hegrenade", "molotov", "inferno", "flashbang"}
-                att_col  = next((c for c in ["attacker_steamid"] if c in df_ud.columns), None)
-                dmg_col  = next((c for c in ["dmg_health", "damage"] if c in df_ud.columns), None)
+                att_col  = next((c for c in ["attacker_steamid", "attacker_steamid64", "attacker"] if c in df_ud.columns), None)
+                dmg_col  = next((c for c in ["dmg_health", "damage", "health_damage", "dmg"] if c in df_ud.columns), None)
                 weap_col = next((c for c in ["weapon", "weapon_name"] if c in df_ud.columns), None)
                 if att_col and dmg_col and weap_col:
                     for _, row in df_ud.iterrows():
@@ -589,25 +628,32 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                 if r_kills.empty: continue
                 # First Kill e Death
                 first = r_kills.iloc[0]
-                att = str(first.get("attacker_steamid", "0"))
-                vic = str(first.get("user_steamid", "0"))
-                if att in adv_stats and att != victim and att != "0":
+                # AnimGraph 2: coluna pode ser victim_steamid (novo) ou user_steamid (antigo)
+                _att_col = next((c for c in ["attacker_steamid", "attacker_steamid64", "attacker"] if c in r_kills.columns), "attacker_steamid")
+                _vic_col = next((c for c in ["victim_steamid", "victim_steamid64", "user_steamid", "user"] if c in r_kills.columns), "victim_steamid")
+                att = str(first.get(_att_col, "0") or "0")
+                vic = str(first.get(_vic_col, "0") or "0")
+                if att in adv_stats and att != vic and att != "0":
                     adv_stats[att]["fk"] += 1
                 if vic in adv_stats and vic != "0":
                     adv_stats[vic]["fd"] += 1
 
                 # Registrar todas as kills do round para o log
                 for _, k_row in r_kills.iterrows():
-                    k_att = str(k_row.get("attacker_steamid", "0"))
-                    k_vic = str(k_row.get("user_steamid", "0"))
+                    k_att = str(k_row.get(_att_col, "0") or "0")
+                    k_vic = str(k_row.get(_vic_col, "0") or "0")
                     if k_att != "0":
                         # Descobrir o lado (CT/T) de cada um para o visual
                         # Como as trocas de lado ocorrem, pegamos o lado do atacante no tick da kill
                         att_side = "unknown"
                         vic_side = "unknown"
                         try:
-                            # Tenta pegar info rápida do lado
-                            sides_df = parser.parse_ticks(["team_name"], ticks=[k_row["tick"]], players=[int(k_att), int(k_vic)])
+                            # Tenta pegar info rápida do lado — nova API 0.41.2 usa keyword args
+                            sides_df = parser.parse_ticks(
+                                ["team_name"],
+                                ticks=[int(k_row["tick"])],
+                                players=[int(k_att), int(k_vic)]
+                            )
                             if sides_df is not None and not sides_df.empty:
                                 for _, s_row in sides_df.iterrows():
                                     if str(s_row["steamid"]) == k_att: att_side = normalize_team(str(s_row["team_name"]))
@@ -626,7 +672,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                         })
 
                 # Multi-kills
-                r_counts = r_kills[r_kills["attacker_steamid"] != r_kills["user_steamid"]].groupby("attacker_steamid").size()
+                r_counts = r_kills[r_kills[_att_col] != r_kills[_vic_col]].groupby(_att_col).size()
                 for atk_sid, count in r_counts.items():
                     atk_sid = str(atk_sid)
                     if atk_sid in adv_stats:
@@ -642,8 +688,8 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
                     df_dmg_rounds["round_num"] = df_dmg_rounds["tick"].apply(get_round) if round_end_ticks else [1] * len(df_dmg_rounds)
                     
                     # Identificar coluna de dano
-                    dmg_col = next((c for c in ["dmg_health", "damage", "health_damage"] if c in df_dmg_rounds.columns), None)
-                    att_col = next((c for c in ["attacker_steamid", "attacker_steamid64"] if c in df_dmg_rounds.columns), None)
+                    dmg_col = next((c for c in ["dmg_health", "damage", "health_damage", "dmg"] if c in df_dmg_rounds.columns), None)
+                    att_col = next((c for c in ["attacker_steamid", "attacker_steamid64", "attacker"] if c in df_dmg_rounds.columns), None)
 
                     if dmg_col and att_col:
                         for r_num, r_dmg in df_dmg_rounds.groupby("round_num"):

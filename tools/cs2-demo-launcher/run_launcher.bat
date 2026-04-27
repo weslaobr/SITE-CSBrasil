@@ -30,14 +30,15 @@ if not exist venv (
     )
 )
 
-:: Install requirements
-echo [INFO] Verificando dependencias...
-venv\Scripts\python.exe -m pip install -r requirements.txt >nul 2>&1
+:: Install/upgrade requirements (garante demoparser2>=0.41.2 para AnimGraph 2)
+echo [INFO] Verificando/atualizando dependencias...
+venv\Scripts\python.exe -m pip install --upgrade -r requirements.txt >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [WARN] Algumas dependencias falharam na instalacao rapida.
-    echo [INFO] Tentando instalacao completa ^(isso pode demorar^)...
-    venv\Scripts\python.exe -m pip install -r requirements.txt
+    echo [WARN] Instalacao silenciosa falhou, tentando modo verboso...
+    venv\Scripts\python.exe -m pip install --upgrade -r requirements.txt
 )
+echo [INFO] demoparser2 version:
+venv\Scripts\python.exe -m pip show demoparser2 | findstr Version
 
 echo [OK] Pronto! Iniciando o Launcher...
 echo.
