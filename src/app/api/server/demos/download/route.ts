@@ -10,11 +10,6 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Não autorizado. Faça login com a Steam.' }, { status: 401 });
         }
 
-        const isAdmin = (session.user as any).isAdmin;
-        if (!isAdmin) {
-            return NextResponse.json({ error: 'Acesso negado. Você não é Admin.' }, { status: 403 });
-        }
-
         const { searchParams } = new URL(req.url);
         const filePath = searchParams.get('file');
 
