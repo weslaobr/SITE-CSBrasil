@@ -249,7 +249,8 @@ export async function GET(
 
         // 3. Format Global Matches to match the old Match schema for the frontend
         const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
-            const mappedResult = gmp.matchResult === 'win' ? 'Win' : (gmp.matchResult === 'loss' ? 'Loss' : 'Tie');
+            const resLower = (gmp.matchResult || '').toLowerCase();
+            const mappedResult = resLower === 'win' ? 'Win' : (resLower === 'loss' ? 'Loss' : 'Tie');
             const meta = gmp.metadata as any;
             const sourceMode = (gmp.match as any).gameMode?.toLowerCase() || '';
             let gameMode = 'Competitive';

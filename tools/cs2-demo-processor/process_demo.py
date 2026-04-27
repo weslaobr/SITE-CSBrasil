@@ -176,10 +176,31 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
 
     if progress_fn: progress_fn(0.15)
     
+    # ── Match Start Detection (Warmup Filter) ──
+    # Tentamos detectar o tick real onde o jogo "valendo" começou.
+    # Eventos possíveis: round_announce_match_start (oficial), ou o primeiro round_start após warmup.
+    df_m_start = _parse("round_announce_match_start")
+    if not is_empty(df_m_start):
+        start_tick = int(df_m_start["tick"].max())
+        log_fn(f"🎮 Início da partida detectado no tick {start_tick}")
+    else:
+        # Fallback: Se não houver announce, tenta o tick do warmup_end
+        df_w_end = _parse("warmup_end")
+        if not is_empty(df_w_end):
+            start_tick = int(df_w_end["tick"].max())
+            log_fn(f"🎮 Fim do warmup detectado no tick {start_tick}")
+    
     # ── Eventos de Fim de Round ──
     df_re = _parse("round_end")
     if is_empty(df_re): df_re = _parse("round_officially_ended")
-    if df_re is not None: df_re = filter_tick(df_re).sort_values("tick").reset_index(drop=True)
+    
+    # Filtramos por tick para remover rounds de warmup
+    if df_re is not None: 
+        df_re = df_re[df_re["tick"] >= start_tick].sort_values("tick").reset_index(drop=True)
+    
+    # Heurística: se o primeiro round_end for antes de 1 minuto de jogo real, 
+    # e houver muitos rounds, pode ser que o start_tick falhou.
+    # Mas por ora confiamos nos eventos.
 
     # Duração Fallback se estiver 00:00
     if duration_str == "00:00" and not is_empty(df_re):
@@ -275,14 +296,27 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         for sid, info in player_info.items():
             team_mapping[sid] = "A" if info["team"] == "CT" else "B"
 
-    # Halftime detection
+    # Halftime detection e rounds_per_half
+    # Tenta detectar via convars (mp_maxrounds)
     rounds_per_half = 12
+    try:
+        convars = parser.parse_convars()
+        if convars and "mp_maxrounds" in convars:
+            rounds_per_half = int(convars["mp_maxrounds"]) // 2
+            log_fn(f"⚙️ Configuração detectada: MR{rounds_per_half*2}")
+    except: pass
+
+    # Tenta detectar via eventos de halftime (mais preciso se houver mudança no meio do jogo)
     try:
         df_ht = _parse("cs_intermission")
         if is_empty(df_ht): df_ht = _parse("round_announce_halftime")
         if not is_empty(df_ht):
             ht_tick = int(df_ht["tick"].min())
-            rounds_per_half = int((df_re["tick"] < ht_tick).sum())
+            # O halftime acontece DEPOIS do último round da primeira metade
+            rounds_before_ht = int((df_re["tick"] < ht_tick).sum())
+            if rounds_before_ht > 0:
+                rounds_per_half = rounds_before_ht
+                log_fn(f"🌓 Halftime detectado após {rounds_per_half} rounds.")
     except: pass
 
     def side_of_a(r_num):
@@ -290,6 +324,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         reg_rounds = rounds_per_half * 2
         if r_num <= reg_rounds: return "T"
         ot_r = r_num - reg_rounds - 1
+        # OT é MR3 (3 rounds cada lado)
         return "CT" if (ot_r // 3) % 2 == 0 else "T"
 
     if not is_empty(df_re):
@@ -298,12 +333,22 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         for i, (_, r_end) in enumerate(df_re.iterrows()):
             r_num = i + 1
             w_side = normalize_team(str(r_end[w_col]))
-            cur_a_side = side_of_a(r_num)
-            is_a_win = (w_side == cur_a_side)
-            if is_a_win: pts_a += 1
-            else: pts_b += 1
-            round_summaries[r_num] = {"kills":[], "damage":{}, "winner": w_side, "reason": str(r_end.get("reason", "")), "logical_winner": "A" if is_a_win else "B"}
+            
+            # Só conta ponto se houver um vencedor claro (CT ou T)
+            if w_side in ("CT", "T"):
+                cur_a_side = side_of_a(r_num)
+                is_a_win = (w_side == cur_a_side)
+                if is_a_win: pts_a += 1
+                else: pts_b += 1
+            
+            round_summaries[r_num] = {
+                "kills":[], "damage":{}, "winner": w_side, 
+                "reason": str(r_end.get("reason", "")), 
+                "logical_winner": "A" if (w_side in ("CT", "T") and w_side == side_of_a(r_num)) else ("B" if w_side in ("CT", "T") else "Draw")
+            }
+        
         score_a, score_b = pts_a, pts_b
+        log_fn(f"📊 Placar calculado: {score_a} x {score_b} ({len(df_re)} rounds, RPH: {rounds_per_half})")
 
 
     # ── Estatísticas Avançadas (Duelos e Granadas) ──────────
@@ -500,7 +545,12 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                             "victimSteamId": k_vic,
                             "victimSide": vic_side,
                             "weapon": w,
-                            "isHeadshot": bool(k_row.get("headshot", False))
+                            "isHeadshot": bool(k_row.get("headshot", False)),
+                            "tick": int(k_row["tick"]),
+                            "attX": float(k_row.get("attacker_x", 0)),
+                            "attY": float(k_row.get("attacker_y", 0)),
+                            "vicX": float(k_row.get("victim_x", 0)),
+                            "vicY": float(k_row.get("victim_y", 0))
                         })
                         
                     if k_ass != "0" and k_ass in player_info and r_num <= rounds:
@@ -589,7 +639,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
             "mvps":          mvp_map.get(sid, 0),
             "adr":           adr,
             "hsPercentage":  round((hs / max(k, 1)) * 100, 1),
-            "matchResult":   "Tie",
+            "matchResult":   "tie",
             "metadata": {
                 "name": info["name"], "nickname": info["name"],
                 "kast": kast, "rating": rating, "weaponStats": weapon_stats[sid],
@@ -602,14 +652,53 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
             },
         })
 
+    # ── Extração de Trajetórias para Replay 2D ──
+    log_fn("📍 Extraindo trajetórias para replay 2D...")
+    replay_data = {}
+    try:
+        p_header = parser.parse_header()
+        playback_ticks = p_header.get("playback_ticks", 0)
+        # Amostragem de ~1Hz (64 ticks em CS2 / 32-64 ticks dependendo da demo)
+        interval = 64
+        target_ticks = list(range(0, int(playback_ticks), interval))
+        if target_ticks and target_ticks[-1] < playback_ticks: target_ticks.append(int(playback_ticks))
+        
+        # Colunas de interesse para o replay
+        pos_cols = ["X", "Y", "Z", "view_angle", "team_name", "is_alive"]
+        df_pos = parser.parse_ticks(pos_cols, ticks=target_ticks)
+        
+        if not is_empty(df_pos):
+            # Agrupa por tick
+            for tick, group in df_pos.groupby("tick"):
+                tick_pos = []
+                for _, row in group.iterrows():
+                    sid = str(row.get("steamid", "0")).split(".")[0]
+                    # Fallback para steamid se vier em outra coluna
+                    if sid == "0" and "user_steamid" in row: sid = str(row["user_steamid"]).split(".")[0]
+                    
+                    if sid in player_info:
+                        tick_pos.append({
+                            "id": sid,
+                            "x": round(float(row.get("X", 0)), 1),
+                            "y": round(float(row.get("Y", 0)), 1),
+                            "a": round(float(row.get("view_angle", 0)), 1),
+                            "l": bool(row.get("is_alive", True)),
+                            "s": normalize_team(str(row.get("team_name", "Unknown")))
+                        })
+                if tick_pos:
+                    replay_data[str(tick)] = tick_pos
+            log_fn(f"📍 Trajetórias extraídas: {len(replay_data)} frames.")
+    except Exception as e:
+        log_fn(f"⚠️ Erro ao extrair trajetórias: {e}")
+
     # Determina resultado final baseado no Time A vs Time B
     if score_a is not None and score_b is not None:
         if score_a > score_b: # Time A venceu
-            results_map = {"A": "Win", "B": "Loss"}
+            results_map = {"A": "win", "B": "loss"}
         elif score_b > score_a: # Time B venceu
-            results_map = {"A": "Loss", "B": "Win"}
+            results_map = {"A": "loss", "B": "win"}
         else: # Empate
-            results_map = {"A": "Tie", "B": "Tie"}
+            results_map = {"A": "tie", "B": "tie"}
             
         for p in players_out:
             sid = p["steamId"]
@@ -618,7 +707,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                 p["matchResult"] = results_map[logical_team]
             else:
                 # Fallback caso o jogador tenha entrado depois
-                p["matchResult"] = "Tie"
+                p["matchResult"] = "tie"
 
     match_id = generate_match_id(header, filepath)
     match_out = {
@@ -631,7 +720,8 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         "scoreB":    score_b,
         "metadata":  {
             "demoFile": os.path.basename(filepath),
-            "roundSummaries": round_summaries
+            "roundSummaries": round_summaries,
+            "replayData": replay_data
         },
     }
 

@@ -46,7 +46,16 @@ export default function MatchHistory({ matches, onSync, loading }: MatchHistoryP
         adr: m.adr || 0,
         kast: m.kast,
         matchDate: m.matchDate || m.finished_at || new Date().toISOString(),
-        result: m.result || (m.outcome === 'win' ? 'Win' : m.outcome === 'loss' ? 'Loss' : 'Draw'),
+        result: (() => {
+            const res = (m.result || '').toLowerCase();
+            const out = (m.outcome || '').toLowerCase();
+            if (res === 'win' || out === 'win') return 'Win';
+            if (res === 'loss' || out === 'loss') return 'Loss';
+            
+            // Se for empate no banco, mas o score diz o contrário, tenta inferir se possível
+            // (Mas sem saber o time do player aqui é difícil, então mantemos Draw/Tie)
+            return (res === 'draw' || res === 'tie' || out === 'draw' || out === 'tie') ? 'Draw' : 'Draw';
+        })(),
         score: typeof m.score === 'string' 
             ? m.score 
             : (Array.isArray(m.score) ? `${m.score[0]}-${m.score[1]}` : '0-0'),
