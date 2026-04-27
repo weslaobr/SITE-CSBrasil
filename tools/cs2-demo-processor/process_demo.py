@@ -388,21 +388,77 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
         if df_re is not None:
             log_fn(f"📖 round event colunas: {list(df_re.columns)}")
         
-        # Mapeamento de times via player_team
-        df_player_team = safe_parse_event("player_team")
-        if df_player_team is not None and not is_empty(df_player_team):
-            log_fn(f"📖 player_team colunas: {list(df_player_team.columns)}")
-            sid_col_pt = next((c for c in ["userid", "user_steamid", "steamid"] if c in df_player_team.columns), None)
-            team_col_pt = next((c for c in ["team", "teamnum", "newteam"] if c in df_player_team.columns), None)
-            if sid_col_pt and team_col_pt:
-                for _, pt_row in df_player_team.iterrows():
-                    sid = str(pt_row.get(sid_col_pt, "0"))
-                    t_num = str(pt_row.get(team_col_pt, ""))
-                    if sid not in team_mapping:
-                        if t_num in ("3", "CT"): team_mapping[sid] = "A"
-                        elif t_num in ("2", "T", "TERRORIST"): team_mapping[sid] = "B"
+        # ── Mapeamento de Times (CT=Time A, TR=Time B no round 1) ─────────────────
+        # ESTRATÉGIA: descobrir qual time começou no CT e qual começou no TR,
+        # para poder seguir os pontos de cada time através da troca de lado no halftime.
+        #
+        # Fonte 1 (mais confiável): parse_ticks no tick do PRIMEIRO round competitivo.
+        #   → Captura o lado exato de cada jogador NO INÍCIO do jogo, não do warmup.
+        # Fonte 2: player_info (já construído de parse_player_info).
+        # Fonte 3: player_team events (menos confiável — pode conter warmup).
 
-        log_fn(f"👥 Mapeamento inicial: {len(team_mapping)} jogadores identificados.")
+        # Tenta descobrir o tick do início do round 1 (primeiro round_freeze_end competitivo)
+        first_round_tick = start_tick
+        try:
+            df_freeze_start = safe_parse_event("round_freeze_end")
+            if not is_empty(df_freeze_start) and "tick" in df_freeze_start.columns:
+                first_round_tick = int(df_freeze_start["tick"].min())
+        except Exception:
+            first_round_tick = start_tick
+
+        # Fonte 1: parse_ticks no tick exato do início do round 1
+        team_mapping_built = False
+        for offset in [0, 32, 64, 128, 256]:
+            try:
+                probe = parser.parse_ticks(
+                    ["team_name"],
+                    ticks=[first_round_tick + offset]
+                )
+                if not is_empty(probe) and "steamid" in probe.columns and "team_name" in probe.columns:
+                    for _, row in probe.iterrows():
+                        sid = str(row["steamid"] or "0").split(".")[0]
+                        team = normalize_team(str(row.get("team_name", "")))
+                        if sid not in team_mapping and team in ("CT", "T") and sid in player_info:
+                            team_mapping[sid] = "A" if team == "CT" else "B"
+                    if len(team_mapping) >= 2:
+                        log_fn(f"👥 Times via ticks (R1 tick={first_round_tick+offset}): {len(team_mapping)} jogadores")
+                        team_mapping_built = True
+                        break
+            except Exception:
+                continue
+
+        # Fonte 2: player_info (já coletado de parse_player_info — reflete início do jogo)
+        if not team_mapping_built or len(team_mapping) < len(player_info):
+            for sid, info in player_info.items():
+                if sid not in team_mapping:
+                    if info["team"] == "CT":
+                        team_mapping[sid] = "A"
+                    elif info["team"] == "T":
+                        team_mapping[sid] = "B"
+            if team_mapping:
+                log_fn(f"👥 Times completados via player_info: {len(team_mapping)} jogadores")
+                team_mapping_built = True
+
+        # Fonte 3: player_team events (fallback, menos confiável)
+        if not team_mapping_built:
+            df_player_team = safe_parse_event("player_team")
+            if df_player_team is not None and not is_empty(df_player_team):
+                log_fn(f"📖 player_team colunas: {list(df_player_team.columns)}")
+                sid_col_pt = next((c for c in ["userid", "user_steamid", "steamid"] if c in df_player_team.columns), None)
+                team_col_pt = next((c for c in ["team", "teamnum", "newteam"] if c in df_player_team.columns), None)
+                if sid_col_pt and team_col_pt:
+                    for _, pt_row in df_player_team.iterrows():
+                        sid = str(pt_row.get(sid_col_pt, "0")).split(".")[0]
+                        t_num = str(pt_row.get(team_col_pt, ""))
+                        if sid not in team_mapping:
+                            if t_num in ("3", "CT"): team_mapping[sid] = "A"
+                            elif t_num in ("2", "T", "TERRORIST"): team_mapping[sid] = "B"
+                log_fn(f"👥 Times via player_team (fallback): {len(team_mapping)} jogadores")
+
+        # Verifica coerência: Team A deve ter jogadores no CT, Team B no TR
+        ct_players = [sid for sid, t in team_mapping.items() if t == "A"]
+        tr_players = [sid for sid, t in team_mapping.items() if t == "B"]
+        log_fn(f"✅ Time A (CT inicial): {len(ct_players)} jogadores | Time B (TR inicial): {len(tr_players)} jogadores")
 
         if not is_empty(df_re):
             # Detectar coluna de vencedor
@@ -410,34 +466,89 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
             if winner_col is None:
                 raise ValueError(f"Sem coluna winner. Colunas: {list(df_re.columns)}")
 
-            df_re = df_re.sort_values("tick")
+            df_re = df_re.sort_values("tick").reset_index(drop=True)
             pts_a, pts_b = 0, 0
-            last_side_a = "CT"
+            initial_side_a = "CT"   # Team A sempre começa como CT (team_num=3)
 
-            for _, r_end in df_re.iterrows():
-                w_side = normalize_team(str(r_end[winner_col]))
-                end_tick = int(r_end["tick"])
-                r_num_est = len([t for t in df_re["tick"] if t <= end_tick])
+            # ── Detectar formato: MR12 (padrão CS2 2023+) ou MR15 (legado) ────────
+            # O CS2 padrão usa MR12: 12 rounds por metade, vence quem fizer 13 primeiro.
+            # Detectamos o halftime pelo evento cs_intermission (mais confiável).
+            # Fallback: contamos rounds até a troca de lado aparecer nos ticks do parser.
+            # Fallback final: MR12 (rounds_per_half = 12).
+            rounds_per_half = 12  # padrão CS2 MR12
 
-                # Troca de lado no round 16
-                ct_now = "unknown"
-                if r_num_est > 15:
-                    ct_now = "T" if last_side_a == "CT" else "CT"
-                    last_side_a = ct_now
-
-                current_side_a = ct_now if ct_now != "unknown" else last_side_a
-                r_num = r_num_est
-                is_a_win = False
-
-                if current_side_a == "CT":
-                    if w_side == "CT": pts_a += 1; is_a_win = True
-                    elif w_side == "T": pts_b += 1
-                elif current_side_a == "T":
-                    if w_side == "T": pts_a += 1; is_a_win = True
-                    elif w_side == "CT": pts_b += 1
+            try:
+                # Tentativa 1: evento cs_intermission (fim da primeira metade)
+                df_ht = safe_parse_event("cs_intermission")
+                if is_empty(df_ht):
+                    df_ht = safe_parse_event("round_announce_halftime")
+                if not is_empty(df_ht) and "tick" in df_ht.columns:
+                    ht_tick = int(df_ht["tick"].min())
+                    # Conta rounds que terminaram ANTES do tick de halftime
+                    rounds_first_half = int((df_re["tick"] < ht_tick).sum())
+                    if rounds_first_half > 0:
+                        rounds_per_half = rounds_first_half
+                        log_fn(f"⏱️  Halftime detectado via evento: {rounds_per_half} rounds/metade")
                 else:
-                    if w_side == "CT": pts_a += 1; is_a_win = True
-                    else: pts_b += 1
+                    raise ValueError("Evento de halftime não encontrado, tentando fallback")
+            except Exception as _ht_e:
+                # Tentativa 2: inferir pelo tick de início de round (round_freeze_end)
+                try:
+                    df_freeze = safe_parse_event("round_freeze_end")
+                    # A pausa de halftime é visivelmente mais longa do que a de início de round.
+                    # Procura o maior gap entre ticks consecutivos de round_freeze_end.
+                    if not is_empty(df_freeze) and "tick" in df_freeze.columns:
+                        freeze_ticks = sorted(df_freeze["tick"].tolist())
+                        if len(freeze_ticks) >= 4:
+                            gaps = [(freeze_ticks[i+1] - freeze_ticks[i], i+1)
+                                    for i in range(len(freeze_ticks)-1)]
+                            max_gap_round = max(gaps, key=lambda x: x[0])[1]
+                            if 8 <= max_gap_round <= 16:   # sanidade: halftime entre round 8-16
+                                rounds_per_half = max_gap_round
+                                log_fn(f"⏱️  Halftime inferido por gap de freeze: round {rounds_per_half}")
+                            else:
+                                raise ValueError(f"Gap suspeito no round {max_gap_round}")
+                        else:
+                            raise ValueError("Poucos ticks de freeze para inferir halftime")
+                    else:
+                        raise ValueError("round_freeze_end vazio")
+                except Exception as _fb_e:
+                    log_fn(f"⏱️  Halftime não detectado ({_fb_e}), usando MR12 padrão (12 rounds/metade)")
+                    rounds_per_half = 12
+
+            # OT no CS2: 3 rounds por metade (MR3-OT)
+            ot_rounds_per_half = 3
+            reg_rounds = rounds_per_half * 2   # total de rounds na fase regular
+
+            def side_of_a(r_num: int) -> str:
+                """Retorna o lado (CT/T) do Time A no round r_num (1-based)."""
+                if r_num <= rounds_per_half:
+                    # Primeira metade
+                    return initial_side_a
+                elif r_num <= reg_rounds:
+                    # Segunda metade (após halftime)
+                    return "T" if initial_side_a == "CT" else "CT"
+                else:
+                    # Overtime: alterna a cada ot_rounds_per_half rounds
+                    ot_r = r_num - reg_rounds - 1   # 0-indexed dentro do OT
+                    ot_half = ot_r // ot_rounds_per_half
+                    if ot_half % 2 == 0:
+                        return initial_side_a          # OT half par → lado inicial
+                    else:
+                        return "T" if initial_side_a == "CT" else "CT"
+
+            log_fn(f"📐 Formato detectado: MR{rounds_per_half} | Troca no round {rounds_per_half + 1}")
+
+            for r_idx, (_, r_end) in enumerate(df_re.iterrows()):
+                r_num = r_idx + 1   # 1-based limpo
+                w_side = normalize_team(str(r_end[winner_col]))
+                current_side_a = side_of_a(r_num)
+                is_a_win = (current_side_a == w_side)
+
+                if is_a_win:
+                    pts_a += 1
+                else:
+                    pts_b += 1
 
                 if r_num not in round_summaries:
                     round_summaries[r_num] = {"kills": [], "damage": {}, "winner": w_side, "reason": ""}
@@ -445,7 +556,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None) -> dict | None:
 
             score_a = pts_a
             score_b = pts_b
-            log_fn(f"📊 Placar Final Reconstruído: {score_a} x {score_b}")
+            log_fn(f"📊 Placar Final: {score_a} x {score_b} (Time A={initial_side_a} R1, MR{rounds_per_half})")
         else:
             raise ValueError("Nenhum evento de round encontrado após filtro.")
             
@@ -1145,17 +1256,23 @@ class DemoProcessorApp(ctk.CTk):
             side="right", padx=14
         )
 
-        # ── Placar
+        # ── Placar (Time A = quem começou como CT | Time B = quem começou como TR)
         score_a = match.get("scoreA", "?")
         score_b = match.get("scoreB", "?")
         score_frame = ctk.CTkFrame(self._preview_frame, fg_color="#0f3460", corner_radius=8)
         score_frame.pack(fill="x", pady=(0, 12))
         ctk.CTkLabel(
             score_frame,
-            text=f"CT  {score_a}  ×  {score_b}  T",
+            text=f"TIME A  {score_a}  ×  {score_b}  TIME B",
             font=ctk.CTkFont(size=24, weight="bold"),
             text_color="white",
-        ).pack(pady=10)
+        ).pack(pady=8)
+        ctk.CTkLabel(
+            score_frame,
+            text="(Time A = CT inicial  |  Time B = TR inicial)",
+            font=ctk.CTkFont(size=10),
+            text_color="#7ca8d4",
+        ).pack(pady=(0, 8))
 
         # ── Tabela de Jogadores
         headers = ["Jogador", "Steam ID", "Time", "K", "D", "A", "ADR", "HS%", "Score", "Resultado"]
