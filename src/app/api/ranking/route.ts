@@ -9,20 +9,20 @@ export const revalidate = 0;
 
 const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
-function detectPlatform(source: string, gameMode: string | null): 'mix' | 'premier' | 'faceit' | 'gc' | null {
+function detectPlatform(source: string, metadata: any): 'mix' | 'premier' | 'faceit' | 'gc' | null {
     const src = source.toLowerCase();
-    const mode = (gameMode || '').toLowerCase();
     
     if (src === 'mix') return 'mix';
     if (src === 'leetify') {
+        // Tentar extrair do metadata se existir
+        const mode = (metadata?.gameMode || metadata?.data_source || '').toLowerCase();
         if (mode.includes('faceit')) return 'faceit';
         if (mode.includes('gamersclub') || mode === 'gc') return 'gc';
-        if (mode.includes('valve') || mode.includes('matchmaking') || mode.includes('premier')) return 'premier';
-        return 'premier'; // default for leetify if unknown
+        return 'premier';
     }
-    if (src === 'faceit') return 'faceit';
-    if (src === 'gamersclub' || src === 'gc') return 'gc';
-    if (src === 'premier' || src === 'matchmaking') return 'premier';
+    if (src.includes('faceit')) return 'faceit';
+    if (src.includes('gamersclub') || src === 'gc') return 'gc';
+    if (src.includes('premier') || src === 'matchmaking') return 'premier';
     
     return null;
 }
@@ -175,7 +175,7 @@ export async function GET() {
             where: { steamId: { in: allSteamIds } },
             include: { 
                 match: { 
-                    select: { source: true, gameMode: true } 
+                    select: { source: true, metadata: true } 
                 } 
             }
         });
@@ -184,6 +184,7 @@ export async function GET() {
         const playerPlatformStats = new Map<string, any>();
 
         allMatchPlayers.forEach((p: any) => {
+            if (!p.match) return; // Segurança contra registros órfãos
             const sid = p.steamId;
             if (!playerPlatformStats.has(sid)) {
                 const empty = () => ({ kills: 0, deaths: 0, assists: 0, adrSum: 0, hsSum: 0, count: 0, wins: 0 });
@@ -193,7 +194,7 @@ export async function GET() {
             }
 
             const pStats = playerPlatformStats.get(sid);
-            const platform = detectPlatform(p.match.source, p.match.gameMode);
+            const platform = detectPlatform(p.match.source, p.match.metadata);
 
             const update = (bucket: any) => {
                 bucket.kills += p.kills || 0;
