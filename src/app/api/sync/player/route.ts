@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/lib/auth";
-import { syncUserMatches } from "@/services/sync-service";
+import { syncUserMatches, syncUserStats } from "@/services/sync-service";
 
 export async function POST(req: NextRequest) {
     try {
