@@ -25,6 +25,15 @@ interface RankUser {
     faceitElo: number;
     hasSync?: boolean;
     mixMatches?: number;
+    stats?: {
+        [key in PlatformFilter]: {
+            matchesPlayed: number;
+            kdr: number;
+            adr: number;
+            hsPercentage: number;
+            winRate: string;
+        }
+    };
 }
 
 interface CommunityStats {
@@ -298,12 +307,20 @@ const GlobalRanking: React.FC = () => {
             user.nickname.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
-        if (platformFilter === 'premier') result = result.filter(u => u.rating > 0 && u.faceitElo === 0);
-        else if (platformFilter === 'faceit') result = result.filter(u => u.faceitLevel > 0);
-        else if (platformFilter === 'gc') result = result.filter(u => u.gcLevel > 0);
-        else if (platformFilter === 'mix') result = result.filter(u => (u.mixMatches || 0) > 0);
+        // Se o filtro for mix/faceit/gc/premier, filtramos quem tem pelo menos 1 partida nessa plataforma
+        if (platformFilter !== 'all') {
+            result = result.filter(u => (u.stats?.[platformFilter]?.matchesPlayed || 0) > 0);
+        }
 
-        return [...result].sort((a, b) => b[sortKey] - a[sortKey]);
+        return [...result].sort((a, b) => {
+            // Se o filtro for uma plataforma específica, ordenamos pelos dados DAQUELA plataforma
+            if (platformFilter !== 'all' && u.stats?.[platformFilter]) {
+                const valA = a.stats?.[platformFilter]?.[sortKey as keyof typeof a.stats.all] ?? a[sortKey as keyof typeof a];
+                const valB = b.stats?.[platformFilter]?.[sortKey as keyof typeof b.stats.all] ?? b[sortKey as keyof typeof b];
+                return (valB as number) - (valA as number);
+            }
+            return (b[sortKey] as number) - (a[sortKey] as number);
+        });
     }, [users, searchTerm, sortKey, platformFilter]);
 
     const top3 = filteredAndSorted.slice(0, 3);
@@ -605,8 +622,22 @@ const GlobalRanking: React.FC = () => {
                             filteredAndSorted.map((user, idx) => {
                                 const isTop1 = user.rank === 1;
                                 const isTop3 = user.rank <= 3;
-                                const sortVal = user[sortKey] as number;
-                                const maxSortVal = Math.max(...filteredAndSorted.map(u => u[sortKey] as number));
+                                
+                                // Dados dinâmicos baseados na plataforma
+                                const pStats = user.stats?.[platformFilter] || {
+                                    kdr: user.kdr,
+                                    adr: user.adr,
+                                    hsPercentage: user.hsPercentage,
+                                    matchesPlayed: user.matchesPlayed,
+                                    winRate: user.winRate
+                                };
+
+                                const sortVal = (pStats[sortKey as keyof typeof pStats] ?? user[sortKey as keyof typeof user]) as number;
+                                const maxSortVal = Math.max(...filteredAndSorted.map(u => {
+                                    const us = u.stats?.[platformFilter] || u;
+                                    return (us[sortKey as keyof typeof us] ?? u[sortKey as keyof typeof u]) as number;
+                                }));
+                                
                                 const pct = Math.min(maxSortVal > 0 ? (sortVal / maxSortVal) * 100 : 0, 100);
                                 const tier = getPremierTier(user.rating);
                                 const tierColor = getRatingTierColor(user.rating);
@@ -665,8 +696,8 @@ const GlobalRanking: React.FC = () => {
                                                     >
                                                         {user.nickname}
                                                     </span>
-                                                    {user.winRate !== 'N/A' && (
-                                                        <span className="text-[9px] text-zinc-600 font-bold">WR {user.winRate}</span>
+                                                    {pStats.winRate !== 'N/A' && (
+                                                        <span className="text-[9px] text-zinc-600 font-bold">WR {pStats.winRate}</span>
                                                     )}
                                                 </div>
                                             </Link>
@@ -706,43 +737,41 @@ const GlobalRanking: React.FC = () => {
 
                                         <td className="px-4 py-3.5 text-center hidden lg:table-cell">
                                             <span className="text-[11px] font-black text-zinc-400">
-                                                {platformFilter === 'mix' 
-                                                    ? (user.mixMatches && user.mixMatches > 0 ? user.mixMatches : <span className="text-zinc-800">—</span>)
-                                                    : (user.matchesPlayed > 0 ? user.matchesPlayed : <span className="text-zinc-800">—</span>)
-                                                }
+                                                {pStats.matchesPlayed > 0 ? pStats.matchesPlayed : <span className="text-zinc-800">—</span>}
                                             </span>
                                         </td>
 
                                         {/* KDR */}
+                                        {/* KDR */}
                                         <td className="px-4 py-3.5 text-center hidden lg:table-cell">
                                             <span className={`text-[11px] font-black ${
-                                                user.kdr >= 1.5 ? 'text-emerald-400' :
-                                                user.kdr >= 1.0 ? 'text-zinc-300' :
-                                                user.kdr > 0 ? 'text-red-400' : 'text-zinc-800'
+                                                pStats.kdr >= 1.5 ? 'text-emerald-400' :
+                                                pStats.kdr >= 1.0 ? 'text-zinc-300' :
+                                                pStats.kdr > 0 ? 'text-red-400' : 'text-zinc-800'
                                             }`}>
-                                                {user.kdr > 0 ? user.kdr.toFixed(2) : '—'}
+                                                {pStats.kdr > 0 ? pStats.kdr.toFixed(2) : '—'}
                                             </span>
                                         </td>
-
+                                        
                                         {/* ADR */}
                                         <td className="px-4 py-3.5 text-center hidden md:table-cell">
                                             <span className={`text-[11px] font-black ${
-                                                user.adr >= 90 ? 'text-emerald-400' :
-                                                user.adr >= 70 ? 'text-zinc-300' :
-                                                user.adr > 0 ? 'text-zinc-500' : 'text-zinc-800'
+                                                pStats.adr >= 90 ? 'text-emerald-400' :
+                                                pStats.adr >= 70 ? 'text-zinc-300' :
+                                                pStats.adr > 0 ? 'text-zinc-500' : 'text-zinc-800'
                                             }`}>
-                                                {user.adr > 0 ? user.adr : '—'}
+                                                {pStats.adr > 0 ? pStats.adr : '—'}
                                             </span>
                                         </td>
-
+                                        
                                         {/* HS% */}
                                         <td className="px-4 py-3.5 text-center hidden md:table-cell">
                                             <span className={`text-[11px] font-black ${
-                                                user.hsPercentage >= 60 ? 'text-orange-400' :
-                                                user.hsPercentage >= 40 ? 'text-zinc-300' :
-                                                user.hsPercentage > 0 ? 'text-zinc-500' : 'text-zinc-800'
+                                                pStats.hsPercentage >= 60 ? 'text-orange-400' :
+                                                pStats.hsPercentage >= 40 ? 'text-zinc-300' :
+                                                pStats.hsPercentage > 0 ? 'text-zinc-500' : 'text-zinc-800'
                                             }`}>
-                                                {user.hsPercentage > 0 ? `${user.hsPercentage}%` : '—'}
+                                                {pStats.hsPercentage > 0 ? `${pStats.hsPercentage}%` : '—'}
                                             </span>
                                         </td>
 

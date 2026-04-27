@@ -9,6 +9,24 @@ export const revalidate = 0;
 
 const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
+function detectPlatform(source: string, gameMode: string | null): 'mix' | 'premier' | 'faceit' | 'gc' | null {
+    const src = source.toLowerCase();
+    const mode = (gameMode || '').toLowerCase();
+    
+    if (src === 'mix') return 'mix';
+    if (src === 'leetify') {
+        if (mode.includes('faceit')) return 'faceit';
+        if (mode.includes('gamersclub') || mode === 'gc') return 'gc';
+        if (mode.includes('valve') || mode.includes('matchmaking') || mode.includes('premier')) return 'premier';
+        return 'premier'; // default for leetify if unknown
+    }
+    if (src === 'faceit') return 'faceit';
+    if (src === 'gamersclub' || src === 'gc') return 'gc';
+    if (src === 'premier' || src === 'matchmaking') return 'premier';
+    
+    return null;
+}
+
 export async function GET() {
     try {
         // 1. Buscar Players com Stats
@@ -99,8 +117,6 @@ export async function GET() {
                     }
 
                     if (Object.keys(updateData).length > 0) {
-                        // NOVA LÓGICA: Manter sempre o maior valor (Peak Rating)
-                        // Se o novo valor for 0 (expirado) ou menor que o atual, mantemos o atual.
                         const finalUpdate: any = {};
                         
                         if (updateData.premierRating !== undefined) {
@@ -154,127 +170,99 @@ export async function GET() {
 
         const userMap = new Map(users.map(u => [u.steamId, u]));
 
-        // 4. Buscar stats agregados de GlobalMatchPlayer por steamId
-        const matchStats = await (prisma as any).globalMatchPlayer.groupBy({
-            by: ['steamId'],
-            where: {
-                steamId: { in: allSteamIds }
-            },
-            _count: { id: true },
-            _avg: {
-                adr: true,
-                hsPercentage: true,
-            },
-            _sum: {
-                kills: true,
-                deaths: true,
-                assists: true,
-            },
-        });
-
-        // Calcular win rate por steamId a partir de partidas
-        const winData = await (prisma as any).globalMatchPlayer.groupBy({
-            by: ['steamId', 'matchResult'],
-            where: {
-                steamId: { in: allSteamIds }
-            },
-            _count: { id: true },
-        });
-
-        // NOVO: Contar partidas especificamente do tipo "mix" para o filtro do ranking
-        const mixMatchData = await (prisma as any).globalMatchPlayer.groupBy({
-            by: ['steamId'],
-            where: {
-                steamId: { in: allSteamIds },
-                match: { source: 'mix' }
-            },
-            _count: { id: true }
-        });
-        const mixMapCounts = new Map<string, number>(
-            (mixMatchData as any[]).map(m => [m.steamId, m._count.id])
-        );
-
-        type WinEntry = { steamId: string; matchResult: string; _count: { id: number } };
-        const winMap = new Map<string, { wins: number; total: number }>();
-        (winData as WinEntry[]).forEach((entry) => {
-            if (!winMap.has(entry.steamId)) {
-                winMap.set(entry.steamId, { wins: 0, total: 0 });
+        // 4. Buscar todos os registros de GlobalMatchPlayer para agregar por plataforma
+        const allMatchPlayers = await (prisma as any).globalMatchPlayer.findMany({
+            where: { steamId: { in: allSteamIds } },
+            include: { 
+                match: { 
+                    select: { source: true, gameMode: true } 
+                } 
             }
-            const curr = winMap.get(entry.steamId)!;
-            curr.total += entry._count.id;
-            if (entry.matchResult?.toLowerCase() === 'win') curr.wins += entry._count.id;
         });
 
-        type MatchStatEntry = {
-            steamId: string;
-            _count: { id: number };
-            _avg: { adr: number | null; hsPercentage: number | null };
-            _sum: { kills: number | null; deaths: number | null; assists: number | null };
-        };
-        const matchStatsMap = new Map<string, MatchStatEntry>(
-            (matchStats as MatchStatEntry[]).map(s => [s.steamId, s])
-        );
+        // 5. Agregar stats por player e plataforma
+        const playerPlatformStats = new Map<string, any>();
 
-        // 5. Mapear para o formato do frontend
+        allMatchPlayers.forEach((p: any) => {
+            const sid = p.steamId;
+            if (!playerPlatformStats.has(sid)) {
+                const empty = () => ({ kills: 0, deaths: 0, assists: 0, adrSum: 0, hsSum: 0, count: 0, wins: 0 });
+                playerPlatformStats.set(sid, {
+                    all: empty(), mix: empty(), premier: empty(), faceit: empty(), gc: empty()
+                });
+            }
+
+            const pStats = playerPlatformStats.get(sid);
+            const platform = detectPlatform(p.match.source, p.match.gameMode);
+
+            const update = (bucket: any) => {
+                bucket.kills += p.kills || 0;
+                bucket.deaths += p.deaths || 0;
+                bucket.assists += p.assists || 0;
+                bucket.adrSum += (p.adr || 0);
+                bucket.hsSum += (p.hsPercentage || 0);
+                bucket.count++;
+                if (p.matchResult?.toLowerCase() === 'win') bucket.wins++;
+            };
+
+            update(pStats.all);
+            if (platform && pStats[platform]) update(pStats[platform]);
+        });
+
+        // 6. Mapear para o formato do frontend
         const rankedUsers = players
             .map(p => {
                 const userData = userMap.get(p.steamId);
                 const stats = p.Stats;
-                const rating = stats?.premierRating || stats?.faceitElo || 0;
-                const mStat = matchStatsMap.get(p.steamId);
-                const wData = winMap.get(p.steamId);
+                const pStats = playerPlatformStats.get(p.steamId);
+                
+                // Função helper para calcular KDR/ADR/HS de um bucket
+                const calculate = (b: any) => {
+                    const kdr = b.deaths > 0 ? Math.round((b.kills / b.deaths) * 100) / 100 : b.kills > 0 ? b.kills : 0;
+                    const adr = b.count > 0 ? Math.round(b.adrSum / b.count) : 0;
+                    const hs = b.count > 0 ? Math.round(b.hsSum / b.count) : 0;
+                    const wr = b.count > 0 ? `${Math.round((b.wins / b.count) * 100)}%` : 'N/A';
+                    return { kdr, adr, hsPercentage: hs, matchesPlayed: b.count, winRate: wr };
+                };
 
-                // Partidas
-                const matchesPlayed = mStat?._count?.id || userData?.matchesPlayed || 0;
+                const statsBreakdown: any = {
+                    all: pStats ? calculate(pStats.all) : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A' },
+                    mix: pStats ? calculate(pStats.mix) : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A' },
+                    faceit: pStats ? calculate(pStats.faceit) : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A' },
+                    premier: pStats ? calculate(pStats.premier) : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A' },
+                    gc: pStats ? calculate(pStats.gc) : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A' },
+                };
 
-                // KDR
-                const totalKills = mStat?._sum?.kills || 0;
-                const totalDeaths = mStat?._sum?.deaths || 0;
-                const kdr = totalDeaths > 0 ? Math.round((totalKills / totalDeaths) * 100) / 100 : totalKills > 0 ? totalKills : 0;
-
-                // ADR
-                const adr = mStat?._avg?.adr
-                    ? Math.round(mStat._avg.adr)
-                    : userData?.adr
-                    ? Math.round(userData.adr)
-                    : 0;
-
-                // HS%
-                const hsPercentage = mStat?._avg?.hsPercentage
-                    ? Math.round(mStat._avg.hsPercentage)
-                    : userData?.hsPercentage
-                    ? Math.round(userData.hsPercentage)
-                    : 0;
-
-                // Win Rate
-                let winRate = 'N/A';
-                if (wData && wData.total > 0) {
-                    winRate = `${Math.round((wData.wins / wData.total) * 100)}%`;
-                } else if (userData?.winRate) {
-                    winRate = `${Math.round(userData.winRate)}%`;
+                // Fallback para dados legados do User se não houver GlobalMatchPlayer
+                if (statsBreakdown.all.matchesPlayed === 0 && userData) {
+                    statsBreakdown.all = {
+                        kdr: 0,
+                        adr: Math.round(userData.adr || 0),
+                        hsPercentage: Math.round(userData.hsPercentage || 0),
+                        matchesPlayed: userData.matchesPlayed || 0,
+                        winRate: userData.winRate ? `${Math.round(userData.winRate)}%` : 'N/A'
+                    };
                 }
+
+                const rating = stats?.premierRating || stats?.faceitElo || 0;
 
                 return {
                     steamId: p.steamId,
                     nickname: userData?.name || (p as any).steamName || p.faceitName || `Player #${p.steamId.slice(-4)}`,
                     avatar: userData?.image || (p as any).steamAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.steamId}`,
                     rating,
-                    winRate,
-                    adr,
-                    hsPercentage,
-                    kdr,
-                    matchesPlayed,
+                    ...statsBreakdown.all, // Padrão
+                    stats: statsBreakdown,
                     hasSync: !!userData?.steamMatchAuthCode && !!userData?.steamLatestMatchCode,
                     trend: 'neutral' as const,
                     gcLevel: stats?.gcLevel || 0,
                     faceitLevel: stats?.faceitLevel || 0,
                     faceitElo: stats?.faceitElo || 0,
-                    mixMatches: mixMapCounts.get(p.steamId) || 0,
                 };
             })
             .filter(user => !user.steamId.endsWith('_temp'));
 
-        // Ordenar por rating decrescente
+        // Ordenar por rating decrescente (ou o critério principal)
         rankedUsers.sort((a, b) => b.rating - a.rating);
 
         const itemsWithRank = rankedUsers.map((user, index) => ({
@@ -282,7 +270,7 @@ export async function GET() {
             rank: index + 1
         }));
 
-        // 6. Estatísticas globais da comunidade
+        // Estatísticas globais
         const totalPlayers = itemsWithRank.length;
         const avgRating = totalPlayers > 0
             ? Math.round(itemsWithRank.reduce((s, u) => s + u.rating, 0) / totalPlayers)
