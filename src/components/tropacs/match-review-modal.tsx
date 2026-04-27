@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trophy, Target, Zap, Shield, Sword, BarChart3, TrendingUp, ExternalLink, Calendar, Download, Activity, BarChart2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import Replay2D from './replay-2d';
 
 interface MatchReviewModalProps {
     matchId: string | null;
@@ -13,7 +14,7 @@ interface MatchReviewModalProps {
 export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalProps) {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>(null);
-    const [activeTab, setActiveTab] = useState<'geral' | 'analitico' | 'utilitarios' | 'duelos'>('geral');
+    const [activeTab, setActiveTab] = useState<'geral' | 'analitico' | 'utilitarios' | 'duelos' | 'simulacao'>('geral');
 
     useEffect(() => {
         if (matchId) {
@@ -118,7 +119,8 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                 { id: 'geral', label: 'Geral' },
                                 { id: 'analitico', label: 'Analítico' },
                                 { id: 'utilitarios', label: 'Utilitários' },
-                                { id: 'duelos', label: 'Duelos' }
+                                { id: 'duelos', label: 'Duelos' },
+                                { id: 'simulacao', label: 'Simulação 2D' }
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
@@ -144,6 +146,21 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                             </div>
                         ) : data ? (
                             <div className="space-y-12 pb-12">
+                                {/* 2D Simulation Tab */}
+                                {activeTab === 'simulacao' && data?.metadata?.replayData && (
+                                    <div className="mb-8">
+                                        <Replay2D 
+                                            mapName={data.map_name || 'de_mirage'}
+                                            replayData={data.metadata.replayData}
+                                            killEvents={Object.values(data.metadata.roundSummaries || {}).flatMap((r: any) => (r.kills || []).map((k: any) => ({
+                                                ...k,
+                                                attackerSide: k.attackerSide || 'Unknown',
+                                                victimSide: k.victimSide || 'Unknown'
+                                            })))}
+                                        />
+                                    </div>
+                                )}
+
                                 {/* Performance Cards in Analytical Tab */}
                                 {activeTab === 'analitico' && (
                                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
