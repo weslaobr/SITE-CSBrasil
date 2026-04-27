@@ -713,7 +713,6 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     ))}
                 </div>
             </div>
-            </div>
 
             {/* Main Content Area */}
             <main className={`overflow-hidden flex-grow ${variant === 'full' ? 'bg-zinc-950/60 border border-white/[0.07] shadow-2xl shadow-black/50 backdrop-blur-xl rounded-3xl' : 'rounded-[20px]'}`}>
