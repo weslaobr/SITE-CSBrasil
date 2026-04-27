@@ -584,10 +584,11 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     </motion.div>
                 )}
             </AnimatePresence>
+                </>
+            )}
 
             {/* ── STAT CARDS ────────────────────────────────────────────────── */}
-            {variant === 'full' && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 ${variant === 'profile' ? 'mb-2' : ''}`}>
                 {([
                     {
                         label: 'Win Rate', value: `${stats.wr}%`,
@@ -665,10 +666,9 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     </motion.div>
                 ))}
             </div>
-            )}
 
             {/* ── FILTROS ───────────────────────────────────────────────────── */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className={`flex flex-wrap items-center gap-3 ${variant === 'profile' ? 'bg-zinc-950/20 p-4 rounded-3xl border border-white/5' : ''}`}>
                 {/* modo */}
                 <div className="flex items-center gap-1 bg-zinc-950/60 border border-white/[0.06] p-1 rounded-xl">
                     {[
@@ -713,8 +713,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     ))}
                 </div>
             </div>
-            </>
-            )}
+            </div>
 
             {/* Main Content Area */}
             <main className={`overflow-hidden flex-grow ${variant === 'full' ? 'bg-zinc-950/60 border border-white/[0.07] shadow-2xl shadow-black/50 backdrop-blur-xl rounded-3xl' : 'rounded-[20px]'}`}>
