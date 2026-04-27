@@ -201,6 +201,11 @@ def insert_match(match_data: dict, players_data: list[dict]) -> tuple[bool, str]
             user_id = get_user_id_by_steam(conn, steam_id)
 
             try:
+                # Garantir que o nome esteja no metadata para o site ler
+                p_meta = p.get("metadata", {})
+                if "name" not in p_meta: p_meta["name"] = p.get("displayName", "Jogador")
+                if "nickname" not in p_meta: p_meta["nickname"] = p.get("displayName", "Jogador")
+
                 cur.execute(
                     """
                     INSERT INTO "GlobalMatchPlayer"
@@ -232,7 +237,7 @@ def insert_match(match_data: dict, players_data: list[dict]) -> tuple[bool, str]
                         float(p.get("adr", 0.0)),
                         float(p.get("hsPercentage", 0.0)),
                         p.get("matchResult", "tie"),
-                        json.dumps(p.get("metadata", {})),
+                        json.dumps(p_meta),
                     ),
                 )
                 inserted_players += 1
