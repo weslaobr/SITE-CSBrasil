@@ -73,6 +73,18 @@ def normalize_team(raw: str) -> str:
     return raw_s
 
 
+def safe_val(val, default=0.0):
+    """Garante que o valor seja um float válido para JSON (sem NaN/Inf)."""
+    try:
+        import math
+        f = float(val)
+        if math.isnan(f) or math.isinf(f):
+            return default
+        return f
+    except:
+        return default
+
+
 # ─────────────────────────────────────────────
 # Parser de Demo
 # ─────────────────────────────────────────────
@@ -547,10 +559,10 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                             "weapon": w,
                             "isHeadshot": bool(k_row.get("headshot", False)),
                             "tick": int(k_row["tick"]),
-                            "attX": float(k_row.get("attacker_x", 0)),
-                            "attY": float(k_row.get("attacker_y", 0)),
-                            "vicX": float(k_row.get("victim_x", 0)),
-                            "vicY": float(k_row.get("victim_y", 0))
+                            "attX": round(safe_val(k_row.get("attacker_x", 0)), 1),
+                            "attY": round(safe_val(k_row.get("attacker_y", 0)), 1),
+                            "vicX": round(safe_val(k_row.get("victim_x", 0)), 1),
+                            "vicY": round(safe_val(k_row.get("victim_y", 0)), 1)
                         })
                         
                     if k_ass != "0" and k_ass in player_info and r_num <= rounds:
@@ -652,42 +664,38 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
             },
         })
 
-    # ── Extração de Trajetórias para Replay 2D ──
-    log_fn("📍 Extraindo trajetórias para replay 2D...")
+    # ── Extração de Trajetórias Ultra-Comprimidas ──
+    log_fn("📍 Extraindo trajetórias comprimidas para replay 2D...")
     replay_data = {}
+    player_id_map = {sid: i for i, sid in enumerate(player_info.keys())}
     try:
         p_header = parser.parse_header()
         playback_ticks = p_header.get("playback_ticks", 0)
-        # Amostragem de ~1Hz (64 ticks em CS2 / 32-64 ticks dependendo da demo)
-        interval = 64
+        # Amostragem de ~2Hz (128 ticks em CS2) para reduzir peso no banco
+        interval = 128
         target_ticks = list(range(0, int(playback_ticks), interval))
         if target_ticks and target_ticks[-1] < playback_ticks: target_ticks.append(int(playback_ticks))
         
-        # Colunas de interesse para o replay
-        pos_cols = ["X", "Y", "Z", "view_angle", "team_name", "is_alive"]
+        pos_cols = ["X", "Y", "view_angle", "is_alive"]
         df_pos = parser.parse_ticks(pos_cols, ticks=target_ticks)
         
         if not is_empty(df_pos):
-            # Agrupa por tick
             for tick, group in df_pos.groupby("tick"):
-                tick_pos = []
+                tick_pos = [] # Formato: [idx, x, y, angle]
                 for _, row in group.iterrows():
                     sid = str(row.get("steamid", "0")).split(".")[0]
-                    # Fallback para steamid se vier em outra coluna
                     if sid == "0" and "user_steamid" in row: sid = str(row["user_steamid"]).split(".")[0]
                     
-                    if sid in player_info:
-                        tick_pos.append({
-                            "id": sid,
-                            "x": round(float(row.get("X", 0)), 1),
-                            "y": round(float(row.get("Y", 0)), 1),
-                            "a": round(float(row.get("view_angle", 0)), 1),
-                            "l": bool(row.get("is_alive", True)),
-                            "s": normalize_team(str(row.get("team_name", "Unknown")))
-                        })
+                    if sid in player_id_map and bool(row.get("is_alive", True)):
+                        tick_pos.append([
+                            player_id_map[sid],
+                            int(safe_val(row.get("X", 0))),
+                            int(safe_val(row.get("Y", 0))),
+                            int(safe_val(row.get("view_angle", 0)))
+                        ])
                 if tick_pos:
                     replay_data[str(tick)] = tick_pos
-            log_fn(f"📍 Trajetórias extraídas: {len(replay_data)} frames.")
+            log_fn(f"📍 Replay comprimido: {len(replay_data)} frames.")
     except Exception as e:
         log_fn(f"⚠️ Erro ao extrair trajetórias: {e}")
 
@@ -721,7 +729,8 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         "metadata":  {
             "demoFile": os.path.basename(filepath),
             "roundSummaries": round_summaries,
-            "replayData": replay_data
+            "replayData": replay_data,
+            "playerIndexMap": {i: sid for sid, i in player_id_map.items()}
         },
     }
 

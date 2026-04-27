@@ -152,6 +152,8 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                         <Replay2D 
                                             mapName={data.map_name || 'de_mirage'}
                                             replayData={data.metadata.replayData}
+                                            playerIndexMap={data.metadata.playerIndexMap || {}}
+                                            stats={data.stats || []}
                                             killEvents={Object.values(data.metadata.roundSummaries || {}).flatMap((r: any) => (r.kills || []).map((k: any) => ({
                                                 ...k,
                                                 attackerSide: k.attackerSide || 'Unknown',

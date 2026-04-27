@@ -32,12 +32,13 @@ interface KillEvent {
 
 interface Props {
   mapName: string;
-  replayData: ReplayData;
+  replayData: { [tick: string]: number[][] }; // [idx, x, y, angle]
   killEvents: KillEvent[];
-  roundSummaries?: any;
+  playerIndexMap: { [idx: string]: string }; // idx -> steamId
+  stats?: any[]; // Para pegar o time (CT/T) do jogador
 }
 
-const Replay2D: React.FC<Props> = ({ mapName, replayData, killEvents, roundSummaries }) => {
+const Replay2D: React.FC<Props> = ({ mapName, replayData, killEvents, playerIndexMap, stats }) => {
   const [currentTickIdx, setCurrentTickIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -45,7 +46,21 @@ const Replay2D: React.FC<Props> = ({ mapName, replayData, killEvents, roundSumma
 
   const ticks = useMemo(() => Object.keys(replayData).map(Number).sort((a, b) => a - b), [replayData]);
   const currentTick = ticks[currentTickIdx];
-  const players = replayData[currentTick] || [];
+  
+  const players = useMemo(() => {
+    const raw = replayData[currentTick] || [];
+    return raw.map(p => {
+      const steamId = playerIndexMap[p[0]];
+      const playerStat = stats?.find(s => String(s.steam64_id || s.steamId) === String(steamId));
+      return {
+        id: steamId,
+        x: p[1],
+        y: p[2],
+        a: p[3],
+        s: playerStat?.team || playerStat?.initial_team_number === 2 ? 'CT' : 'T'
+      };
+    });
+  }, [currentTick, replayData, playerIndexMap, stats]);
 
   // Encontrar kills recentes (últimos 3 segundos / 3 ticks na nossa amostragem de 1Hz)
   const recentKills = useMemo(() => {
