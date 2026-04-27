@@ -181,6 +181,19 @@ export async function GET() {
             _count: { id: true },
         });
 
+        // NOVO: Contar partidas especificamente do tipo "mix" para o filtro do ranking
+        const mixMatchData = await (prisma as any).globalMatchPlayer.groupBy({
+            by: ['steamId'],
+            where: {
+                steamId: { in: allSteamIds },
+                match: { source: 'mix' }
+            },
+            _count: { id: true }
+        });
+        const mixMapCounts = new Map<string, number>(
+            (mixMatchData as any[]).map(m => [m.steamId, m._count.id])
+        );
+
         type WinEntry = { steamId: string; matchResult: string; _count: { id: number } };
         const winMap = new Map<string, { wins: number; total: number }>();
         (winData as WinEntry[]).forEach((entry) => {
@@ -256,6 +269,7 @@ export async function GET() {
                     gcLevel: stats?.gcLevel || 0,
                     faceitLevel: stats?.faceitLevel || 0,
                     faceitElo: stats?.faceitElo || 0,
+                    mixMatches: mixMapCounts.get(p.steamId) || 0,
                 };
             })
             .filter(user => !user.steamId.endsWith('_temp'));

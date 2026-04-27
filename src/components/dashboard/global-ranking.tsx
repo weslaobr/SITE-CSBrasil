@@ -24,6 +24,7 @@ interface RankUser {
     faceitLevel: number;
     faceitElo: number;
     hasSync?: boolean;
+    mixMatches?: number;
 }
 
 interface CommunityStats {
@@ -36,7 +37,7 @@ interface CommunityStats {
 }
 
 type SortKey = 'rating' | 'kdr' | 'adr' | 'hsPercentage' | 'faceitElo' | 'gcLevel' | 'matchesPlayed';
-type PlatformFilter = 'all' | 'premier' | 'faceit' | 'gc';
+type PlatformFilter = 'all' | 'premier' | 'faceit' | 'gc' | 'mix';
 
 const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
     { key: 'rating',       label: 'SR Premier',  icon: <Trophy size={11} /> },
@@ -53,6 +54,7 @@ const PLATFORM_FILTERS: { key: PlatformFilter; label: string }[] = [
     { key: 'premier', label: 'Premier' },
     { key: 'faceit',  label: 'Faceit' },
     { key: 'gc',      label: 'GC' },
+    { key: 'mix',     label: 'Mix' },
 ];
 
 const PODIUM_CONFIG = [
@@ -299,6 +301,7 @@ const GlobalRanking: React.FC = () => {
         if (platformFilter === 'premier') result = result.filter(u => u.rating > 0 && u.faceitElo === 0);
         else if (platformFilter === 'faceit') result = result.filter(u => u.faceitLevel > 0);
         else if (platformFilter === 'gc') result = result.filter(u => u.gcLevel > 0);
+        else if (platformFilter === 'mix') result = result.filter(u => (u.mixMatches || 0) > 0);
 
         return [...result].sort((a, b) => b[sortKey] - a[sortKey]);
     }, [users, searchTerm, sortKey, platformFilter]);
@@ -567,7 +570,9 @@ const GlobalRanking: React.FC = () => {
                             <th className="px-4 py-3.5">
                                 {sortKey === 'faceitElo' ? 'Faceit ELO' : sortKey === 'gcLevel' ? 'GC Level' : 'SR Premier'}
                             </th>
-                            <th className="px-4 py-3.5 text-center hidden lg:table-cell">Partidas</th>
+                            <th className="px-4 py-3.5 text-center hidden lg:table-cell">
+                                {platformFilter === 'mix' ? 'Mixes' : 'Partidas'}
+                            </th>
                             <th className="px-4 py-3.5 text-center hidden lg:table-cell">KDR</th>
                             <th className="px-4 py-3.5 text-center hidden md:table-cell">ADR</th>
                             <th className="px-4 py-3.5 text-center hidden md:table-cell">HS%</th>
@@ -699,10 +704,12 @@ const GlobalRanking: React.FC = () => {
                                             </div>
                                         </td>
 
-                                        {/* Partidas */}
                                         <td className="px-4 py-3.5 text-center hidden lg:table-cell">
                                             <span className="text-[11px] font-black text-zinc-400">
-                                                {user.matchesPlayed > 0 ? user.matchesPlayed : <span className="text-zinc-800">—</span>}
+                                                {platformFilter === 'mix' 
+                                                    ? (user.mixMatches && user.mixMatches > 0 ? user.mixMatches : <span className="text-zinc-800">—</span>)
+                                                    : (user.matchesPlayed > 0 ? user.matchesPlayed : <span className="text-zinc-800">—</span>)
+                                                }
                                             </span>
                                         </td>
 
