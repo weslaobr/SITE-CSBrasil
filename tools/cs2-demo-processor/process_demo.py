@@ -1582,15 +1582,6 @@ class DemoProcessorApp(ctk.CTk):
             p["assists"] = p_assists
             p["hsPercentage"] = round((p_hs / max(p_kills, 1)) * 100, 1)
             p["adr"] = round(p_damage / max(len(selected_rounds), 1), 1)
-                
-                # Damage (já somado acima no loop)
-                pass
-
-            p["kills"] = p_kills
-            p["deaths"] = p_deaths
-            p["assists"] = p_assists
-            p["adr"] = p_damage / len(selected_rounds) if selected_rounds else 0
-            p["hsPercentage"] = (p_hs / p_kills * 100) if p_kills > 0 else 0
             
             # Winner? (Lógica soberana baseada no placar final da tela)
             if new_score_a > new_score_b:

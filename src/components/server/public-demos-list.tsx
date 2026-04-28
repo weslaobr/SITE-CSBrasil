@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     Download, Clock, HardDrive, RefreshCw, 
     FileWarning, Loader2, Search, ExternalLink,
-    FileText, Calendar
+    FileText, Calendar, Play
 } from 'lucide-react';
 
 interface DemoFile {
@@ -282,7 +282,7 @@ export function PublicDemosList() {
                                                 ) : processingStatus[demo.name] === 'error' ? (
                                                     <FileWarning size={16} />
                                                 ) : (
-                                                    <Zap size={16} />
+                                                    <Play size={16} />
                                                 )}
                                                 {processingFile === demo.name ? 'Processando...' : 
                                                  processingStatus[demo.name] === 'success' ? 'Enviado!' :
