@@ -12,17 +12,20 @@ const STEAM_API_KEY = process.env.STEAM_API_KEY;
 function detectPlatform(source: string, metadata: any): 'mix' | 'premier' | 'faceit' | 'gc' | null {
     const src = source.toLowerCase();
     
-    if (src === 'mix') return 'mix';
+    // Mix matches: local uploads, demo processor, or manually tagged
+    if (['mix', 'demo', 'local'].some(s => src.includes(s))) return 'mix';
+    
     if (src === 'leetify') {
-        // Tentar extrair do metadata se existir
         const mode = (metadata?.gameMode || metadata?.data_source || '').toLowerCase();
         if (mode.includes('faceit')) return 'faceit';
         if (mode.includes('gamersclub') || mode === 'gc') return 'gc';
+        if (mode.includes('mix') || mode.includes('demo')) return 'mix';
         return 'premier';
     }
+    
     if (src.includes('faceit')) return 'faceit';
     if (src.includes('gamersclub') || src === 'gc') return 'gc';
-    if (src.includes('premier') || src === 'matchmaking') return 'premier';
+    if (src.includes('premier') || src === 'matchmaking' || src === 'steam') return 'premier';
     
     return null;
 }

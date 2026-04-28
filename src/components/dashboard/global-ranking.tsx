@@ -56,6 +56,7 @@ const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
     { key: 'adr',          label: 'ADR',         icon: <Target size={11} /> },
     { key: 'hsPercentage', label: 'Headshot %',  icon: <Flame size={11} /> },
     { key: 'matchesPlayed',label: 'Partidas',    icon: <Zap size={11} /> },
+    { key: 'winRate' as any, label: 'Win Rate',    icon: <TrendingUp size={11} /> },
 ];
 
 const PLATFORM_FILTERS: { key: PlatformFilter; label: string }[] = [
@@ -313,13 +314,15 @@ const GlobalRanking: React.FC = () => {
         }
 
         return [...result].sort((a, b) => {
-            // Se o filtro for uma plataforma específica, ordenamos pelos dados DAQUELA plataforma
-            if (platformFilter !== 'all' && a.stats?.[platformFilter]) {
-                const valA = a.stats?.[platformFilter]?.[sortKey as keyof typeof a.stats.all] ?? a[sortKey as keyof typeof a];
-                const valB = b.stats?.[platformFilter]?.[sortKey as keyof typeof b.stats.all] ?? b[sortKey as keyof typeof b];
-                return (valB as number) - (valA as number);
-            }
-            return (b[sortKey] as number) - (a[sortKey] as number);
+            const getVal = (u: RankUser) => {
+                const s = platformFilter !== 'all' ? (u.stats?.[platformFilter] || u) : u;
+                let v = (s as any)[sortKey] ?? (u as any)[sortKey];
+                if (sortKey === 'winRate' as any) {
+                    v = parseInt(String(v || '0').replace('%', ''));
+                }
+                return v;
+            };
+            return (getVal(b) as number) - (getVal(a) as number);
         });
     }, [users, searchTerm, sortKey, platformFilter]);
 
@@ -663,7 +666,7 @@ const GlobalRanking: React.FC = () => {
                                                     boxShadow: user.rank === 1 ? `0 0 12px ${tier.color}60` : 'none',
                                                 } : { background: 'rgba(255,255,255,0.05)', color: '#71717a' }}
                                             >
-                                                {isTop1 ? <Crown size={13} /> : user.rank < 10 ? `0${user.rank}` : user.rank}
+                                                {idx === 0 && searchTerm === '' ? <Crown size={13} /> : (idx + 1) < 10 ? `0${idx + 1}` : (idx + 1)}
                                             </div>
                                         </td>
 
