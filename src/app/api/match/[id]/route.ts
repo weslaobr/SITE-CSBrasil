@@ -245,13 +245,26 @@ export async function PATCH(
              return NextResponse.json({ error: "Missing scoreA or scoreB" }, { status: 400 });
         }
 
-        // 1. Update GlobalMatch
+        // 1. Update GlobalMatch main columns
         const updatedMatch = await prisma.globalMatch.update({
             where: { id: matchId },
             data: {
                 scoreA: Number(scoreA),
                 scoreB: Number(scoreB)
             }
+        });
+
+        // 1.5. IMPORTANT: Also update metadata scores to prevent UI stale data
+        const currentMeta = (updatedMatch.metadata as any) || {};
+        const newMeta = {
+            ...currentMeta,
+            team_3_score: Number(scoreA),
+            team_2_score: Number(scoreB)
+        };
+
+        await prisma.globalMatch.update({
+            where: { id: matchId },
+            data: { metadata: newMeta }
         });
 
         // 2. Update GlobalMatchPlayer results based on new score
@@ -277,7 +290,7 @@ export async function PATCH(
             data: { matchResult: resB }
         });
 
-        console.log(`[PATCH Match] Match ${matchId} manually updated to ${scoreA}-${scoreB} by User ${session.user.email}`);
+        console.log(`[PATCH Match] Match ${matchId} manually updated to ${scoreA}-${scoreB} (including metadata) by User ${session.user.email}`);
 
         return NextResponse.json({ success: true, match: updatedMatch });
     } catch (error: any) {
