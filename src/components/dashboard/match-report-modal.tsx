@@ -161,24 +161,30 @@ const MatchReportModal: React.FC<Props> = ({
     const handleUpdateScore = async () => {
         setIsSavingScore(true);
         try {
-            const { a: currentScoreA, e: currentScoreE } = getScore();
-            // We need to determine logical A/B based on the user's team
-            const meta = currentMatch?.metadata || {};
+            // Determine user team with multiple ID format checks
             const stats: any[] = meta.stats || currentMatch?.players || [];
             const userP = stats.find(p => {
-                const sid = p.steam64_id || p.steamId || p.player_id;
-                return sid === userSteamId;
+                const sid = p.steam64_id || p.steamId || p.player_id || p.steamid64;
+                return sid === userSteamId || String(sid) === String(userSteamId);
             });
-            const myLogicalTeam = userP?.team || userP?.initial_team_number || 'A';
             
+            let myLogicalTeam = userP?.team || userP?.initial_team_number || 'A';
+            
+            // Normalize team identifiers
+            const teamStr = String(myLogicalTeam).toUpperCase();
+            const isTeamB = teamStr === 'B' || teamStr === '2' || teamStr === 'T' || teamStr === 'TR' || teamStr === 'TERRORIST';
+            const normalizedTeam = isTeamB ? 'B' : 'A';
+
             let finalLogicalA = editScoreA;
             let finalLogicalB = editScoreB;
 
-            // If user is on Team B, their UI Score A (Left) corresponds to Logical B
-            if (myLogicalTeam === 'B' || myLogicalTeam === 2) {
+            // If user is on Team B, their UI Score A (Left) corresponds to Logical B in the database
+            if (normalizedTeam === 'B') {
                 finalLogicalA = editScoreB;
                 finalLogicalB = editScoreA;
             }
+
+            console.log(`[ScoreUpdate] User=${userSteamId} Team=${normalizedTeam} LeftScore=${editScoreA} RightScore=${editScoreB} -> LogicalA=${finalLogicalA} LogicalB=${finalLogicalB}`);
 
             await axios.patch(`/api/match/${currentMatch.id}`, {
                 scoreA: finalLogicalA,
