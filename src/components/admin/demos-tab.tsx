@@ -22,6 +22,8 @@ export default function DemosTab() {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+    const [processingFile, setProcessingFile] = useState<string | null>(null);
+    const [processingStatus, setProcessingStatus] = useState<Record<string, 'idle' | 'loading' | 'success' | 'error'>>({});
 
     useEffect(() => {
         fetchDemos();
@@ -63,6 +65,39 @@ export default function DemosTab() {
         }
     };
 
+    const handleProcess = async (file: DemoFile) => {
+        setProcessingFile(file.name);
+        setProcessingStatus(prev => ({ ...prev, [file.name]: 'loading' }));
+        
+        try {
+            const downloadRes = await fetch(`/api/server/demos/download?file=${encodeURIComponent(file.path)}`);
+            if (!downloadRes.ok) throw new Error('Erro ao obter link da demo');
+            const downloadData = await downloadRes.json();
+            
+            if (!downloadData.downloadUrl) throw new Error('Link de download não gerado');
+
+            const res = await fetch('/api/sync/manual-demo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: downloadData.downloadUrl }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Erro no processamento');
+            }
+
+            setProcessingStatus(prev => ({ ...prev, [file.name]: 'success' }));
+            setTimeout(() => setProcessingStatus(prev => ({ ...prev, [file.name]: 'idle' })), 5000);
+        } catch (err: any) {
+            console.error(err);
+            setProcessingStatus(prev => ({ ...prev, [file.name]: 'error' }));
+            setTimeout(() => setProcessingStatus(prev => ({ ...prev, [file.name]: 'idle' })), 5000);
+        } finally {
+            setProcessingFile(null);
+        }
+    };
+
     const formatSize = (bytes: number) => {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -88,6 +123,16 @@ export default function DemosTab() {
 
     const formatDemoName = (name: string) => {
         let cleanName = name.replace(/\.dem$/i, '');
+        
+        const dateMatch = cleanName.match(/(\d{8})_(\d{4})/);
+        let timeDisplay = null;
+        if (dateMatch) {
+            const d = dateMatch[1];
+            const t = dateMatch[2];
+            timeDisplay = `${d.slice(6,8)}/${d.slice(4,6)} às ${t.slice(0,2)}:${t.slice(2,4)}`;
+            cleanName = cleanName.replace(`match_${d}_${t}_`, '');
+        }
+
         const mapMatch = cleanName.match(/(de_[a-zA-Z0-9]+|cs_[a-zA-Z0-9]+)/i);
         const map = mapMatch ? mapMatch[0] : null;
         
@@ -99,7 +144,8 @@ export default function DemosTab() {
 
         return {
             title: cleanName || "Partida",
-            mapDisplay: map ? map.replace(/^(de_|cs_)/i, '').charAt(0).toUpperCase() + map.replace(/^(de_|cs_)/i, '').slice(1) : null
+            mapDisplay: map ? map.replace(/^(de_|cs_)/i, '').charAt(0).toUpperCase() + map.replace(/^(de_|cs_)/i, '').slice(1) : null,
+            timeDisplay
         };
     };
 
@@ -192,18 +238,23 @@ export default function DemosTab() {
                                                 <FileText size={16} />
                                             </div>
                                             <div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex flex-wrap items-center gap-2">
                                                     <p className="text-[11px] font-bold text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight">
                                                         {formatDemoName(demo.name).title}
                                                     </p>
                                                     {formatDemoName(demo.name).mapDisplay && (
-                                                        <span className="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 text-[9px] font-bold text-yellow-400 uppercase">
+                                                        <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20 text-[9px] font-bold text-yellow-500 uppercase flex-shrink-0">
                                                             {formatDemoName(demo.name).mapDisplay}
                                                         </span>
                                                     )}
+                                                    {formatDemoName(demo.name).timeDisplay && (
+                                                        <span className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[9px] font-bold text-blue-400 uppercase flex-shrink-0">
+                                                            {formatDemoName(demo.name).timeDisplay}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <p className="text-[9px] font-mono text-zinc-600 mt-0.5 truncate max-w-[200px]" title={demo.name}>
-                                                    {demo.name}
+                                                <p className="text-[9px] font-mono text-zinc-600 mt-1 truncate max-w-[300px]" title={demo.name}>
+                                                    <span className="opacity-50 italic">orig:</span> {demo.name}
                                                 </p>
                                             </div>
                                         </div>
@@ -221,18 +272,39 @@ export default function DemosTab() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button 
-                                            onClick={() => handleDownload(demo)}
-                                            disabled={downloadingFile === demo.name}
-                                            className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {downloadingFile === demo.name ? (
-                                                <Loader2 size={12} className="animate-spin" />
-                                            ) : (
-                                                <Download size={12} />
-                                            )}
-                                            {downloadingFile === demo.name ? 'Gerando...' : 'Download'}
-                                        </button>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button 
+                                                onClick={() => handleProcess(demo)}
+                                                disabled={processingFile === demo.name || downloadingFile === demo.name}
+                                                className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${
+                                                    processingStatus[demo.name] === 'success' ? 'bg-green-600/10 text-green-400 border-green-500/20' :
+                                                    processingStatus[demo.name] === 'error' ? 'bg-red-600/10 text-red-400 border-red-500/20' :
+                                                    'bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border-blue-500/20'
+                                                }`}
+                                            >
+                                                {processingFile === demo.name ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : (
+                                                    <RefreshCw size={12} className={processingStatus[demo.name] === 'success' ? '' : ''} />
+                                                )}
+                                                {processingFile === demo.name ? 'Processando...' : 
+                                                 processingStatus[demo.name] === 'success' ? 'Concluído' :
+                                                 processingStatus[demo.name] === 'error' ? 'Falhou' : 'Analisar Demo'}
+                                            </button>
+
+                                            <button 
+                                                onClick={() => handleDownload(demo)}
+                                                disabled={downloadingFile === demo.name || processingFile === demo.name}
+                                                className="inline-flex items-center gap-2 px-3 py-2 bg-zinc-800 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-zinc-700 transition-all border border-white/5 disabled:opacity-50"
+                                            >
+                                                {downloadingFile === demo.name ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : (
+                                                    <Download size={12} />
+                                                )}
+                                                {downloadingFile === demo.name ? '...' : 'Download'}
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

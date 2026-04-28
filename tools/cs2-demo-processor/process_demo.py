@@ -89,6 +89,45 @@ def safe_val(val, default=0.0):
 # Parser de Demo
 # ─────────────────────────────────────────────
 
+def quick_scan_demo(filepath: str) -> dict | None:
+    """
+    Faz um scan super rápido (2-5s) apenas para identificar a partida.
+    Retorna { map, scoreA, scoreB, players: [names...] }
+    """
+    if not HAS_PARSER: return None
+    try:
+        parser = DemoParser(filepath)
+        header = parser.parse_header()
+        map_name = str(header.get("map_name", "unknown")).lower()
+        
+        # Pega jogadores e scores dos últimos ticks
+        df_players = parser.parse_ticks(["name", "team_name", "score"])
+        if df_players is None or df_players.empty:
+            return {"map": map_name, "scoreA": 0, "scoreB": 0, "players": []}
+        
+        # Pega o último estado de cada jogador
+        latest = df_players.dropna(subset=["steamid"]).drop_duplicates(subset=["steamid"], keep="last")
+        players = []
+        sA, sB = 0, 0
+        
+        for _, row in latest.iterrows():
+            name = str(row.get("name", "Unknown"))
+            team = normalize_team(str(row.get("team_name", "")))
+            if team == "CT": sA = max(sA, int(row.get("score", 0)))
+            if team == "T": sB = max(sB, int(row.get("score", 0)))
+            if name and not name.isdigit():
+                players.append(f"{name} ({team})")
+        
+        return {
+            "map": map_name,
+            "scoreA": sA,
+            "scoreB": sB,
+            "players": sorted(players),
+            "duration": seconds_to_mmss(float(header.get("playback_time", 0)))
+        }
+    except:
+        return None
+
 def safe_parse_event(parser, event_name):
     """Tenta parse_event compatível com demoparser2 >= 0.41.2."""
     for kwargs in [{"player": [], "other": []}, {"player": []}, {}]:
@@ -865,12 +904,15 @@ class DemoProcessorApp(ctk.CTk):
 
         self._show_placeholder()
 
-    def _show_placeholder(self):
+    def _show_placeholder(self, text=None):
         for w in self._preview_frame.winfo_children():
             w.destroy()
+        
+        msg = text if text else "Selecione um arquivo .dem para visualizar os dados\ne identificar a partida antes de processar."
+        
         ctk.CTkLabel(
             self._preview_frame,
-            text="Selecione um arquivo .dem e clique em\n'Processar Demo' para visualizar os dados.",
+            text=msg,
             font=ctk.CTkFont(size=13),
             text_color="gray",
             justify="center",
@@ -920,9 +962,46 @@ class DemoProcessorApp(ctk.CTk):
 
             self._btn_process.configure(state="normal", text="🔍  Processar Demo")
             self._btn_send.configure(state="disabled")
-            self._show_placeholder()
+            self._show_placeholder("🔍 Identificando partida...")
             self._log_box.delete("1.0", "end")
             self._log(f"📂 Demo selecionada: {os.path.basename(path)}")
+            
+            # Inicia Quick Scan em background
+            threading.Thread(target=self._do_quick_scan, args=(path,), daemon=True).start()
+
+    def _do_quick_scan(self, path):
+        info = quick_scan_demo(path)
+        if info:
+            self.after(0, lambda: self._show_quick_preview(info))
+        else:
+            self.after(0, lambda: self._show_placeholder("⚠️ Não foi possível identificar detalhes rapidamente.\nVocê ainda pode processar a demo normalmente."))
+
+    def _show_quick_preview(self, info):
+        for w in self._preview_frame.winfo_children():
+            w.destroy()
+            
+        container = ctk.CTkFrame(self._preview_frame, fg_color="#16213e", corner_radius=15)
+        container.pack(fill="x", padx=10, pady=10)
+        
+        ctk.CTkLabel(container, text="PARTIDA IDENTIFICADA", font=ctk.CTkFont(size=10, weight="bold"), text_color="#e94560").pack(pady=(10,0))
+        
+        main_info = f"{info['map'].upper()}  |  {info['scoreA']} x {info['scoreB']}"
+        ctk.CTkLabel(container, text=main_info, font=ctk.CTkFont(size=24, weight="bold")).pack(pady=5)
+        
+        ctk.CTkLabel(container, text=f"Duração: {info['duration']}", font=ctk.CTkFont(size=12), text_color="gray").pack()
+        
+        # Lista de Jogadores
+        p_frame = ctk.CTkFrame(container, fg_color="transparent")
+        p_frame.pack(fill="x", padx=20, pady=15)
+        
+        ctk.CTkLabel(p_frame, text="JOGADORES DETECTADOS:", font=ctk.CTkFont(size=9, weight="bold"), text_color="gray").pack(anchor="w")
+        
+        # Divide em duas colunas se tiver muitos
+        cols = 2
+        for i, p_name in enumerate(info['players']):
+            ctk.CTkLabel(p_frame, text=f"• {p_name}", font=ctk.CTkFont(size=11), anchor="w").pack(anchor="w", pady=1)
+            
+        ctk.CTkLabel(container, text="Esta é a partida correta? Se sim, clique em 'Processar Demo' abaixo.", font=ctk.CTkFont(size=10, slant="italic"), text_color="#555").pack(pady=(0, 10))
 
     def _select_multiple_demos(self):
         paths = filedialog.askopenfilenames(
@@ -1413,15 +1492,23 @@ class DemoProcessorApp(ctk.CTk):
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
-    if not HAS_PARSER:
-        print("ERRO: demoparser2 não instalado.")
-        print("Execute run.bat ou: pip install -r requirements.txt")
-        sys.exit(1)
+    try:
+        if not HAS_PARSER:
+            print("ERRO: demoparser2 não instalado.")
+            print("Execute run.bat ou: pip install -r requirements.txt")
+            sys.exit(1)
 
-    if not HAS_PANDAS:
-        print("ERRO: pandas não instalado.")
-        print("Execute run.bat ou: pip install -r requirements.txt")
-        sys.exit(1)
+        if not HAS_PANDAS:
+            print("ERRO: pandas não instalado.")
+            print("Execute run.bat ou: pip install -r requirements.txt")
+            sys.exit(1)
 
-    app = DemoProcessorApp()
-    app.mainloop()
+        app = DemoProcessorApp()
+        app.mainloop()
+    except Exception as e:
+        print("\n" + "="*50)
+        print("❌ CRITICAL ERROR DURING STARTUP:")
+        print("="*50)
+        traceback.print_exc()
+        print("="*50)
+        input("\nPressione ENTER para fechar...")

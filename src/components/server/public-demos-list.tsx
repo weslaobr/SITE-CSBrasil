@@ -22,6 +22,8 @@ export function PublicDemosList() {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+    const [processingFile, setProcessingFile] = useState<string | null>(null);
+    const [processingStatus, setProcessingStatus] = useState<Record<string, 'idle' | 'loading' | 'success' | 'error'>>({});
 
     useEffect(() => {
         fetchDemos();
@@ -62,6 +64,41 @@ export function PublicDemosList() {
         }
     };
 
+    const handleProcess = async (file: DemoFile) => {
+        setProcessingFile(file.name);
+        setProcessingStatus(prev => ({ ...prev, [file.name]: 'loading' }));
+        
+        try {
+            // 1. Get signed download URL
+            const downloadRes = await fetch(`/api/server/demos/download?file=${encodeURIComponent(file.path)}`);
+            if (!downloadRes.ok) throw new Error('Erro ao obter link da demo');
+            const downloadData = await downloadRes.json();
+            
+            if (!downloadData.downloadUrl) throw new Error('Link de download não gerado');
+
+            // 2. Send to processor
+            const res = await fetch('/api/sync/manual-demo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: downloadData.downloadUrl }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Erro no processamento');
+            }
+
+            setProcessingStatus(prev => ({ ...prev, [file.name]: 'success' }));
+            setTimeout(() => setProcessingStatus(prev => ({ ...prev, [file.name]: 'idle' })), 5000);
+        } catch (err: any) {
+            console.error(err);
+            setProcessingStatus(prev => ({ ...prev, [file.name]: 'error' }));
+            setTimeout(() => setProcessingStatus(prev => ({ ...prev, [file.name]: 'idle' })), 5000);
+        } finally {
+            setProcessingFile(null);
+        }
+    };
+
     const formatSize = (bytes: number) => {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -87,6 +124,17 @@ export function PublicDemosList() {
 
     const formatDemoName = (name: string) => {
         let cleanName = name.replace(/\.dem$/i, '');
+        
+        // Try to extract date/time from MatchZy format: match_20240428_1530_de_dust2
+        const dateMatch = cleanName.match(/(\d{8})_(\d{4})/);
+        let timeDisplay = null;
+        if (dateMatch) {
+            const d = dateMatch[1];
+            const t = dateMatch[2];
+            timeDisplay = `${d.slice(6,8)}/${d.slice(4,6)} às ${t.slice(0,2)}:${t.slice(2,4)}`;
+            cleanName = cleanName.replace(`match_${d}_${t}_`, '');
+        }
+
         const mapMatch = cleanName.match(/(de_[a-zA-Z0-9]+|cs_[a-zA-Z0-9]+)/i);
         const map = mapMatch ? mapMatch[0] : null;
         
@@ -98,7 +146,8 @@ export function PublicDemosList() {
 
         return {
             title: cleanName || "Partida",
-            mapDisplay: map ? map.replace(/^(de_|cs_)/i, '').charAt(0).toUpperCase() + map.replace(/^(de_|cs_)/i, '').slice(1) : null
+            mapDisplay: map ? map.replace(/^(de_|cs_)/i, '').charAt(0).toUpperCase() + map.replace(/^(de_|cs_)/i, '').slice(1) : null,
+            timeDisplay
         };
     };
 
@@ -196,13 +245,18 @@ export function PublicDemosList() {
                                                         {formatDemoName(demo.name).title}
                                                     </p>
                                                     {formatDemoName(demo.name).mapDisplay && (
-                                                        <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold text-yellow-400 uppercase flex-shrink-0">
+                                                        <span className="px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20 text-[10px] font-bold text-yellow-500 uppercase flex-shrink-0">
                                                             {formatDemoName(demo.name).mapDisplay}
                                                         </span>
                                                     )}
+                                                    {formatDemoName(demo.name).timeDisplay && (
+                                                        <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400 uppercase flex-shrink-0">
+                                                            {formatDemoName(demo.name).timeDisplay}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <p className="text-[10px] font-mono text-zinc-500 break-all leading-relaxed">
-                                                    <span className="text-zinc-400 font-bold">Arquivo:</span> {demo.name}
+                                                <p className="text-[10px] font-mono text-zinc-600 break-all leading-relaxed">
+                                                    <span className="text-zinc-500 font-bold">Original:</span> {demo.name}
                                                 </p>
                                                 <div className="flex flex-wrap items-center gap-4 mt-2 text-[10px] font-bold text-zinc-500 uppercase">
                                                     <span className="flex items-center gap-1.5"><Clock size={12} className="text-zinc-600" /> {formatDate(demo.modifiedAt)}</span>
@@ -211,18 +265,43 @@ export function PublicDemosList() {
                                             </div>
                                         </div>
 
-                                        <button 
-                                            onClick={() => handleDownload(demo)}
-                                            disabled={downloadingFile === demo.name}
-                                            className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl transition-all shadow-lg shadow-yellow-500/10 active:scale-95 disabled:opacity-50 font-black uppercase tracking-widest text-[10px] w-full sm:w-auto"
-                                        >
-                                            {downloadingFile === demo.name ? (
-                                                <Loader2 size={16} className="animate-spin" />
-                                            ) : (
-                                                <Download size={16} />
-                                            )}
-                                            {downloadingFile === demo.name ? 'Gerando...' : 'Baixar'}
-                                        </button>
+                                        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                                            <button 
+                                                onClick={() => handleProcess(demo)}
+                                                disabled={processingFile === demo.name || downloadingFile === demo.name}
+                                                className={`flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 font-black uppercase tracking-widest text-[10px] w-full sm:w-auto border ${
+                                                    processingStatus[demo.name] === 'success' ? 'bg-green-600/10 text-green-400 border-green-500/20' :
+                                                    processingStatus[demo.name] === 'error' ? 'bg-red-600/10 text-red-400 border-red-500/20' :
+                                                    'bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border-blue-500/20'
+                                                }`}
+                                            >
+                                                {processingFile === demo.name ? (
+                                                    <Loader2 size={16} className="animate-spin" />
+                                                ) : processingStatus[demo.name] === 'success' ? (
+                                                    <Check size={16} />
+                                                ) : processingStatus[demo.name] === 'error' ? (
+                                                    <FileWarning size={16} />
+                                                ) : (
+                                                    <Zap size={16} />
+                                                )}
+                                                {processingFile === demo.name ? 'Processando...' : 
+                                                 processingStatus[demo.name] === 'success' ? 'Enviado!' :
+                                                 processingStatus[demo.name] === 'error' ? 'Falhou' : 'Processar'}
+                                            </button>
+
+                                            <button 
+                                                onClick={() => handleDownload(demo)}
+                                                disabled={downloadingFile === demo.name || processingFile === demo.name}
+                                                className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition-all active:scale-95 disabled:opacity-50 font-black uppercase tracking-widest text-[10px] w-full sm:w-auto border border-white/5"
+                                            >
+                                                {downloadingFile === demo.name ? (
+                                                    <Loader2 size={16} className="animate-spin" />
+                                                ) : (
+                                                    <Download size={16} />
+                                                )}
+                                                {downloadingFile === demo.name ? 'Gerando...' : 'Baixar'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </React.Fragment>
                             );
