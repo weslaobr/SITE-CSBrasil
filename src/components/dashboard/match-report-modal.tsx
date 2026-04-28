@@ -597,25 +597,35 @@ const MatchReportModal: React.FC<Props> = ({
             return null;
         };
 
-        const my = teamScore(myTeam);
-        const enemy = teamScore(enemyTeam);
-        if (my !== null && enemy !== null) return { a: my, e: enemy };
+        const getRawScores = (): { a: number; e: number } => {
+            const my = teamScore(myTeam);
+            const enemy = teamScore(enemyTeam);
+            if (my !== null && enemy !== null) return { a: my, e: enemy };
 
-        // GlobalMatch fields fallback
-        const gA = currentMatch?.scoreA, gB = currentMatch?.scoreB;
-        if (gA !== undefined && gB !== undefined) {
-            const isB = myTeam === '3' || myTeam?.toLowerCase() === 'b';
-            return isB ? { a: Number(gB), e: Number(gA) } : { a: Number(gA), e: Number(gB) };
-        }
+            const gA = currentMatch?.scoreA, gB = currentMatch?.scoreB;
+            if (gA !== undefined && gB !== undefined) {
+                const isB = myTeam === '3' || myTeam?.toLowerCase() === 'b';
+                return isB ? { a: Number(gB), e: Number(gA) } : { a: Number(gA), e: Number(gB) };
+            }
 
-        // Score string fallback
-        const parts = (currentMatch?.score || '').split(/[^\d]+/).map(Number).filter(n => !isNaN(n));
-        if (parts.length >= 2) {
-            const isB = myTeam === '3' || myTeam?.toLowerCase() === 'b';
-            return isB ? { a: parts[1], e: parts[0] } : { a: parts[0], e: parts[1] };
-        }
+            const parts = (currentMatch?.score || '').split(/[^\d]+/).map(Number).filter(n => !isNaN(n));
+            if (parts.length >= 2) {
+                const isB = myTeam === '3' || myTeam?.toLowerCase() === 'b';
+                return isB ? { a: parts[1], e: parts[0] } : { a: parts[0], e: parts[1] };
+            }
+            return { a: 0, e: 0 };
+        };
 
-        return { a: 0, e: 0 };
+        const { a, e } = getRawScores();
+        const res = (currentMatch.result || '').toLowerCase();
+        const isW = res === 'win' || res === 'vitória' || res === 'vitoria';
+        const isL = res === 'loss' || res === 'derrota';
+        
+        // Final safeguard: if official result contradicts score positions, swap them.
+        if (isW && a < e) return { a: e, e: a };
+        if (isL && a > e) return { a: e, e: a };
+        
+        return { a, e };
     };
 
     const { a: scoreA, e: scoreE } = computeScore();
