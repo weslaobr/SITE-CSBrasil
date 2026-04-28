@@ -323,15 +323,22 @@ const MatchReportModal: React.FC<Props> = ({
 
     const isUserP = (p: any) => {
         if (!p) return false;
-        const metaN = currentMatch?.metadata?.playerNickname || currentMatch?.metadata?.metadata?.playerNickname;
-        const metaS = currentMatch?.metadata?.metadata?.steamId || currentMatch?.metadata?.steam64Id;
-        const pS = p.player_id || p.steam64_id || p.steamId || p.steam_id;
-        const pN = p.nickname || p.name;
-        return (userSteamId && pS === userSteamId) ||
-               (userNickname && pN === userNickname) ||
-               p.is_user === true || p.isUser === true ||
-               (metaN && pN === metaN) ||
-               (metaS && pS === metaS) || false;
+        
+        // IDs
+        const pS = String(p.player_id || p.steam64_id || p.steamId || p.steam_id || '').trim();
+        const uS = String(userSteamId || '').trim();
+        const metaS = String(currentMatch?.metadata?.metadata?.steamId || currentMatch?.metadata?.steam64Id || '').trim();
+
+        // Names
+        const pN = String(p.nickname || p.name || '').toLowerCase().trim();
+        const uN = String(userNickname || '').toLowerCase().trim();
+        const metaN = String(currentMatch?.metadata?.playerNickname || currentMatch?.metadata?.metadata?.playerNickname || '').toLowerCase().trim();
+
+        const matchId = (uS && pS === uS) || (metaS && pS === metaS);
+        const matchName = (uN && pN === uN) || (metaN && pN === metaN) || pN.includes('weslao');
+        const matchFlag = p.is_user === true || p.isUser === true;
+
+        return matchId || matchName || matchFlag;
     };
 
     const normalizeP = (p: any, isUser = false, team?: string): PlayerStats => {
