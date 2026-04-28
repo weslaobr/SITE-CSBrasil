@@ -1467,8 +1467,10 @@ const MatchReportModal: React.FC<Props> = ({
                                                 const isMe = (session?.user as any)?.steamId === userSteamId;
                                                 const allyTitle = isMe ? "Seu Time" : (userNickname ? `Time de ${userNickname}` : "Time do Jogador");
                                                 return (
+                                                    <>
                                                         <TeamBlock players={t1} title={allyTitle} scoreVal={scoreA} ally={true} onRemovePlayer={handleRemovePlayer} />
                                                         <TeamBlock players={t2} title="Adversários" scoreVal={scoreE} ally={false} onRemovePlayer={handleRemovePlayer} />
+                                                    </>
                                                 );
                                             })()}
                                         </div>
