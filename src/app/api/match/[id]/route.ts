@@ -294,8 +294,8 @@ export async function PATCH(
                     scoreB: Number(scoreB),
                     metadata: {
                         ...currentMeta,
-                        team_3_score: Number(scoreA),
-                        team_2_score: Number(scoreB)
+                        team_2_score: Number(scoreA),
+                        team_3_score: Number(scoreB)
                     }
                 }
             });
