@@ -171,6 +171,21 @@ export async function GET() {
                 matchesPlayed: true,
                 steamMatchAuthCode: true,
                 steamLatestMatchCode: true,
+                matches: {
+                    select: {
+                        source: true,
+                        gameMode: true,
+                        matchDate: true,
+                        mapName: true,
+                        result: true,
+                        score: true,
+                        kills: true,
+                        deaths: true,
+                        assists: true,
+                        adr: true,
+                        hsPercentage: true
+                    }
+                }
             }
         });
 
@@ -195,14 +210,11 @@ export async function GET() {
         const playerPlatformStats = new Map<string, any>();
         const processedMatches = new Set<string>(); // Key: steamId + map + time_bin
 
-        allMatchPlayers.forEach((p: any) => {
-            if (!p.match) return;
-            const sid = p.steamId;
-            
-            // Lógica de desduplicação similar ao MatchesDashboard
-            const matchTime = new Date(p.match.matchDate).getTime();
-            const timeBin = Math.floor(matchTime / (15 * 60 * 1000)); // 15 min bins
-            const mapNorm = (p.match.mapName || '').toLowerCase().replace('de_', '').trim();
+        // Função de utilidade para normalizar dados de ambas as tabelas
+        const processMatchData = (sid: string, mData: any, pStats: any) => {
+            const matchTime = new Date(mData.matchDate).getTime();
+            const timeBin = Math.floor(matchTime / (15 * 60 * 1000));
+            const mapNorm = (mData.mapName || '').toLowerCase().replace('de_', '').trim();
             const dedupeKey = `${sid}_${mapNorm}_${timeBin}`;
             
             if (processedMatches.has(dedupeKey)) return;
@@ -215,36 +227,52 @@ export async function GET() {
                 });
             }
 
-            const pStats = playerPlatformStats.get(sid);
-            const platform = detectPlatform(p.match.source, p.match.metadata);
+            const pStatsBucket = playerPlatformStats.get(sid);
+            const platform = detectPlatform(mData.source || mData.gameMode, mData.metadata || mData);
 
             const update = (bucket: any) => {
-                bucket.kills += p.kills || 0;
-                bucket.deaths += p.deaths || 0;
-                bucket.assists += p.assists || 0;
-                bucket.adrSum += (p.adr || 0);
-                bucket.hsSum += (p.hsPercentage || 0);
+                bucket.kills += mData.kills || 0;
+                bucket.deaths += mData.deaths || 0;
+                bucket.assists += mData.assists || 0;
+                bucket.adrSum += (mData.adr || 0);
+                bucket.hsSum += (mData.hsPercentage || 0);
                 bucket.count++;
                 
                 // Determinação de resultado consistente
-                const resLower = (p.matchResult || '').toLowerCase();
+                const resLower = (mData.matchResult || mData.result || '').toLowerCase();
                 if (resLower === 'win') {
                     bucket.wins++;
                 } else if (resLower === 'loss' || resLower === 'defeat') {
-                    // Do nothing
+                    // Perda
                 } else {
-                    // Check score if available
-                    const scoreA = p.match.scoreA;
-                    const scoreB = p.match.scoreB;
-                    if (scoreA != null && scoreB != null) {
-                        const isA = !p.team || ['A', 'CT', '2'].includes(p.team.toUpperCase());
-                        if (isA ? scoreA > scoreB : scoreB > scoreA) bucket.wins++;
+                    // Check score
+                    const scoreStr = mData.score;
+                    if (typeof scoreStr === 'string' && scoreStr.includes('-')) {
+                        const [s1, s2] = scoreStr.split('-').map(n => parseInt(n.trim()));
+                        if (!isNaN(s1) && !isNaN(s2) && s1 > s2) bucket.wins++;
+                    } else if (mData.scoreA != null && mData.scoreB != null) {
+                        const isA = !mData.team || ['A', 'CT', '2'].includes(mData.team.toUpperCase());
+                        if (isA ? mData.scoreA > mData.scoreB : mData.scoreB > mData.scoreA) bucket.wins++;
                     }
                 }
             };
 
-            update(pStats.all);
-            if (platform && pStats[platform]) update(pStats[platform]);
+            update(pStatsBucket.all);
+            if (platform && pStatsBucket[platform]) update(pStatsBucket[platform]);
+        };
+
+        // Processar GlobalMatchPlayer
+        allMatchPlayers.forEach((p: any) => {
+            if (!p.match) return;
+            processMatchData(p.steamId, { ...p, ...p.match }, null);
+        });
+
+        // Processar Match (Tabela de usuários)
+        users.forEach((u: any) => {
+            if (!u.matches) return;
+            u.matches.forEach((m: any) => {
+                processMatchData(u.steamId, m, null);
+            });
         });
 
         // 6. Mapear para o formato do frontend
