@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Play, Download, Calendar, Activity, Target, Zap, Clock, Shield, Search, RefreshCw, X, 
-    AlertCircle, Crosshair, TrendingUp, Star, Flame, Eye, MapPin, Trophy, Swords, Info
+    AlertCircle, Crosshair, TrendingUp, Star, Flame, Eye, MapPin, Trophy, Swords, Info, Edit2, Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -83,6 +83,10 @@ const MatchReportModal: React.FC<Props> = ({
     const [internalMatch, setInternalMatch] = useState<Match | null>(null);
     const [loading, setLoading] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isEditingScore, setIsEditingScore] = useState(false);
+    const [editScoreA, setEditScoreA] = useState(0);
+    const [editScoreB, setEditScoreB] = useState(0);
+    const [isSavingScore, setIsSavingScore] = useState(false);
     const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos' | 'linha-tempo'>('placar');
     const [fetchError, setFetchError] = useState(false);
 
@@ -151,6 +155,44 @@ const MatchReportModal: React.FC<Props> = ({
             console.error(e);
         } finally {
             setIsSyncing(false);
+        }
+    };
+
+    const handleUpdateScore = async () => {
+        setIsSavingScore(true);
+        try {
+            const { a: currentScoreA, e: currentScoreE } = getScore();
+            // We need to determine logical A/B based on the user's team
+            const meta = currentMatch?.metadata || {};
+            const stats: any[] = meta.stats || currentMatch?.players || [];
+            const userP = stats.find(p => {
+                const sid = p.steam64_id || p.steamId || p.player_id;
+                return sid === userSteamId;
+            });
+            const myLogicalTeam = userP?.team || userP?.initial_team_number || 'A';
+            
+            let finalLogicalA = editScoreA;
+            let finalLogicalB = editScoreB;
+
+            // If user is on Team B, their UI Score A (Left) corresponds to Logical B
+            if (myLogicalTeam === 'B' || myLogicalTeam === 2) {
+                finalLogicalA = editScoreB;
+                finalLogicalB = editScoreA;
+            }
+
+            await axios.patch(`/api/match/${currentMatch.id}`, {
+                scoreA: finalLogicalA,
+                scoreB: finalLogicalB
+            });
+            
+            toast.success("Resultado atualizado!");
+            setIsEditingScore(false);
+            window.location.reload();
+        } catch (error) {
+            console.error(error);
+            toast.error("Erro ao atualizar o placar.");
+        } finally {
+            setIsSavingScore(false);
         }
     };
 
@@ -1077,9 +1119,53 @@ const MatchReportModal: React.FC<Props> = ({
                                         {isWin ? 'VITÓRIA' : 'DERROTA'}
                                     </span>
                                     <div className="flex items-center gap-2.5">
-                                        <span className={`text-4xl font-black italic tracking-tighter leading-none ${isWin ? 'text-white' : 'text-zinc-400'}`}>{scoreA}</span>
-                                        <span className="text-xl font-black text-zinc-700 italic">—</span>
-                                        <span className={`text-4xl font-black italic tracking-tighter leading-none ${!isWin ? 'text-white' : 'text-zinc-600'}`}>{scoreE}</span>
+                                        {isEditingScore ? (
+                                            <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10">
+                                                <input 
+                                                    type="number" 
+                                                    value={editScoreA} 
+                                                    onChange={e => setEditScoreA(parseInt(e.target.value) || 0)}
+                                                    className="w-12 bg-transparent text-2xl font-black text-center border-b border-yellow-500 focus:outline-none"
+                                                />
+                                                <span className="text-zinc-700 font-black">—</span>
+                                                <input 
+                                                    type="number" 
+                                                    value={editScoreB} 
+                                                    onChange={e => setEditScoreB(parseInt(e.target.value) || 0)}
+                                                    className="w-12 bg-transparent text-2xl font-black text-center border-b border-zinc-500 focus:outline-none"
+                                                />
+                                                <button 
+                                                    onClick={handleUpdateScore}
+                                                    disabled={isSavingScore}
+                                                    className="ml-2 w-8 h-8 rounded-lg bg-emerald-500 text-black flex items-center justify-center hover:bg-emerald-400 disabled:opacity-50"
+                                                >
+                                                    {isSavingScore ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                                                </button>
+                                                <button 
+                                                    onClick={() => setIsEditingScore(false)}
+                                                    className="w-8 h-8 rounded-lg bg-white/5 text-zinc-400 flex items-center justify-center hover:bg-white/10"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <span className={`text-4xl font-black italic tracking-tighter leading-none ${isWin ? 'text-white' : 'text-zinc-400'}`}>{scoreA}</span>
+                                                <span className="text-xl font-black text-zinc-700 italic">—</span>
+                                                <span className={`text-4xl font-black italic tracking-tighter leading-none ${!isWin ? 'text-white' : 'text-zinc-600'}`}>{scoreE}</span>
+                                                <button 
+                                                    onClick={() => {
+                                                        setEditScoreA(scoreA);
+                                                        setEditScoreB(scoreE);
+                                                        setIsEditingScore(true);
+                                                    }}
+                                                    className="ml-2 w-6 h-6 rounded bg-white/5 text-zinc-700 hover:text-white flex items-center justify-center hover:bg-white/10 transition-colors"
+                                                    title="Corrigir placar/resultado manualmente"
+                                                >
+                                                    <Edit2 size={10} />
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 

@@ -157,8 +157,9 @@ class ParserService:
             if source:
                 match.source = source
         
-        # --- Logical Team Tracking for Correct Scores ---
+        # --- Logical Team Tracking for Correct Scores
         score_a, score_b = 0, 0
+        last_round_winner = None
         team_mapping = {}  # steamid -> "A" (started CT) or "B" (started T)
         
         try:
@@ -206,8 +207,10 @@ class ParserService:
                     det_side_a = current_side_a if current_side_a != "unknown" else last_side_a
                     if normalize_side(det_side_a) == normalize_side(winner_side):
                         score_a += 1
+                        last_round_winner = "A"
                     else:
                         score_b += 1
+                        last_round_winner = "B"
             else:
                 # Fallback: Just count CT/T wins
                 score_a = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0]) if not rounds_df.empty else 0
@@ -217,11 +220,18 @@ class ParserService:
             score_a = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0]) if not rounds_df.empty else 0
             score_b = int(rounds_df[rounds_df["winner_side"] == "T"].shape[0]) if not rounds_df.empty else 0
 
+        # Sovereign Winner Logic: Last round winner is the match winner
+        if last_round_winner == "A":
+            s1, s2 = max(score_a, score_b), min(score_a, score_b)
+            score_a, score_b = s1, s2
+            match.winner_team = "CT_INITIAL"
+        elif last_round_winner == "B":
+            s1, s2 = max(score_a, score_b), min(score_a, score_b)
+            score_a, score_b = s2, s1
+            match.winner_team = "T_INITIAL"
+        
         match.score_ct = score_a
         match.score_t = score_b
-        
-        if score_a > score_b: match.winner_team = "CT"
-        elif score_b > score_a: match.winner_team = "T"
         else: match.winner_team = "Draw"
 
         if not rounds_df.empty and "end_tick" in rounds_df.columns:

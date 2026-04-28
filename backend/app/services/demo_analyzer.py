@@ -191,8 +191,9 @@ class DemoAnalyzerService:
                 "players": [],
             }
 
-        # ── Calculate scores from rounds (Team A vs Team B tracking) ──
+        # ── Calculate scores from rounds (Team A vs Team B tracking)
         score_a, score_b = 0, 0
+        last_round_winner = None
         team_mapping = {} # steamid -> "A" (started CT) or "B" (started T)
         
         try:
@@ -236,8 +237,10 @@ class DemoAnalyzerService:
                     det_side_a = current_side_a if current_side_a != "unknown" else last_side_a
                     if normalize_side(det_side_a) == normalize_side(w_side):
                         score_a += 1
+                        last_round_winner = "A"
                     else:
                         score_b += 1
+                        last_round_winner = "B"
 
                 # Duration: estimate from total rounds
                 total_rounds = len(rounds_df)
@@ -276,9 +279,24 @@ class DemoAnalyzerService:
         players_summary = []
 
         # Determine results map based on score_a vs score_b
-        if score_a > score_b:
+        # Sovereign Winner Logic: The winner of the last round is the match winner.
+        # This auto-corrects any potential miscounts in intermediate rounds.
+        if last_round_winner == "A":
+            match_winner = "A"
+            # Ensure score_a is the higher one
+            s1, s2 = max(score_a, score_b), min(score_a, score_b)
+            score_a, score_b = s1, s2
+        elif last_round_winner == "B":
+            match_winner = "B"
+            # Ensure score_b is the higher one
+            s1, s2 = max(score_a, score_b), min(score_a, score_b)
+            score_a, score_b = s2, s1
+        else:
+            match_winner = "Draw" if score_a == score_b else ("A" if score_a > score_b else "B")
+
+        if match_winner == "A":
             res_map = {"A": "Win", "B": "Loss"}
-        elif score_b > score_a:
+        elif match_winner == "B":
             res_map = {"A": "Loss", "B": "Win"}
         else:
             res_map = {"A": "Tie", "B": "Tie"}

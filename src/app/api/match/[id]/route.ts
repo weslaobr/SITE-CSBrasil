@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from "next-auth";
+import { getAuthOptions } from "@/lib/auth";
 
 const LEETIFY_API_KEY = process.env.LEETIFY_API_KEY;
 const LEETIFY_BASE_URL = 'https://api-public.cs-prod.leetify.com';
@@ -223,5 +225,57 @@ export async function GET(
         console.error(`Error fetching match ${matchId}:`, error.message);
         return NextResponse.json({ error: "Failed to fetch match details" }, { status: 500 });
     }
+}
 
+export async function PATCH(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const { id: matchId } = await params;
+    const session = await getServerSession(getAuthOptions(request));
+
+    if (!session || !(session.user as any)?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+        const { scoreA, scoreB } = await request.json();
+
+        if (scoreA === undefined || scoreB === undefined) {
+             return NextResponse.json({ error: "Missing scoreA or scoreB" }, { status: 400 });
+        }
+
+        // 1. Update GlobalMatch
+        const updatedMatch = await prisma.globalMatch.update({
+            where: { id: matchId },
+            data: {
+                scoreA: Number(scoreA),
+                scoreB: Number(scoreB)
+            }
+        });
+
+        // 2. Update GlobalMatchPlayer results based on new score
+        let resA = "tie", resB = "tie";
+        if (scoreA > scoreB) { resA = "win"; resB = "loss"; }
+        else if (scoreB > scoreA) { resA = "loss"; resB = "win"; }
+
+        // Update Team A
+        await prisma.globalMatchPlayer.updateMany({
+            where: { globalMatchId: matchId, team: "A" },
+            data: { matchResult: resA }
+        });
+
+        // Update Team B
+        await prisma.globalMatchPlayer.updateMany({
+            where: { globalMatchId: matchId, team: "B" },
+            data: { matchResult: resB }
+        });
+
+        console.log(`[PATCH Match] Match ${matchId} manually updated to ${scoreA}-${scoreB} by User ${session.user.email}`);
+
+        return NextResponse.json({ success: true, match: updatedMatch });
+    } catch (error: any) {
+        console.error(`[PATCH Match Error]`, error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 }
