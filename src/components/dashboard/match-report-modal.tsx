@@ -7,8 +7,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
-import { toast } from 'sonner';
-import axios from 'axios';
 
 // ── TYPES ────────────────────────────────────────────────────────────────────
 
