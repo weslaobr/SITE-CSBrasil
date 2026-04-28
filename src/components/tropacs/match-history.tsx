@@ -49,12 +49,22 @@ export default function MatchHistory({ matches, onSync, loading }: MatchHistoryP
         result: (() => {
             const res = (m.result || '').toLowerCase();
             const out = (m.outcome || '').toLowerCase();
+            
+            // Priority 1: Check if we have a score string like "13-5"
+            // We assume the first number is the profile owner's score
+            if (typeof m.score === 'string' && m.score.includes('-')) {
+                const [s1, s2] = m.score.split('-').map(n => parseInt(n.trim()));
+                if (!isNaN(s1) && !isNaN(s2)) {
+                    if (s1 > s2) return 'Win';
+                    if (s2 > s1) return 'Loss';
+                    return 'Draw';
+                }
+            }
+
+            // Priority 2: Fallback to existing result fields
             if (res === 'win' || out === 'win') return 'Win';
             if (res === 'loss' || out === 'loss') return 'Loss';
-            
-            // Se for empate no banco, mas o score diz o contrário, tenta inferir se possível
-            // (Mas sem saber o time do player aqui é difícil, então mantemos Draw/Tie)
-            return (res === 'draw' || res === 'tie' || out === 'draw' || out === 'tie') ? 'Draw' : 'Draw';
+            return 'Draw';
         })(),
         score: typeof m.score === 'string' 
             ? m.score 
