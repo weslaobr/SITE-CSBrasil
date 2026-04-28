@@ -226,6 +226,16 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 return diff < 15 * 60 * 1000 && mNormalizedMap === normalizedMap;
             });
 
+            // Recalculate result based on score string for consistency across list and modal
+            if (typeof match.score === 'string' && match.score.includes('-')) {
+                const [s1, s2] = match.score.split('-').map(n => parseInt(n.trim()));
+                if (!isNaN(s1) && !isNaN(s2)) {
+                    if (s1 > s2) match.result = 'Win';
+                    else if (s2 > s1) match.result = 'Loss';
+                    else match.result = 'Draw';
+                }
+            }
+
             if (!isDuplicate) {
                 uniqueMatches.push(match);
             }
