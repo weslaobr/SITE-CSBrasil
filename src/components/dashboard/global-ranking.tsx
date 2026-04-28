@@ -232,11 +232,16 @@ function AnimatedNumber({ value, duration = 1.2 }: { value: number; duration?: n
             setDisplay(0);
             return;
         }
+        let start = 0;
         const step = end / (duration * 60);
         const timer = setInterval(() => {
             start += step;
-            if (start >= end) { setDisplay(end); clearInterval(timer); }
-            else setDisplay(Math.floor(start));
+            if (start >= end) {
+                setDisplay(end);
+                clearInterval(timer);
+            } else {
+                setDisplay(Math.floor(start));
+            }
         }, 1000 / 60);
         return () => clearInterval(timer);
     }, [value, duration]);

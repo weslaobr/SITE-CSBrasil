@@ -295,30 +295,34 @@ export async function GET() {
                     const wr = b.count > 0 ? `${Math.round((b.wins / b.count) * 100)}%` : 'N/A';
                     
                     // Pontos por plataforma:
-                    // Mix -> ADR é o padrão ouro
-                    // Outros -> SR/ELO se houver, senão ADR
+                    // Prioridade 1: Dados sincronizados da tabela Stats (SR/ELO)
+                    // Prioridade 2: Média de Rating das partidas (Leetify/Bot)
+                    // Prioridade 3: ADR (como fallback final)
+                    
                     let rating = 0;
-                    if (platformKey === 'mix') {
+                    if (platformKey === 'premier') {
+                        rating = stats?.premierRating || 0;
+                    } else if (platformKey === 'faceit') {
+                        rating = stats?.faceitElo || 0;
+                    } else if (platformKey === 'gc') {
+                        rating = (stats?.gcLevel || 0) * 100;
+                    } else if (platformKey === 'mix') {
                         rating = adr;
                     } else {
-                        // Tentar rating de performance (escala 0-2) ou SR (escala 0-30000)
+                        // All/Outros
                         const avgPerf = b.count > 0 ? b.ratingSum / b.count : 0;
-                        if (platformKey === 'premier' && stats?.premierRating) rating = stats.premierRating;
-                        else if (platformKey === 'faceit' && stats?.faceitElo) rating = stats.faceitElo;
-                        else if (platformKey === 'gc' && stats?.gcLevel) rating = stats.gcLevel * 100; // Fake scale
-                        else if (avgPerf > 0) rating = Math.round(avgPerf * 100) / 100;
-                        else rating = 0;
+                        rating = stats?.premierRating || stats?.faceitElo || (avgPerf > 0 ? Math.round(avgPerf * 100) / 100 : adr);
                     }
                     
                     return { kdr, adr, hsPercentage: hs, matchesPlayed: b.count, winRate: wr, rating };
                 };
 
                 const statsBreakdown: any = {
-                    all: pStats ? calculate(pStats.all, 'all') : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A', rating: 0 },
-                    mix: pStats ? calculate(pStats.mix, 'mix') : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A', rating: 0 },
-                    faceit: pStats ? calculate(pStats.faceit, 'faceit') : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A', rating: 0 },
-                    premier: pStats ? calculate(pStats.premier, 'premier') : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A', rating: 0 },
-                    gc: pStats ? calculate(pStats.gc, 'gc') : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A', rating: 0 },
+                    all: calculate(pStats?.all || { deaths: 0, kills: 0, assists: 0, adrSum: 0, hsSum: 0, ratingSum: 0, count: 0, wins: 0 }, 'all'),
+                    mix: calculate(pStats?.mix || { deaths: 0, kills: 0, assists: 0, adrSum: 0, hsSum: 0, ratingSum: 0, count: 0, wins: 0 }, 'mix'),
+                    faceit: calculate(pStats?.faceit || { deaths: 0, kills: 0, assists: 0, adrSum: 0, hsSum: 0, ratingSum: 0, count: 0, wins: 0 }, 'faceit'),
+                    premier: calculate(pStats?.premier || { deaths: 0, kills: 0, assists: 0, adrSum: 0, hsSum: 0, ratingSum: 0, count: 0, wins: 0 }, 'premier'),
+                    gc: calculate(pStats?.gc || { deaths: 0, kills: 0, assists: 0, adrSum: 0, hsSum: 0, ratingSum: 0, count: 0, wins: 0 }, 'gc'),
                 };
 
                 // Fallback para dados legados do User se não houver GlobalMatchPlayer
@@ -332,9 +336,9 @@ export async function GET() {
                     };
                 }
 
-                // Rating Global: Premier > Faceit > Performance Rating
+                // Rating Global: Premier > Faceit > ADR
                 let rating = stats?.premierRating || stats?.faceitElo || 0;
-                if (rating === 0) rating = statsBreakdown.all.rating || 0;
+                if (rating === 0) rating = statsBreakdown.all.rating || statsBreakdown.all.adr || 0;
 
                 return {
                     steamId: p.steamId,
