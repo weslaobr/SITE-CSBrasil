@@ -162,6 +162,7 @@ const MatchReportModal: React.FC<Props> = ({
         setIsSavingScore(true);
         try {
             // Determine user team with multiple ID format checks
+            const meta = currentMatch?.metadata || {};
             const stats: any[] = meta.stats || currentMatch?.players || [];
             const userP = stats.find(p => {
                 const sid = p.steam64_id || p.steamId || p.player_id || p.steamid64;
