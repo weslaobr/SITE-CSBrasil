@@ -268,15 +268,20 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     df_dmg = _parse("player_hurt")
     if df_dmg is not None: df_dmg = filter_tick(df_dmg)
 
-    # Identificação de rounds para Kills e Dano (Base para métricas)
+    # Identificação de rounds para Kills e Dano (Base para métricas) - OTIMIZADO
     round_end_ticks = sorted(df_re["tick"].tolist()) if (df_re is not None and not df_re.empty) else []
-    def get_round(t):
-        for i, end_t in enumerate(round_end_ticks):
-            if t <= end_t: return i + 1
-        return len(round_end_ticks)
+    
+    if round_end_ticks and not is_empty(df_kills):
+        import numpy as np
+        df_kills["round_num"] = np.searchsorted(round_end_ticks, df_kills["tick"]) + 1
+    elif not is_empty(df_kills):
+        df_kills["round_num"] = 1
 
-    if not is_empty(df_kills): df_kills["round_num"] = df_kills["tick"].apply(get_round)
-    if not is_empty(df_dmg):   df_dmg["round_num"]   = df_dmg["tick"].apply(get_round)
+    if round_end_ticks and not is_empty(df_dmg):
+        import numpy as np
+        df_dmg["round_num"] = np.searchsorted(round_end_ticks, df_dmg["tick"]) + 1
+    elif not is_empty(df_dmg):
+        df_dmg["round_num"] = 1
 
     if progress_fn: progress_fn(0.25)
 
@@ -588,21 +593,9 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                             if vic_name and (not player_info[k_vic]["name"] or player_info[k_vic]["name"].isdigit()) and not vic_name.isdigit():
                                 player_info[k_vic]["name"] = vic_name
 
-                        # Descobrir o lado (CT/T) de cada um para o visual
-                        att_side = "unknown"
-                        vic_side = "unknown"
-                        try:
-                            # Tenta pegar info rápida do lado
-                            sides_df = parser.parse_ticks(
-                                ["team_name"],
-                                ticks=[int(k_row["tick"])],
-                                players=[int(k_att), int(k_vic)]
-                            )
-                            if sides_df is not None and not sides_df.empty:
-                                for _, s_row in sides_df.iterrows():
-                                    if str(s_row["steamid"]) == k_att: att_side = normalize_team(str(s_row["team_name"]))
-                                    if str(s_row["steamid"]) == k_vic: vic_side = normalize_team(str(s_row["team_name"]))
-                        except: pass
+                        # Descobrir o lado (CT/T) - OTIMIZADO (Usa o info já coletado)
+                        att_side = player_info.get(k_att, {}).get("team", "unknown")
+                        vic_side = player_info.get(k_vic, {}).get("team", "unknown")
 
                         round_summaries[r_num]["kills"].append({
                             "attackerName": player_info[k_att]["name"],
@@ -634,10 +627,13 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
 
             # Extrair Dano por Round
             try:
-                df_dmg_rounds = _parse("player_hurt")
                 df_dmg_rounds = filter_tick(df_dmg_rounds)
                 if not is_empty(df_dmg_rounds):
-                    df_dmg_rounds["round_num"] = df_dmg_rounds["tick"].apply(get_round) if round_end_ticks else [1] * len(df_dmg_rounds)
+                    if round_end_ticks:
+                        import numpy as np
+                        df_dmg_rounds["round_num"] = np.searchsorted(round_end_ticks, df_dmg_rounds["tick"]) + 1
+                    else:
+                        df_dmg_rounds["round_num"] = 1
                     
                     # Identificar coluna de dano
                     dmg_col = next((c for c in ["dmg_health", "damage", "health_damage", "dmg"] if c in df_dmg_rounds.columns), None)
