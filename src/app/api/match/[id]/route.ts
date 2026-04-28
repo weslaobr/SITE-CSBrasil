@@ -294,18 +294,20 @@ export async function PATCH(
         });
 
         if (legacyMatch && legacyMatch.externalId) {
-            const newResult = scoreA > scoreB ? "Win" : (scoreB > scoreA ? "Loss" : "Tie");
+            // THE USER IS ALWAYS RIGHT: If they send scoreA > scoreB, it's a Win for the profile owner
+            const sA = Number(scoreA);
+            const sB = Number(scoreB);
+            const newResult = sA > sB ? "Win" : (sB > sA ? "Loss" : "Tie");
             
-            // Update for ALL users who have this same match (by externalId)
             await prisma.match.updateMany({
                 where: { externalId: legacyMatch.externalId },
                 data: {
-                    score: `${scoreA}-${scoreB}`,
+                    score: `${sA}-${sB}`,
                     result: newResult
                 }
             });
 
-            console.log(`[PATCH LegacyMatch] All records for ${legacyMatch.externalId} updated to ${scoreA}-${scoreB} (${newResult})`);
+            console.log(`[PATCH LegacyMatch] Forced override for ${legacyMatch.externalId} to ${sA}-${sB} (${newResult})`);
             return NextResponse.json({ success: true });
         }
 
