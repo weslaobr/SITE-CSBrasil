@@ -254,6 +254,25 @@ class DemoAnalyzerService:
         # Assign back to variables used for DB
         score_ct, score_t = score_a, score_b
 
+        # ── Sovereign Winner Logic ────────────────────────────────────
+        # The winner of the last round is the match winner.
+        # This auto-corrects any potential miscounts in intermediate rounds.
+        match_winner = "Draw"
+        if last_round_winner == "A":
+            match_winner = "A"
+            s1, s2 = max(score_a, score_b), min(score_a, score_b)
+            score_a, score_b = s1, s2
+        elif last_round_winner == "B":
+            match_winner = "B"
+            s1, s2 = max(score_a, score_b), min(score_a, score_b)
+            score_a, score_b = s2, s1
+        else:
+            match_winner = "tie" if score_a == score_b else ("A" if score_a > score_b else "B")
+
+        res_map = {"A": "win", "B": "loss"}
+        if match_winner == "B": res_map = {"A": "loss", "B": "win"}
+        elif match_winner == "tie": res_map = {"A": "tie", "B": "tie"}
+
         # ── Insert GlobalMatch ────────────────────────────────────────
         global_match = GlobalMatch(
             id=match_id,
@@ -278,28 +297,6 @@ class DemoAnalyzerService:
         player_stats = dem.player_stats
         players_summary = []
 
-        # Determine results map based on score_a vs score_b
-        # Sovereign Winner Logic: The winner of the last round is the match winner.
-        # This auto-corrects any potential miscounts in intermediate rounds.
-        if last_round_winner == "A":
-            match_winner = "A"
-            # Ensure score_a is the higher one
-            s1, s2 = max(score_a, score_b), min(score_a, score_b)
-            score_a, score_b = s1, s2
-        elif last_round_winner == "B":
-            match_winner = "B"
-            # Ensure score_b is the higher one
-            s1, s2 = max(score_a, score_b), min(score_a, score_b)
-            score_a, score_b = s2, s1
-        else:
-            match_winner = "Draw" if score_a == score_b else ("A" if score_a > score_b else "B")
-
-        if match_winner == "A":
-            res_map = {"A": "Win", "B": "Loss"}
-        elif match_winner == "B":
-            res_map = {"A": "Loss", "B": "Win"}
-        else:
-            res_map = {"A": "Tie", "B": "Tie"}
 
         # Calculate FK/FD from kill events
         fk_counts: dict[str, int] = {}

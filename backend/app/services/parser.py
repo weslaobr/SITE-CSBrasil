@@ -229,10 +229,11 @@ class ParserService:
             s1, s2 = max(score_a, score_b), min(score_a, score_b)
             score_a, score_b = s2, s1
             match.winner_team = "T_INITIAL"
+        else:
+            match.winner_team = "Draw"
         
         match.score_ct = score_a
         match.score_t = score_b
-        else: match.winner_team = "Draw"
 
         if not rounds_df.empty and "end_tick" in rounds_df.columns:
             max_tick = rounds_df["end_tick"].max()
