@@ -181,17 +181,33 @@ export async function GET() {
             where: { steamId: { in: allSteamIds } },
             include: { 
                 match: { 
-                    select: { source: true, metadata: true } 
+                    select: { 
+                        source: true, 
+                        metadata: true,
+                        matchDate: true,
+                        mapName: true
+                    } 
                 } 
             }
         });
 
-        // 5. Agregar stats por player e plataforma
+        // 5. Agregar stats por player e plataforma com desduplicação
         const playerPlatformStats = new Map<string, any>();
+        const processedMatches = new Set<string>(); // Key: steamId + map + time_bin
 
         allMatchPlayers.forEach((p: any) => {
-            if (!p.match) return; // Segurança contra registros órfãos
+            if (!p.match) return;
             const sid = p.steamId;
+            
+            // Lógica de desduplicação similar ao MatchesDashboard
+            const matchTime = new Date(p.match.matchDate).getTime();
+            const timeBin = Math.floor(matchTime / (15 * 60 * 1000)); // 15 min bins
+            const mapNorm = (p.match.mapName || '').toLowerCase().replace('de_', '').trim();
+            const dedupeKey = `${sid}_${mapNorm}_${timeBin}`;
+            
+            if (processedMatches.has(dedupeKey)) return;
+            processedMatches.add(dedupeKey);
+
             if (!playerPlatformStats.has(sid)) {
                 const empty = () => ({ kills: 0, deaths: 0, assists: 0, adrSum: 0, hsSum: 0, count: 0, wins: 0 });
                 playerPlatformStats.set(sid, {
@@ -209,7 +225,22 @@ export async function GET() {
                 bucket.adrSum += (p.adr || 0);
                 bucket.hsSum += (p.hsPercentage || 0);
                 bucket.count++;
-                if (p.matchResult?.toLowerCase() === 'win') bucket.wins++;
+                
+                // Determinação de resultado consistente
+                const resLower = (p.matchResult || '').toLowerCase();
+                if (resLower === 'win') {
+                    bucket.wins++;
+                } else if (resLower === 'loss' || resLower === 'defeat') {
+                    // Do nothing
+                } else {
+                    // Check score if available
+                    const scoreA = p.match.scoreA;
+                    const scoreB = p.match.scoreB;
+                    if (scoreA != null && scoreB != null) {
+                        const isA = !p.team || ['A', 'CT', '2'].includes(p.team.toUpperCase());
+                        if (isA ? scoreA > scoreB : scoreB > scoreA) bucket.wins++;
+                    }
+                }
             };
 
             update(pStats.all);
