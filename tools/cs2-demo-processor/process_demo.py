@@ -214,6 +214,13 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     try:
         header = parser.parse_header()
         map_name = str(header.get("map_name", "unknown")).lower()
+        # Normalização: Se for Cache (Workshop ou Oficial), força 'de_cache'
+        if "cache" in map_name:
+            map_name = "de_cache"
+        else:
+            # Para outros mapas, remove o path do workshop se existir (workshop/123/de_dust2 -> de_dust2)
+            map_name = map_name.split("/")[-1]
+
         duration_secs = float(header.get("playback_time", 0))
         if duration_secs > 0:
             duration_str = seconds_to_mmss(duration_secs)
