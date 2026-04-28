@@ -1075,20 +1075,20 @@ class DemoProcessorApp(ctk.CTk):
         score_frame.pack(fill="x", pady=(0, 12))
         ctk.CTkLabel(
             score_frame,
-            text=f"TIME A  {score_a}  ×  {score_b}  TIME B",
+            text=f"TIME CT  {score_a}  ×  {score_b}  TIME TR",
             font=ctk.CTkFont(size=24, weight="bold"),
             text_color="white",
         ).pack(pady=8)
         ctk.CTkLabel(
             score_frame,
-            text="(Time A = CT inicial  |  Time B = TR inicial)",
+            text="(Time CT = Início como CT  |  Time TR = Início como TR)",
             font=ctk.CTkFont(size=10),
             text_color="#7ca8d4",
         ).pack(pady=(0, 4))
 
         ctk.CTkButton(
             score_frame,
-            text="🔄  INVERTER RESULTADO (A ↔ B)",
+            text="🔄  INVERTER LADOS (CT ↔ TR)",
             font=ctk.CTkFont(size=10, weight="bold"),
             fg_color="#16213e",
             hover_color="#1a1a2e",
@@ -1121,13 +1121,14 @@ class DemoProcessorApp(ctk.CTk):
                 row_f.grid_columnconfigure(i, weight=w)
 
             res_color = result_colors.get(p.get("matchResult", "Tie"), "gray")
+            team_label = "CT (Início)" if p.get("team") == "CT" else "TR (Início)"
             team_color = "#5dade2" if p.get("team") == "CT" else "#e59866"
             m = p.get("metadata", {})
 
             values = [
                 (p.get("displayName", "?"),    "white"),
                 (p.get("steamId", "0"),         "#888"),
-                (p.get("team", "?"),            team_color),
+                (team_label,                    team_color),
                 (str(p.get("kills", 0)),        "white"),
                 (str(p.get("deaths", 0)),       "#e74c3c"),
                 (str(p.get("assists", 0)),      "#f1c40f"),
@@ -1232,7 +1233,7 @@ class DemoProcessorApp(ctk.CTk):
             elif p.get("matchResult") == "Loss":
                 p["matchResult"] = "Win"
         
-        self._log("🔄 Resultado e Placar invertidos manualmente (A ↔ B).")
+        self._log("🔄 Lados e Resultados invertidos manualmente (CT ↔ TR).")
         self._render_preview(self._demo_data)
 
     def _on_export_json(self):
