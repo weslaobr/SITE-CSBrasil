@@ -60,6 +60,12 @@ except ImportError:
         def parse(self):
             pass
 
+def normalize_side(side) -> str:
+    s = str(side).upper().strip()
+    if s in ("3", "CT"): return "CT"
+    if s in ("2", "T", "TERRORIST"): return "T"
+    return "UNKNOWN"
+
 
 # ─── Main Service ─────────────────────────────────────────────────────────────
 
@@ -228,7 +234,7 @@ class DemoAnalyzerService:
                                     last_side_a = current_side_a
                     
                     det_side_a = current_side_a if current_side_a != "unknown" else last_side_a
-                    if str(det_side_a).upper() == str(w_side).upper():
+                    if normalize_side(det_side_a) == normalize_side(w_side):
                         score_a += 1
                     else:
                         score_b += 1
