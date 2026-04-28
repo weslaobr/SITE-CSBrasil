@@ -245,54 +245,63 @@ export async function PATCH(
              return NextResponse.json({ error: "Missing scoreA or scoreB" }, { status: 400 });
         }
 
-        // 1. Update GlobalMatch main columns
-        const updatedMatch = await prisma.globalMatch.update({
-            where: { id: matchId },
-            data: {
-                scoreA: Number(scoreA),
-                scoreB: Number(scoreB)
-            }
-        });
+        // 1. Try to update GlobalMatch (Local Demos)
+        const globalMatch = await prisma.globalMatch.findUnique({ where: { id: matchId } });
+        
+        if (globalMatch) {
+            const currentMeta = (globalMatch.metadata as any) || {};
+            const updatedMatch = await prisma.globalMatch.update({
+                where: { id: matchId },
+                data: {
+                    scoreA: Number(scoreA),
+                    scoreB: Number(scoreB),
+                    metadata: {
+                        ...currentMeta,
+                        team_3_score: Number(scoreA),
+                        team_2_score: Number(scoreB)
+                    }
+                }
+            });
 
-        // 1.5. IMPORTANT: Also update metadata scores to prevent UI stale data
-        const currentMeta = (updatedMatch.metadata as any) || {};
-        const newMeta = {
-            ...currentMeta,
-            team_3_score: Number(scoreA),
-            team_2_score: Number(scoreB)
-        };
+            let resA = "tie", resB = "tie";
+            if (scoreA > scoreB) { resA = "win"; resB = "loss"; }
+            else if (scoreB > scoreA) { resA = "loss"; resB = "win"; }
 
-        await prisma.globalMatch.update({
-            where: { id: matchId },
-            data: { metadata: newMeta }
-        });
+            await prisma.globalMatchPlayer.updateMany({
+                where: { globalMatchId: matchId, team: { in: ["A", "CT", "3"] } },
+                data: { matchResult: resA }
+            });
 
-        // 2. Update GlobalMatchPlayer results based on new score
-        let resA = "tie", resB = "tie";
-        if (scoreA > scoreB) { resA = "win"; resB = "loss"; }
-        else if (scoreB > scoreA) { resA = "loss"; resB = "win"; }
+            await prisma.globalMatchPlayer.updateMany({
+                where: { globalMatchId: matchId, team: { in: ["B", "T", "TR", "2", "TERRORIST"] } },
+                data: { matchResult: resB }
+            });
 
-        // Update Team A (and its aliases CT, 3)
-        await prisma.globalMatchPlayer.updateMany({
-            where: { 
-                globalMatchId: matchId, 
-                team: { in: ["A", "CT", "3"] } 
-            },
-            data: { matchResult: resA }
-        });
+            console.log(`[PATCH GlobalMatch] ${matchId} updated to ${scoreA}-${scoreB}`);
+            return NextResponse.json({ success: true, match: updatedMatch });
+        }
 
-        // Update Team B (and its aliases T, TR, 2)
-        await prisma.globalMatchPlayer.updateMany({
-            where: { 
-                globalMatchId: matchId, 
-                team: { in: ["B", "T", "TR", "2", "TERRORIST"] } 
-            },
-            data: { matchResult: resB }
-        });
+        // 2. Try to update Match (Legacy/Official Sync)
+        const legacyMatch = await prisma.match.findUnique({ where: { id: matchId } });
+        if (legacyMatch) {
+            // Determine result for legacy match (usually from user's perspective)
+            // In Match table, 'score' is a string "13-6" and 'result' is "Win"/"Loss"
+            // We'll assume scoreA is the user's score and scoreB is the opponent's
+            const newResult = scoreA > scoreB ? "Win" : (scoreB > scoreA ? "Loss" : "Tie");
+            
+            const updatedLegacy = await prisma.match.update({
+                where: { id: matchId },
+                data: {
+                    score: `${scoreA}-${scoreB}`,
+                    result: newResult
+                }
+            });
 
-        console.log(`[PATCH Match] Match ${matchId} manually updated to ${scoreA}-${scoreB} (including metadata) by User ${session.user.email}`);
+            console.log(`[PATCH LegacyMatch] ${matchId} updated to ${scoreA}-${scoreB} (${newResult})`);
+            return NextResponse.json({ success: true, match: updatedLegacy });
+        }
 
-        return NextResponse.json({ success: true, match: updatedMatch });
+        return NextResponse.json({ error: "Match not found in any table" }, { status: 404 });
     } catch (error: any) {
         console.error(`[PATCH Match Error]`, error);
         return NextResponse.json({ error: error.message }, { status: 500 });
