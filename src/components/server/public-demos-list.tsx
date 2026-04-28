@@ -205,30 +205,22 @@ export function PublicDemosList() {
             ) : (
                 <div className="flex flex-col gap-3 pb-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
                     {filteredDemos
-                        .sort((a, b) => {
-                            const dateA = a.modifiedAt ? new Date(a.modifiedAt).getTime() : 0;
-                            const dateB = b.modifiedAt ? new Date(b.modifiedAt).getTime() : 0;
-                            return dateB - dateA;
-                        })
+                        .sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime())
                         .map((demo, index, array) => {
                             let showSeparator = false;
                             let gapText = "";
                             if (index > 0) {
-                                const prevDateStr = array[index - 1]?.modifiedAt;
-                                const currDateStr = demo?.modifiedAt;
-                                if (prevDateStr && currDateStr) {
-                                    const prevDate = new Date(prevDateStr).getTime();
-                                    const currDate = new Date(currDateStr).getTime();
-                                    const diffHours = (prevDate - currDate) / (1000 * 60 * 60);
-                                    if (diffHours > 4) {
-                                        showSeparator = true;
-                                        if (diffHours > 48) {
-                                            gapText = `Jogos de ${Math.floor(diffHours / 24)} dias atrás`;
-                                        } else if (diffHours > 24) {
-                                            gapText = `Jogos do dia anterior`;
-                                        } else {
-                                            gapText = `Sessões Anteriores (+${Math.floor(diffHours)}h atrás)`;
-                                        }
+                                const prevDate = new Date(array[index - 1].modifiedAt).getTime();
+                                const currDate = new Date(demo.modifiedAt).getTime();
+                                const diffHours = (prevDate - currDate) / (1000 * 60 * 60);
+                                if (diffHours > 4) {
+                                    showSeparator = true;
+                                    if (diffHours > 48) {
+                                        gapText = `Jogos de ${Math.floor(diffHours / 24)} dias atrás`;
+                                    } else if (diffHours > 24) {
+                                        gapText = `Jogos do dia anterior`;
+                                    } else {
+                                        gapText = `Sessões Anteriores (+${Math.floor(diffHours)}h atrás)`;
                                     }
                                 }
                             }
