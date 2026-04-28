@@ -43,6 +43,7 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id: matchId } = await params;
+    const profileSteamId = request.nextUrl.searchParams.get('profileSteamId') || '';
 
     try {
         // 1. Verificar primeiro no nosso próprio Banco de Dados (Partidas geradas pelo nosso Bot)
@@ -99,7 +100,7 @@ export async function GET(
                     clutches_won: m.clutches ?? m.clutch_count ?? m.clutches_won ?? m.clutchesWon ?? 0,
                     // Flash
                     flash_assists: m.flashAssists ?? m.flash_assist ?? m.flash_assists ?? m.flashbang_assists ?? 0,
-                    is_user: false // será conferido no cliente via SteamID
+                    is_user: !!(profileSteamId && p.steamId && String(p.steamId) === String(profileSteamId))
                 };
             });
 

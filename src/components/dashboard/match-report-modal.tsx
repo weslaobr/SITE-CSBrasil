@@ -110,7 +110,7 @@ const MatchReportModal: React.FC<Props> = ({
     const fetchMatchData = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`/api/match/${matchId}`);
+            const res = await axios.get(`/api/match/${matchId}${userSteamId ? `?profileSteamId=${userSteamId}` : ''}`);
             const data = res.data;
             const scoreFromAPI = (data.team_2_score !== undefined && data.team_3_score !== undefined)
                 ? `${data.team_2_score}-${data.team_3_score}` : null;
@@ -323,21 +323,19 @@ const MatchReportModal: React.FC<Props> = ({
 
     const isUserP = (p: any) => {
         if (!p) return false;
-        
+
+        // Priority 1: Server-set flag (most reliable — set using profileSteamId query param)
+        if (p.is_user === true || p.isUser === true) return true;
+
+        // Priority 2: Direct SteamID match
         const pS = String(p.player_id || p.steam64_id || p.steamId || p.steam_id || p.steamid || '').trim();
         const uS = String(userSteamId || '').trim();
-        
+        if (uS && pS && pS === uS) return true;
+
+        // Priority 3: Nickname match (case-insensitive)
         const pN = String(p.nickname || p.name || p.personaname || '').toLowerCase().trim();
         const uN = String(userNickname || '').toLowerCase().trim();
-
-        // 1. Direct SteamID Match (Highest Priority)
-        if (uS && pS && pS === uS) return true;
-        
-        // 2. Nickname Match
         if (uN && pN && (pN === uN || pN.includes(uN) || uN.includes(pN))) return true;
-
-        // 3. Fallback for common nicknames
-        if (pN === 'anicat123' || pN.includes('anicat')) return uN.includes('anicat') || !uN;
 
         return false;
     };
@@ -476,22 +474,50 @@ const MatchReportModal: React.FC<Props> = ({
         if (!currentMatch) return { a: 0, e: 0 };
         const meta = currentMatch.metadata || {};
         const stats: any[] = meta.stats || [];
+
+        // --- Step 1: Find the profile owner in the player stats ---
         const uP = stats.find(isUserP);
-        const uT = uP?.initial_team_number;
-        const eT = stats.find((s: any) => s.initial_team_number && s.initial_team_number !== uT)?.initial_team_number;
-        const sc = (t: any) => {
-            if (!t) return null;
-            if (meta[`team_${t}_score`] !== undefined) return meta[`team_${t}_score`];
-            if (meta[`team${t}Score`] !== undefined) return meta[`team${t}Score`];
+        const uT = uP?.initial_team_number != null ? String(uP.initial_team_number) : null;
+        const eT = uT
+            ? stats.find((s: any) => s.initial_team_number != null && String(s.initial_team_number) !== uT)
+                  ?.initial_team_number != null
+                ? String(stats.find((s: any) => s.initial_team_number != null && String(s.initial_team_number) !== uT)!.initial_team_number)
+                : null
+            : null;
+
+        // --- Step 2: Look up score from metadata by team number ---
+        const getTeamScore = (teamNum: string | null) => {
+            if (!teamNum) return null;
+            // Try multiple key formats used by Leetify and local processor
+            for (const key of [
+                `team_${teamNum}_score`,
+                `team${teamNum}Score`,
+                `team${teamNum}_score`,
+            ]) {
+                if (meta[key] !== undefined) return Number(meta[key]);
+            }
             return null;
         };
-        const s1 = sc(uT), s2 = sc(eT);
-        if (s1 !== null && s2 !== null) return { a: s1, e: s2 };
-        const parts = (currentMatch.score || '').split(/[^\d]+/).map(Number).filter(n => !isNaN(n));
-        if (parts.length >= 2) {
-            const win = currentMatch.result === 'Win';
-            return { a: win ? Math.max(...parts) : Math.min(...parts), e: win ? Math.min(...parts) : Math.max(...parts) };
+
+        const myScore = getTeamScore(uT);
+        const enemyScore = getTeamScore(eT);
+        if (myScore !== null && enemyScore !== null) return { a: myScore, e: enemyScore };
+
+        // --- Step 3: GlobalMatch fallback (scoreA = Team A, scoreB = Team B) ---
+        // Detect if the profile owner is "team B" (team number 2) and swap accordingly
+        const gA = currentMatch.scoreA;
+        const gB = currentMatch.scoreB;
+        if (gA !== undefined && gB !== undefined) {
+            const isTeamB = uT === '2' || uT === 'B' || uT?.toLowerCase() === 'b';
+            return isTeamB ? { a: Number(gB), e: Number(gA) } : { a: Number(gA), e: Number(gB) };
         }
+
+        // --- Step 4: Parse score string as absolute last resort ---
+        // At this point we can't reliably know which side the profile owner is on,
+        // so just return the parts in order. isWin = scoreA > scoreE handles the display.
+        const parts = (currentMatch.score || '').split(/[^\d]+/).map(Number).filter(n => !isNaN(n));
+        if (parts.length >= 2) return { a: parts[0], e: parts[1] };
+
         return { a: 0, e: 0 };
     };
 
@@ -539,7 +565,61 @@ const MatchReportModal: React.FC<Props> = ({
     if (!currentMatch) return null;
 
     const { t1, t2 } = getTeams();
-    const { a: scoreA, e: scoreE } = getScore();
+
+    // ── Compute score from teams perspective ──────────────────────────────
+    // t1 is always the profile owner's team. We look up their team number
+    // in the stats metadata and fetch their team score directly.
+    const computeScore = (): { a: number; e: number } => {
+        const meta = currentMatch?.metadata || {};
+        const stats: any[] = meta.stats || [];
+
+        // Find any t1 player in stats to learn their team number
+        const t1StatEntry = t1.reduce<any>((found, p) => {
+            if (found) return found;
+            const sid = String(p.steamId || '');
+            return sid ? stats.find((s: any) =>
+                String(s.player_id || s.steam64_id || s.steamId || s.steam_id || '') === sid
+            ) : null;
+        }, null);
+
+        const myTeam = t1StatEntry?.initial_team_number != null
+            ? String(t1StatEntry.initial_team_number) : null;
+        const enemyTeam = myTeam
+            ? stats.find((s: any) =>
+                s.initial_team_number != null && String(s.initial_team_number) !== myTeam
+              )?.initial_team_number?.toString() ?? null
+            : null;
+
+        const teamScore = (num: string | null): number | null => {
+            if (!num) return null;
+            for (const k of [`team_${num}_score`, `team${num}Score`, `team${num}_score`]) {
+                if (meta[k] !== undefined) return Number(meta[k]);
+            }
+            return null;
+        };
+
+        const my = teamScore(myTeam);
+        const enemy = teamScore(enemyTeam);
+        if (my !== null && enemy !== null) return { a: my, e: enemy };
+
+        // GlobalMatch fields
+        const gA = currentMatch?.scoreA, gB = currentMatch?.scoreB;
+        if (gA !== undefined && gB !== undefined) {
+            const isB = myTeam === '2' || myTeam?.toLowerCase() === 'b';
+            return isB ? { a: Number(gB), e: Number(gA) } : { a: Number(gA), e: Number(gB) };
+        }
+
+        // Score string last resort
+        const parts = (currentMatch?.score || '').split(/[^\d]+/).map(Number).filter(n => !isNaN(n));
+        if (parts.length >= 2) {
+            const isB = myTeam === '2' || myTeam?.toLowerCase() === 'b';
+            return isB ? { a: parts[1], e: parts[0] } : { a: parts[0], e: parts[1] };
+        }
+
+        return { a: 0, e: 0 };
+    };
+
+    const { a: scoreA, e: scoreE } = computeScore();
     const isWin = scoreA > scoreE;
     const mode = detectMode();
     const mapDisplay = currentMatch.mapName?.replace('de_','').split('_').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Mapa';
