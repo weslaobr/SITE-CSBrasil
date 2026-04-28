@@ -425,7 +425,14 @@ const MatchReportModal: React.FC<Props> = ({
 
         const byKills = (a: PlayerStats, b: PlayerStats) => b.kills - a.kills;
         if (meta.fullStats?.rounds?.[0]?.teams) {
-            const [a, b] = meta.fullStats.rounds[0].teams;
+            let [a, b] = meta.fullStats.rounds[0].teams;
+            
+            // Check if user is in team B to swap
+            const playersB = b.players || [];
+            if (playersB.some((p: any) => isUserP(p))) {
+                [a, b] = [b, a];
+            }
+
             return {
                 t1: (a.players||[]).map((p:any)=>normalizeP(p,isUserP(p), a.side || a.teamSide || 'CT')).sort(byKills),
                 t2: (b.players||[]).map((p:any)=>normalizeP(p,isUserP(p), b.side || b.teamSide || 'T')).sort(byKills)
