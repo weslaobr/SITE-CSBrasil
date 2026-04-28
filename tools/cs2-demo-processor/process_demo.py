@@ -1084,6 +1084,16 @@ class DemoProcessorApp(ctk.CTk):
             text="(Time A = CT inicial  |  Time B = TR inicial)",
             font=ctk.CTkFont(size=10),
             text_color="#7ca8d4",
+        ).pack(pady=(0, 4))
+
+        ctk.CTkButton(
+            score_frame,
+            text="🔄  INVERTER RESULTADO (A ↔ B)",
+            font=ctk.CTkFont(size=10, weight="bold"),
+            fg_color="#16213e",
+            hover_color="#1a1a2e",
+            height=20,
+            command=self._on_swap_result
         ).pack(pady=(0, 8))
 
         # ── Tabela de Jogadores
@@ -1196,6 +1206,34 @@ class DemoProcessorApp(ctk.CTk):
         self._btn_export.configure(state="normal")
 
     # ── Enviar para Banco ─────────────────────
+
+    def _on_swap_result(self):
+        if not self._demo_data: return
+        
+        match = self._demo_data["match"]
+        players = self._demo_data["players"]
+        summaries = match.get("metadata", {}).get("roundSummaries", {})
+        
+        # 1. Swap Scores
+        match["scoreA"], match["scoreB"] = match.get("scoreB", 0), match.get("scoreA", 0)
+        
+        # 2. Swap Logical Winner in roundSummaries
+        for r_num in summaries:
+             s = summaries[r_num]
+             if s.get("logical_winner") == "A":
+                 s["logical_winner"] = "B"
+             elif s.get("logical_winner") == "B":
+                 s["logical_winner"] = "A"
+        
+        # 3. Swap Results for Players
+        for p in players:
+            if p.get("matchResult") == "Win":
+                p["matchResult"] = "Loss"
+            elif p.get("matchResult") == "Loss":
+                p["matchResult"] = "Win"
+        
+        self._log("🔄 Resultado e Placar invertidos manualmente (A ↔ B).")
+        self._render_preview(self._demo_data)
 
     def _on_export_json(self):
         if not self._demo_data: return
