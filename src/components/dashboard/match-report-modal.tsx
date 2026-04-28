@@ -504,19 +504,20 @@ const MatchReportModal: React.FC<Props> = ({
         if (myScore !== null && enemyScore !== null) return { a: myScore, e: enemyScore };
 
         // --- Step 3: GlobalMatch fallback (scoreA = Team A, scoreB = Team B) ---
-        // Detect if the profile owner is "team B" (team number 2) and swap accordingly
+        // Treat team number '2' as Team A (scoreA) and '3' as Team B (scoreB)
         const gA = currentMatch.scoreA;
         const gB = currentMatch.scoreB;
         if (gA !== undefined && gB !== undefined) {
-            const isTeamB = uT === '2' || uT === 'B' || uT?.toLowerCase() === 'b';
+            const isTeamB = uT === '3' || uT === 'B' || uT?.toLowerCase() === 'b';
             return isTeamB ? { a: Number(gB), e: Number(gA) } : { a: Number(gA), e: Number(gB) };
         }
 
         // --- Step 4: Parse score string as absolute last resort ---
-        // At this point we can't reliably know which side the profile owner is on,
-        // so just return the parts in order. isWin = scoreA > scoreE handles the display.
         const parts = (currentMatch.score || '').split(/[^\d]+/).map(Number).filter(n => !isNaN(n));
-        if (parts.length >= 2) return { a: parts[0], e: parts[1] };
+        if (parts.length >= 2) {
+            const isTeamB = uT === '3' || uT === 'B' || uT?.toLowerCase() === 'b';
+            return isTeamB ? { a: parts[1], e: parts[0] } : { a: parts[0], e: parts[1] };
+        }
 
         return { a: 0, e: 0 };
     };
@@ -602,17 +603,17 @@ const MatchReportModal: React.FC<Props> = ({
         const enemy = teamScore(enemyTeam);
         if (my !== null && enemy !== null) return { a: my, e: enemy };
 
-        // GlobalMatch fields
+        // GlobalMatch fields fallback
         const gA = currentMatch?.scoreA, gB = currentMatch?.scoreB;
         if (gA !== undefined && gB !== undefined) {
-            const isB = myTeam === '2' || myTeam?.toLowerCase() === 'b';
+            const isB = myTeam === '3' || myTeam?.toLowerCase() === 'b';
             return isB ? { a: Number(gB), e: Number(gA) } : { a: Number(gA), e: Number(gB) };
         }
 
-        // Score string last resort
+        // Score string fallback
         const parts = (currentMatch?.score || '').split(/[^\d]+/).map(Number).filter(n => !isNaN(n));
         if (parts.length >= 2) {
-            const isB = myTeam === '2' || myTeam?.toLowerCase() === 'b';
+            const isB = myTeam === '3' || myTeam?.toLowerCase() === 'b';
             return isB ? { a: parts[1], e: parts[0] } : { a: parts[0], e: parts[1] };
         }
 
@@ -621,6 +622,11 @@ const MatchReportModal: React.FC<Props> = ({
 
     const { a: scoreA, e: scoreE } = computeScore();
     const isWin = scoreA > scoreE;
+    const isTie = scoreA === scoreE;
+    const resultText = currentMatch.result?.toUpperCase() === 'WIN' ? 'VITÓRIA' 
+                     : currentMatch.result?.toUpperCase() === 'LOSS' ? 'DERROTA'
+                     : currentMatch.result?.toUpperCase() === 'TIE' ? 'EMPATE'
+                     : isWin ? 'VITÓRIA' : isTie ? 'EMPATE' : 'DERROTA';
     const mode = detectMode();
     const mapDisplay = currentMatch.mapName?.replace('de_','').split('_').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Mapa';
     const dateStr = new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
@@ -1217,8 +1223,12 @@ const MatchReportModal: React.FC<Props> = ({
 
                                 {/* Score */}
                                 <div className="flex flex-col items-center shrink-0">
-                                    <span className={`text-[8px] font-black uppercase tracking-[0.3em] mb-0.5 px-2 py-0.5 rounded-full border ${isWin ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : 'text-red-400 border-red-500/30 bg-red-500/10'}`}>
-                                        {isWin ? 'VITÓRIA' : 'DERROTA'}
+                                    <span className={`text-[8px] font-black uppercase tracking-[0.3em] mb-0.5 px-2 py-0.5 rounded-full border ${
+                                        resultText === 'VITÓRIA' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : 
+                                        resultText === 'EMPATE' ? 'text-zinc-400 border-zinc-500/30 bg-zinc-500/10' :
+                                        'text-red-400 border-red-500/30 bg-red-500/10'
+                                    }`}>
+                                        {resultText}
                                     </span>
                                     <div className="flex items-center gap-2.5">
                                         {isEditingScore ? (
@@ -1263,9 +1273,9 @@ const MatchReportModal: React.FC<Props> = ({
                                             </div>
                                         ) : (
                                             <>
-                                                <span className={`text-4xl font-black italic tracking-tighter leading-none ${isWin ? 'text-white' : 'text-zinc-400'}`}>{scoreA}</span>
+                                                <span className={`text-4xl font-black italic tracking-tighter leading-none ${resultText === 'VITÓRIA' ? 'text-white' : resultText === 'EMPATE' ? 'text-zinc-200' : 'text-zinc-400'}`}>{scoreA}</span>
                                                 <span className="text-xl font-black text-zinc-700 italic">—</span>
-                                                <span className={`text-4xl font-black italic tracking-tighter leading-none ${!isWin ? 'text-white' : 'text-zinc-600'}`}>{scoreE}</span>
+                                                <span className={`text-4xl font-black italic tracking-tighter leading-none ${resultText === 'DERROTA' ? 'text-white' : resultText === 'EMPATE' ? 'text-zinc-200' : 'text-zinc-600'}`}>{scoreE}</span>
                                                 <button 
                                                     onClick={() => {
                                                         setEditScoreA(scoreA);
