@@ -82,6 +82,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     const [isEditing, setIsEditing] = useState(!currentFaceit);
     const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalTab, setModalTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos' | 'linha-tempo' | 'simulacao'>('placar');
     const [searchTerm, setSearchTerm] = useState('');
 
     // Last sync timestamp (persisted to localStorage)
@@ -232,8 +233,9 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         return uniqueMatches;
     }, [matches, mapFilter, modeFilter, searchTerm]);
 
-    const handleViewMatch = (match: Match) => {
+    const handleViewMatch = (match: Match, initialTab: any = 'placar') => {
         setSelectedMatch(match);
+        setModalTab(initialTab);
         setIsModalOpen(true);
     };
 
@@ -979,12 +981,14 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             {/* Replay 2D */}
                                             <td className="px-3 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    {match.isTracker && (
-                                                        <Link href={`/dashboard/match/${match.id}/viewer`} onClick={(e) => e.stopPropagation()}>
-                                                            <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-yellow-500/10 hover:bg-yellow-500 text-yellow-500 hover:text-black transition-all group/replay shadow-lg shadow-yellow-500/5 active:scale-90 border border-yellow-500/10 hover:border-yellow-500" title="Ver Replay 2D">
-                                                                <Play size={16} className="fill-current ml-0.5" />
-                                                            </button>
-                                                        </Link>
+                                                    {((match as any).isTracker || match.metadata?.replayData) && (
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); handleViewMatch(match, 'simulacao'); }}
+                                                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-yellow-500/10 hover:bg-yellow-500 text-yellow-500 hover:text-black transition-all group/replay shadow-lg shadow-yellow-500/5 active:scale-90 border border-yellow-500/10 hover:border-yellow-500" 
+                                                            title="Ver Replay 2D"
+                                                        >
+                                                            <Play size={16} className="fill-current ml-0.5" />
+                                                        </button>
                                                     )}
                                                     
                                                     {(() => {
@@ -1146,6 +1150,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 }}
                 userSteamId={currentUserSteamId}
                 userNickname={currentFaceit}
+                initialTab={modalTab}
             />
         </div>
     );
