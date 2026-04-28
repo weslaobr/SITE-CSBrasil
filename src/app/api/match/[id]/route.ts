@@ -259,15 +259,21 @@ export async function PATCH(
         if (scoreA > scoreB) { resA = "win"; resB = "loss"; }
         else if (scoreB > scoreA) { resA = "loss"; resB = "win"; }
 
-        // Update Team A
+        // Update Team A (and its aliases CT, 3)
         await prisma.globalMatchPlayer.updateMany({
-            where: { globalMatchId: matchId, team: "A" },
+            where: { 
+                globalMatchId: matchId, 
+                team: { in: ["A", "CT", "3"] } 
+            },
             data: { matchResult: resA }
         });
 
-        // Update Team B
+        // Update Team B (and its aliases T, TR, 2)
         await prisma.globalMatchPlayer.updateMany({
-            where: { globalMatchId: matchId, team: "B" },
+            where: { 
+                globalMatchId: matchId, 
+                team: { in: ["B", "T", "TR", "2", "TERRORIST"] } 
+            },
             data: { matchResult: resB }
         });
 
