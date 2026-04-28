@@ -324,7 +324,7 @@ export default function TeamBuilderPage() {
         if (teamA.length === 0 && teamB.length === 0) return;
         setDiscordStatus("sending");
         
-        const lastPick = vetoHistory.findLast(h => h.type === "pick");
+        const lastPick = [...vetoHistory].reverse().find(h => h.type === "pick");
         const selectedMapName = lastPick ? (mapPool.find(m => m.id === lastPick.map)?.name || "Não definido") : "Não definido";
         const pickMethod = lastPick?.team === "system" ? "Aleatório" : "Manual";
 
@@ -358,7 +358,7 @@ export default function TeamBuilderPage() {
         if (teamA.length === 0 && teamB.length === 0) return;
         setSteamStatus("sending");
 
-        const lastPick = vetoHistory.findLast(h => h.type === "pick");
+        const lastPick = [...vetoHistory].reverse().find(h => h.type === "pick");
         const selectedMapName = lastPick ? (mapPool.find(m => m.id === lastPick.map)?.name || "Não definido") : "Não definido";
         const pickMethod = lastPick?.team === "system" ? "Aleatório" : "Manual";
 

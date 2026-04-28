@@ -6,6 +6,7 @@ const STEAM_BOT_URL = process.env.STEAM_BOT_URL || process.env.NEXT_PUBLIC_BOT_A
 
 export async function POST(request: NextRequest) {
     try {
+        const body = await request.json();
         const { teamA, teamB, avgA, avgB, mapName, pickMethod } = body;
 
         if (!teamA || !teamB) {
