@@ -52,18 +52,10 @@ export default function MatchHistory({ matches, onSync, loading, steamId, steamN
             const res = (m.result || '').toLowerCase();
             const out = (m.outcome || '').toLowerCase();
             
-            // Priority 1: Trust existing result fields from API
-            if (res === 'win' || out === 'win') return 'Win';
-            if (res === 'loss' || out === 'loss') return 'Loss';
-            
-            // Priority 2: Fallback to score string only if result is missing
-            if (typeof m.score === 'string' && m.score.includes('-')) {
-                const [s1, s2] = m.score.split('-').map(n => parseInt(n.trim()));
-                if (!isNaN(s1) && !isNaN(s2)) {
-                    if (s1 > s2) return 'Win';
-                    if (s2 > s1) return 'Loss';
-                }
-            }
+            // Strictly trust existing result fields from API/Sync
+            if (res === 'win' || out === 'win' || res === 'vitoria' || res === 'vitória') return 'Win';
+            if (res === 'loss' || out === 'loss' || res === 'derrota') return 'Loss';
+            if (res === 'tie' || out === 'tie' || res === 'draw' || res === 'empate') return 'Draw';
 
             return 'Draw';
         })(),

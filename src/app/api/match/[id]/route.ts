@@ -69,11 +69,8 @@ export async function GET(
             const profileIsTeamA = isTeamA(profileTeam);
             const scoreA = localMatch.scoreA ?? 0;
             const scoreB = localMatch.scoreB ?? 0;
-            const profileScore  = profileIsTeamA ? scoreA : scoreB;
-            const opponentScore = profileIsTeamA ? scoreB : scoreA;
-            const profileResult = profilePlayer
-                ? (profileScore > opponentScore ? 'Win' : profileScore < opponentScore ? 'Loss' : 'Tie')
-                : null;
+            // Trust the matchResult stored in the database (populated during sync/upload)
+            const profileResult = profilePlayer?.matchResult || null;
 
             let localStats = localMatch.players.map(p => {
                 const m = (p.metadata as any) || {};
