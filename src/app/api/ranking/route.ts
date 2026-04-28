@@ -221,7 +221,7 @@ export async function GET() {
             processedMatches.add(dedupeKey);
 
             if (!playerPlatformStats.has(sid)) {
-                const empty = () => ({ kills: 0, deaths: 0, assists: 0, adrSum: 0, hsSum: 0, count: 0, wins: 0 });
+                const empty = () => ({ kills: 0, deaths: 0, assists: 0, adrSum: 0, hsSum: 0, ratingSum: 0, count: 0, wins: 0 });
                 playerPlatformStats.set(sid, {
                     all: empty(), mix: empty(), premier: empty(), faceit: empty(), gc: empty()
                 });
@@ -236,6 +236,11 @@ export async function GET() {
                 bucket.assists += mData.assists || 0;
                 bucket.adrSum += (mData.adr || 0);
                 bucket.hsSum += (mData.hsPercentage || 0);
+                
+                // Extrair rating da partida se disponível
+                const matchRating = mData.rating || (mData.metadata?.leetify_rating) || (mData.metadata?.rating) || 0;
+                if (matchRating > 0) bucket.ratingSum += matchRating;
+
                 bucket.count++;
                 
                 // Determinação de resultado consistente
@@ -288,7 +293,12 @@ export async function GET() {
                     const adr = b.count > 0 ? Math.round(b.adrSum / b.count) : 0;
                     const hs = b.count > 0 ? Math.round(b.hsSum / b.count) : 0;
                     const wr = b.count > 0 ? `${Math.round((b.wins / b.count) * 100)}%` : 'N/A';
-                    return { kdr, adr, hsPercentage: hs, matchesPlayed: b.count, winRate: wr };
+                    
+                    // Rating da plataforma: média ponderada ou ADR como fallback
+                    let rating = b.count > 0 ? Math.round((b.ratingSum / b.count) * 100) / 100 : 0;
+                    if (rating === 0) rating = adr; // Fallback para ADR se não houver rating Leetify/Faceit
+                    
+                    return { kdr, adr, hsPercentage: hs, matchesPlayed: b.count, winRate: wr, rating };
                 };
 
                 const statsBreakdown: any = {
@@ -310,7 +320,9 @@ export async function GET() {
                     };
                 }
 
-                const rating = stats?.premierRating || stats?.faceitElo || 0;
+                // Rating Global: Premier > Faceit > ADR
+                let rating = stats?.premierRating || stats?.faceitElo || 0;
+                if (rating === 0) rating = statsBreakdown.all.rating || statsBreakdown.all.adr;
 
                 return {
                     steamId: p.steamId,
