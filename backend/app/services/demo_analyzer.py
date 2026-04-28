@@ -228,7 +228,7 @@ class DemoAnalyzerService:
                                     last_side_a = current_side_a
                     
                     det_side_a = current_side_a if current_side_a != "unknown" else last_side_a
-                    if det_side_a == w_side:
+                    if str(det_side_a).upper() == str(w_side).upper():
                         score_a += 1
                     else:
                         score_b += 1

@@ -112,8 +112,8 @@ export async function GET(
                 game_mode: localMatch.source,
                 data_source: localMatch.source,
                 match_date: localMatch.matchDate.toISOString(),
-                team_2_score: localMatch.scoreA || 0,
-                team_3_score: localMatch.scoreB || 0,
+                team_2_score: localMatch.scoreB || 0,
+                team_3_score: localMatch.scoreA || 0,
                 demo_url: localMeta.demoUrl || null,
                 metadata: localMeta,
                 stats: localStats
