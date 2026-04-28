@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
-import Replay2D from '../tropacs/replay-2d';
-import Link from 'next/link';
+import { toast } from 'sonner';
+import axios from 'axios';
 
 // ── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -66,7 +66,6 @@ interface Match {
     metadata?: any;
     adr?: number;
     hsPercentage?: number;
-    isTracker?: boolean;
 }
 
 interface Props {
@@ -76,18 +75,17 @@ interface Props {
     onClose: () => void;
     userSteamId?: string;
     userNickname?: string;
-    initialTab?: 'placar' | 'desempenho' | 'utilitarios' | 'confrontos' | 'linha-tempo' | 'simulacao';
 }
 
 // ── COMPONENT ────────────────────────────────────────────────────────────────
 
 const MatchReportModal: React.FC<Props> = ({
-    match: initialMatch, matchId, isOpen, onClose, userSteamId, userNickname, initialTab = 'placar'
+    match: initialMatch, matchId, isOpen, onClose, userSteamId, userNickname
 }) => {
     const [internalMatch, setInternalMatch] = useState<Match | null>(null);
     const [loading, setLoading] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
-    const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos' | 'linha-tempo' | 'simulacao'>('placar');
+    const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos' | 'linha-tempo'>('placar');
     const [fetchError, setFetchError] = useState(false);
 
     const match = initialMatch || internalMatch;
@@ -97,17 +95,15 @@ const MatchReportModal: React.FC<Props> = ({
             if (!match || !match.metadata || match.id !== matchId) {
                 setInternalMatch(null);
                 setFetchError(false);
-                setTab(initialTab);
+                setTab('placar');
                 fetchMatchData();
-            } else {
-                setTab(initialTab);
             }
         } else if (!isOpen) {
             setInternalMatch(null);
             setFetchError(false);
             setTab('placar');
         }
-    }, [isOpen, matchId, initialTab]);
+    }, [isOpen, matchId]);
 
     const fetchMatchData = async () => {
         setLoading(true);
@@ -134,8 +130,7 @@ const MatchReportModal: React.FC<Props> = ({
                 externalId: data.match_id || initialMatch?.externalId,
                 metadata: { ...initialMatch?.metadata, ...data },
                 adr: data.stats?.find((p: any) => p.is_user)?.dpr || data.stats?.find((p: any) => p.is_user)?.adr || initialMatch?.adr,
-                hsPercentage: (data.stats?.find((p: any) => p.is_user)?.accuracy_head * 100) || initialMatch?.hsPercentage,
-                isTracker: data.isTracker || initialMatch?.isTracker
+                hsPercentage: (data.stats?.find((p: any) => p.is_user)?.accuracy_head * 100) || initialMatch?.hsPercentage
             });
         } catch (e) { 
             console.error(e); 
@@ -716,7 +711,6 @@ const MatchReportModal: React.FC<Props> = ({
         { id: 'utilitarios',  label: 'Utilitários',  icon: <Zap size={12} /> },
         { id: 'confrontos',   label: 'Confrontos',   icon: <Crosshair size={12} /> },
         { id: 'linha-tempo',  label: 'Linha do Tempo', icon: <Clock size={12} /> },
-        { id: 'simulacao',    label: 'Simulação 2D', icon: <Play size={12} /> },
     ];
 
     // ── SUB-COMPONENTS ────────────────────────────────────────────────────────
@@ -1229,51 +1223,6 @@ const MatchReportModal: React.FC<Props> = ({
                                 >
                                     {tab === 'linha-tempo' && (currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries) ? (
                                         <RoundLog />
-                                    ) : tab === 'simulacao' ? (
-                                        <div className="flex flex-col gap-6">
-                                            {currentMatch?.metadata?.replayData ? (
-                                                <Replay2D 
-                                                    mapName={currentMatch.mapName || 'de_mirage'}
-                                                    replayData={currentMatch.metadata.replayData}
-                                                    playerIndexMap={currentMatch.metadata.playerIndexMap || {}}
-                                                    stats={currentMatch.metadata.stats || currentMatch.metadata.players || []}
-                                                    killEvents={Object.values(currentMatch.metadata.roundSummaries || {}).flatMap((r: any) => (r.kills || []).map((k: any) => ({
-                                                        ...k,
-                                                        attackerSide: k.attackerSide || 'Unknown',
-                                                        victimSide: k.victimSide || 'Unknown'
-                                                    })))}
-                                                />
-                                            ) : currentMatch?.isTracker ? (
-                                                <div className="py-20 flex flex-col items-center justify-center bg-zinc-900/30 rounded-[40px] border border-white/5 gap-6 text-center">
-                                                    <div className="w-20 h-20 rounded-3xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 shadow-2xl">
-                                                        <Play size={40} className="text-yellow-500 fill-yellow-500" />
-                                                    </div>
-                                                    <div className="max-w-md space-y-2">
-                                                        <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Visualizador Interativo</h3>
-                                                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest leading-relaxed">
-                                                            Esta partida possui dados de telemetria avançada. Abra o visualizador completo para analisar a movimentação dos jogadores tick-a-tick.
-                                                        </p>
-                                                    </div>
-                                                    <Link 
-                                                        href={`/dashboard/match/${currentMatch.id}/viewer`}
-                                                        className="px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase text-[10px] tracking-widest rounded-2xl transition-all shadow-xl shadow-yellow-500/20 active:scale-95 flex items-center gap-2"
-                                                    >
-                                                        <ExternalLink size={14} />
-                                                        Abrir Visualizador 2D
-                                                    </Link>
-                                                </div>
-                                            ) : (
-                                                <div className="py-20 flex flex-col items-center justify-center bg-zinc-900/30 rounded-[40px] border border-white/5 gap-4 text-center">
-                                                    <div className="w-16 h-16 rounded-2xl bg-zinc-800/50 flex items-center justify-center text-2xl">📉</div>
-                                                    <div className="max-w-xs space-y-1">
-                                                        <h4 className="text-sm font-black uppercase tracking-widest text-zinc-400">Replay Indisponível</h4>
-                                                        <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-tight">
-                                                            Apenas partidas processadas pelo nosso sistema ou com dados do Leetify possuem replay 2D.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
                                     ) : (
                                         <div className="flex gap-3 items-start">
                                             <TeamBlock players={t1} title="Seu Time" scoreVal={scoreA} ally={true} />

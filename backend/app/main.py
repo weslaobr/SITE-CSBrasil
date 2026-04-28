@@ -98,16 +98,6 @@ async def get_match_stats(match_id: str, db: AsyncSession = Depends(get_db)):
         "players": players
     }
 
-@app.get("/api/match/{match_id}/ticks", tags=["Tracker"])
-async def get_match_ticks(match_id: str, db: AsyncSession = Depends(get_db)):
-    from app.models.tracker import TickData
-    from sqlalchemy import select
-    
-    stmt = select(TickData).where(TickData.match_id == match_id).order_by(TickData.tick.asc())
-    result = await db.execute(stmt)
-    ticks = result.scalars().all()
-    
-    return {"ticks": ticks}
 
 @app.get("/api/match/list", tags=["Tracker"])
 async def list_matches(steamid: Optional[str] = None, db: AsyncSession = Depends(get_db)):

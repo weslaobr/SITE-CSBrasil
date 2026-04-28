@@ -82,7 +82,6 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     const [isEditing, setIsEditing] = useState(!currentFaceit);
     const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalTab, setModalTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos' | 'linha-tempo' | 'simulacao'>('placar');
     const [searchTerm, setSearchTerm] = useState('');
 
     // Last sync timestamp (persisted to localStorage)
@@ -233,22 +232,9 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         return uniqueMatches;
     }, [matches, mapFilter, modeFilter, searchTerm]);
 
-    const handleViewMatch = (match: Match, initialTab: any = 'placar') => {
+    const handleViewMatch = (match: Match) => {
         setSelectedMatch(match);
-        setModalTab(initialTab);
         setIsModalOpen(true);
-    };
-
-    const handleLoadMockMatch = async () => {
-        try {
-            const res = await fetch('/mock-match.json');
-            const data = await res.json();
-            handleViewMatch(data as any, 'simulacao');
-            toast.success("Partida de teste carregada com sucesso!");
-        } catch (error) {
-            console.error("Erro ao carregar partida de teste:", error);
-            toast.error("Não foi possível carregar a partida de teste local.");
-        }
     };
 
     const stats = useMemo(() => {
@@ -551,14 +537,6 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                             >
                                 <Users className="w-4 h-4" />
                                 <span className="text-[10px] font-black uppercase tracking-widest">Contas</span>
-                            </button>
-                            <button
-                                onClick={handleLoadMockMatch}
-                                className="flex items-center justify-center gap-2.5 px-5 py-3.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 transition-all group border-l border-white/[0.06]"
-                                title="Visualizar Replay 2D com dados locais (Sem DB)"
-                            >
-                                <Play size={14} className="fill-current" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Debug 2D</span>
                             </button>
                         </div>
                     </header>
@@ -1001,15 +979,6 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             {/* Replay 2D */}
                                             <td className="px-3 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    {((match as any).isTracker || match.metadata?.replayData) && (
-                                                        <button 
-                                                            onClick={(e) => { e.stopPropagation(); handleViewMatch(match, 'simulacao'); }}
-                                                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-yellow-500/10 hover:bg-yellow-500 text-yellow-500 hover:text-black transition-all group/replay shadow-lg shadow-yellow-500/5 active:scale-90 border border-yellow-500/10 hover:border-yellow-500" 
-                                                            title="Ver Replay 2D"
-                                                        >
-                                                            <Play size={16} className="fill-current ml-0.5" />
-                                                        </button>
-                                                    )}
                                                     
                                                     {(() => {
                                                         const meta = match.metadata || {};
@@ -1170,7 +1139,6 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 }}
                 userSteamId={currentUserSteamId}
                 userNickname={currentFaceit}
-                initialTab={modalTab}
             />
         </div>
     );

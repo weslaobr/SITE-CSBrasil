@@ -121,14 +121,3 @@ class GrenadeEvent(Base):
     grenade_type = Column(Text)
     pos = Column(Geometry(geometry_type="POINTZ", srid=4326))
 
-class TickData(Base):
-    __tablename__ = "tracker_tick_data"
-    __table_args__ = {"schema": "tracker"}
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    match_id = Column(Text, ForeignKey("tracker.tracker_matches.match_id", ondelete="CASCADE"), index=True)
-    tick = Column(Integer, nullable=False)
-    steamid64 = Column(BigInteger, nullable=False)
-    pos = Column(Geometry(geometry_type="POINTZ", srid=4326))
-    angle = Column(Float) # Yaw angle
-    inventory_json = Column(Text) # Optional: simple list of weapons held

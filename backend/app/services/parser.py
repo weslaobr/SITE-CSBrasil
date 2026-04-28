@@ -23,7 +23,7 @@ except ImportError:
 
 import pandas as pd
 from typing import Dict, Any, List
-from app.models.tracker import Match, MatchPlayer, Round, KillEvent, Player, DamageEvent, GrenadeEvent, TickData
+from app.models.tracker import Match, MatchPlayer, Round, KillEvent, Player, DamageEvent, GrenadeEvent
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import json
@@ -119,7 +119,7 @@ class ParserService:
         
         # 0. Cleanup existing data for this match_id
         from sqlalchemy import delete
-        from app.models.tracker import MatchPlayer as MP, Round as R, KillEvent as KE, DamageEvent as DE, GrenadeEvent as GE, TickData as TD
+        from app.models.tracker import MatchPlayer as MP, Round as R, KillEvent as KE, DamageEvent as DE, GrenadeEvent as GE
         
         logger.info(f"Parser: Cleaning up old records for match {match_id}")
         await db.execute(delete(MP).where(MP.match_id == match_id))
@@ -127,7 +127,6 @@ class ParserService:
         await db.execute(delete(KE).where(KE.match_id == match_id))
         await db.execute(delete(DE).where(DE.match_id == match_id))
         await db.execute(delete(GE).where(GE.match_id == match_id))
-        await db.execute(delete(TD).where(TD.match_id == match_id))
         await db.flush()
 
         # 0.5. Fetch or Create Match record
@@ -385,19 +384,6 @@ class ParserService:
                 grenade_type=row["grenade_type"]
             )
             db.add(grenade)
-
-        # 7. Tick Data Sampling (Desativado para economizar espaço no Banco de 512MB)
-        # ticks_df = self.dem.ticks
-        # if not ticks_df.empty:
-        #     sampled_ticks = ticks_df[ticks_df["tick"] % 16 == 0]
-        #     for _, row in sampled_ticks.iterrows():
-        #         tick_entry = TickData(
-        #             match_id=match_id,
-        #             tick=int(row["tick"]),
-        #             steamid64=int(row["steamid"]),
-        #             angle=float(row["yaw"]) if "yaw" in row else 0.0
-        #         )
-        #         db.add(tick_entry)
 
         match.is_parsed = True
         match.parsed_at = pd.Timestamp.now()
