@@ -265,27 +265,9 @@ export async function GET(
                 gameMode = 'Premier';
             }
 
-            const scoreA = gmp.match.scoreA ?? 0;
-            const scoreB = gmp.match.scoreB ?? 0;
-            const profileIsWin = mappedResult === 'Win';
-            const profileIsLoss = mappedResult === 'Loss';
-            
-            // Heuristic for score string: 
-            // If we know the result, ensure the score matches it (PlayerScore-EnemyScore)
-            let scoreStr = '0-0';
-            if (scoreA !== null && scoreB !== null) {
-                const maxS = Math.max(scoreA, scoreB);
-                const minS = Math.min(scoreA, scoreB);
-                
-                if (profileIsWin) {
-                    scoreStr = `${maxS}-${minS}`;
-                } else if (profileIsLoss) {
-                    scoreStr = `${minS}-${maxS}`;
-                } else {
-                    // Tie or unknown: fallback to team-based logic
-                    scoreStr = isTeamA(gmp.team) ? `${scoreA}-${scoreB}` : `${scoreB}-${scoreA}`;
-                }
-            }
+            const scoreStr = gmp.match.scoreA != null 
+                ? (isTeamA(gmp.team) ? `${gmp.match.scoreA}-${gmp.match.scoreB}` : `${gmp.match.scoreB}-${gmp.match.scoreA}`)
+                : '0-0';
 
             return {
                 id: gmp.id,

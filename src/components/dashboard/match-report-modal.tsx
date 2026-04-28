@@ -504,33 +504,17 @@ const MatchReportModal: React.FC<Props> = ({
                 : null
             : null;
 
-        const res = (currentMatch.result || '').toLowerCase();
-        const scoreStr = currentMatch.score || '';
-        
-        // Priority 1: Use the score string and result to determine order
-        if (typeof scoreStr === 'string' && scoreStr.includes('-')) {
-            const parts = scoreStr.split('-').map(n => parseInt(n.trim()));
-            if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-                const s1 = parts[0];
-                const s2 = parts[1];
-                const maxS = Math.max(s1, s2);
-                const minS = Math.min(s1, s2);
-
-                if (res === 'win') return { a: maxS, e: minS };
-                if (res === 'loss') return { a: minS, e: maxS };
-                return { a: s1, e: s2 };
-            }
-        }
-
-        // Priority 2: Fallback to team scores if available
         const gA = currentMatch.scoreA;
         const gB = currentMatch.scoreB;
         if (gA !== undefined && gB !== undefined) {
-            if (res === 'win') return { a: Math.max(gA, gB), e: Math.min(gA, gB) };
-            if (res === 'loss') return { a: Math.min(gA, gB), e: Math.max(gA, gB) };
-            
             const isTeamB = uT === '3' || uT === 'B' || uT?.toLowerCase() === 'b';
             return isTeamB ? { a: Number(gB), e: Number(gA) } : { a: Number(gA), e: Number(gB) };
+        }
+
+        const parts = (currentMatch.score || '').split(/[^\d]+/).map(Number).filter(n => !isNaN(n));
+        if (parts.length >= 2) {
+            const isTeamB = uT === '3' || uT === 'B' || uT?.toLowerCase() === 'b';
+            return isTeamB ? { a: parts[1], e: parts[0] } : { a: parts[0], e: parts[1] };
         }
 
         return { a: 0, e: 0 };

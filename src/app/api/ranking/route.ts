@@ -314,7 +314,7 @@ export async function GET() {
                         else if (platformKey === 'faceit' && stats?.faceitElo) rating = stats.faceitElo;
                         else if (platformKey === 'gc' && stats?.gcLevel) rating = stats.gcLevel * 100; // Fake scale
                         else if (avgPerf > 0) rating = Math.round(avgPerf * 100) / 100;
-                        else rating = adr;
+                        else rating = 0;
                     }
                     
                     return { kdr, adr, hsPercentage: hs, matchesPlayed: b.count, winRate: wr, rating };
@@ -339,9 +339,9 @@ export async function GET() {
                     };
                 }
 
-                // Rating Global: Premier > Faceit > ADR
+                // Rating Global: Premier > Faceit > Performance Rating
                 let rating = stats?.premierRating || stats?.faceitElo || 0;
-                if (rating === 0) rating = statsBreakdown.all.rating || statsBreakdown.all.adr;
+                if (rating === 0) rating = statsBreakdown.all.rating || 0;
 
                 return {
                     steamId: p.steamId,
