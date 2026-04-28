@@ -619,12 +619,15 @@ const MatchReportModal: React.FC<Props> = ({
     };
 
     const { a: scoreA, e: scoreE } = computeScore();
-    const isWin = scoreA > scoreE;
-    const isTie = scoreA === scoreE;
-    const resultText = currentMatch.result?.toUpperCase() === 'WIN' ? 'VITÓRIA' 
-                     : currentMatch.result?.toUpperCase() === 'LOSS' ? 'DERROTA'
-                     : currentMatch.result?.toUpperCase() === 'TIE' ? 'EMPATE'
-                     : isWin ? 'VITÓRIA' : isTie ? 'EMPATE' : 'DERROTA';
+    const resultLower = (currentMatch.result || '').toLowerCase();
+    const isWin = resultLower === 'win' || resultLower === 'vitória' || resultLower === 'vitoria';
+    const isLoss = resultLower === 'loss' || resultLower === 'derrota';
+    const isTie = resultLower === 'tie' || resultLower === 'draw' || resultLower === 'empate' || (!isWin && !isLoss && scoreA === scoreE && scoreA > 0);
+    
+    const resultText = isWin ? 'VITÓRIA' 
+                     : isLoss ? 'DERROTA'
+                     : isTie ? 'EMPATE'
+                     : 'PARTIDA';
     const mode = detectMode();
     const mapDisplay = currentMatch.mapName?.replace('de_','').split('_').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Mapa';
     const dateStr = new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
