@@ -324,24 +324,19 @@ const MatchReportModal: React.FC<Props> = ({
     const isUserP = (p: any) => {
         if (!p) return false;
         
-        // IDs
         const pS = String(p.player_id || p.steam64_id || p.steamId || p.steam_id || '').trim();
         const uS = String(userSteamId || '').trim();
-        
-        // Profiles IDs (Owner of the profile being viewed)
-        // If we are on a profile page, 'userSteamId' should ideally be the profile owner's ID
         const metaS = String(currentMatch?.metadata?.metadata?.steamId || currentMatch?.metadata?.steam64Id || '').trim();
 
-        // Names
         const pN = String(p.nickname || p.name || '').toLowerCase().trim();
         const uN = String(userNickname || '').toLowerCase().trim();
         const metaN = String(currentMatch?.metadata?.playerNickname || currentMatch?.metadata?.metadata?.playerNickname || '').toLowerCase().trim();
 
-        // Logic: Prioritize the SteamID passed to the modal (which should be the profile owner)
+        // Check ID matches first (most reliable)
         if (uS && pS === uS) return true;
         if (metaS && pS === metaS) return true;
         
-        // Fallback to nickname if no ID match
+        // Fallback to name matches
         if (uN && pN === uN) return true;
         if (metaN && pN === metaN) return true;
 
