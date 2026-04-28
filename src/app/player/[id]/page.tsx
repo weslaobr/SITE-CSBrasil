@@ -471,6 +471,8 @@ export default function PlayerProfilePage() {
                 matchId={selectedMatchId}
                 isOpen={!!selectedMatchId}
                 onClose={() => setSelectedMatchId(null)}
+                userSteamId={steamId}
+                userNickname={profile?.personaname}
             />
         </div>
     );
