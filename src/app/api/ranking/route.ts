@@ -10,23 +10,26 @@ export const revalidate = 0;
 const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
 function detectPlatform(source: string, metadata: any): 'mix' | 'premier' | 'faceit' | 'gc' | null {
-    const src = source.toLowerCase();
-    
-    // Mix matches: local uploads, demo processor, or manually tagged
-    if (['mix', 'demo', 'local'].some(s => src.includes(s))) return 'mix';
-    
-    if (src === 'leetify') {
-        const mode = (metadata?.gameMode || metadata?.data_source || '').toLowerCase();
-        if (mode.includes('faceit')) return 'faceit';
-        if (mode.includes('gamersclub') || mode === 'gc') return 'gc';
-        if (mode.includes('mix') || mode.includes('demo')) return 'mix';
-        return 'premier';
+    try {
+        const src = (source || '').toLowerCase();
+        
+        // Mix matches: local uploads, demo processor, or manually tagged
+        if (['mix', 'demo', 'local'].some(s => src.includes(s))) return 'mix';
+        
+        if (src === 'leetify') {
+            const mode = (metadata?.gameMode || metadata?.data_source || '').toLowerCase();
+            if (mode.includes('faceit')) return 'faceit';
+            if (mode.includes('gamersclub') || mode === 'gc') return 'gc';
+            if (mode.includes('mix') || mode.includes('demo')) return 'mix';
+            return 'premier';
+        }
+        
+        if (src.includes('faceit')) return 'faceit';
+        if (src.includes('gamersclub') || src === 'gc') return 'gc';
+        if (src.includes('premier') || src === 'matchmaking' || src === 'steam') return 'premier';
+    } catch (e) {
+        console.error("[RankingAPI] Platform detection error:", e);
     }
-    
-    if (src.includes('faceit')) return 'faceit';
-    if (src.includes('gamersclub') || src === 'gc') return 'gc';
-    if (src.includes('premier') || src === 'matchmaking' || src === 'steam') return 'premier';
-    
     return null;
 }
 
@@ -254,7 +257,7 @@ export async function GET() {
                     steamId: p.steamId,
                     nickname: userData?.name || (p as any).steamName || p.faceitName || `Player #${p.steamId.slice(-4)}`,
                     avatar: userData?.image || (p as any).steamAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.steamId}`,
-                    rating,
+                    rating: rating || 0,
                     ...statsBreakdown.all, // Padrão
                     stats: statsBreakdown,
                     hasSync: !!userData?.steamMatchAuthCode && !!userData?.steamLatestMatchCode,

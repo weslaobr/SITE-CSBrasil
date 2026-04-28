@@ -356,3 +356,44 @@ export async function PATCH(
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const { id: matchId } = await params;
+    const { searchParams } = new URL(request.url);
+    const steamId = searchParams.get('steamId');
+
+    const session = await getServerSession(getAuthOptions(request));
+    if (!session || !(session.user as any)?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!steamId) {
+        return NextResponse.json({ error: "Missing steamId" }, { status: 400 });
+    }
+
+    try {
+        // 1. Remove from GlobalMatchPlayer
+        const deleted = await prisma.globalMatchPlayer.deleteMany({
+            where: {
+                globalMatchId: matchId,
+                steamId: steamId
+            }
+        });
+
+        if (deleted.count > 0) {
+            console.log(`[DELETE Player] Removed ${steamId} from match ${matchId}`);
+            return NextResponse.json({ success: true, count: deleted.count });
+        }
+
+        // 2. Fallback: If it's a legacy match, we can't easily delete a player from a JSON blob
+        // unless we edit the metadata. But for now, we focus on GlobalMatchPlayer.
+        
+        return NextResponse.json({ error: "Player not found in this match" }, { status: 404 });
+    } catch (error: any) {
+        console.error(`[DELETE Player Error]`, error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}

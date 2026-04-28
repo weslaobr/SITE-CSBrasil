@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Play, Download, Calendar, Activity, Target, Zap, Clock, Shield, Search, RefreshCw, X, 
-    AlertCircle, Crosshair, TrendingUp, Star, Flame, Eye, MapPin, Trophy, Swords, Info, Edit2, Check
+    AlertCircle, Crosshair, TrendingUp, Star, Flame, Eye, MapPin, Trophy, Swords, Info, Edit2, Check,
+    Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -340,6 +341,22 @@ const MatchReportModal: React.FC<Props> = ({
         if (uN && pN && (pN === uN || pN.includes(uN) || uN.includes(pN))) return true;
 
         return false;
+    };
+
+    const handleRemovePlayer = async (steamId: string) => {
+        if (!window.confirm('Tem certeza que deseja remover este jogador da partida? Isso limpará as estatísticas dele deste registro.')) return;
+        
+        try {
+            const res = await axios.delete(`/api/match/${matchId}?steamId=${steamId}`);
+            if (res.data.success) {
+                toast.success('Jogador removido com sucesso!');
+                if (onSync) onSync();
+                else window.location.reload();
+            }
+        } catch (error: any) {
+            console.error('Error removing player:', error);
+            toast.error('Erro ao remover jogador: ' + (error.response?.data?.error || error.message));
+        }
     };
 
     const normalizeP = (p: any, isUser = false, team?: string): PlayerStats => {
@@ -896,7 +913,7 @@ const MatchReportModal: React.FC<Props> = ({
     );
 
     /** Compact player row for main scoreboard */
-    const ScoreRow = ({ p, isAlly }: { p: PlayerStats; isAlly: boolean }) => {
+    const ScoreRow = ({ p, isAlly, onRemove }: { p: PlayerStats; isAlly: boolean; onRemove: (sid: string) => void }) => {
         const kd = (p.kills / (p.deaths || 1)).toFixed(2);
         const mvpKills = p.kills === Math.max(...(isAlly ? t1 : t2).map(x => x.kills));
         const kdColor = parseFloat(kd) >= 1.5 ? 'text-emerald-300' : parseFloat(kd) >= 1 ? 'text-emerald-400' : 'text-red-400';
@@ -915,6 +932,17 @@ const MatchReportModal: React.FC<Props> = ({
                             <div className="h-full bg-rose-500/60 rounded-full" style={{width:`${Math.min(100,p.hs)}%`}} />
                         </div>
                     </div>
+                </td>
+                <td className="py-2.5 px-1 text-right">
+                    {(session?.user as any)?.isAdmin && (
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onRemove(p.steamId); }}
+                            className="p-1.5 text-zinc-800 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Remover jogador desta partida"
+                        >
+                            <Trash2 size={12} />
+                        </button>
+                    )}
                 </td>
             </tr>
         );
@@ -1091,7 +1119,7 @@ const MatchReportModal: React.FC<Props> = ({
     };
 
 
-    const TeamBlock = ({ players, title, scoreVal, ally }: { players: PlayerStats[]; title: string; scoreVal: number; ally: boolean }) => {
+    const TeamBlock = ({ players, title, scoreVal, ally, onRemovePlayer }: { players: PlayerStats[]; title: string; scoreVal: number; ally: boolean; onRemovePlayer: (sid: string) => void }) => {
         const maxUtil = Math.max(...players.map(x => x.utilDmg || 0), 1);
         const maxGrenades = Math.max(...players.map(x => (x.heThrown || 0) + (x.flashThrown || 0) + (x.smokesThrown || 0) + (x.molotovThrown || 0)), 1);
 
@@ -1134,6 +1162,7 @@ const MatchReportModal: React.FC<Props> = ({
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Kill/Death Ratio (Média de mortes por vida)">K/D</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Average Damage per Round (Dano médio por rodada)">ADR</th>
                                         <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center" title="Headshot Percentage (Porcentagem de tiros na cabeça)">HS%</th>
+                                        <th className="py-2 px-1 w-8"></th>
                                     </>}
                                     {tab === 'desempenho' && <>
                                         <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600" title="Nome do Jogador">Jogador</th>
@@ -1165,7 +1194,7 @@ const MatchReportModal: React.FC<Props> = ({
                                 </tr>
                             </thead>
                             <tbody>
-                                {players.map((p, i) => tab === 'placar' ? <ScoreRow key={i} p={p} isAlly={ally} />
+                                {players.map((p, i) => tab === 'placar' ? <ScoreRow key={i} p={p} isAlly={ally} onRemove={onRemovePlayer} />
                                     : tab === 'desempenho' ? <PerfRow key={i} p={p} />
                                     : tab === 'utilitarios' ? <UtilRow key={i} p={p} maxUtil={maxUtil} />
                                     : <DuelRow key={i} p={p} />
@@ -1438,10 +1467,8 @@ const MatchReportModal: React.FC<Props> = ({
                                                 const isMe = (session?.user as any)?.steamId === userSteamId;
                                                 const allyTitle = isMe ? "Seu Time" : (userNickname ? `Time de ${userNickname}` : "Time do Jogador");
                                                 return (
-                                                    <>
-                                                        <TeamBlock players={t1} title={allyTitle} scoreVal={scoreA} ally={true} />
-                                                        <TeamBlock players={t2} title="Adversários" scoreVal={scoreE} ally={false} />
-                                                    </>
+                                                        <TeamBlock players={t1} title={allyTitle} scoreVal={scoreA} ally={true} onRemovePlayer={handleRemovePlayer} />
+                                                        <TeamBlock players={t2} title="Adversários" scoreVal={scoreE} ally={false} onRemovePlayer={handleRemovePlayer} />
                                                 );
                                             })()}
                                         </div>

@@ -227,9 +227,11 @@ function PremierBadge({ rating, size = 'sm' }: { rating: number; size?: 'xs' | '
 function AnimatedNumber({ value, duration = 1.2 }: { value: number; duration?: number }) {
     const [display, setDisplay] = useState(0);
     useEffect(() => {
-        let start = 0;
-        const end = value;
-        if (end === 0) return;
+        const end = value || 0;
+        if (end === 0) {
+            setDisplay(0);
+            return;
+        }
         const step = end / (duration * 60);
         const timer = setInterval(() => {
             start += step;
@@ -316,13 +318,16 @@ const GlobalRanking: React.FC = () => {
         return [...result].sort((a, b) => {
             const getVal = (u: RankUser) => {
                 const s = platformFilter !== 'all' ? (u.stats?.[platformFilter] || u) : u;
-                let v = (s as any)[sortKey] ?? (u as any)[sortKey];
+                let v = (s as any)[sortKey] ?? (u as any)[sortKey] ?? 0;
                 if (sortKey === 'winRate' as any) {
                     v = parseInt(String(v || '0').replace('%', ''));
+                    if (isNaN(v)) v = 0;
                 }
-                return v;
+                return typeof v === 'number' ? v : 0;
             };
-            return (getVal(b) as number) - (getVal(a) as number);
+            const valB = getVal(b);
+            const valA = getVal(a);
+            return valB - valA;
         });
     }, [users, searchTerm, sortKey, platformFilter]);
 
