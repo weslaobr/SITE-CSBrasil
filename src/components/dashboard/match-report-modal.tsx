@@ -504,38 +504,33 @@ const MatchReportModal: React.FC<Props> = ({
                 : null
             : null;
 
-        // --- Step 2: Look up score from metadata by team number ---
-        const getTeamScore = (teamNum: string | null) => {
-            if (!teamNum) return null;
-            // Try multiple key formats used by Leetify and local processor
-            for (const key of [
-                `team_${teamNum}_score`,
-                `team${teamNum}Score`,
-                `team${teamNum}_score`,
-            ]) {
-                if (meta[key] !== undefined) return Number(meta[key]);
+        const res = (currentMatch.result || '').toLowerCase();
+        const scoreStr = currentMatch.score || '';
+        
+        // Priority 1: Use the score string and result to determine order
+        if (typeof scoreStr === 'string' && scoreStr.includes('-')) {
+            const parts = scoreStr.split('-').map(n => parseInt(n.trim()));
+            if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                const s1 = parts[0];
+                const s2 = parts[1];
+                const maxS = Math.max(s1, s2);
+                const minS = Math.min(s1, s2);
+
+                if (res === 'win') return { a: maxS, e: minS };
+                if (res === 'loss') return { a: minS, e: maxS };
+                return { a: s1, e: s2 };
             }
-            return null;
-        };
+        }
 
-        const myScore = getTeamScore(uT);
-        const enemyScore = getTeamScore(eT);
-        if (myScore !== null && enemyScore !== null) return { a: myScore, e: enemyScore };
-
-        // --- Step 3: GlobalMatch fallback (scoreA = Team A, scoreB = Team B) ---
-        // Treat team number '2' as Team A (scoreA) and '3' as Team B (scoreB)
+        // Priority 2: Fallback to team scores if available
         const gA = currentMatch.scoreA;
         const gB = currentMatch.scoreB;
         if (gA !== undefined && gB !== undefined) {
+            if (res === 'win') return { a: Math.max(gA, gB), e: Math.min(gA, gB) };
+            if (res === 'loss') return { a: Math.min(gA, gB), e: Math.max(gA, gB) };
+            
             const isTeamB = uT === '3' || uT === 'B' || uT?.toLowerCase() === 'b';
             return isTeamB ? { a: Number(gB), e: Number(gA) } : { a: Number(gA), e: Number(gB) };
-        }
-
-        // --- Step 4: Parse score string as absolute last resort ---
-        const parts = (currentMatch.score || '').split(/[^\d]+/).map(Number).filter(n => !isNaN(n));
-        if (parts.length >= 2) {
-            const isTeamB = uT === '3' || uT === 'B' || uT?.toLowerCase() === 'b';
-            return isTeamB ? { a: parts[1], e: parts[0] } : { a: parts[0], e: parts[1] };
         }
 
         return { a: 0, e: 0 };
