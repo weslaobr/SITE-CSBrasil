@@ -78,7 +78,8 @@ const Replay2D: React.FC<Props> = ({ mapName, replayData, killEvents, playerInde
     return () => { if (playbackRef.current) clearInterval(playbackRef.current); };
   }, [isPlaying, playbackSpeed, ticks.length]);
 
-  const mapUrl = `https://raw.githubusercontent.com/pajlada/csgo-overviews/master/overviews/${mapName.toLowerCase()}.png`;
+  const normalizedMapName = mapName.toLowerCase().startsWith('de_') ? mapName.toLowerCase() : `de_${mapName.toLowerCase()}`;
+  const mapUrl = `https://raw.githubusercontent.com/pajlada/csgo-overviews/master/overviews/${normalizedMapName}.png`;
 
   return (
     <div className="flex flex-col gap-6 bg-zinc-950/50 p-6 rounded-[32px] border border-white/5">

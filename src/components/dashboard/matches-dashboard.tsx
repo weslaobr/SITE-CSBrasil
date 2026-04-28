@@ -239,6 +239,18 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
         setIsModalOpen(true);
     };
 
+    const handleLoadMockMatch = async () => {
+        try {
+            const res = await fetch('/mock-match.json');
+            const data = await res.json();
+            handleViewMatch(data as any, 'simulacao');
+            toast.success("Partida de teste carregada com sucesso!");
+        } catch (error) {
+            console.error("Erro ao carregar partida de teste:", error);
+            toast.error("Não foi possível carregar a partida de teste local.");
+        }
+    };
+
     const stats = useMemo(() => {
         const total = filteredMatches.length;
         if (total === 0) return { wr: 0, kills: 0, adr: '0.0', kd: '0.00', hs: '0', rating: '—' };
@@ -539,6 +551,14 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                             >
                                 <Users className="w-4 h-4" />
                                 <span className="text-[10px] font-black uppercase tracking-widest">Contas</span>
+                            </button>
+                            <button
+                                onClick={handleLoadMockMatch}
+                                className="flex items-center justify-center gap-2.5 px-5 py-3.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 transition-all group border-l border-white/[0.06]"
+                                title="Visualizar Replay 2D com dados locais (Sem DB)"
+                            >
+                                <Play size={14} className="fill-current" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Debug 2D</span>
                             </button>
                         </div>
                     </header>
