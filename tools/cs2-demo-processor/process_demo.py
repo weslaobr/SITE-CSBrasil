@@ -664,41 +664,8 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
             },
         })
 
-    # ── Extração de Trajetórias Ultra-Comprimidas ──
-    log_fn("📍 Extraindo trajetórias comprimidas para replay 2D...")
-    replay_data = {}
-    player_id_map = {sid: i for i, sid in enumerate(player_info.keys())}
-    try:
-        p_header = parser.parse_header()
-        playback_ticks = p_header.get("playback_ticks", 0)
-        # Amostragem de ~2Hz (128 ticks em CS2) para reduzir peso no banco
-        interval = 128
-        target_ticks = list(range(0, int(playback_ticks), interval))
-        if target_ticks and target_ticks[-1] < playback_ticks: target_ticks.append(int(playback_ticks))
-        
-        pos_cols = ["X", "Y", "view_angle", "is_alive"]
-        df_pos = parser.parse_ticks(pos_cols, ticks=target_ticks)
-        
-        if not is_empty(df_pos):
-            for tick, group in df_pos.groupby("tick"):
-                tick_pos = [] # Formato: [idx, x, y, angle]
-                for _, row in group.iterrows():
-                    sid = str(row.get("steamid", "0")).split(".")[0]
-                    if sid == "0" and "user_steamid" in row: sid = str(row["user_steamid"]).split(".")[0]
-                    
-                    if sid in player_id_map and bool(row.get("is_alive", True)):
-                        tick_pos.append([
-                            player_id_map[sid],
-                            int(safe_val(row.get("X", 0))),
-                            int(safe_val(row.get("Y", 0))),
-                            int(safe_val(row.get("view_angle", 0)))
-                        ])
-                if tick_pos:
-                    replay_data[str(tick)] = tick_pos
-            log_fn(f"📍 Replay comprimido: {len(replay_data)} frames.")
-    except Exception as e:
-        log_fn(f"⚠️ Erro ao extrair trajetórias: {e}")
 
+    player_id_map = {sid: i for i, sid in enumerate(player_info.keys())}
     # Determina resultado final baseado no Time A vs Time B
     if score_a is not None and score_b is not None:
         if score_a > score_b: # Time A venceu
@@ -729,7 +696,6 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         "metadata":  {
             "demoFile": os.path.basename(filepath),
             "roundSummaries": round_summaries,
-            "replayData": replay_data,
             "playerIndexMap": {i: sid for sid, i in player_id_map.items()}
         },
     }
