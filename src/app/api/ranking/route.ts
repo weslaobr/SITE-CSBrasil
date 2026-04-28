@@ -256,16 +256,9 @@ export async function GET() {
                     bucket.wins++;
                 } else if (resLower === 'loss' || resLower === 'defeat') {
                     // Perda
-                } else {
-                    // Check score
-                    const scoreStr = mData.score;
-                    if (typeof scoreStr === 'string' && scoreStr.includes('-')) {
-                        const [s1, s2] = scoreStr.split('-').map(n => parseInt(n.trim()));
-                        if (!isNaN(s1) && !isNaN(s2) && s1 > s2) bucket.wins++;
-                    } else if (mData.scoreA != null && mData.scoreB != null) {
-                        const isA = !mData.team || ['A', 'CT', '2'].includes(mData.team.toUpperCase());
-                        if (isA ? mData.scoreA > mData.scoreB : mData.scoreB > mData.scoreA) bucket.wins++;
-                    }
+                } else if (mData.scoreA != null && mData.scoreB != null) {
+                    const isA = !mData.team || ['A', 'CT', '2'].includes(String(mData.team).toUpperCase());
+                    if (isA ? mData.scoreA > mData.scoreB : mData.scoreB > mData.scoreA) bucket.wins++;
                 }
             };
 
