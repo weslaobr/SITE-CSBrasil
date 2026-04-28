@@ -279,36 +279,35 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                     mvp_map[sid] = int(row.get("mvps", 0) or 0)
     except: pass
 
-    # ── Placar e Lados ──
-    score_a, score_b = 0, 0
-    rounds = len(df_re) if df_re is not None else 0
-    round_summaries = {}
-    team_mapping = {} # sid -> A/B
-
+    # ── 2. Identificar times no início (Team A = CT, Team B = TR)
+    team_mapping = {}
     # Tenta descobrir o tick do início do round 1 para mapear times
     first_round_tick = start_tick
     try:
         df_freeze = _parse("round_freeze_end")
         if not is_empty(df_freeze): first_round_tick = int(df_freeze["tick"].min())
     except: pass
+    
+    # Tenta múltiplos offsets para garantir que pegamos os times após o freeze-time do round 1
+    for offset in [128, 256, 512, 1024]:
+        probe = parser.parse_ticks(["team_name", "team_num"], ticks=[first_round_tick + offset])
+        if not probe.empty:
+            for _, p_row in probe.iterrows():
+                sid = str(p_row["steamid"])
+                team = str(p_row.get("team_name", ""))
+                t_num = p_row.get("team_num", 0)
+                
+                if sid not in team_mapping:
+                    if team == "CT" or t_num == 3:
+                        team_mapping[sid] = "A"
+                    elif team == "T" or "TERRORIST" in team.upper() or t_num == 2:
+                        team_mapping[sid] = "B"
+            
+            if len(team_mapping) >= 5: break # Já temos dados suficientes
 
-    # Fonte 1: parse_ticks no R1
-    try:
-        probe = parser.parse_ticks(["team_name"], ticks=[first_round_tick])
-        if not is_empty(probe):
-            for _, row in probe.iterrows():
-                sid = str(row["steamid"]).split(".")[0]
-                team = normalize_team(str(row.get("team_name", "")))
-                if sid in player_info and team in ("CT", "T"):
-                    team_mapping[sid] = "A" if team == "CT" else "B"
-    except: pass
+    log_fn(f"👥 Mapeamento de times concluído ({len(team_mapping)} jogadores identificados).")
 
-    # Fonte 2: player_info (fallback)
-    if not team_mapping:
-        for sid, info in player_info.items():
-            team_mapping[sid] = "A" if info["team"] == "CT" else "B"
-
-    # Halftime detection e rounds_per_half
+    # ── Halftime detection e rounds_per_half ──
     # Tenta detectar via convars (mp_maxrounds)
     rounds_per_half = 12
     try:
@@ -342,6 +341,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     if not is_empty(df_re):
         pts_a, pts_b = 0, 0
         w_col = next((c for c in ["winner", "winner_name"] if c in df_re.columns), "winner")
+        last_round_winner = None
         for i, (_, r_end) in enumerate(df_re.iterrows()):
             r_num = i + 1
             w_side = normalize_team(str(r_end[w_col]))
@@ -350,8 +350,12 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
             if w_side in ("CT", "T"):
                 cur_a_side = side_of_a(r_num)
                 is_a_win = (w_side == cur_a_side)
-                if is_a_win: pts_a += 1
-                else: pts_b += 1
+                if is_a_win: 
+                    pts_a += 1
+                    last_round_winner = "A"
+                else: 
+                    pts_b += 1
+                    last_round_winner = "B"
             
             round_summaries[r_num] = {
                 "kills":[], "damage":{}, "winner": w_side, 
@@ -359,6 +363,15 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                 "logical_winner": "A" if (w_side in ("CT", "T") and w_side == side_of_a(r_num)) else ("B" if w_side in ("CT", "T") else "Draw")
             }
         
+        # Sovereign Winner Logic: The winner of the last round is the match winner
+        if last_round_winner == "A":
+            final_a, final_b = max(pts_a, pts_b), min(pts_a, pts_b)
+            pts_a, pts_b = final_a, final_b
+        elif last_round_winner == "B":
+            final_a, final_b = min(pts_a, pts_b), max(pts_a, pts_b)
+            pts_a, pts_b = final_a, final_b
+
+        log_fn(f"📊 Placar Final Calculado: CT {pts_a} x {pts_b} TR")
         score_a, score_b = pts_a, pts_b
         log_fn(f"📊 Placar calculado: {score_a} x {score_b} ({len(df_re)} rounds, RPH: {rounds_per_half})")
 
@@ -1276,7 +1289,6 @@ class DemoProcessorApp(ctk.CTk):
         match["metadata"] = self._demo_data["match"]["metadata"].copy()
         
         players = [p.copy() for p in self._demo_data["players"]]
-        raw_data = self._demo_data.get("raw", {}) # Supondo que parse_demo retorne os DFs brutos no 'raw'
 
         # ── Filtragem Manual de Rounds ──
         selected_rounds = [r for r, var in self._round_vars.items() if var.get()]
@@ -1287,19 +1299,7 @@ class DemoProcessorApp(ctk.CTk):
         self._log(f"⚡ Filtrando partida: Mantendo {len(selected_rounds)} rounds...")
 
         # Recalcular Placar
-        new_score_a = 0
-        new_score_b = 0
         summaries = match.get("metadata", {}).get("roundSummaries", {})
-        
-        # Identificar Time A/B via mapping original
-        # O mapping está no metadata.roundSummaries em cada kill ou derivado de logic
-        # Mas vamos usar o score_a/score_b original vs winner_side
-        # Na verdade, a forma mais segura é filtrar os pontos
-        
-        # Como já fizemos a lógica robusta de Logical Team A/B no parse_demo,
-        # vamos apenas re-executar a contagem sobre os rounds selecionados.
-        # Mas para simplificar aqui (já que não temos o team_mapping em mãos fácil na UI),
-        # vamos pedir pro db_connector aceitar o que mandamos.
         
         def is_team_a_winner(r_num):
             s = summaries.get(r_num) or summaries.get(str(r_num), {})
