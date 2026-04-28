@@ -1433,15 +1433,18 @@ class DemoProcessorApp(ctk.CTk):
         summaries = match.get("metadata", {}).get("roundSummaries", {})
         
         # 1. Swap Scores
-        match["scoreA"], match["scoreB"] = match.get("scoreB", 0), match.get("scoreA", 0)
+        old_a = match.get("scoreA", 0)
+        old_b = match.get("scoreB", 0)
+        match["scoreA"] = old_b
+        match["scoreB"] = old_a
         
         # 2. Swap Logical Winner in roundSummaries
         for r_num in summaries:
-             s = summaries[r_num]
-             if s.get("logical_winner") == "A":
-                 s["logical_winner"] = "B"
-             elif s.get("logical_winner") == "B":
-                 s["logical_winner"] = "A"
+            s = summaries[r_num]
+            if s.get("logical_winner") == "A":
+                s["logical_winner"] = "B"
+            elif s.get("logical_winner") == "B":
+                s["logical_winner"] = "A"
         
         # 3. Swap Results for Players
         for p in players:
@@ -1542,35 +1545,43 @@ class DemoProcessorApp(ctk.CTk):
         
         # Recalcular Estatísticas de Jogadores
         for p in players:
-            sid = p["steamId"]
-            p_kills = 0
-            p_deaths = 0
-            p_assists = 0
-            p_damage = 0
-            p_hs = 0
+            # Normalização rigorosa do sid para o match do log
+            sid = sid_norm(p.get("steamId"))
+            p_kills, p_deaths, p_assists, p_damage, p_hs = 0, 0, 0, 0, 0
             
             for r_num in selected_rounds:
                 s = summaries.get(r_num) or summaries.get(str(r_num), {})
                 if not s: continue
                 
-                # Kills e HS
+                # Eventos do Round
                 r_kills = s.get("kills", [])
-                p_kills += len([k for k in r_kills if k.get("attackerSteamId") == sid])
-                p_deaths += len([k for k in r_kills if k.get("victimSteamId") == sid])
-                p_hs += len([k for k in r_kills if k.get("attackerSteamId") == sid and k.get("isHeadshot")])
+                p_kills += len([k for k in r_kills if sid_norm(k.get("attackerSteamId")) == sid])
+                p_deaths += len([k for k in r_kills if sid_norm(k.get("victimSteamId")) == sid])
+                p_hs += len([k for k in r_kills if sid_norm(k.get("attackerSteamId")) == sid and k.get("isHeadshot")])
+                p_assists += len([k for k in r_kills if sid_norm(k.get("assisterSteamId")) == sid])
                 
-                # ASSISTÊNCIAS - Agora usando o campo restaurado
-                p_assists += len([k for k in r_kills if k.get("assisterSteamId") == sid])
-                
-                # DANO - Agora usando o mapa de dano por round
+                # Dano
                 p_damage += s.get("damage", {}).get(sid, 0)
 
-            # SE CONTINUAR ZERO (ADR/Assists), MAS O GLOBAL TIVER DADOS
-            if p_damage == 0 or p_assists == 0:
-                orig_p = next((op for op in self._demo_data["players"] if op["steamId"] == sid), None)
-                if orig_p:
-                    if p_assists == 0: p_assists = orig_p.get("assists", 0)
-                    if p_damage == 0: p_damage = orig_p.get("adr", 0) * len(selected_rounds)
+            # GARANTIA: Se o cálculo por rounds falhar mas a demo tiver os dados globais
+            orig_p = next((op for op in self._demo_data["players"] if sid_norm(op["steamId"]) == sid), None)
+            if orig_p:
+                # Se a diferença for muito grande (erro de timeline), usa o global proporcional
+                if p_kills == 0 and orig_p.get("kills", 0) > 0:
+                    p_kills = orig_p.get("kills", 0)
+                    p_deaths = orig_p.get("deaths", 0)
+                    p_assists = orig_p.get("assists", 0)
+                    p_hs = (orig_p.get("hsPercentage", 0) / 100 * p_kills) if p_kills > 0 else 0
+                    p_damage = orig_p.get("adr", 0) * len(selected_rounds)
+                elif p_assists == 0 and orig_p.get("assists", 0) > 0:
+                    # Caso específico de assistências sumindo
+                    p_assists = orig_p.get("assists", 0)
+                
+            p["kills"] = p_kills
+            p["deaths"] = p_deaths
+            p["assists"] = p_assists
+            p["hsPercentage"] = round((p_hs / max(p_kills, 1)) * 100, 1)
+            p["adr"] = round(p_damage / max(len(selected_rounds), 1), 1)
                 
                 # Damage (já somado acima no loop)
                 pass
