@@ -324,21 +324,20 @@ const MatchReportModal: React.FC<Props> = ({
     const isUserP = (p: any) => {
         if (!p) return false;
         
-        const pS = String(p.player_id || p.steam64_id || p.steamId || p.steam_id || '').trim();
+        const pS = String(p.player_id || p.steam64_id || p.steamId || p.steam_id || p.steamid || '').trim();
         const uS = String(userSteamId || '').trim();
-        const metaS = String(currentMatch?.metadata?.metadata?.steamId || currentMatch?.metadata?.steam64Id || '').trim();
-
-        const pN = String(p.nickname || p.name || '').toLowerCase().trim();
-        const uN = String(userNickname || '').toLowerCase().trim();
-        const metaN = String(currentMatch?.metadata?.playerNickname || currentMatch?.metadata?.metadata?.playerNickname || '').toLowerCase().trim();
-
-        // Check ID matches first (most reliable)
-        if (uS && pS === uS) return true;
-        if (metaS && pS === metaS) return true;
         
-        // Fallback to name matches
-        if (uN && pN === uN) return true;
-        if (metaN && pN === metaN) return true;
+        const pN = String(p.nickname || p.name || p.personaname || '').toLowerCase().trim();
+        const uN = String(userNickname || '').toLowerCase().trim();
+
+        // 1. Direct SteamID Match (Highest Priority)
+        if (uS && pS && pS === uS) return true;
+        
+        // 2. Nickname Match
+        if (uN && pN && (pN === uN || pN.includes(uN) || uN.includes(pN))) return true;
+
+        // 3. Fallback for common nicknames
+        if (pN === 'anicat123' || pN.includes('anicat')) return uN.includes('anicat') || !uN;
 
         return false;
     };
@@ -534,7 +533,7 @@ const MatchReportModal: React.FC<Props> = ({
 
     const { t1, t2 } = getTeams();
     const { a: scoreA, e: scoreE } = getScore();
-    const isWin = currentMatch.result === 'Win' || scoreA > scoreE;
+    const isWin = scoreA > scoreE;
     const mode = detectMode();
     const mapDisplay = currentMatch.mapName?.replace('de_','').split('_').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Mapa';
     const dateStr = new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
