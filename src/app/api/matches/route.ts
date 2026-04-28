@@ -92,6 +92,8 @@ export async function GET(req: NextRequest) {
         });
 
         // Format Global Matches to match the old Match schema for the frontend
+        const isTeamA = (t: string | null) => !t || ['A', 'CT', '3'].includes(t.toUpperCase());
+
         const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
             const res = (gmp.matchResult || '').toLowerCase();
             const mappedResult = res === 'win' ? 'Win' : (res === 'loss' ? 'Loss' : 'Tie');
@@ -116,7 +118,9 @@ export async function GET(req: NextRequest) {
                 kills: gmp.kills,
                 deaths: gmp.deaths,
                 assists: gmp.assists,
-                score: gmp.match.scoreA != null ? `${gmp.match.scoreA}-${gmp.match.scoreB}` : '0-0',
+                score: gmp.match.scoreA != null 
+                    ? (isTeamA(gmp.team) ? `${gmp.match.scoreA}-${gmp.match.scoreB}` : `${gmp.match.scoreB}-${gmp.match.scoreA}`)
+                    : '0-0',
                 result: mappedResult,
                 matchDate: gmp.match.matchDate,
                 hsPercentage: gmp.hsPercentage,
