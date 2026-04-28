@@ -54,13 +54,41 @@ export async function GET(
 
         if (localMatch && localMatch.players && localMatch.players.length > 0) {
             const localMeta = (localMatch.metadata as any) || {};
+
+            // Team number convention:
+            // Team A (scoreA) → numeric team "2" → team_2_score  (Leetify convention)
+            // Team B (scoreB) → numeric team "3" → team_3_score
+            // The frontend's computeScore() looks for team_{initial_team_number}_score in metadata.
+            const isTeamA = (t: string | null) => !t || ['A','CT','3'].includes(t.toUpperCase());
+
+            // Find the profile owner's player record to compute result from their perspective
+            const profilePlayer = profileSteamId
+                ? localMatch.players.find(p => String(p.steamId) === String(profileSteamId))
+                : null;
+            const profileTeam = profilePlayer?.team ?? null;
+            const profileIsTeamA = isTeamA(profileTeam);
+            const scoreA = localMatch.scoreA ?? 0;
+            const scoreB = localMatch.scoreB ?? 0;
+            const profileScore  = profileIsTeamA ? scoreA : scoreB;
+            const opponentScore = profileIsTeamA ? scoreB : scoreA;
+            const profileResult = profilePlayer
+                ? (profileScore > opponentScore ? 'Win' : profileScore < opponentScore ? 'Loss' : 'Tie')
+                : null;
+
             let localStats = localMatch.players.map(p => {
                 const m = (p.metadata as any) || {};
                 // FK/FD: vem ou das colunas diretas (parser Python) ou do metadata (sync Leetify)
                 const fkVal = (p as any).fk ?? m.fk ?? m.fk_count ?? m.first_kill_count ?? m.firstKills ?? 0;
                 const fdVal = (p as any).fd ?? m.fd ?? m.fd_count ?? m.first_death_count ?? m.firstDeaths ?? 0;
+                // Map internal team labels to numeric team numbers used by computeScore()
+                // Team A → initial_team_number = 2 (Leetify convention)
+                // Team B → initial_team_number = 3
+                const numericTeam = isTeamA(p.team) ? '2' : '3';
                 return {
                     team_id: p.team,
+                    // initial_team_number is CRITICAL — used by computeScore() and getTeams()
+                    // to identify which team the profile owner belongs to and look up the right score.
+                    initial_team_number: numericTeam,
                     steam64_id: p.steamId,
                     name: m.name ?? m.nickname ?? m.playerNickname ?? p.steamId,
                     total_kills: p.kills,
@@ -115,10 +143,20 @@ export async function GET(
                 game_mode: localMatch.source,
                 data_source: localMatch.source,
                 match_date: localMatch.matchDate.toISOString(),
-                team_2_score: localMatch.scoreB || 0,
-                team_3_score: localMatch.scoreA || 0,
+                // Team A (internal 'A'/'CT'/'3') maps to numeric team 2 → team_2_score
+                // Team B (internal 'B'/'T'/'2') maps to numeric team 3 → team_3_score
+                // computeScore() on the frontend looks for team_{initial_team_number}_score
+                team_2_score: localMatch.scoreA ?? 0,
+                team_3_score: localMatch.scoreB ?? 0,
+                // result from the profile owner's perspective (null if unknown)
+                result: profileResult,
                 demo_url: localMeta.demoUrl || null,
-                metadata: localMeta,
+                metadata: {
+                    ...localMeta,
+                    // Expose team scores by numeric key so computeScore() can find them
+                    team_2_score: localMatch.scoreA ?? 0,
+                    team_3_score: localMatch.scoreB ?? 0,
+                },
                 stats: localStats
             };
 
