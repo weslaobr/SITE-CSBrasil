@@ -293,19 +293,20 @@ export async function PATCH(
             } 
         });
 
-        if (legacyMatch) {
+        if (legacyMatch && legacyMatch.externalId) {
             const newResult = scoreA > scoreB ? "Win" : (scoreB > scoreA ? "Loss" : "Tie");
             
-            const updatedLegacy = await prisma.match.update({
-                where: { id: legacyMatch.id },
+            // Update for ALL users who have this same match (by externalId)
+            await prisma.match.updateMany({
+                where: { externalId: legacyMatch.externalId },
                 data: {
                     score: `${scoreA}-${scoreB}`,
                     result: newResult
                 }
             });
 
-            console.log(`[PATCH LegacyMatch] ${matchId} updated to ${scoreA}-${scoreB} (${newResult})`);
-            return NextResponse.json({ success: true, match: updatedLegacy });
+            console.log(`[PATCH LegacyMatch] All records for ${legacyMatch.externalId} updated to ${scoreA}-${scoreB} (${newResult})`);
+            return NextResponse.json({ success: true });
         }
 
         return NextResponse.json({ error: "Match not found in any table" }, { status: 404 });
