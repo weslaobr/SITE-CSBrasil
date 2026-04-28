@@ -1135,6 +1135,17 @@ const MatchReportModal: React.FC<Props> = ({
                                                     className="w-12 bg-transparent text-2xl font-black text-center border-b border-zinc-500 focus:outline-none"
                                                 />
                                                 <button 
+                                                    onClick={() => {
+                                                        const tmp = editScoreA;
+                                                        setEditScoreA(editScoreB);
+                                                        setEditScoreB(tmp);
+                                                    }}
+                                                    className="mx-1 w-8 h-8 rounded-lg bg-white/5 text-zinc-400 flex items-center justify-center hover:bg-white/10"
+                                                    title="Inverter placar"
+                                                >
+                                                    <RefreshCw size={14} />
+                                                </button>
+                                                <button 
                                                     onClick={handleUpdateScore}
                                                     disabled={isSavingScore}
                                                     className="ml-2 w-8 h-8 rounded-lg bg-emerald-500 text-black flex items-center justify-center hover:bg-emerald-400 disabled:opacity-50"
