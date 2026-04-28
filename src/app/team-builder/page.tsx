@@ -355,7 +355,10 @@ export default function TeamBuilderPage() {
     };
 
     const handleSendSteam = async () => {
-        if (teamA.length === 0 && teamB.length === 0) return;
+        if (teamA.length === 0 && teamB.length === 0) {
+            alert("Selecione os times antes de enviar.");
+            return;
+        }
         setSteamStatus("sending");
 
         const lastPick = [...vetoHistory].reverse().find(h => h.type === "pick");
@@ -372,15 +375,21 @@ export default function TeamBuilderPage() {
                     pickMethod
                 }),
             });
+            
+            const data = await res.json();
+            
             if (res.ok) {
                 setSteamStatus("sent");
                 setTimeout(() => setSteamStatus("idle"), 3000);
             } else {
+                console.error("Steam API Error:", data);
+                alert(`Erro ao enviar: ${data.message || data.error || "Erro desconhecido"}`);
                 setSteamStatus("error");
                 setTimeout(() => setSteamStatus("idle"), 4000);
             }
         } catch (err) {
             console.error(err);
+            alert("Erro de conexão ao tentar enviar para a Steam.");
             setSteamStatus("error");
             setTimeout(() => setSteamStatus("idle"), 4000);
         }

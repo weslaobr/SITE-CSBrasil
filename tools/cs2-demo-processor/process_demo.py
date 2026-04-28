@@ -85,6 +85,12 @@ def safe_val(val, default=0.0):
         return default
 
 
+def sid_norm(val):
+    """Normaliza SteamID para string, removendo .0 se necessário."""
+    if val is None or str(val) == "0" or str(val) == "None": return ""
+    return str(val).split(".")[0].strip()
+
+
 # ─────────────────────────────────────────────
 # Parser de Demo
 # ─────────────────────────────────────────────
@@ -163,11 +169,6 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         return None
 
     # helpers
-    def sid_norm(val):
-        if val is None or str(val) == "0" or str(val) == "None": return ""
-        # Remove .0 de floats convertidos para string
-        return str(val).split(".")[0].strip()
-
     def is_empty(df):
         if df is None: return True
         if hasattr(df, "empty"): return df.empty
@@ -1519,6 +1520,7 @@ class DemoProcessorApp(ctk.CTk):
             messagebox.showerror("Erro", "Processe uma demo primeiro.")
             return
 
+
         # Cria cópia profunda parcial para não corromper os dados originais em caso de re-envio
         match = self._demo_data["match"].copy()
         match["metadata"] = self._demo_data["match"]["metadata"].copy()
@@ -1616,6 +1618,7 @@ class DemoProcessorApp(ctk.CTk):
         
         # Atualiza source
         match["source"] = self._source_var.get()
+
 
         if db_connector.match_exists(match["id"]):
             resp = messagebox.askyesno(

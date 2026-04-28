@@ -248,7 +248,7 @@ app.get('/item-details', (req, res) => {
 });
 
 // API para envio de mensagens via chat da Steam
-app.post('/send-message', (req, res) => {
+app.post('/send-message', async (req, res) => {
     const { steamId, message } = req.body;
 
     if (!steamId || !message) {
@@ -262,11 +262,29 @@ app.post('/send-message', (req, res) => {
     try {
         console.log(`💬 Enviando mensagem para ${steamId}`);
         // A biblioteca steam-user permite enviar mesmo que a pessoa esteja offline
-        user.chat.sendFriendMessage(steamId, message);
-        res.json({ success: true, message: 'Mensagem enviada ou na fila de envio' });
+        // Na v5, sendFriendMessage retorna uma Promise
+        await user.chat.sendFriendMessage(steamId, message);
+        console.log(`✅ Mensagem enviada com sucesso para ${steamId}`);
+        res.json({ success: true, message: 'Mensagem enviada com sucesso' });
     } catch (err) {
-        console.error(`❌ Erro ao enviar mensagem para ${steamId}:`, err);
-        res.status(500).json({ error: 'Erro ao enviar mensagem', details: err.message });
+        console.error(`❌ Erro ao enviar mensagem para ${steamId}:`, err.message);
+        
+        let statusCode = 500;
+        let errorMessage = 'Erro ao enviar mensagem';
+        
+        if (err.message.includes('Not Friends') || err.eresult === 15) {
+            statusCode = 403;
+            errorMessage = 'O bot não é amigo deste usuário';
+        } else if (err.message.includes('RateLimitExceeded')) {
+            statusCode = 429;
+            errorMessage = 'Limite de mensagens excedido';
+        }
+
+        res.status(statusCode).json({ 
+            error: errorMessage, 
+            details: err.message,
+            relationship: err.eresult === 15 ? 'NotFriends' : 'Unknown'
+        });
     }
 });
 
