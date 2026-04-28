@@ -59,7 +59,7 @@ export async function GET(
             // Team A (scoreA) → numeric team "2" → team_2_score  (Leetify convention)
             // Team B (scoreB) → numeric team "3" → team_3_score
             // The frontend's computeScore() looks for team_{initial_team_number}_score in metadata.
-            const isTeamA = (t: string | null) => !t || ['A','CT','3'].includes(t.toUpperCase());
+            const isTeamA = (t: string | null) => !t || ['A', 'CT', '2'].includes(t.toUpperCase());
 
             // Find the profile owner's player record to compute result from their perspective
             const profilePlayer = profileSteamId
@@ -247,7 +247,7 @@ export async function GET(
                     traded_death_opportunities: p.traded_death_opportunities ?? 0,
                     trade_kills_succeed: p.trade_kills_succeed ?? 0,
                     traded_deaths_succeed: p.traded_deaths_succeed ?? 0,
-
+                    is_user: !!(profileSteamId && (p.steam64_id || p.player_id || p.steamId) && String(p.steam64_id || p.player_id || p.steamId) === String(profileSteamId))
                 };
             });
             data.demo_url = data.demo_url || data.demoUrl || null;

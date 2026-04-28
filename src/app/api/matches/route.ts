@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
         });
 
         // Format Global Matches to match the old Match schema for the frontend
-        const isTeamA = (t: string | null) => !t || ['A', 'CT', '3'].includes(t.toUpperCase());
+        const isTeamA = (t: string | null) => !t || ['A', 'CT', '2'].includes(t.toUpperCase());
 
         const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
             const res = (gmp.matchResult || '').toLowerCase();
