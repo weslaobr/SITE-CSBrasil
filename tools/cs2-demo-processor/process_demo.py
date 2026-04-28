@@ -280,6 +280,9 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     except: pass
 
     # ── 2. Identificar times no início (Team A = CT, Team B = TR)
+    score_a, score_b = 0, 0
+    rounds = len(df_re) if df_re is not None else 0
+    round_summaries = {}
     team_mapping = {}
     # Tenta descobrir o tick do início do round 1 para mapear times
     first_round_tick = start_tick
