@@ -231,14 +231,21 @@ export async function GET() {
             const platform = detectPlatform(mData.source || mData.gameMode, mData.metadata || mData);
 
             const update = (bucket: any) => {
-                bucket.kills += mData.kills || 0;
-                bucket.deaths += mData.deaths || 0;
-                bucket.assists += mData.assists || 0;
-                bucket.adrSum += (mData.adr || 0);
-                bucket.hsSum += (mData.hsPercentage || 0);
+                // ADR robust extraction
+                const adrVal = mData.adr ?? mData.dpr ?? mData.average_damage_per_round ?? mData.avg_adr ?? 0;
+                bucket.adrSum += Number(adrVal);
+
+                // Kills/Deaths/Assists
+                bucket.kills += Number(mData.kills || 0);
+                bucket.deaths += Number(mData.deaths || 0);
+                bucket.assists += Number(mData.assists || 0);
+
+                // HS robust extraction
+                const hsVal = mData.hsPercentage ?? mData.hs_percentage ?? mData.headshot_percentage ?? mData.hs_pct ?? 0;
+                bucket.hsSum += Number(hsVal);
                 
-                // Extrair rating da partida se disponível
-                const matchRating = mData.rating || (mData.metadata?.leetify_rating) || (mData.metadata?.rating) || 0;
+                // Extrair rating da partida se disponível (escala 0.0-2.0)
+                const matchRating = Number(mData.rating || mData.leetify_rating || mData.rating2 || 0);
                 if (matchRating > 0) bucket.ratingSum += matchRating;
 
                 bucket.count++;
@@ -288,25 +295,37 @@ export async function GET() {
                 const pStats = playerPlatformStats.get(p.steamId);
                 
                 // Função helper para calcular KDR/ADR/HS de um bucket
-                const calculate = (b: any) => {
+                const calculate = (b: any, platformKey: string) => {
                     const kdr = b.deaths > 0 ? Math.round((b.kills / b.deaths) * 100) / 100 : b.kills > 0 ? b.kills : 0;
                     const adr = b.count > 0 ? Math.round(b.adrSum / b.count) : 0;
                     const hs = b.count > 0 ? Math.round(b.hsSum / b.count) : 0;
                     const wr = b.count > 0 ? `${Math.round((b.wins / b.count) * 100)}%` : 'N/A';
                     
-                    // Rating da plataforma: média ponderada ou ADR como fallback
-                    let rating = b.count > 0 ? Math.round((b.ratingSum / b.count) * 100) / 100 : 0;
-                    if (rating === 0) rating = adr; // Fallback para ADR se não houver rating Leetify/Faceit
+                    // Pontos por plataforma:
+                    // Mix -> ADR é o padrão ouro
+                    // Outros -> SR/ELO se houver, senão ADR
+                    let rating = 0;
+                    if (platformKey === 'mix') {
+                        rating = adr;
+                    } else {
+                        // Tentar rating de performance (escala 0-2) ou SR (escala 0-30000)
+                        const avgPerf = b.count > 0 ? b.ratingSum / b.count : 0;
+                        if (platformKey === 'premier' && stats?.premierRating) rating = stats.premierRating;
+                        else if (platformKey === 'faceit' && stats?.faceitElo) rating = stats.faceitElo;
+                        else if (platformKey === 'gc' && stats?.gcLevel) rating = stats.gcLevel * 100; // Fake scale
+                        else if (avgPerf > 0) rating = Math.round(avgPerf * 100) / 100;
+                        else rating = adr;
+                    }
                     
                     return { kdr, adr, hsPercentage: hs, matchesPlayed: b.count, winRate: wr, rating };
                 };
 
                 const statsBreakdown: any = {
-                    all: pStats ? calculate(pStats.all) : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A' },
-                    mix: pStats ? calculate(pStats.mix) : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A' },
-                    faceit: pStats ? calculate(pStats.faceit) : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A' },
-                    premier: pStats ? calculate(pStats.premier) : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A' },
-                    gc: pStats ? calculate(pStats.gc) : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A' },
+                    all: pStats ? calculate(pStats.all, 'all') : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A', rating: 0 },
+                    mix: pStats ? calculate(pStats.mix, 'mix') : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A', rating: 0 },
+                    faceit: pStats ? calculate(pStats.faceit, 'faceit') : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A', rating: 0 },
+                    premier: pStats ? calculate(pStats.premier, 'premier') : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A', rating: 0 },
+                    gc: pStats ? calculate(pStats.gc, 'gc') : { kdr: 0, adr: 0, hsPercentage: 0, matchesPlayed: 0, winRate: 'N/A', rating: 0 },
                 };
 
                 // Fallback para dados legados do User se não houver GlobalMatchPlayer
