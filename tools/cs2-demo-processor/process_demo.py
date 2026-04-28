@@ -163,6 +163,11 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         return None
 
     # helpers
+    def sid_norm(val):
+        if val is None or str(val) == "0" or str(val) == "None": return ""
+        # Remove .0 de floats convertidos para string
+        return str(val).split(".")[0].strip()
+
     def is_empty(df):
         if df is None: return True
         if hasattr(df, "empty"): return df.empty
@@ -179,7 +184,29 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         return df
 
     def _parse(ev):
-        return safe_parse_event(parser, ev)
+        try:
+            df = safe_parse_event(parser, ev)
+            if is_empty(df): return None
+            # Normalização de colunas para garantir que o resto do código funcione
+            rename_map = {
+                "attacker_pawn_steamid": "attacker_steamid",
+                "victim_pawn_steamid": "victim_steamid",
+                "user_pawn_steamid": "victim_steamid",
+                "assister_pawn_steamid": "assister_steamid",
+                "attacker_steamid64": "attacker_steamid",
+                "user_steamid": "victim_steamid",
+                "user_steamid64": "victim_steamid",
+                "victim_steamid64": "victim_steamid",
+                "assister_steamid64": "assister_steamid"
+            }
+            # Verifica se as colunas existem antes de renomear para evitar erro
+            actual_renames = {k: v for k, v in rename_map.items() if k in df.columns}
+            if actual_renames:
+                df = df.rename(columns=actual_renames)
+            return df
+        except Exception as e:
+            log_fn(f"⚠️ Erro ao parsear evento {ev}: {e}")
+            return None
 
     # ── Header e Duração ─────────────────
     header = {}
@@ -205,8 +232,9 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
             # Ordena por tick para pegar o estado mais recente
             df_p = df_p.sort_values("tick")
             for _, row in df_p.iterrows():
-                sid = str(row.get("steamid", "0")).split(".")[0]
-                if sid == "0" or not sid: continue
+                # Conversão robusta de SteamID
+                sid = sid_norm(row.get("steamid"))
+                if not sid: continue
                 
                 name = str(row.get("name", ""))
                 team = normalize_team(str(row.get("team_name", "")))
@@ -242,11 +270,12 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
             log_fn(f"🎮 Fim do warmup detectado no tick {start_tick}")
     
     # ── Eventos de Fim de Round ──
-    df_re = _parse("round_end")
-    if is_empty(df_re): df_re = _parse("round_officially_ended")
+    df_re_raw = _parse("round_end")
+    if is_empty(df_re_raw): df_re_raw = _parse("round_officially_ended")
     
     # Filtramos por tick para remover rounds de warmup
-    if df_re is not None: 
+    df_re = df_re_raw
+    if not is_empty(df_re): 
         df_re = df_re[df_re["tick"] >= start_tick].sort_values("tick").reset_index(drop=True)
     
     # Heurística: se o primeiro round_end for antes de 1 minuto de jogo real, 
@@ -262,15 +291,38 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         log_fn(f"⏳ Duração estimada via rounds: {duration_str}")
 
     # ── Kills e Dano ──
-    df_kills = _parse("player_death")
-    if df_kills is not None: df_kills = filter_tick(df_kills)
+    df_kills_raw = _parse("player_death")
+    df_dmg_raw = _parse("player_hurt")
     
-    df_dmg = _parse("player_hurt")
-    if df_dmg is not None: df_dmg = filter_tick(df_dmg)
+    df_kills = filter_tick(df_kills_raw)
+    df_dmg = filter_tick(df_dmg_raw)
+    
+    # Validação de Filtro: se o filtro limpou TUDO mas havia dados antes, o start_tick está errado.
+    if is_empty(df_kills) and not is_empty(df_kills_raw):
+        log_fn("⚠️  Aviso: Filtro de warmup removeu todas as kills. Ignorando filtro de início.")
+        df_kills = df_kills_raw
+        df_dmg = df_dmg_raw
+        # Ajusta round_end também se necessário
+        if not is_empty(df_re_raw): df_re = df_re_raw
+
+    # GARANTIR QUE TODOS OS JOGADORES DOS EVENTOS ESTEJAM NO PLAYER_INFO
+    # (Fazemos isso antes de qualquer loop de rounds ou kda)
+    for df in [df_kills, df_dmg]:
+        if not is_empty(df):
+            for col in ["attacker_steamid", "victim_steamid", "assister_steamid"]:
+                if col in df.columns:
+                    for val in df[col].dropna().unique():
+                        sid = sid_norm(val)
+                        if sid and sid not in player_info:
+                            player_info[sid] = {"name": f"Jogador_{sid[-4:]}", "team": "unknown"}
 
     # Identificação de rounds para Kills e Dano (Base para métricas) - OTIMIZADO
     round_end_ticks = sorted(df_re["tick"].tolist()) if (df_re is not None and not df_re.empty) else []
     
+    def get_round(t):
+        if not round_end_ticks: return 1
+        return int(np.searchsorted(round_end_ticks, t) + 1)
+
     if round_end_ticks and not is_empty(df_kills):
         import numpy as np
         df_kills["round_num"] = np.searchsorted(round_end_ticks, df_kills["tick"]) + 1
@@ -286,27 +338,46 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     if progress_fn: progress_fn(0.25)
 
     # ── ADR e KDA ──
-    dmg_total = {sid: 0 for sid in player_info}
-    kda = {sid: {"kills": 0, "deaths": 0, "assists": 0, "hs_kills": 0} for sid in player_info}
+    dmg_total = {}
+    kda = {}
+    score_map = {}
+    mvp_map = {}
+
+    # GARANTIR QUE TODOS OS JOGADORES DOS EVENTOS ESTEJAM NO PLAYER_INFO
+    for df in [df_kills, df_dmg]:
+        if not is_empty(df):
+            for col in ["attacker_steamid", "victim_steamid", "assister_steamid"]:
+                if col in df.columns:
+                    for val in df[col].dropna().unique():
+                        sid = sid_norm(val)
+                        if sid and sid not in player_info:
+                            player_info[sid] = {"name": f"Jogador_{sid[-4:]}", "team": "unknown"}
+
+    # Inicializar kda para todos os encontrados
+    for sid in player_info:
+        kda[sid] = {"kills": 0, "deaths": 0, "assists": 0, "hs_kills": 0}
+        dmg_total[sid] = 0
     
     if not is_empty(df_dmg):
-        att_col = next((c for c in ["attacker_steamid", "attacker_steamid64"] if c in df_dmg.columns), "attacker_steamid")
-        dmg_col = next((c for c in ["dmg_health", "damage"] if c in df_dmg.columns), "dmg_health")
+        dmg_col = next((c for c in ["dmg_health", "damage", "health_damage", "dmg"] if c in df_dmg.columns), "dmg_health")
         for _, row in df_dmg.iterrows():
-            sid = str(row.get(att_col, "0")).split(".")[0]
-            if sid in dmg_total: dmg_total[sid] += int(row.get(dmg_col, 0) or 0)
+            sid = sid_norm(row.get("attacker_steamid"))
+            if sid in dmg_total: 
+                dmg_total[sid] += int(row.get(dmg_col, 0) or 0)
 
     if not is_empty(df_kills):
-        att_col = next((c for c in ["attacker_steamid", "attacker_steamid64"] if c in df_kills.columns), "attacker_steamid")
-        vic_col = next((c for c in ["victim_steamid", "victim_steamid64"] if c in df_kills.columns), "victim_steamid")
-        ass_col = next((c for c in ["assister_steamid", "assister_steamid64"] if c in df_kills.columns), "assister_steamid")
         for _, row in df_kills.iterrows():
-            atk, vic, ass = str(row.get(att_col, "0")).split(".")[0], str(row.get(vic_col, "0")).split(".")[0], str(row.get(ass_col, "0")).split(".")[0]
-            if atk in kda and atk != vic:
+            atk = sid_norm(row.get("attacker_steamid"))
+            vic = sid_norm(row.get("victim_steamid"))
+            ass = sid_norm(row.get("assister_steamid"))
+            
+            if atk and atk in kda and atk != vic:
                 kda[atk]["kills"] += 1
                 if bool(row.get("headshot", False)): kda[atk]["hs_kills"] += 1
-            if vic in kda: kda[vic]["deaths"] += 1
-            if ass in kda and ass != "0": kda[ass]["assists"] += 1
+            if vic and vic in kda:
+                kda[vic]["deaths"] += 1
+            if ass and ass in kda and ass != "0":
+                kda[ass]["assists"] += 1
 
     if progress_fn: progress_fn(0.4)
 
@@ -418,9 +489,26 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
             final_a, final_b = min(pts_a, pts_b), max(pts_a, pts_b)
             pts_a, pts_b = final_a, final_b
 
-        log_fn(f"📊 Placar Final Calculado: CT {pts_a} x {pts_b} TR")
+        log_fn(f"📊 Placar via Rounds: {pts_a} x {pts_b}")
         score_a, score_b = pts_a, pts_b
-        log_fn(f"📊 Placar calculado: {score_a} x {score_b} ({len(df_re)} rounds, RPH: {rounds_per_half})")
+
+    # ── Scoreboard Fallback (Se o placar via rounds for suspeito ou 0-0) ──
+    if score_a == 0 and score_b == 0:
+        try:
+            # Tenta pegar o placar oficial dos times no último tick
+            df_sc_final = parser.parse_ticks(["team_score_total"])
+            if not is_empty(df_sc_final):
+                # No CS2, team_score_total costuma refletir o placar da HUD
+                score_a = int(df_sc_final["team_score_total"].max())
+                log_fn(f"📋 Placar via Scoreboard HUD: {score_a} (Distribuindo...)")
+                # Se não temos rounds, usamos o que achamos como base
+                if score_a > 0:
+                    # Fallback: Se o vencedor foi A, ele fica com o score_a, e B fica com o restante (heurística)
+                    pass
+        except:
+            pass
+
+    log_fn(f"📊 Placar Final: {score_a} x {score_b} ({len(df_re)} rounds)")
 
 
     # ── Estatísticas Avançadas (Duelos e Granadas) ──────────
@@ -571,11 +659,11 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
 
                 # Registrar todas as kills do round para o log
                 for _, k_row in r_kills.iterrows():
-                    k_att = str(k_row.get(_att_col, "0") or "0")
-                    k_vic = str(k_row.get(_vic_col, "0") or "0")
+                    k_att = sid_norm(k_row.get(_att_col))
+                    k_vic = sid_norm(k_row.get(_vic_col))
                     k_ass = str(k_row.get(_ass_col, "0") or "0") if "_ass_col" in locals() else "0"
                     
-                    if k_att != "0" and k_att in player_info:
+                    if k_att and k_att in player_info:
                         # Weapon Stats
                         w = str(k_row.get("weapon", "unknown")).replace("weapon_", "")
                         weapon_stats[k_att][w] = weapon_stats[k_att].get(w, 0) + 1
@@ -597,6 +685,10 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                         att_side = player_info.get(k_att, {}).get("team", "unknown")
                         vic_side = player_info.get(k_vic, {}).get("team", "unknown")
 
+                        # Tenta pegar assister
+                        _ass_col = next((c for c in ["assister_steamid", "assister_pawn_steamid", "assister_steamid64"] if c in k_row.index), None)
+                        k_ass = sid_norm(k_row.get(_ass_col)) if _ass_col else None
+
                         round_summaries[r_num]["kills"].append({
                             "attackerName": player_info[k_att]["name"],
                             "attackerSteamId": k_att,
@@ -604,14 +696,22 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                             "victimName": player_info.get(k_vic, {}).get("name", "Jogador"),
                             "victimSteamId": k_vic,
                             "victimSide": vic_side,
+                            "assisterSteamId": k_ass,
                             "weapon": w,
-                            "isHeadshot": bool(k_row.get("headshot", False)),
-                            "tick": int(k_row["tick"]),
+                            "isHeadshot": bool(k_row.get("headshot") or k_row.get("is_headshot") or False),
+                            "tick": int(k_row.get("tick", 0)),
                             "attX": round(safe_val(k_row.get("attacker_x", 0)), 1),
                             "attY": round(safe_val(k_row.get("attacker_y", 0)), 1),
                             "vicX": round(safe_val(k_row.get("victim_x", 0)), 1),
                             "vicY": round(safe_val(k_row.get("victim_y", 0)), 1)
                         })
+
+                # Winner Lógico (A ou B)
+                w_side = round_summaries[r_num]["winner"]
+                if w_side in ("CT", "T"):
+                    round_summaries[r_num]["logical_winner"] = "A" if w_side == side_of_a(r_num) else "B"
+                else:
+                    round_summaries[r_num]["logical_winner"] = "Draw"
                         
                     if k_ass != "0" and k_ass in player_info and r_num <= rounds:
                         kast_data[k_ass][r_num] = True # KAST (Assist)
@@ -627,29 +727,21 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
 
             # Extrair Dano por Round
             try:
-                df_dmg_rounds = filter_tick(df_dmg_rounds)
-                if not is_empty(df_dmg_rounds):
-                    if round_end_ticks:
-                        import numpy as np
-                        df_dmg_rounds["round_num"] = np.searchsorted(round_end_ticks, df_dmg_rounds["tick"]) + 1
-                    else:
-                        df_dmg_rounds["round_num"] = 1
-                    
-                    # Identificar coluna de dano
-                    dmg_col = next((c for c in ["dmg_health", "damage", "health_damage", "dmg"] if c in df_dmg_rounds.columns), None)
-                    att_col = next((c for c in ["attacker_steamid", "attacker_steamid64", "attacker"] if c in df_dmg_rounds.columns), None)
+                if not is_empty(df_dmg):
+                    # Identificar coluna de dano e atacante
+                    dmg_col = next((c for c in ["dmg_health", "damage", "health_damage", "dmg"] if c in df_dmg.columns), "dmg_health")
+                    att_col = next((c for c in ["attacker_steamid", "attacker_steamid64", "attacker"] if c in df_dmg.columns), "attacker_steamid")
 
-                    if dmg_col and att_col:
-                        for r_num, r_dmg in df_dmg_rounds.groupby("round_num"):
-                            r_num = int(r_num)
-                            if r_num not in round_summaries:
-                                round_summaries[r_num] = {"kills": [], "damage": {}}
-                            
-                            # Dano causado por atacante neste round
-                            dmg_agg = r_dmg.groupby(att_col)[dmg_col].sum()
-                            for sid, d_val in dmg_agg.items():
-                                round_summaries[r_num]["damage"][str(sid)] = int(d_val)
-                                
+                    for r_num, r_dmg in df_dmg.groupby("round_num"):
+                        r_num = int(r_num)
+                        if r_num not in round_summaries:
+                            round_summaries[r_num] = {"kills": [], "damage": {}, "winner": "", "reason": "", "logical_winner": ""}
+                        
+                        for _, row in r_dmg.iterrows():
+                            sid = sid_norm(row.get(att_col))
+                            if sid:
+                                d_val = int(row.get(dmg_col, 0) or 0)
+                                round_summaries[r_num]["damage"][sid] = round_summaries[r_num]["damage"].get(sid, 0) + d_val
             except Exception as e:
                 log_fn(f"⚠️  Erro ao processar dano por round: {e}")
 
@@ -657,8 +749,26 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     except Exception as e:
         log_fn(f"⚠️  Duelos não extraídos integralmente: {e}")
 
-    # ── Finalizar KAST (Survival) ──
-    _vic_col_final = next((c for c in ["victim_steamid", "victim_steamid64", "user_steamid", "user"] if not is_empty(df_kills) and c in df_kills.columns), "victim_steamid")
+    # ── Finalizar KAST e Fallback Scoreboard ──
+    try:
+        # Se as kills estão zeradas, tenta pegar do scoreboard oficial do parser
+        total_k = sum(v["kills"] for v in kda.values())
+        if total_k == 0:
+            df_sb = parser.parse_ticks(["kills", "deaths", "assists", "mvps", "score"])
+            if not is_empty(df_sb):
+                # Pega o último tick de cada jogador
+                last_sb = df_sb.sort_values("tick").groupby("steamid").tail(1)
+                for _, row in last_sb.iterrows():
+                    sid = sid_norm(row.get("steamid"))
+                    if sid in kda:
+                        kda[sid]["kills"] = int(row.get("kills", 0))
+                        kda[sid]["deaths"] = int(row.get("deaths", 0))
+                        kda[sid]["assists"] = int(row.get("assists", 0))
+                        mvp_map[sid] = int(row.get("mvps", 0))
+                        score_map[sid] = int(row.get("score", 0))
+    except: pass
+
+    _vic_col_final = "victim_steamid"
     for sid in player_info:
         for r in range(1, rounds + 1):
             if not kast_data[sid][r]:
@@ -1208,6 +1318,7 @@ class DemoProcessorApp(ctk.CTk):
             bg = "#1e1e2e" if idx % 2 == 0 else "#252535"
             row_f = ctk.CTkFrame(self._preview_frame, fg_color=bg, corner_radius=4)
             row_f.pack(fill="x", pady=1)
+            row_f.bind("<Button-3>", lambda e, player=p: self._on_table_right_click(e, player))
             for i, w in enumerate(col_weights):
                 row_f.grid_columnconfigure(i, weight=w)
 
@@ -1230,11 +1341,13 @@ class DemoProcessorApp(ctk.CTk):
             ]
 
             for i, (val, color) in enumerate(values):
-                ctk.CTkLabel(
+                lbl = ctk.CTkLabel(
                     row_f, text=val,
                     font=ctk.CTkFont(size=11),
                     text_color=color, anchor="w"
-                ).grid(row=0, column=i, padx=6, pady=5, sticky="w")
+                )
+                lbl.grid(row=0, column=i, padx=6, pady=5, sticky="w")
+                lbl.bind("<Button-3>", lambda e, player=p: self._on_table_right_click(e, player))
 
         # ── Linha do Tempo (Rounds) ────────────────
         ctk.CTkLabel(
@@ -1299,6 +1412,19 @@ class DemoProcessorApp(ctk.CTk):
 
     # ── Enviar para Banco ─────────────────────
 
+    def _on_table_right_click(self, event, player):
+        self._selected_player = player
+        menu = tk.Menu(self, tearoff=0)
+        menu.add_command(label="🔄 Trocar de Time", command=self._swap_player_team)
+        menu.post(event.x_root, event.y_root)
+
+    def _swap_player_team(self):
+        if not self._selected_player: return
+        current = self._selected_player.get("team", "CT")
+        self._selected_player["team"] = "T" if current == "CT" else "CT"
+        self._log(f"👤 Time de {self._selected_player['displayName']} alterado para {self._selected_player['team']}.")
+        self._render_preview(self._demo_data)
+
     def _on_swap_result(self):
         if not self._demo_data: return
         
@@ -1333,6 +1459,27 @@ class DemoProcessorApp(ctk.CTk):
         match_id = self._demo_data["match"]["id"]
         default_name = f"match_{match_id}.json"
         
+        # Se houve filtragem de rounds, perguntar se quer exportar a versão filtrada
+        data_to_export = self._demo_data
+        
+        # Se os campos de pontuação na UI forem diferentes do dado original, 
+        # significa que houve filtragem ou ajuste manual.
+        # Vamos gerar um pacote "fresco" para exportação baseado no que está na tela
+        if hasattr(self, '_round_vars'):
+            # Simula o que o _on_send faz para pegar os dados limpos
+            try:
+                selected_rounds = [r for r, var in self._round_vars.items() if var.get()]
+                if len(selected_rounds) < len(self._demo_data["match"]["metadata"]["roundSummaries"]):
+                    # Exportar versão filtrada
+                    match_copy = self._demo_data["match"].copy()
+                    match_copy["metadata"] = self._demo_data["match"]["metadata"].copy()
+                    # Recalcular placar para o JSON
+                    summaries = match_copy["metadata"]["roundSummaries"]
+                    match_copy["scoreA"] = len([r for r in selected_rounds if (summaries.get(r) or summaries.get(str(r), {})).get("logical_winner") == "A"])
+                    match_copy["scoreB"] = len([r for r in selected_rounds if (summaries.get(r) or summaries.get(str(r), {})).get("logical_winner") == "B"])
+                    data_to_export = {"match": match_copy, "players": self._demo_data["players"]}
+            except: pass
+
         file_path = filedialog.asksaveasfilename(
             defaultextension=".json",
             initialfile=default_name,
@@ -1406,15 +1553,27 @@ class DemoProcessorApp(ctk.CTk):
                 s = summaries.get(r_num) or summaries.get(str(r_num), {})
                 if not s: continue
                 
-                # Kills
+                # Kills e HS
                 r_kills = s.get("kills", [])
-                p_kills += len([k for k in r_kills if str(k.get("attackerSteamId") or k.get("attacker_steamid")) == sid])
-                p_deaths += len([k for k in r_kills if str(k.get("victimSteamId") or k.get("user_steamid")) == sid])
-                p_assists += len([k for k in r_kills if str(k.get("assisterSteamId") or k.get("assister_steamid")) == sid])
-                p_hs += len([k for k in r_kills if str(k.get("attackerSteamId") or k.get("attacker_steamid")) == sid and k.get("isHeadshot")])
+                p_kills += len([k for k in r_kills if k.get("attackerSteamId") == sid])
+                p_deaths += len([k for k in r_kills if k.get("victimSteamId") == sid])
+                p_hs += len([k for k in r_kills if k.get("attackerSteamId") == sid and k.get("isHeadshot")])
                 
-                # Damage (usando o summary damage map)
+                # ASSISTÊNCIAS - Agora usando o campo restaurado
+                p_assists += len([k for k in r_kills if k.get("assisterSteamId") == sid])
+                
+                # DANO - Agora usando o mapa de dano por round
                 p_damage += s.get("damage", {}).get(sid, 0)
+
+            # SE CONTINUAR ZERO (ADR/Assists), MAS O GLOBAL TIVER DADOS
+            if p_damage == 0 or p_assists == 0:
+                orig_p = next((op for op in self._demo_data["players"] if op["steamId"] == sid), None)
+                if orig_p:
+                    if p_assists == 0: p_assists = orig_p.get("assists", 0)
+                    if p_damage == 0: p_damage = orig_p.get("adr", 0) * len(selected_rounds)
+                
+                # Damage (já somado acima no loop)
+                pass
 
             p["kills"] = p_kills
             p["deaths"] = p_deaths
@@ -1422,18 +1581,14 @@ class DemoProcessorApp(ctk.CTk):
             p["adr"] = p_damage / len(selected_rounds) if selected_rounds else 0
             p["hsPercentage"] = (p_hs / p_kills * 100) if p_kills > 0 else 0
             
-            # Winner?
+            # Winner? (Lógica soberana baseada no placar final da tela)
             if new_score_a > new_score_b:
-                # O Time original do player é mantido
-                # Precisamos saber se ele era A ou B.
-                # No parse_demo, salvei o resultado na lógica original.
-                # Se p["matchResult"] mudou, vamos herdar da nova pontuação
-                if p["matchResult"] == "tie": pass # mantém
-                else:
-                    # Se antes era win e A ganhou, ele é A.
-                    # Se antes era loss e A ganhou, ele é B.
-                    # Vamos simplificar: se o resultado original era baseado em ser A...
-                    pass # Na verdade a lógica de win/loss precisa ser consistente.
+                # Se o player começou no time que terminou com mais pontos (Time A)
+                p["matchResult"] = "win" if p.get("team") == "CT" else "loss"
+            elif new_score_b > new_score_a:
+                p["matchResult"] = "win" if p.get("team") == "T" else "loss"
+            else:
+                p["matchResult"] = "tie"
 
         # --- NOVO: Filtrar o JSON de metadados para que o site reflita a exclusão ---
         filtered_summaries = {}
