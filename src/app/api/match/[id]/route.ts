@@ -246,7 +246,8 @@ export async function PATCH(
         }
 
         // 1. Try to update GlobalMatch (Local Demos)
-        const globalMatch = await prisma.globalMatch.findUnique({ where: { id: matchId } });
+        // Check by primary ID
+        let globalMatch = await prisma.globalMatch.findUnique({ where: { id: matchId } });
         
         if (globalMatch) {
             const currentMeta = (globalMatch.metadata as any) || {};
@@ -282,15 +283,21 @@ export async function PATCH(
         }
 
         // 2. Try to update Match (Legacy/Official Sync)
-        const legacyMatch = await prisma.match.findUnique({ where: { id: matchId } });
+        // Search by ID OR externalId
+        const legacyMatch = await prisma.match.findFirst({ 
+            where: { 
+                OR: [
+                    { id: matchId },
+                    { externalId: matchId }
+                ]
+            } 
+        });
+
         if (legacyMatch) {
-            // Determine result for legacy match (usually from user's perspective)
-            // In Match table, 'score' is a string "13-6" and 'result' is "Win"/"Loss"
-            // We'll assume scoreA is the user's score and scoreB is the opponent's
             const newResult = scoreA > scoreB ? "Win" : (scoreB > scoreA ? "Loss" : "Tie");
             
             const updatedLegacy = await prisma.match.update({
-                where: { id: matchId },
+                where: { id: legacyMatch.id },
                 data: {
                     score: `${scoreA}-${scoreB}`,
                     result: newResult
