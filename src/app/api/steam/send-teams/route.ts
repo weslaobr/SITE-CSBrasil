@@ -6,24 +6,25 @@ const STEAM_BOT_URL = process.env.STEAM_BOT_URL || process.env.NEXT_PUBLIC_BOT_A
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
-        const { teamA, teamB, avgA, avgB } = body;
+        const { teamA, teamB, avgA, avgB, mapName, pickMethod } = body;
 
         if (!teamA || !teamB) {
             return NextResponse.json({ error: 'Dados dos times ausentes' }, { status: 400 });
         }
 
-        // Formatação da mensagem para o chat da Steam (não suporta markdown complexo, mas aceita emojis)
         const message = `
-🎮 PARTIDA GERADA - SITE CSBrasil 🎮
+🎮 PARTIDA GERADA - TropaCS 🎮
 
-🟡 TIME A (Média: ${avgA})
-${teamA.map((p: any) => `- ${p.nickname}`).join('\n')}
+🗺️ MAPA: ${mapName || "A definir"} (${pickMethod || "Manual"})
 
-🔵 TIME B (Média: ${avgB})
-${teamB.map((p: any) => `- ${p.nickname}`).join('\n')}
+🟡 TIME TR: ${teamA.map((p: any) => p.nickname).join(', ')}
+🔵 TIME CT: ${teamB.map((p: any) => p.nickname).join(', ')}
 
-Boa sorte e bom jogo! 🚀
+🤖 Adicione o bot para receber o time no privado:
+https://steamcommunity.com/id/tropacs
+
+🎭 Skins personalizadas:
+https://inventory.cstrike.app/
 `.trim();
 
         const allPlayers = [...teamA, ...teamB];

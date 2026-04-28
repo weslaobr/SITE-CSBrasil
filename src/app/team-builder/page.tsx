@@ -323,11 +323,20 @@ export default function TeamBuilderPage() {
     const handleSendDiscord = async () => {
         if (teamA.length === 0 && teamB.length === 0) return;
         setDiscordStatus("sending");
+        
+        const lastPick = vetoHistory.findLast(h => h.type === "pick");
+        const selectedMapName = lastPick ? (mapPool.find(m => m.id === lastPick.map)?.name || "Não definido") : "Não definido";
+        const pickMethod = lastPick?.team === "system" ? "Aleatório" : "Manual";
+
         try {
             const res = await fetch("/api/discord/team-announce", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ teamA, teamB, avgA, avgB, balanceMode }),
+                body: JSON.stringify({ 
+                    teamA, teamB, avgA, avgB, balanceMode,
+                    mapName: selectedMapName,
+                    pickMethod
+                }),
             });
             if (res.ok) {
                 setDiscordStatus("sent");
@@ -347,14 +356,21 @@ export default function TeamBuilderPage() {
 
     const handleSendSteam = async () => {
         if (teamA.length === 0 && teamB.length === 0) return;
-        console.log("DEBUG Steam Send - Team A:", teamA.map(p => ({ n: p.nickname, id: p.steamId, type: typeof p.steamId })));
-        console.log("DEBUG Steam Send - Team B:", teamB.map(p => ({ n: p.nickname, id: p.steamId, type: typeof p.steamId })));
         setSteamStatus("sending");
+
+        const lastPick = vetoHistory.findLast(h => h.type === "pick");
+        const selectedMapName = lastPick ? (mapPool.find(m => m.id === lastPick.map)?.name || "Não definido") : "Não definido";
+        const pickMethod = lastPick?.team === "system" ? "Aleatório" : "Manual";
+
         try {
             const res = await fetch("/api/steam/send-teams", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ teamA, teamB, avgA, avgB }),
+                body: JSON.stringify({ 
+                    teamA, teamB, avgA, avgB,
+                    mapName: selectedMapName,
+                    pickMethod
+                }),
             });
             if (res.ok) {
                 setSteamStatus("sent");
@@ -814,7 +830,7 @@ export default function TeamBuilderPage() {
                         <div className="bg-zinc-900/60 rounded-3xl border border-yellow-500/20 overflow-hidden ring-1 ring-inset ring-transparent hover:ring-yellow-500/30 transition-all h-full">
                             <div className="bg-gradient-to-br from-yellow-500/20 to-transparent p-6 border-b border-yellow-500/10">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-yellow-500 drop-shadow-md">Time A</h3>
+                                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-yellow-500 drop-shadow-md">Time TR</h3>
                                     <button
                                         onClick={() => handleCopyTeam("A")}
                                         disabled={teamA.length === 0}
@@ -825,7 +841,7 @@ export default function TeamBuilderPage() {
                                                     ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20 active:scale-95'
                                                     : 'bg-white/5 text-zinc-600 border-white/5 cursor-not-allowed'
                                         }`}
-                                        title="Copiar nomes do Time A"
+                                        title="Copiar nomes do Time TR"
                                     >
                                         {copiedTeam === "A" ? <Check size={12} /> : <Copy size={12} />}
                                         {copiedTeam === "A" ? "Copiado" : "Copiar"}
@@ -865,12 +881,12 @@ export default function TeamBuilderPage() {
                                                     ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20 active:scale-95'
                                                     : 'bg-white/5 text-zinc-600 border-white/5 cursor-not-allowed'
                                         }`}
-                                        title="Copiar nomes do Time B"
+                                        title="Copiar nomes do Time CT"
                                     >
                                         {copiedTeam === "B" ? <Check size={12} /> : <Copy size={12} />}
                                         {copiedTeam === "B" ? "Copiado" : "Copiar"}
                                     </button>
-                                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-blue-500 drop-shadow-md">Time B</h3>
+                                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-blue-500 drop-shadow-md">Time CT</h3>
                                 </div>
                                 <div className="flex items-center gap-2 mt-2 justify-end text-right">
                                     <p className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-widest"><span className="text-white text-sm">{avgB}{balanceMode === "resenha" ? " ★" : ""}</span> :{balanceMode === "resenha" ? "Resenha" : "SR"} Média</p>

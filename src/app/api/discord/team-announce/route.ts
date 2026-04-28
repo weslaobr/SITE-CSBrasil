@@ -8,41 +8,40 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { teamA, teamB, avgA, avgB, balanceMode } = body;
+    const { teamA, teamB, avgA, avgB, balanceMode, mapName, pickMethod } = body;
 
     if (!teamA || !teamB) {
         return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
     }
 
-    const ratingLabel = balanceMode === "resenha" ? "⭐ Resenha" : "📊 SR";
+    const ratingLabel = balanceMode === "resenha" ? "⭐" : "SR";
 
     const formatList = (players: { nickname: string; rating: number; resenhaRating?: number }[]) =>
         players
             .map((p, i) => {
                 const rating = balanceMode === "resenha"
-                    ? `${(p.resenhaRating || 5).toFixed(1)} ⭐`
-                    : `${p.rating} SR`;
-                return `\`${String(i + 1).padStart(2, "0")}\` **${p.nickname}** — ${rating}`;
+                    ? `${(p.resenhaRating || 5).toFixed(1)}`
+                    : `${p.rating}`;
+                return `**${p.nickname}** (${rating})`;
             })
-            .join("\n");
+            .join(", ");
 
     const embed = {
-        title: "🎮 Times Sorteados — CS Brasil",
+        title: "🎮 Partida Gerada — CS Brasil",
         color: 0x9333ea,
+        description: `🗺️ **Mapa:** ${mapName || "A definir"} (${pickMethod || "Manual"})\n\n🤖 **Bot:** [Adicionar TropaCS](https://steamcommunity.com/id/tropacs) (receba o time no privado)\n🎭 **Skins:** [Customizar Skins](https://inventory.cstrike.app/)`,
         fields: [
             {
-                name: `🟡 Time A — Média ${ratingLabel}: ${avgA}`,
-                value: teamA.length > 0 ? formatList(teamA) : "_Nenhum jogador_",
-                inline: true,
+                name: `🟡 TIME TR (Média ${ratingLabel}: ${avgA})`,
+                value: teamA.length > 0 ? formatList(teamA) : "_Vazio_",
             },
             {
-                name: `🔵 Time B — Média ${ratingLabel}: ${avgB}`,
-                value: teamB.length > 0 ? formatList(teamB) : "_Nenhum jogador_",
-                inline: true,
+                name: `🔵 TIME CT (Média ${ratingLabel}: ${avgB})`,
+                value: teamB.length > 0 ? formatList(teamB) : "_Vazio_",
             },
         ],
         footer: {
-            text: "Sorteador de Times • CS Brasil",
+            text: "TropaCS • Sorteador de Times",
         },
         timestamp: new Date().toISOString(),
     };
