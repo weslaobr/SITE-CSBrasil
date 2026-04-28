@@ -442,6 +442,8 @@ export default function PlayerProfilePage() {
                         onReview={setSelectedMatchId}
                         onSync={handleSync}
                         loading={syncing}
+                        steamId={steamId}
+                        steamNickname={profile?.personaname}
                     />
                 </div>
 

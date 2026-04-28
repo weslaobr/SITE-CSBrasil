@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { useSession } from 'next-auth/react';
 
 // ── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,7 @@ interface Props {
 const MatchReportModal: React.FC<Props> = ({
     match: initialMatch, matchId, isOpen, onClose, userSteamId, userNickname
 }) => {
+    const { data: session } = useSession();
     const [internalMatch, setInternalMatch] = useState<Match | null>(null);
     const [loading, setLoading] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -1432,8 +1434,16 @@ const MatchReportModal: React.FC<Props> = ({
                                         <RoundLog />
                                     ) : (
                                         <div className="flex gap-3 items-start">
-                                            <TeamBlock players={t1} title="Seu Time" scoreVal={scoreA} ally={true} />
-                                            <TeamBlock players={t2} title="Adversários" scoreVal={scoreE} ally={false} />
+                                            {(() => {
+                                                const isMe = (session?.user as any)?.steamId === userSteamId;
+                                                const allyTitle = isMe ? "Seu Time" : (userNickname ? `Time de ${userNickname}` : "Time do Jogador");
+                                                return (
+                                                    <>
+                                                        <TeamBlock players={t1} title={allyTitle} scoreVal={scoreA} ally={true} />
+                                                        <TeamBlock players={t2} title="Adversários" scoreVal={scoreE} ally={false} />
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                     )}
                                 </motion.div>

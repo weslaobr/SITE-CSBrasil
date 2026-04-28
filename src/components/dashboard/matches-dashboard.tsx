@@ -30,6 +30,7 @@ import {
 import { toast } from 'sonner';
 import MatchReportModal from './match-report-modal';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 interface Match {
     id: string;
@@ -78,6 +79,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     syncError,
     variant = 'full'
 }) => {
+    const { data: session } = useSession();
     const [faceitInput, setFaceitInput] = useState(currentFaceit || '');
     const [isEditing, setIsEditing] = useState(!currentFaceit);
     const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -733,7 +735,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                 <tr className="text-[9px] uppercase font-black text-zinc-600 tracking-[0.15em] border-b border-white/[0.05] bg-black/50 sticky top-0 z-10 backdrop-blur-md">
                                     <th className="w-1 p-0" />
                                     <th className="px-5 py-3.5" title="Nome do mapa jogado">Mapa</th>
-                                    <th className="px-3 py-3.5 text-center" title="Pontuação final da partida (Seu Time vs Adversários)">Placar</th>
+                                    <th className="px-3 py-3.5 text-center" title={`Pontuação final da partida (${(session?.user as any)?.steamId === currentUserSteamId ? "Seu Time" : (currentFaceit || "Time do Jogador")} vs Adversários)`}>Placar</th>
                                     <th className="px-3 py-3.5 text-center" title="Patente ou Rating da partida">Patente</th>
                                     <th className="px-3 py-3.5 text-center" title="Modo de jogo (Competitivo, Premier, Faceit, etc)">Modo</th>
                                     <th className="px-2 py-3.5 text-center" title="ID único da partida">ID</th>

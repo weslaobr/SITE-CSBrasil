@@ -7,9 +7,11 @@ interface MatchHistoryProps {
     onReview?: (id: string) => void;
     onSync?: () => void;
     loading?: boolean;
+    steamId?: string;
+    steamNickname?: string;
 }
 
-export default function MatchHistory({ matches, onSync, loading }: MatchHistoryProps) {
+export default function MatchHistory({ matches, onSync, loading, steamId, steamNickname }: MatchHistoryProps) {
     if (!matches || matches.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center p-12 text-center bg-zinc-900/40 border border-white/5 rounded-3xl backdrop-blur-md">
@@ -79,10 +81,11 @@ export default function MatchHistory({ matches, onSync, loading }: MatchHistoryP
         <MatchesDashboard 
             variant="profile" 
             matches={mappedMatches}
-            currentFaceit=""
+            currentFaceit={steamNickname || ""}
             onUpdateFaceit={() => {}}
             onSync={onSync}
             loading={loading}
+            currentUserSteamId={steamId}
         />
     );
 }
