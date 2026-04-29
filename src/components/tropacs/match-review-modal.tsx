@@ -14,7 +14,7 @@ interface MatchReviewModalProps {
 export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalProps) {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>(null);
-    const [activeTab, setActiveTab] = useState<'geral' | 'analitico' | 'utilitarios' | 'duelos' | 'simulacao'>('geral');
+    const [activeTab, setActiveTab] = useState<'geral' | 'analitico' | 'utilitarios' | 'armas' | 'duelos' | 'simulacao'>('geral');
 
     useEffect(() => {
         if (matchId) {
@@ -119,6 +119,7 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                 { id: 'geral', label: 'Geral' },
                                 { id: 'analitico', label: 'Analítico' },
                                 { id: 'utilitarios', label: 'Utilitários' },
+                                { id: 'armas', label: 'Armas' },
                                 { id: 'duelos', label: 'Duelos' },
                                 { id: 'simulacao', label: 'Simulação 2D' }
                             ].map((tab) => (
@@ -243,11 +244,11 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                                                 </>
                                                             ) : activeTab === 'analitico' ? (
                                                                 <>
-                                                                    <th className="py-4 text-center">Flash (Ass/Ceg)</th>
-                                                                    <th className="py-4 text-center">Counter-S %</th>
-                                                                    <th className="py-4 text-center">Opening (W/L)</th>
-                                                                    <th className="py-4 text-center">Prec. (Spotted)</th>
-                                                                    <th className="pr-6 py-4 text-right">HS Kills</th>
+                                                                    <th className="py-4 text-center">Flash (Ceg/Duração)</th>
+                                                                    <th className="py-4 text-center">Abertura (FK/FD)</th>
+                                                                    <th className="py-4 text-center">Dist. Kill</th>
+                                                                    <th className="py-4 text-center">TTD (Reflexo)</th>
+                                                                    <th className="pr-6 py-4 text-right">Rating</th>
                                                                 </>
                                                             ) : activeTab === 'duelos' ? (
                                                                 <>
@@ -338,27 +339,25 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                                                     ) : activeTab === 'analitico' ? (
                                                                         <>
                                                                             <td className="py-4 text-center">
-                                                                                <span className="text-white font-bold">{player.flash_assist || 0}</span>
-                                                                                <span className="text-zinc-700 mx-2">·</span>
-                                                                                <span className="text-zinc-400">{player.flashbang_hit_foe || 0}</span>
+                                                                                <span className="text-white font-bold">{player.enemies_flashed || player.flashbang_hit_foe || 0}</span>
+                                                                                <span className="text-zinc-700 mx-1">·</span>
+                                                                                <span className="text-zinc-400 text-[10px]">{(player.total_blind_duration || player.blind_time || 0).toFixed(1)}s</span>
                                                                             </td>
                                                                             <td className="py-4 text-center">
-                                                                                <span className={`font-black italic ${(player.counter_strafing_shots_good_ratio * 100) > 80 ? 'text-green-400' : 'text-zinc-400'}`}>
-                                                                                    {(player.counter_strafing_shots_good_ratio * 100).toFixed(0)}%
-                                                                                </span>
-                                                                            </td>
-                                                                            <td className="py-4 text-center">
-                                                                                <span className="text-yellow-500 font-bold">{player.multi1k || 0}</span>
+                                                                                <span className="text-yellow-500 font-bold">{player.fk || player.multi1k || 0}</span>
                                                                                 <span className="text-zinc-700 mx-1">/</span>
-                                                                                <span className="text-white text-[10px] bg-white/5 px-1.5 py-0.5 rounded">
-                                                                                    {player.rounds_count}
-                                                                                </span>
+                                                                                <span className="text-red-500">{player.fd || 0}</span>
                                                                             </td>
                                                                             <td className="py-4 text-center font-bold text-zinc-400">
-                                                                                {(player.accuracy_enemy_spotted * 100).toFixed(1)}%
+                                                                                {player.avg_kill_distance ? `${(player.avg_kill_distance / 10).toFixed(0)}m` : '---'}
                                                                             </td>
-                                                                            <td className="pr-6 py-4 text-right font-black italic text-zinc-500">
-                                                                                {player.total_hs_kills || 0}
+                                                                            <td className="py-4 text-center">
+                                                                                <span className={`font-black italic ${player.avg_ttd > 0 && player.avg_ttd < 400 ? 'text-green-400' : 'text-zinc-500'}`}>
+                                                                                    {player.avg_ttd > 0 ? `${player.avg_ttd.toFixed(0)}ms` : '---'}
+                                                                                </span>
+                                                                            </td>
+                                                                            <td className="pr-6 py-4 text-right">
+                                                                                <span className="text-yellow-500 font-black italic">{player.rating?.toFixed(2) || '0.00'}</span>
                                                                             </td>
                                                                         </>
                                                                     ) : activeTab === 'duelos' ? (
@@ -429,6 +428,40 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                         </div>
                                     );
                                 })}
+
+                                {/* Weapon Stats Tab */}
+                                {activeTab === 'armas' && (
+                                    <div className="space-y-8">
+                                        {data?.stats?.map((player: any) => {
+                                            const pWeapons = data?.weapon_stats?.filter((w: any) => String(w.steamid64) === String(player.steam64_id));
+                                            if (!pWeapons || pWeapons.length === 0) return null;
+                                            
+                                            return (
+                                                <div key={player.steam64_id} className="space-y-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <img src={player.avatar_url} className="w-8 h-8 rounded-lg" alt="" />
+                                                        <h4 className="font-black italic uppercase text-sm">{player.name}</h4>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                                                        {pWeapons.sort((a:any, b:any) => b.kills - a.kills).map((w: any, idx: number) => (
+                                                            <div key={idx} className="bg-white/[0.03] border border-white/5 p-3 rounded-2xl flex flex-col gap-1">
+                                                                <span className="text-[10px] font-black uppercase text-yellow-500/80">{w.weapon}</span>
+                                                                <div className="flex items-baseline gap-1">
+                                                                    <span className="text-xl font-black italic">{w.kills}</span>
+                                                                    <span className="text-[9px] text-zinc-500 uppercase font-bold">Kills</span>
+                                                                </div>
+                                                                <div className="flex justify-between text-[8px] font-bold text-zinc-500 uppercase">
+                                                                    <span>HS: {w.headshots}</span>
+                                                                    <span>Dmg: {w.damage}</span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="text-center py-20 bg-zinc-900/50 rounded-[40px] border border-white/5">

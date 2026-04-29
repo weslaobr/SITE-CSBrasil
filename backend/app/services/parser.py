@@ -29,9 +29,9 @@ def normalize_side(side) -> str:
 
 import pandas as pd
 from typing import Dict, Any, List
-from app.models.tracker import Match, MatchPlayer, Round, KillEvent, Player, DamageEvent, GrenadeEvent
+from app.models.tracker import Match, MatchPlayer, Round, KillEvent, Player, DamageEvent, GrenadeEvent, WeaponStat, ClutchEvent
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update, delete
 import json
 import logging
 from datetime import datetime
@@ -49,17 +49,12 @@ class ParserService:
         self.dem.parse()
 
         # --- Strict Match Start Detection ---
-        # We need to ignore warmup and especially the "knife round".
-        # A knife round is usually followed by a restart.
         start_tick = 0
         try:
-            # 1. Identify all match start events
             match_start_events = []
             if hasattr(self.dem, 'events') and "round_announce_match_start" in self.dem.events:
                 match_start_events = self.dem.events["round_announce_match_start"]["tick"].tolist()
             
-            # 2. Identify the first firearm kill
-            # Firearms = anything that is not a knife or a decoy/utility
             exclude_weapons = [
                 "knife", "bayonet", "fists", "melee", "hegrenade", "flashbang", 
                 "smokegrenade", "molotov", "incgrenade", "decoy", "inferno", "taser", "zeus"
@@ -68,19 +63,14 @@ class ParserService:
             non_knife_kills = self.dem.kills[~self.dem.kills["weapon"].str.contains(exclude_pattern, case=False, na=False)]
             first_firearm_kill_tick = non_knife_kills["tick"].min() if not non_knife_kills.empty else float('inf')
             
-            # 3. Decision: The match start is the LAST 'round_announce_match_start' 
-            # that occurs BEFORE or AT the first firearm kill.
             candidate_starts = [t for t in match_start_events if t < first_firearm_kill_tick]
             if candidate_starts:
                 start_tick = max(candidate_starts)
             elif first_firearm_kill_tick != float('inf'):
-                # Fallback: find the start of the round that contains the first firearm kill
-                # In CS2, rounds often don't have start_tick, so we use the end of the previous round
                 try:
                     prev_rounds = self.dem.rounds[self.dem.rounds["end_tick"] < first_firearm_kill_tick]
                     start_tick = prev_rounds["end_tick"].max() if not prev_rounds.empty else 0
                 except:
-                    # Very basic fallback if rounds DF is weird
                     start_tick = 0
             
             logger.info(f"Parser: Strict match start detected at tick {start_tick} (Firearm kill at {first_firearm_kill_tick})")
@@ -95,37 +85,29 @@ class ParserService:
             return df
 
         # Filter all DataFrames
-        self.dem.rounds = filter_df(self.dem.rounds, "end_tick") # Rounds use end_tick
+        self.dem.rounds = filter_df(self.dem.rounds, "end_tick")
         self.dem.kills = filter_df(self.dem.kills)
         self.dem.damages = filter_df(self.dem.damages)
         self.dem.grenades = filter_df(self.dem.grenades, "tick")
         if hasattr(self.dem, 'ticks'):
             self.dem.ticks = filter_df(self.dem.ticks)
 
-        # Re-number rounds to be 1-based for the competitive part
         if not self.dem.rounds.empty:
             self.dem.rounds = self.dem.rounds.sort_values("end_tick").reset_index(drop=True)
             self.dem.rounds["round"] = self.dem.rounds.index + 1
-        # --- End Match Start Detection ---
         
-        # Determine unique match_id from demo header or file hash fallback
-        # This prevents duplication if the same demo is re-uploaded with different filenames/URLs
         extracted_id = self.dem.header.get("match_id") or self.dem.header.get("client_name")
-        
-        # If the ID is too generic or missing, use a file content hash
         if not extracted_id or extracted_id in ["Counter-Strike 2", "mock_share_code"]:
             import hashlib
             with open(self.demo_path, "rb") as f:
-                # Hash first 1MB for speed and high collision avoidance 
                 file_hash = hashlib.md5(f.read(1024 * 1024)).hexdigest()
             extracted_id = f"demo_{file_hash}"
             
         match_id = match_id_override or extracted_id
         map_name = self.dem.header["map_name"]
         
-        # 0. Cleanup existing data for this match_id
-        from sqlalchemy import delete
-        from app.models.tracker import MatchPlayer as MP, Round as R, KillEvent as KE, DamageEvent as DE, GrenadeEvent as GE
+        # 0. Cleanup
+        from app.models.tracker import MatchPlayer as MP, Round as R, KillEvent as KE, DamageEvent as DE, GrenadeEvent as GE, WeaponStat as WS, ClutchEvent as CE
         
         logger.info(f"Parser: Cleaning up old records for match {match_id}")
         await db.execute(delete(MP).where(MP.match_id == match_id))
@@ -133,37 +115,27 @@ class ParserService:
         await db.execute(delete(KE).where(KE.match_id == match_id))
         await db.execute(delete(DE).where(DE.match_id == match_id))
         await db.execute(delete(GE).where(GE.match_id == match_id))
+        await db.execute(delete(WS).where(WS.match_id == match_id))
+        await db.execute(delete(CE).where(CE.match_id == match_id))
         await db.flush()
 
-        # 0.5. Fetch or Create Match record
+        # 0.5. Fetch or Create Match
         from app.models.tracker import Match
         match = await db.get(Match, match_id)
-        
         if not match:
-            match = Match(
-                match_id=match_id, 
-                map_name=map_name,
-                match_date=match_date or datetime.now(),
-                demo_url=demo_url,
-                source=source or "vanilla"
-            )
+            match = Match(match_id=match_id, map_name=map_name, match_date=match_date or datetime.now(), demo_url=demo_url, source=source or "vanilla")
             db.add(match)
         else:
             match.map_name = map_name
-            if match_date:
-                match.match_date = match_date
-            if demo_url:
-                match.demo_url = demo_url
-            if source:
-                match.source = source
+            if match_date: match.match_date = match_date
+            if demo_url: match.demo_url = demo_url
+            if source: match.source = source
         
-        # --- Logical Team Tracking for Correct Scores
         score_a, score_b = 0, 0
         last_round_winner = None
-        team_mapping = {}  # steamid -> "A" (started CT) or "B" (started T)
+        team_mapping = {}
         
         try:
-            # 1. Identify teams at the start of the match (Robust window)
             if hasattr(self.dem, 'ticks') and not self.dem.ticks.empty:
                 for offset in [64, 128, 256, 512, 1024]:
                     start_ticks_df = self.dem.ticks[(self.dem.ticks["tick"] >= start_tick + offset - 10) & (self.dem.ticks["tick"] <= start_tick + offset + 10)]
@@ -176,25 +148,18 @@ class ParserService:
                                 elif team_num == 2: team_mapping[sid] = "B"
                     if len(team_mapping) >= 10: break
             
-            logger.info(f"Parser: Logical team mapping found {len(team_mapping)} players.")
-
-            # 2. Iterate rounds and track which logical team won
             rounds_df = self.dem.rounds
             if not rounds_df.empty and team_mapping:
-                last_side_a = "CT" # Logical Team A started as CT
+                last_side_a = "CT"
                 for _, r_row in rounds_df.iterrows():
                     winner_side = r_row["winner_side"]
                     end_tick = r_row["end_tick"]
-                    
-                    # Robust side detection: check all known players of Team A
                     current_side_a = "unknown"
                     sids_a = [sid for sid, t in team_mapping.items() if t == "A"]
                     if sids_a and hasattr(self.dem, 'ticks'):
                         end_ticks_df = self.dem.ticks[(self.dem.ticks["tick"] >= end_tick - 64) & (self.dem.ticks["tick"] <= end_tick)]
-                        # Get teams of all Team A players at this tick
                         players_at_end = end_ticks_df[end_ticks_df["steamid"].isin(sids_a)]
                         if not players_at_end.empty:
-                            # Use majority vote (mode)
                             m = players_at_end.groupby("steamid").last()["team_num"] if "team_num" in players_at_end.columns else players_at_end.groupby("steamid").last().get("team_number")
                             if m is not None and not m.empty:
                                 team_nums_mode = m.mode()
@@ -203,7 +168,6 @@ class ParserService:
                                     current_side_a = "CT" if dominant_team == 3 else "T"
                                     last_side_a = current_side_a
 
-                    # Determine point
                     det_side_a = current_side_a if current_side_a != "unknown" else last_side_a
                     if normalize_side(det_side_a) == normalize_side(winner_side):
                         score_a += 1
@@ -212,7 +176,6 @@ class ParserService:
                         score_b += 1
                         last_round_winner = "B"
             else:
-                # Fallback: Just count CT/T wins
                 score_a = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0]) if not rounds_df.empty else 0
                 score_b = int(rounds_df[rounds_df["winner_side"] == "T"].shape[0]) if not rounds_df.empty else 0
         except Exception as e:
@@ -220,7 +183,6 @@ class ParserService:
             score_a = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0]) if not rounds_df.empty else 0
             score_b = int(rounds_df[rounds_df["winner_side"] == "T"].shape[0]) if not rounds_df.empty else 0
 
-        # Sovereign Winner Logic: Last round winner is the match winner
         if last_round_winner == "A":
             s1, s2 = max(score_a, score_b), min(score_a, score_b)
             score_a, score_b = s1, s2
@@ -239,26 +201,16 @@ class ParserService:
             max_tick = rounds_df["end_tick"].max()
             match.duration_seconds = int(max_tick / 64)
         
-        # 2. Players & Overall Stats
-        # We recalculate stats from filtered DataFrames to ensure accuracy (no mockup/warmup kills)
-        # However, we still need the list of players.
+        # 2. Players
         player_stats_agg = self.dem.player_stats
-        
-        # Pre-calculate counts from filtered kills/damages
         kills_by_player = self.dem.kills.groupby("attacker_steamid").size().to_dict() if not self.dem.kills.empty else {}
         deaths_by_player = self.dem.kills.groupby("victim_steamid").size().to_dict() if not self.dem.kills.empty else {}
         hs_by_player = self.dem.kills[self.dem.kills["is_headshot"] == True].groupby("attacker_steamid").size().to_dict() if not self.dem.kills.empty else {}
-        
-        # Damage aggregation for ADR
-        # Filter out team damage if possible (assumes attacker_side != victim_side or similar)
-        # For now, we take all damage in filtered DF
         dmg_by_player = self.dem.damages.groupby("attacker_steamid")["hp_damage"].sum().to_dict() if not self.dem.damages.empty else {}
-        
         num_rounds = len(self.dem.rounds) if not self.dem.rounds.empty else 1
 
         for _, row in player_stats_agg.iterrows():
             steamid = int(row["steamid"])
-            
             player = await db.get(Player, steamid)
             if not player:
                 player = Player(steamid64=steamid, personaname=row["name"])
@@ -266,141 +218,113 @@ class ParserService:
             else:
                 player.personaname = row["name"]
             
-            # Extract recalculated stats
             pkills = int(kills_by_player.get(steamid, 0))
             pdeaths = int(deaths_by_player.get(steamid, 0))
             phscount = int(hs_by_player.get(steamid, 0))
             pdmg = float(dmg_by_player.get(steamid, 0))
             padr = pdmg / num_rounds if num_rounds > 0 else 0.0
+            p_logical_team = team_mapping.get(steamid, row["team_name"])
 
-            # MatchPlayer stats
             mp_stats = MatchPlayer(
-                match_id=match_id,
-                steamid64=steamid,
-                team=row["team_name"],
-                kills=pkills,
-                deaths=pdeaths,
-                assists=int(row["assists"]), # Assists are harder to re-calc, use row for now
-                adr=padr,
-                kast=float(row["kast"]), # Keep original KAST/Rating as fallback/approximation
-                rating=float(row["rating"]),
-                hs_count=phscount,
-                utility_damage=int(row["utility_damage"]),
-                flash_assists=int(row["flash_assists"]),
-                # Novas estatísticas para o guia de desempenho
-                fk=0, # Will be updated below
-                fd=0, # Will be updated below
-                triples=int(row.get("triple_kills", row.get("3k", 0))),
-                quads=int(row.get("quad_kills", row.get("4k", 0))),
-                aces=int(row.get("ace_kills", row.get("5k", 0))),
-                clutches=int(row.get("clutch_wins", row.get("clutches", 0))),
-                trades=int(row.get("trade_kills", row.get("trades", 0)))
+                match_id=match_id, steamid64=steamid, team=p_logical_team, kills=pkills, deaths=pdeaths,
+                assists=int(row["assists"]), adr=padr, kast=float(row["kast"]), rating=float(row["rating"]),
+                hs_count=phscount, utility_damage=int(row["utility_damage"]), flash_assists=int(row["flash_assists"]),
+                fk=0, fd=0, triples=int(row.get("triple_kills", row.get("3k", 0))),
+                quads=int(row.get("quad_kills", row.get("4k", 0))), aces=int(row.get("ace_kills", row.get("5k", 0))),
+                clutches=int(row.get("clutch_wins", row.get("clutches", 0))), trades=int(row.get("trade_kills", row.get("trades", 0))),
+                enemies_flashed=0, total_blind_duration=0.0, avg_kill_distance=0.0, avg_ttd=0.0, utility_damage_roi=0.0
             )
             db.add(mp_stats)
 
-        # 2b. Calcular FK/FD por round a partir dos kill events
+        # Advanced Stats Calculation
         kills_df_early = self.dem.kills.copy() if not self.dem.kills.empty else pd.DataFrame()
         if not kills_df_early.empty and 'round' in kills_df_early.columns:
-            # Para cada round, encontre o primeiro kill (menor tick)
-            fk_counts = {}  # steamid -> count de rounds onde foi o abridor
-            fd_counts = {}  # steamid -> count de rounds onde foi a primeira morte
-
+            fk_counts, fd_counts = {}, {}
             for round_num, round_kills in kills_df_early.groupby('round'):
-                # A primeira kill do round = kill com menor tick
                 first_kill_row = round_kills.nsmallest(1, 'tick').iloc[0]
-                attacker = str(int(first_kill_row['attacker_steamid'])) if first_kill_row.get('attacker_steamid') else None
-                victim = str(int(first_kill_row['victim_steamid'])) if first_kill_row.get('victim_steamid') else None
-                if attacker:
-                    fk_counts[attacker] = fk_counts.get(attacker, 0) + 1
-                if victim:
-                    fd_counts[victim] = fd_counts.get(victim, 0) + 1
-
-            # Atualizar os registros MatchPlayer com os valores calculados
-            for _, row in player_stats.iterrows():
-                steamid_str = str(int(row['steamid']))
-                fk_val = fk_counts.get(steamid_str, 0)
-                fd_val = fd_counts.get(steamid_str, 0)
+                attacker = first_kill_row['attacker_steamid']
+                victim = first_kill_row['victim_steamid']
+                if attacker: fk_counts[attacker] = fk_counts.get(attacker, 0) + 1
+                if victim: fd_counts[victim] = fd_counts.get(victim, 0) + 1
+            
+            for sid in team_mapping.keys():
+                fk_val = fk_counts.get(sid, 0)
+                fd_val = fd_counts.get(sid, 0)
                 if fk_val > 0 or fd_val > 0:
-                    # Atualizar o registro via query
-                    from sqlalchemy import update
-                    from app.models.tracker import MatchPlayer as MP
-                    await db.execute(
-                        update(MP).where(
-                            MP.match_id == match_id,
-                            MP.steamid64 == int(row['steamid'])
-                        ).values(fk=fk_val, fd=fd_val)
-                    )
+                    await db.execute(update(MP).where(MP.match_id == match_id, MP.steamid64 == int(sid)).values(fk=fk_val, fd=fd_val))
 
+            # Weapon Breakdown
+            weapon_groups = kills_df_early.groupby(['attacker_steamid', 'weapon'])
+            for (attacker_sid, weapon_name), group in weapon_groups:
+                if not attacker_sid: continue
+                w_kills, w_hs = len(group), len(group[group['is_headshot'] == True])
+                w_damage = 0
+                if not self.dem.damages.empty:
+                    w_damage = self.dem.damages[(self.dem.damages['attacker_steamid'] == attacker_sid) & (self.dem.damages['weapon'] == weapon_name)]['hp_damage'].sum()
+                db.add(WeaponStat(match_id=match_id, steamid64=int(attacker_sid), weapon=weapon_name, kills=w_kills, headshots=w_hs, damage=int(w_damage)))
 
+            # Flash Effectiveness
+            if hasattr(self.dem, 'events') and 'player_blind' in self.dem.events:
+                blind_events = filter_df(self.dem.events['player_blind'])
+                attacker_col = 'attacker_steamid' if 'attacker_steamid' in blind_events.columns else 'attacker_pawn_steamid'
+                if attacker_col in blind_events.columns:
+                    flash_stats = blind_events.groupby(attacker_col).agg(count=('victim_steamid', 'nunique'), duration=('blind_duration', 'sum'))
+                    for sid, f_row in flash_stats.iterrows():
+                        await db.execute(update(MP).where(MP.match_id == match_id, MP.steamid64 == int(sid)).values(enemies_flashed=int(f_row['count']), total_blind_duration=float(f_row['duration'])))
 
-        # 3. Rounds (With deep mapping)
-        rounds_df = self.dem.rounds
+            # Kill Distance
+            if 'attacker_pos_x' in kills_df_early.columns:
+                import numpy as np
+                def calc_dist(r):
+                    try: return np.linalg.norm(np.array([r['attacker_pos_x'], r['attacker_pos_y'], r['attacker_pos_z']]) - np.array([r['victim_pos_x'], r['victim_pos_y'], r['victim_pos_z']]))
+                    except: return 0.0
+                kills_df_early['distance'] = kills_df_early.apply(calc_dist, axis=1)
+                dist_stats = kills_df_early.groupby('attacker_steamid')['distance'].mean()
+                for sid, avg_dist in dist_stats.items():
+                    if sid: await db.execute(update(MP).where(MP.match_id == match_id, MP.steamid64 == int(sid)).values(avg_kill_distance=float(avg_dist)))
 
-        round_map = {} # tick -> round_id for mapping events
-        for idx, row in rounds_df.iterrows():
-            new_round = Round(
-                match_id=match_id,
-                round_number=int(row["round"]),
-                winner_side=row["winner_side"],
-                reason=row["reason"],
-                end_tick=int(row["end_tick"])
-            )
+            # Clutch Analysis
+            if hasattr(self.dem, 'clutches') and not self.dem.clutches.empty:
+                clutches_df = filter_df(self.dem.clutches, "tick")
+                for _, c_row in clutches_df.iterrows():
+                    db.add(ClutchEvent(match_id=match_id, steamid64=int(c_row['steamid']), clutch_type=f"1v{c_row['opponents_at_start']}", is_won=bool(c_row['is_won'])))
+
+        # 3. Rounds
+        round_map = {}
+        for idx, row in self.dem.rounds.iterrows():
+            ct_val = int(row.get("ct_eq_val", row.get("ct_equipment_value", 0)))
+            t_val = int(row.get("t_eq_val", row.get("t_equipment_value", 0)))
+            def get_buy_type(val):
+                if val < 5000: return "Eco"
+                if val < 15000: return "Force"
+                return "Full Buy"
+            new_round = Round(match_id=match_id, round_number=int(row["round"]), winner_side=row["winner_side"], reason=row["reason"], end_tick=int(row["end_tick"]), 
+                             ct_equipment_value=ct_val, t_equipment_value=t_val, ct_buy_type=get_buy_type(ct_val), t_buy_type=get_buy_type(t_val))
             db.add(new_round)
             await db.flush() 
             round_map[int(row["end_tick"])] = new_round.round_id
 
-        # Helper to find round_id from tick
         def get_round_id(tick):
-            # Simplified: finds first round that ended after this tick
             for end_tick, rid in sorted(round_map.items()):
-                if tick <= end_tick:
-                    return rid
+                if tick <= end_tick: return rid
             return None
 
         # 4. Kills
-        kills_df = self.dem.kills
-        for _, row in kills_df.iterrows():
-            rid = get_round_id(int(row["tick"]))
-            kill = KillEvent(
-                match_id=match_id,
-                round_id=rid,
-                tick=int(row["tick"]),
-                attacker_steamid=int(row["attacker_steamid"]) if row["attacker_steamid"] else None,
-                victim_steamid=int(row["victim_steamid"]) if row["victim_steamid"] else None,
-                weapon=row["weapon"],
-                is_headshot=bool(row["is_headshot"])
-            )
-            db.add(kill)
+        for _, row in self.dem.kills.iterrows():
+            db.add(KillEvent(match_id=match_id, round_id=get_round_id(int(row["tick"])), tick=int(row["tick"]), attacker_steamid=int(row["attacker_steamid"]) if row["attacker_steamid"] else None,
+                            victim_steamid=int(row["victim_steamid"]) if row["victim_steamid"] else None, weapon=row["weapon"], is_headshot=bool(row["is_headshot"]), distance=float(row.get("distance", 0.0)),
+                            attacker_x=float(row.get("attacker_pos_x", 0)), attacker_y=float(row.get("attacker_pos_y", 0)), attacker_z=float(row.get("attacker_pos_z", 0)),
+                            victim_x=float(row.get("victim_pos_x", 0)), victim_y=float(row.get("victim_pos_y", 0)), victim_z=float(row.get("victim_pos_z", 0))))
 
-        # 5. Damage Events (Phase 3)
-        damages_df = self.dem.damages
-        for _, row in damages_df.iterrows():
-            rid = get_round_id(int(row["tick"]))
-            damage = DamageEvent(
-                match_id=match_id,
-                round_id=rid,
-                tick=int(row["tick"]),
-                attacker_steamid=int(row["attacker_steamid"]) if row["attacker_steamid"] else None,
-                victim_steamid=int(row["victim_steamid"]) if row["victim_steamid"] else None,
-                weapon=row["weapon"],
-                hp_damage=int(row["hp_damage"]),
-                armor_damage=int(row["armor_damage"]),
-                hitgroup=int(row["hitgroup"])
-            )
-            db.add(damage)
+        # 5. Damage
+        for _, row in self.dem.damages.iterrows():
+            db.add(DamageEvent(match_id=match_id, round_id=get_round_id(int(row["tick"])), tick=int(row["tick"]), attacker_steamid=int(row["attacker_steamid"]) if row["attacker_steamid"] else None,
+                              victim_steamid=int(row["victim_steamid"]) if row["victim_steamid"] else None, weapon=row["weapon"], hp_damage=int(row["hp_damage"]), armor_damage=int(row["armor_damage"]), hitgroup=int(row["hitgroup"])))
 
-        # 6. Grenade Events (Phase 3)
-        grenades_df = self.dem.grenades
-        for _, row in grenades_df.iterrows():
-            rid = get_round_id(int(row["tick"]))
-            grenade = GrenadeEvent(
-                match_id=match_id,
-                round_id=rid,
-                tick=int(row["tick"]),
-                steamid64=int(row["thrower_steamid"]) if row["thrower_steamid"] else None,
-                grenade_type=row["grenade_type"]
-            )
-            db.add(grenade)
+        # 6. Grenades
+        for _, row in self.dem.grenades.iterrows():
+            db.add(GrenadeEvent(match_id=match_id, round_id=get_round_id(int(row["tick"])), tick=int(row["tick"]), steamid64=int(row["thrower_steamid"]) if row["thrower_steamid"] else None, grenade_type=row["grenade_type"],
+                               x=float(row.get("x", 0)), y=float(row.get("y", 0)), z=float(row.get("z", 0))))
 
         match.is_parsed = True
         match.parsed_at = pd.Timestamp.now()

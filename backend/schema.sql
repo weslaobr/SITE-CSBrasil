@@ -40,6 +40,18 @@ CREATE TABLE tracker.match_players (
     hs_count INT DEFAULT 0,
     utility_damage INT DEFAULT 0,
     flash_assists INT DEFAULT 0,
+    fk INT DEFAULT 0,
+    fd INT DEFAULT 0,
+    triples INT DEFAULT 0,
+    quads INT DEFAULT 0,
+    aces INT DEFAULT 0,
+    clutches INT DEFAULT 0,
+    trades INT DEFAULT 0,
+    enemies_flashed INT DEFAULT 0,
+    total_blind_duration FLOAT DEFAULT 0.0,
+    avg_kill_distance FLOAT DEFAULT 0.0,
+    avg_ttd FLOAT DEFAULT 0.0,
+    utility_damage_roi FLOAT DEFAULT 0.0,
     PRIMARY KEY (match_id, steamid64)
 );
 
@@ -50,7 +62,11 @@ CREATE TABLE tracker.rounds (
     round_number INT NOT NULL,
     winner_side TEXT, -- 'CT' or 'T'
     reason TEXT, -- 'bomb_defused', 'target_bombed', 'ct_win_elimination', etc.
-    end_tick INT
+    end_tick INT,
+    ct_equipment_value INT DEFAULT 0,
+    t_equipment_value INT DEFAULT 0,
+    ct_buy_type TEXT,
+    t_buy_type TEXT
 );
 
 -- Stats per player per round
@@ -79,7 +95,8 @@ CREATE TABLE tracker.kill_events (
     is_headshot BOOLEAN DEFAULT FALSE,
     is_wallbang BOOLEAN DEFAULT FALSE,
     attacker_pos GEOMETRY(PointZ, 4326), -- PostGIS Z-coordinate support
-    victim_pos GEOMETRY(PointZ, 4326)
+    victim_pos GEOMETRY(PointZ, 4326),
+    distance FLOAT
 );
 
 -- Damage events
@@ -150,3 +167,24 @@ CREATE TABLE tracker.tracker_tick_data (
 
 CREATE INDEX idx_tick_data_match ON tracker.tracker_tick_data(match_id);
 CREATE INDEX idx_tick_data_tick ON tracker.tracker_tick_data(tick);
+
+-- New Tables for Advanced Analytics
+CREATE TABLE tracker.tracker_weapon_stats (
+    id SERIAL PRIMARY KEY,
+    match_id TEXT REFERENCES tracker.matches(match_id) ON DELETE CASCADE,
+    steamid64 BIGINT REFERENCES tracker.players(steamid64),
+    weapon TEXT NOT NULL,
+    kills INT DEFAULT 0,
+    headshots INT DEFAULT 0,
+    damage INT DEFAULT 0,
+    accuracy FLOAT DEFAULT 0.0
+);
+
+CREATE TABLE tracker.tracker_clutch_events (
+    clutch_id SERIAL PRIMARY KEY,
+    match_id TEXT REFERENCES tracker.matches(match_id) ON DELETE CASCADE,
+    round_id INT REFERENCES tracker.tracker_rounds(round_id) ON DELETE CASCADE,
+    steamid64 BIGINT REFERENCES tracker.players(steamid64),
+    clutch_type TEXT, -- '1v1', '1v2', etc
+    is_won BOOLEAN
+);

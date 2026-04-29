@@ -82,20 +82,30 @@ async def import_match(request: ImportMatchRequest, background_tasks: Background
 
 @app.get("/api/match/{match_id}/stats", tags=["Tracker"])
 async def get_match_stats(match_id: str, db: AsyncSession = Depends(get_db)):
-    from app.models.tracker import Match, MatchPlayer
+    from app.models.tracker import Match, MatchPlayer, WeaponStat, ClutchEvent
     from sqlalchemy import select
     
     match = await db.get(Match, match_id)
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
         
-    stmt = select(MatchPlayer).where(MatchPlayer.match_id == match_id)
-    result = await db.execute(stmt)
-    players = result.scalars().all()
+    players_stmt = select(MatchPlayer).where(MatchPlayer.match_id == match_id)
+    players_res = await db.execute(players_stmt)
+    players = players_res.scalars().all()
+
+    weapon_stmt = select(WeaponStat).where(WeaponStat.match_id == match_id)
+    weapon_res = await db.execute(weapon_stmt)
+    weapon_stats = weapon_res.scalars().all()
+
+    clutch_stmt = select(ClutchEvent).where(ClutchEvent.match_id == match_id)
+    clutch_res = await db.execute(clutch_stmt)
+    clutches = clutch_res.scalars().all()
     
     return {
         "match": match,
-        "players": players
+        "players": players,
+        "weapon_stats": weapon_stats,
+        "clutch_events": clutches
     }
 
 

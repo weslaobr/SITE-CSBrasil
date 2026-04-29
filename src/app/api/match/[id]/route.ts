@@ -164,14 +164,63 @@ export async function GET(
         // Isso é essencial para o 2D Viewer de partidas locais que ainda não foram migradas
         const TRACKER_API = process.env.PYTHON_API_URL || 'http://localhost:8000';
         try {
-            const trackerRes = await axios.get(`${TRACKER_API}/api/match/${matchId}`);
+            const trackerRes = await axios.get(`${TRACKER_API}/api/match/${matchId}/stats`);
             if (trackerRes.status === 200) {
-                let trackerData = trackerRes.data;
-                // Normalizar se necessário (o python geralmente já retorna no formato ou próximo dele)
-                return NextResponse.json(trackerData);
+                const trackerData = trackerRes.data;
+                const matchInfo = trackerData.match;
+                const players = trackerData.players.map((p: any) => ({
+                    ...p,
+                    steam64_id: String(p.steamid64),
+                    name: p.personaname || p.steamid64,
+                    total_kills: p.kills,
+                    total_deaths: p.deaths,
+                    total_assists: p.assists,
+                    adr: p.adr,
+                    accuracy_head: p.hs_count / (p.kills || 1), // HS% aproximado se não tivermos precisão real
+                    rating: p.rating || 0,
+                    kast: p.kast || 0,
+                    fk: p.fk || 0,
+                    fd: p.fd || 0,
+                    triples: p.triples || 0,
+                    quads: p.quads || 0,
+                    aces: p.aces || 0,
+                    clutches: p.clutches || 0,
+                    trades: p.trades || 0,
+                    enemies_flashed: p.enemies_flashed || 0,
+                    flashbang_hit_foe: p.enemies_flashed || 0, // Alias para o modal
+                    total_blind_duration: p.total_blind_duration || 0,
+                    blind_time: p.total_blind_duration || 0, // Alias para o modal
+                    avg_kill_distance: p.avg_kill_distance || 0,
+                    avg_ttd: p.avg_ttd || 0,
+                    utility_damage_roi: p.utility_damage_roi || 0,
+                    initial_team_number: p.team === 'A' ? 2 : 3,
+                    is_user: !!(profileSteamId && String(p.steamid64) === String(profileSteamId))
+                }));
+
+                const data = {
+                    match_id: matchInfo.match_id,
+                    map_name: matchInfo.map_name,
+                    game_mode: matchInfo.source,
+                    data_source: matchInfo.source,
+                    match_date: matchInfo.match_date,
+                    team_2_score: matchInfo.score_ct,
+                    team_3_score: matchInfo.score_t,
+                    result: null, 
+                    demo_url: matchInfo.demo_url,
+                    stats: players,
+                    weapon_stats: trackerData.weapon_stats || [],
+                    clutch_events: trackerData.clutch_events || [],
+                    metadata: {
+                        ...matchInfo,
+                        team_2_score: matchInfo.score_ct,
+                        team_3_score: matchInfo.score_t,
+                    }
+                };
+
+                return NextResponse.json(data);
             }
-        } catch (trackerError) {
-            console.warn(`Match ${matchId} not found in Tracker API fallback.`);
+        } catch (trackerError: any) {
+            console.warn(`Match ${matchId} tracker fetch failed: ${trackerError.message}`);
         }
 
         // 3. Fallback final: Leetify API
