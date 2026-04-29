@@ -49,6 +49,8 @@ interface PlayerStats {
     isUser?: boolean;
     steamId?: string;
     team?: string;
+    eloChange?: number | null;
+    eloAfter?: number | null;
 }
 
 
@@ -454,6 +456,8 @@ const MatchReportModal: React.FC<Props> = ({
             enemiesFlashed: Number(p.enemies_flashed ?? p.flashbang_hit_foe ?? 0),
             ttd: Number(p.avg_ttd ?? 0),
             killDist: Number(p.avg_kill_distance ?? 0),
+            eloChange: p.eloChange !== undefined ? p.eloChange : (p.elo_change ?? null),
+            eloAfter: p.eloAfter !== undefined ? p.eloAfter : (p.elo_after ?? null),
             isUser,
             steamId: p.steam64_id || p.player_id || p.steamId || p.steam_id,
             team
@@ -1151,6 +1155,11 @@ const MatchReportModal: React.FC<Props> = ({
                 >
                     {p.isUser ? '★ ' : ''}{p.nickname}
                 </a>
+                {p.eloChange !== undefined && p.eloChange !== null && (
+                    <span className={`text-[8px] font-black ml-1.5 px-1 rounded-sm ${p.eloChange > 0 ? 'bg-emerald-500/20 text-emerald-400' : p.eloChange < 0 ? 'bg-red-500/20 text-red-400' : 'bg-zinc-800 text-zinc-500'}`}>
+                        {p.eloChange > 0 ? `+${p.eloChange}` : p.eloChange}
+                    </span>
+                )}
             </div>
         </td>
     );

@@ -167,7 +167,9 @@ export async function GET(
                         he_thrown: tp.he_thrown,
                         flash_thrown: tp.flash_thrown,
                         smokes_thrown: tp.smokes_thrown,
-                        molotovs_thrown: tp.molotovs_thrown
+                        molotovs_thrown: tp.molotovs_thrown,
+                        eloChange: tp.elo_change,
+                        eloAfter: tp.elo_after
                     };
                 }
                 return p;
@@ -230,10 +232,46 @@ export async function GET(
                     blind_time: p.total_blind_duration || 0, // Alias para o modal
                     avg_kill_distance: p.avg_kill_distance || 0,
                     avg_ttd: p.avg_ttd || 0,
+                    utility_damage: p.utility_damage || 0,
                     utility_damage_roi: p.utility_damage_roi || 0,
-                    initial_team_number: p.team === 'A' ? 2 : 3,
+                    he_thrown: p.he_thrown || 0,
+                    flash_thrown: p.flash_thrown || 0,
+                    smokes_thrown: p.smokes_thrown || 0,
+                    molotovs_thrown: p.molotovs_thrown || 0,
+                    eloChange: p.elo_change,
+                    eloAfter: p.elo_after,
+                    initial_team_number: p.team === 'A' ? 3 : 2,
                     is_user: !!(profileSteamId && String(p.steamid64) === String(profileSteamId))
                 }));
+
+                const roundSummaries: Record<number, any> = {};
+                const rounds = trackerData.rounds || [];
+                const kills = trackerData.kill_events || [];
+                
+                const nameMap = new Map();
+                players.forEach((p: any) => {
+                    nameMap.set(String(p.steam64_id), p.name);
+                });
+
+                rounds.forEach((r: any) => {
+                    roundSummaries[r.round_number] = {
+                        winner: r.winner_side,
+                        reason: r.reason,
+                        kills: kills
+                            .filter((k: any) => k.round_id === r.round_id)
+                            .map((k: any) => ({
+                                tick: k.tick,
+                                attackerSteamId: String(k.attacker_steamid),
+                                victimSteamId: String(k.victim_steamid),
+                                attackerName: nameMap.get(String(k.attacker_steamid)) || String(k.attacker_steamid),
+                                victimName: nameMap.get(String(k.victim_steamid)) || String(k.victim_steamid),
+                                weapon: k.weapon,
+                                isHeadshot: k.is_headshot,
+                                attackerHp: k.attacker_hp,
+                                victimHp: k.victim_hp
+                            }))
+                    };
+                });
 
                 const data = {
                     match_id: matchInfo.match_id,
@@ -252,6 +290,7 @@ export async function GET(
                         ...matchInfo,
                         team_2_score: matchInfo.score_ct,
                         team_3_score: matchInfo.score_t,
+                        roundSummaries: roundSummaries
                     }
                 };
 

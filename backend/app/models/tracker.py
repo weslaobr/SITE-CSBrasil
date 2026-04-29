@@ -65,6 +65,10 @@ class MatchPlayer(Base):
     smokes_thrown = Column(Integer, default=0)
     molotovs_thrown = Column(Integer, default=0)
 
+    # Ranking System (Tropoints)
+    elo_change = Column(Integer)
+    elo_after = Column(Integer)
+
 class Round(Base):
     __tablename__ = "tracker_rounds"
     __table_args__ = {"schema": "public"}

@@ -849,21 +849,21 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                                              );
                                                                          })()}
                                                                      </div>
+                                                                  </td>
+                                                                 <td className="px-3 py-4 text-center">
+                                                                     {match.eloChange !== undefined && match.eloChange !== null ? (
+                                                                         <div className="flex flex-col items-center">
+                                                                             <div className={`flex items-center gap-0.5 text-xs font-black tracking-tighter ${match.eloChange > 0 ? 'text-emerald-400' : match.eloChange < 0 ? 'text-red-400' : 'text-zinc-600'}`}>
+                                                                                 {match.eloChange > 0 ? `+${match.eloChange}` : match.eloChange}
+                                                                             </div>
+                                                                             {match.eloAfter !== undefined && (
+                                                                                 <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mt-0.5">{match.eloAfter} TP</span>
+                                                                             )}
+                                                                         </div>
+                                                                     ) : (
+                                                                         <span className="text-zinc-800 font-black italic text-[9px]">—</span>
+                                                                     )}
                                                                  </td>
-                                                                <td className="px-3 py-4 text-center">
-                                                                    {match.eloChange !== undefined ? (
-                                                                        <div className="flex flex-col items-center">
-                                                                            <div className={`flex items-center gap-0.5 text-xs font-black tracking-tighter ${match.eloChange > 0 ? 'text-emerald-400' : match.eloChange < 0 ? 'text-red-400' : 'text-zinc-600'}`}>
-                                                                                {match.eloChange > 0 ? `+${match.eloChange}` : match.eloChange}
-                                                                            </div>
-                                                                            {match.eloAfter !== undefined && (
-                                                                                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mt-0.5">{match.eloAfter} TP</span>
-                                                                            )}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <span className="text-zinc-800 font-black italic text-[9px]">—</span>
-                                                                    )}
-                                                                </td>
                                                                 <td className="px-3 py-4 text-center">
                                                                     <div className="flex flex-col items-center gap-1">
                                                                         <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wide ${

@@ -92,6 +92,10 @@ class RankingService:
             user.rankingPoints = new_points
             user.mixLevel = new_level
             
+            # Update MatchPlayer stats (for history in matches dashboard)
+            p.elo_change = total_delta
+            p.elo_after = new_points
+            
             logger.info(f"Ranking: User {p.steamid64} | {old_points} -> {new_points} (Delta: {total_delta}, Level: {new_level})")
 
             # 6. Update GlobalMatchPlayer if it exists (for history)

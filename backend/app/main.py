@@ -89,9 +89,21 @@ async def get_match_stats(match_id: str, db: AsyncSession = Depends(get_db)):
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
         
-    players_stmt = select(MatchPlayer).where(MatchPlayer.match_id == match_id)
+    from app.models.tracker import MatchPlayer, Player
+    players_stmt = (
+        select(MatchPlayer, Player.personaname)
+        .join(Player, MatchPlayer.steamid64 == Player.steamid64)
+        .where(MatchPlayer.match_id == match_id)
+    )
     players_res = await db.execute(players_stmt)
-    players = players_res.scalars().all()
+    players_rows = players_res.all()
+    
+    # Convert to list of dicts or objects that have personaname
+    players = []
+    for mp, name in players_rows:
+        p_dict = {c.name: getattr(mp, c.name) for c in mp.__table__.columns}
+        p_dict["personaname"] = name
+        players.append(p_dict)
 
     weapon_stmt = select(WeaponStat).where(WeaponStat.match_id == match_id)
     weapon_res = await db.execute(weapon_stmt)
@@ -100,12 +112,24 @@ async def get_match_stats(match_id: str, db: AsyncSession = Depends(get_db)):
     clutch_stmt = select(ClutchEvent).where(ClutchEvent.match_id == match_id)
     clutch_res = await db.execute(clutch_stmt)
     clutches = clutch_res.scalars().all()
+
+    # New: Fetch Rounds and KillEvents for the timeline/duels
+    from app.models.tracker import Round, KillEvent
+    rounds_stmt = select(Round).where(Round.match_id == match_id).order_by(Round.round_number)
+    rounds_res = await db.execute(rounds_stmt)
+    rounds = rounds_res.scalars().all()
+
+    kills_stmt = select(KillEvent).where(KillEvent.match_id == match_id).order_by(KillEvent.tick)
+    kills_res = await db.execute(kills_stmt)
+    kills = kills_res.scalars().all()
     
     return {
         "match": match,
         "players": players,
         "weapon_stats": weapon_stats,
-        "clutch_events": clutches
+        "clutch_events": clutches,
+        "rounds": rounds,
+        "kill_events": kills
     }
 
 
@@ -157,6 +181,8 @@ async def list_matches(steamid: Optional[str] = None, db: AsyncSession = Depends
                 "kast": p_dict.get("kast", 0),
                 "rating": p_dict.get("rating", 0),
                 "hs_count": p_dict.get("hs_count", 0),
+                "eloChange": p_dict.get("elo_change"),
+                "eloAfter": p_dict.get("elo_after"),
             })
             matches_with_stats.append(m_dict)
         return matches_with_stats
