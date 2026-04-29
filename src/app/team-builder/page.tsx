@@ -370,7 +370,7 @@ export default function TeamBuilderPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
-                    teamA, teamB, avgA, avgB,
+                    teamA, teamB, avgA, avgB, balanceMode,
                     mapName: selectedMapName,
                     pickMethod
                 }),

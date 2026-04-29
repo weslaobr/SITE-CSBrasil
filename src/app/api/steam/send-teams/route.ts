@@ -7,24 +7,41 @@ const STEAM_BOT_URL = process.env.STEAM_BOT_URL || process.env.NEXT_PUBLIC_BOT_A
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { teamA, teamB, avgA, avgB, mapName, pickMethod } = body;
+        const { teamA, teamB, avgA, avgB, mapName, pickMethod, balanceMode } = body;
 
         if (!teamA || !teamB) {
             return NextResponse.json({ error: 'Dados dos times ausentes' }, { status: 400 });
         }
 
+        const ratingLabel = balanceMode === "resenha" ? "★" : "SR";
+        const getPScore = (p: any) => balanceMode === "resenha" 
+            ? (p.tempResenhaRating !== undefined ? p.tempResenhaRating : (p.resenhaRating || 5)).toFixed(1)
+            : (p.tempRating !== undefined ? p.tempRating : p.rating);
+
         const message = `
-🎮 PARTIDA GERADA - TropaCS 🎮
+[b]🎮 PARTIDA GERADA - TropaCS 🎮[/b]
 
-🗺️ MAPA: ${mapName || "A definir"} (${pickMethod || "Manual"})
+[b]🗺️ MAPA:[/b] ${mapName || "A definir"}
+[b]🎲 MÉTODO:[/b] ${pickMethod || "Manual"}
 
-🟡 TIME TR: ${teamA.map((p: any) => p.nickname).join(', ')}
-🔵 TIME CT: ${teamB.map((p: any) => p.nickname).join(', ')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🤖 Adicione o bot para receber o time no privado:
+[b]🟡 TIME TR:[/b] (Média: ${avgA} ${ratingLabel})
+[code]
+${teamA.map((p: any) => `• ${p.nickname.padEnd(14)} [${getPScore(p)}]`).join('\n')}
+[/code]
+
+[b]🔵 TIME CT:[/b] (Média: ${avgB} ${ratingLabel})
+[code]
+${teamB.map((p: any) => `• ${p.nickname.padEnd(14)} [${getPScore(p)}]`).join('\n')}
+[/code]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[b]🤖 ADICIONE O BOT PARA RECEBER TIMES:[/b]
 https://steamcommunity.com/id/tropacs
 
-🎭 Skins personalizadas:
+[b]🎭 SKINS PERSONALIZADAS:[/b]
 https://inventory.cstrike.app/
 `.trim();
 
