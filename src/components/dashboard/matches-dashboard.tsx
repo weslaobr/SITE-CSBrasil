@@ -870,8 +870,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                                                  </>
                                                                              );
                                                                          })()}
-                                                                     </div>
-                                                                  </td>
+                                                                 </td>
                                                                 <td className="px-3 py-4 text-center">
                                                                     <div className="flex flex-col items-center gap-1">
                                                                         <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wide ${
