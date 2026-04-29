@@ -52,6 +52,11 @@ model User {
   winRate               Float?
   matchesPlayed         Int                 @default(0)
   isAdmin               Boolean?            @default(false)
+  
+  // Proprietary Ranking System (Levels 1-20)
+  rankingPoints         Int                 @default(500)
+  mixLevel              Int                 @default(5)
+  
   accounts              Account[]
   evaluationLists       EvaluationList[]    @relation("EvaluationCreator")
   globalMatchPlayers    GlobalMatchPlayer[]
@@ -261,6 +266,11 @@ model GlobalMatchPlayer {
   adr           Float?
   hsPercentage  Float?
   matchResult   String
+  
+  // Ranking tracking
+  eloChange     Int?
+  eloAfter      Int?
+  
   metadata      Json?       @default("{}")
   match         GlobalMatch @relation(fields: [globalMatchId], references: [id], onDelete: Cascade)
   user          User?       @relation(fields: [userId], references: [id])

@@ -164,5 +164,7 @@ class PublicUser(Base):
     __table_args__ = {"schema": "public", "extend_existing": True}
     id = Column(String, primary_key=True)
     steamId = Column(String)
+    rankingPoints = Column(Integer, default=500)
+    mixLevel = Column(Integer, default=5)
     steamMatchAuthCode = Column(String)
     steamLatestMatchCode = Column(String)

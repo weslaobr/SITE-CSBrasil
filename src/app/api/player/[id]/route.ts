@@ -224,6 +224,9 @@ export async function GET(
             premierRating: dbPlayer.Stats.premierRating || cs2space?.ranks?.premier || null,
             // Rank máximo de Competitivo clássico
             maxCompetitiveRank: dbPlayer.Stats.maxCompetitiveRank || maxCompetitiveRank || null,
+            // Proprietary ranking
+            rankingPoints: dbUser?.rankingPoints || 1000,
+            mixLevel: dbUser?.mixLevel || 10,
         } : cs2space ? {
             faceitName:    cs2space.faceit?.nickname || null,
             faceitId:      cs2space.faceit?.id       || null,
@@ -235,6 +238,9 @@ export async function GET(
             gcLevel:       leetifyGCLevel,
             gcNickname:    steamId,
             maxCompetitiveRank: maxCompetitiveRank || null,
+            // Proprietary ranking
+            rankingPoints: dbUser?.rankingPoints || 1000,
+            mixLevel: dbUser?.mixLevel || 10,
         } : leetifyData ? {
             // Jogador sem dbPlayer e sem CS2.space — apenas dados do Leetify
             faceitName:    null,
@@ -245,7 +251,13 @@ export async function GET(
             gcLevel:       leetifyGCLevel,
             gcNickname:    steamId,
             maxCompetitiveRank: maxCompetitiveRank || null,
-        } : null;
+            // Proprietary ranking
+            rankingPoints: dbUser?.rankingPoints || 1000,
+            mixLevel: dbUser?.mixLevel || 10,
+        } : {
+            rankingPoints: dbUser?.rankingPoints || 1000,
+            mixLevel: dbUser?.mixLevel || 10,
+        };
 
         // 3. Format Global Matches to match the old Match schema for the frontend
         const isTeamA = (t: string | null) => !t || ['A', 'CT', '2'].includes(t.toUpperCase());

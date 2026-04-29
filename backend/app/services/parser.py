@@ -338,4 +338,12 @@ class ParserService:
         match.parsed_at = pd.Timestamp.now()
         await db.commit()
         logger.info(f"Parser: Successfully finished match {match_id}")
+
+        # Trigger Ranking update
+        try:
+            from app.services.ranking_service import RankingService
+            await RankingService.process_match_rankings(db, match_id)
+        except Exception as rank_err:
+            logger.error(f"Parser: Error updating rankings for {match_id}: {rank_err}")
+
         return match_id
