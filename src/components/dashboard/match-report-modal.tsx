@@ -330,6 +330,18 @@ const MatchReportModal: React.FC<Props> = ({
         return `https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/${finalName}.svg`;
     };
 
+    const getSideColor = (side: string) => {
+        if (side === 'CT') return 'text-sky-400';
+        if (side === 'T') return 'text-orange-400';
+        return 'text-zinc-500';
+    };
+
+    const getSideBg = (side: string) => {
+        if (side === 'CT') return 'bg-sky-500/10 border-sky-500/20';
+        if (side === 'T') return 'bg-orange-500/10 border-orange-500/20';
+        return 'bg-white/5 border-white/10';
+    };
+
 
 
     const isUserP = (p: any) => {
@@ -669,17 +681,6 @@ const MatchReportModal: React.FC<Props> = ({
         
         const rounds = Object.keys(summaries).map(Number).sort((a, b) => a - b);
         
-        const getSideColor = (side: string) => {
-            if (side === 'CT') return 'text-sky-400';
-            if (side === 'T') return 'text-orange-400';
-            return 'text-zinc-500';
-        };
-
-        const getSideBg = (side: string) => {
-            if (side === 'CT') return 'bg-sky-500/10 border-sky-500/20';
-            if (side === 'T') return 'bg-orange-500/10 border-orange-500/20';
-            return 'bg-white/5 border-white/10';
-        };
 
         return (
             <div className="flex flex-col gap-8 mt-6 relative pb-10">
