@@ -861,6 +861,7 @@ const MatchReportModal: React.FC<Props> = ({
                 })}
             </div>
         );
+    };
     const DuelsLog = () => {
         const [selectedSid, setSelectedSid] = useState<string | null>(null);
         const allPlayers = [...t1, ...t2];
