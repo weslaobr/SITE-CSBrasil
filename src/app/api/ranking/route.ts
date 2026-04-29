@@ -301,20 +301,7 @@ export async function GET() {
                     // Prioridade 2: Média de Rating das partidas (Leetify/Bot)
                     // Prioridade 3: ADR (como fallback final)
                     
-                    let rating = 0;
-                    if (platformKey === 'premier') {
-                        rating = stats?.premierRating || 0;
-                    } else if (platformKey === 'faceit') {
-                        rating = stats?.faceitElo || 0;
-                    } else if (platformKey === 'gc') {
-                        rating = (stats?.gcLevel || 0) * 100;
-                    } else if (platformKey === 'mix') {
-                        rating = userData?.rankingPoints || 500;
-                    } else {
-                        // All/Outros
-                        const avgPerf = b.count > 0 ? b.ratingSum / b.count : 0;
-                        rating = stats?.premierRating || stats?.faceitElo || (avgPerf > 0 ? Math.round(avgPerf * 100) / 100 : adr);
-                    }
+                    let rating = stats?.premierRating || 0;
                     
                     return { kdr, adr, hsPercentage: hs, matchesPlayed: b.count, winRate: wr, rating };
                 };

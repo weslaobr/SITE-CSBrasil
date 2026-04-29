@@ -586,7 +586,13 @@ const GlobalRanking: React.FC = () => {
                         {PLATFORM_FILTERS.map(pf => (
                             <button
                                 key={pf.key}
-                                onClick={() => setPlatformFilter(pf.key)}
+                                onClick={() => {
+                                    setPlatformFilter(pf.key);
+                                    if (pf.key === 'mix') setSortKey('rankingPoints');
+                                    else if (pf.key === 'faceit') setSortKey('faceitElo');
+                                    else if (pf.key === 'gc') setSortKey('gcLevel');
+                                    else if (pf.key === 'premier') setSortKey('rating');
+                                }}
                                 className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${
                                     platformFilter === pf.key
                                         ? 'bg-zinc-200 text-black border-zinc-200'
