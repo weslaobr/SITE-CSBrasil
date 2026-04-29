@@ -842,6 +842,12 @@ const MatchReportModal: React.FC<Props> = ({
                                                         <Eye size={10} className="text-zinc-600" /> Sobreviventes
                                                     </span>
                                                     <div className="flex flex-wrap gap-2">
+                                                        {survivors.map(s => {
+                                                            const side = s.team || (t1.some(p => p.nickname === s.nickname) ? 'CT' : 'T');
+                                                            return (
+                                                                <div key={s.nickname} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl ${getSideBg(side)} border border-white/5`}>
+                                                                    <div className={`w-1 h-1 rounded-full ${side === 'CT' ? 'bg-sky-500 shadow-[0_0_6px_rgba(56,189,248,0.5)]' : 'bg-orange-500 shadow-[0_0_6px_rgba(249,115,22,0.5)]'}`} />
+                                                                    <span className={`text-[10px] font-bold ${getSideColor(side)}`}>{s.nickname}</span>
                                                                 </div>
                                                             );
                                                         })}
