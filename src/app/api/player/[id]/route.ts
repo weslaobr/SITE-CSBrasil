@@ -225,8 +225,8 @@ export async function GET(
             // Rank máximo de Competitivo clássico
             maxCompetitiveRank: dbPlayer.Stats.maxCompetitiveRank || maxCompetitiveRank || null,
             // Proprietary ranking
-            rankingPoints: dbUser?.rankingPoints || 1000,
-            mixLevel: dbUser?.mixLevel || 10,
+            rankingPoints: dbUser?.rankingPoints ?? 500,
+            mixLevel: dbUser?.mixLevel ?? 5,
         } : cs2space ? {
             faceitName:    cs2space.faceit?.nickname || null,
             faceitId:      cs2space.faceit?.id       || null,
@@ -239,8 +239,8 @@ export async function GET(
             gcNickname:    steamId,
             maxCompetitiveRank: maxCompetitiveRank || null,
             // Proprietary ranking
-            rankingPoints: dbUser?.rankingPoints || 1000,
-            mixLevel: dbUser?.mixLevel || 10,
+            rankingPoints: dbUser?.rankingPoints ?? 500,
+            mixLevel: dbUser?.mixLevel ?? 5,
         } : leetifyData ? {
             // Jogador sem dbPlayer e sem CS2.space — apenas dados do Leetify
             faceitName:    null,
@@ -252,11 +252,11 @@ export async function GET(
             gcNickname:    steamId,
             maxCompetitiveRank: maxCompetitiveRank || null,
             // Proprietary ranking
-            rankingPoints: dbUser?.rankingPoints || 1000,
-            mixLevel: dbUser?.mixLevel || 10,
+            rankingPoints: dbUser?.rankingPoints ?? 500,
+            mixLevel: dbUser?.mixLevel ?? 5,
         } : {
-            rankingPoints: dbUser?.rankingPoints || 1000,
-            mixLevel: dbUser?.mixLevel || 10,
+            rankingPoints: dbUser?.rankingPoints ?? 500,
+            mixLevel: dbUser?.mixLevel ?? 5,
         };
 
         // 3. Format Global Matches to match the old Match schema for the frontend

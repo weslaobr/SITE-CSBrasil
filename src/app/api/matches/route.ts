@@ -88,7 +88,11 @@ export async function GET(req: NextRequest) {
             // Rank extraction
             const rank = meta.rank || meta.skill_level || meta.matchmaking_rank || null;
 
-            return { ...m, kills, deaths, assists, adr, hsPercentage, kast, rank };
+            // Elo/Tropoints extraction
+            const eloChange = meta.eloChange ?? meta.elo_change ?? null;
+            const eloAfter = meta.eloAfter ?? meta.elo_after ?? null;
+
+            return { ...m, kills, deaths, assists, adr, hsPercentage, kast, rank, eloChange, eloAfter };
         });
 
         // Format Global Matches to match the old Match schema for the frontend
@@ -127,6 +131,8 @@ export async function GET(req: NextRequest) {
                 adr: gmp.adr,
                 kast: meta?.kast !== undefined ? (meta.kast > 1 ? Math.round(meta.kast) : Math.round(meta.kast * 100)) : (meta?.kast_percent || meta?.kast_percentage || null),
                 rank: meta?.rank || meta?.skill_level || null,
+                eloChange: gmp.eloChange,
+                eloAfter: gmp.eloAfter,
                 url: (gmp.match.metadata as any)?.demoUrl || (gmp.match.metadata as any)?.demo_url || null,
                 metadata: { ...(gmp.match.metadata as any || {}), ...meta }
             };
