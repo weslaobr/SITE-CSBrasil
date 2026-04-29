@@ -185,7 +185,7 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                                 <div className="relative">
                                     <div className="w-16 h-16 rounded-2xl bg-zinc-900 border-2 border-amber-500/40 flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform duration-500 shadow-xl shadow-amber-500/10">
                                         <span className="text-3xl font-black italic text-amber-500 leading-none -ml-0.5">
-                                            {playerStats?.mixLevel || 10}
+                                            {playerStats?.mixLevel || 5}
                                         </span>
                                     </div>
                                     <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center text-[8px] font-black text-black">
@@ -196,12 +196,12 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                                 <div className="flex flex-col items-start gap-1">
                                     <div className="flex items-baseline gap-1.5">
                                         <span className="text-4xl font-black italic uppercase leading-none tracking-tighter text-white">
-                                            {playerStats?.rankingPoints?.toLocaleString('pt-BR') || '1.000'}
+                                            {playerStats?.rankingPoints?.toLocaleString('pt-BR') || '500'}
                                         </span>
                                         <span className="text-xs font-bold text-amber-500/80 italic uppercase tracking-widest">TROPOINTS</span>
                                     </div>
                                     <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest text-left max-w-[140px] leading-relaxed">
-                                        {(playerStats?.mixLevel || 10) >= 18 ? 'Elite do Servidor' : (playerStats?.mixLevel || 10) >= 15 ? 'Competidor Avançado' : 'Jogador de Mix'}
+                                        {(playerStats?.mixLevel || 5) >= 18 ? 'Elite do Servidor' : (playerStats?.mixLevel || 5) >= 15 ? 'Competidor Avançado' : 'Jogador de Mix'}
                                     </p>
                                 </div>
                             </div>
@@ -209,7 +209,7 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
                             <div className="mt-4 w-full h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5 p-[1px]">
                                 <motion.div 
                                     initial={{ width: 0 }}
-                                    animate={{ width: `${(playerStats?.rankingPoints || 1000) % 100}%` }}
+                                    animate={{ width: `${(playerStats?.rankingPoints || 500) % 100}%` }}
                                     className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)]"
                                 />
                             </div>

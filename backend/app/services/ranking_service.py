@@ -12,7 +12,7 @@ class RankingService:
         """
         Calculates level from 1 to 20 based on Tropoints.
         Level 1: 0-100 Tropoints
-        Level 10: 901-1000 Tropoints
+        Level 5: 401-500 Tropoints (Initial)
         Level 20: 1901+ Tropoints
         """
         if points <= 0: return 1
