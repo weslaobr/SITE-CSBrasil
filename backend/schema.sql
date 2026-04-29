@@ -52,6 +52,10 @@ CREATE TABLE tracker.match_players (
     avg_kill_distance FLOAT DEFAULT 0.0,
     avg_ttd FLOAT DEFAULT 0.0,
     utility_damage_roi FLOAT DEFAULT 0.0,
+    he_thrown INT DEFAULT 0,
+    flash_thrown INT DEFAULT 0,
+    smokes_thrown INT DEFAULT 0,
+    molotovs_thrown INT DEFAULT 0,
     PRIMARY KEY (match_id, steamid64)
 );
 

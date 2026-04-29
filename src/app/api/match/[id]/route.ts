@@ -56,10 +56,10 @@ export async function GET(
             const localMeta = (localMatch.metadata as any) || {};
 
             // Team number convention:
-            // Team A (scoreA) → numeric team "2" → team_2_score  (Leetify convention)
-            // Team B (scoreB) → numeric team "3" → team_3_score
+            // Team A (scoreA) → numeric team "3" → team_3_score  (Leetify convention)
+            // Team B (scoreB) → numeric team "2" → team_2_score
             // The frontend's computeScore() looks for team_{initial_team_number}_score in metadata.
-            const isTeamA = (t: string | null) => !t || ['A', 'CT', '2'].includes(t.toUpperCase());
+            const isTeamA = (t: string | null) => !t || ['A', 'CT', '3'].includes(t.toUpperCase());
 
             // Find the profile owner's player record to compute result from their perspective
             const profilePlayer = profileSteamId
@@ -80,7 +80,7 @@ export async function GET(
                 // Map internal team labels to numeric team numbers used by computeScore()
                 // Team A → initial_team_number = 2 (Leetify convention)
                 // Team B → initial_team_number = 3
-                const numericTeam = isTeamA(p.team) ? '2' : '3';
+                const numericTeam = isTeamA(p.team) ? '3' : '2';
                 return {
                     team_id: p.team,
                     // initial_team_number is CRITICAL — used by computeScore() and getTeams()
@@ -163,7 +163,11 @@ export async function GET(
                         avg_ttd: tp.avg_ttd,
                         avg_kill_distance: tp.avg_kill_distance,
                         enemies_flashed: tp.enemies_flashed,
-                        blind_time: tp.total_blind_duration
+                        blind_time: tp.total_blind_duration,
+                        he_thrown: tp.he_thrown,
+                        flash_thrown: tp.flash_thrown,
+                        smokes_thrown: tp.smokes_thrown,
+                        molotovs_thrown: tp.molotovs_thrown
                     };
                 }
                 return p;
@@ -175,16 +179,16 @@ export async function GET(
                 game_mode: localMatch.source,
                 data_source: localMatch.source,
                 match_date: localMatch.matchDate.toISOString(),
-                team_2_score: localMatch.scoreA ?? 0,
-                team_3_score: localMatch.scoreB ?? 0,
+                team_2_score: localMatch.scoreB ?? 0,
+                team_3_score: localMatch.scoreA ?? 0,
                 result: profileResult,
                 demo_url: localMeta.demoUrl || null,
                 weapon_stats: trackerWeaponStats,
                 clutch_events: trackerClutchEvents,
                 metadata: {
                     ...localMeta,
-                    team_2_score: localMatch.scoreA ?? 0,
-                    team_3_score: localMatch.scoreB ?? 0,
+                    team_2_score: localMatch.scoreB ?? 0,
+                    team_3_score: localMatch.scoreA ?? 0,
                     weapon_stats: trackerWeaponStats,
                     clutch_events: trackerClutchEvents,
                 },

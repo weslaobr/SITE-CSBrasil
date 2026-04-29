@@ -59,6 +59,12 @@ class MatchPlayer(Base):
     avg_ttd = Column(Float, default=0.0)
     utility_damage_roi = Column(Float, default=0.0)
 
+    # Thrown grenade counts
+    he_thrown = Column(Integer, default=0)
+    flash_thrown = Column(Integer, default=0)
+    smokes_thrown = Column(Integer, default=0)
+    molotovs_thrown = Column(Integer, default=0)
+
 class Round(Base):
     __tablename__ = "tracker_rounds"
     __table_args__ = {"schema": "public"}

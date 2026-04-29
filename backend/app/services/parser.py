@@ -225,6 +225,13 @@ class ParserService:
             padr = pdmg / num_rounds if num_rounds > 0 else 0.0
             p_logical_team = team_mapping.get(steamid, row["team_name"])
 
+            # Grenade counts for this player
+            p_grenades = self.dem.grenades[self.dem.grenades["thrower_steamid"] == steamid] if not self.dem.grenades.empty else pd.DataFrame()
+            phe_thrown = int(p_grenades[p_grenades["grenade_type"] == "HeGrenade"].shape[0])
+            pflash_thrown = int(p_grenades[p_grenades["grenade_type"] == "Flashbang"].shape[0])
+            psmoke_thrown = int(p_grenades[p_grenades["grenade_type"] == "SmokeGrenade"].shape[0])
+            pmolotov_thrown = int(p_grenades[p_grenades["grenade_type"].isin(["Molotov", "IncendiaryGrenade"])].shape[0])
+
             mp_stats = MatchPlayer(
                 match_id=match_id, steamid64=steamid, team=p_logical_team, kills=pkills, deaths=pdeaths,
                 assists=int(row["assists"]), adr=padr, kast=float(row["kast"]), rating=float(row["rating"]),
@@ -232,7 +239,8 @@ class ParserService:
                 fk=0, fd=0, triples=int(row.get("triple_kills", row.get("3k", 0))),
                 quads=int(row.get("quad_kills", row.get("4k", 0))), aces=int(row.get("ace_kills", row.get("5k", 0))),
                 clutches=int(row.get("clutch_wins", row.get("clutches", 0))), trades=int(row.get("trade_kills", row.get("trades", 0))),
-                enemies_flashed=0, total_blind_duration=0.0, avg_kill_distance=0.0, avg_ttd=0.0, utility_damage_roi=0.0
+                enemies_flashed=0, total_blind_duration=0.0, avg_kill_distance=0.0, avg_ttd=0.0, utility_damage_roi=0.0,
+                he_thrown=phe_thrown, flash_thrown=pflash_thrown, smokes_thrown=psmoke_thrown, molotovs_thrown=pmolotov_thrown
             )
             db.add(mp_stats)
 
