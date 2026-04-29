@@ -97,10 +97,13 @@ const MatchReportModal: React.FC<Props> = ({
 
     React.useEffect(() => {
         if (isOpen && matchId) {
-            if (!match || !match.metadata || match.id !== matchId) {
-                setInternalMatch(null);
+            // Fetch if no match, no metadata, or if metadata is missing rich data (roundSummaries)
+            if (!match || !match.metadata || !match.metadata.roundSummaries || match.id !== matchId) {
+                // If it's a different match, clear the internal state first
+                if (match?.id !== matchId) {
+                    setInternalMatch(null);
+                }
                 setFetchError(false);
-                setTab('placar');
                 fetchMatchData();
             }
         } else if (!isOpen) {
@@ -109,6 +112,12 @@ const MatchReportModal: React.FC<Props> = ({
             setTab('placar');
         }
     }, [isOpen, matchId]);
+
+    const weaponImg = (w: string) => {
+        if (!w) return '';
+        const name = w.replace('weapon_', '').replace('knife_m9_bayonet', 'm9_bayonet').replace('knife_karambit', 'karambit');
+        return `https://raw.githubusercontent.com/Cpt-S/CSGO-Weapon-Icons/master/SVG/${name}.svg`;
+    };
 
     const fetchMatchData = async () => {
         setLoading(true);

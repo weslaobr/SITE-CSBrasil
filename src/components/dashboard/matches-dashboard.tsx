@@ -1137,7 +1137,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
             </main>
 
             <MatchReportModal
-                match={selectedMatch}
+                match={null}
                 matchId={selectedMatch?.externalId?.replace('leetify-', '') || selectedMatch?.id || null}
                 isOpen={isModalOpen}
                 onClose={() => {
