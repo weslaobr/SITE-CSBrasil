@@ -48,6 +48,8 @@ interface Match {
     rating2?: number;
     hsPercentage?: number;
     rank?: string;
+    eloChange?: number;
+    eloAfter?: number;
     matchDate: string;
     duration?: string;
     result: string;
@@ -740,6 +742,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     <th className="px-5 py-3.5" title="Nome do mapa jogado">Mapa</th>
                                     <th className="px-3 py-3.5 text-center" title={`Pontuação final da partida (${(session?.user as any)?.steamId === currentUserSteamId ? "Seu Time" : (currentFaceit || "Time do Jogador")} vs Adversários)`}>Placar</th>
                                     <th className="px-3 py-3.5 text-center" title="Patente ou Rating da partida">Patente</th>
+                                    <th className="px-3 py-3.5 text-center" title="Alteração de Tropoints nesta partida">Tropoints</th>
                                     <th className="px-3 py-3.5 text-center" title="Modo de jogo (Competitivo, Premier, Faceit, etc)">Modo</th>
                                     <th className="px-2 py-3.5 text-center" title="ID único da partida">ID</th>
                                     <th className="px-3 py-3.5 text-center" title="Kills (Eliminações)">K</th>
@@ -847,6 +850,20 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                                          })()}
                                                                      </div>
                                                                  </td>
+                                                                <td className="px-3 py-4 text-center">
+                                                                    {match.eloChange !== undefined ? (
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`flex items-center gap-0.5 text-xs font-black tracking-tighter ${match.eloChange > 0 ? 'text-emerald-400' : match.eloChange < 0 ? 'text-red-400' : 'text-zinc-600'}`}>
+                                                                                {match.eloChange > 0 ? `+${match.eloChange}` : match.eloChange}
+                                                                            </div>
+                                                                            {match.eloAfter !== undefined && (
+                                                                                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mt-0.5">{match.eloAfter} TP</span>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-zinc-800 font-black italic text-[9px]">—</span>
+                                                                    )}
+                                                                </td>
                                                                 <td className="px-3 py-4 text-center">
                                                                     <div className="flex flex-col items-center gap-1">
                                                                         <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wide ${

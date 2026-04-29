@@ -63,6 +63,8 @@ export default function MatchHistory({ matches, onSync, loading, steamId, steamN
             ? m.score 
             : (Array.isArray(m.score) ? `${m.score[0]}-${m.score[1]}` : '0-0'),
         rank: m.rank || m.metadata?.rank || m.metadata?.skill_level || null,
+        eloChange: m.eloChange,
+        eloAfter: m.eloAfter,
         metadata: m.metadata || {
             leetify_rating: m.leetify_rating
         }

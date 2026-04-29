@@ -169,6 +169,8 @@ export async function GET() {
                 adr: true,
                 hsPercentage: true,
                 matchesPlayed: true,
+                rankingPoints: true,
+                mixLevel: true,
                 steamMatchAuthCode: true,
                 steamLatestMatchCode: true,
                 matches: {
@@ -307,7 +309,7 @@ export async function GET() {
                     } else if (platformKey === 'gc') {
                         rating = (stats?.gcLevel || 0) * 100;
                     } else if (platformKey === 'mix') {
-                        rating = adr;
+                        rating = userData?.rankingPoints || 500;
                     } else {
                         // All/Outros
                         const avgPerf = b.count > 0 ? b.ratingSum / b.count : 0;
@@ -352,6 +354,8 @@ export async function GET() {
                     gcLevel: stats?.gcLevel || 0,
                     faceitLevel: stats?.faceitLevel || 0,
                     faceitElo: stats?.faceitElo || 0,
+                    rankingPoints: userData?.rankingPoints ?? 500,
+                    mixLevel: userData?.mixLevel ?? 5,
                 };
             })
             .filter(user => !user.steamId.endsWith('_temp'));

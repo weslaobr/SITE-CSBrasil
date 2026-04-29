@@ -25,6 +25,8 @@ interface RankUser {
     faceitElo: number;
     hasSync?: boolean;
     mixMatches?: number;
+    rankingPoints?: number;
+    mixLevel?: number;
     stats?: {
         [key in PlatformFilter]: {
             matchesPlayed: number;
@@ -45,7 +47,7 @@ interface CommunityStats {
     mostActiveMatches: number;
 }
 
-type SortKey = 'rating' | 'kdr' | 'adr' | 'hsPercentage' | 'faceitElo' | 'gcLevel' | 'matchesPlayed';
+type SortKey = 'rating' | 'kdr' | 'adr' | 'hsPercentage' | 'faceitElo' | 'gcLevel' | 'matchesPlayed' | 'rankingPoints' | 'mixLevel';
 type PlatformFilter = 'all' | 'premier' | 'faceit' | 'gc' | 'mix';
 
 const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
@@ -56,6 +58,8 @@ const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
     { key: 'adr',          label: 'ADR',         icon: <Target size={11} /> },
     { key: 'hsPercentage', label: 'Headshot %',  icon: <Flame size={11} /> },
     { key: 'matchesPlayed',label: 'Partidas',    icon: <Zap size={11} /> },
+    { key: 'rankingPoints', label: 'Tropoints',   icon: <Flame size={11} className="text-amber-500" /> },
+    { key: 'mixLevel',      label: 'Nível Mix',  icon: <Trophy size={11} className="text-amber-500" /> },
     { key: 'winRate' as any, label: 'Win Rate',    icon: <TrendingUp size={11} /> },
 ];
 
@@ -64,7 +68,7 @@ const PLATFORM_FILTERS: { key: PlatformFilter; label: string }[] = [
     { key: 'premier', label: 'Premier' },
     { key: 'faceit',  label: 'Faceit' },
     { key: 'gc',      label: 'GC' },
-    { key: 'mix',     label: 'Mix' },
+    { key: 'mix',     label: 'Mix (Tropoints)' },
 ];
 
 const PODIUM_CONFIG = [
@@ -477,9 +481,15 @@ const GlobalRanking: React.FC = () => {
                                         className="text-3xl font-black italic tracking-tighter"
                                         style={{ color: podiumTier.color, textShadow: `0 0 20px ${podiumTier.color}80` }}
                                     >
-                                        <AnimatedNumber value={user.rating} />
+                                        <AnimatedNumber value={sortKey === 'rankingPoints' ? (user.rankingPoints || 0) : sortKey === 'mixLevel' ? (user.mixLevel || 0) : user.rating} />
                                     </span>
-                                    <PremierBadge rating={user.rating} size="sm" />
+                                    {sortKey === 'rankingPoints' ? (
+                                        <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">Tropoints</span>
+                                    ) : sortKey === 'mixLevel' ? (
+                                        <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">Nível Mix</span>
+                                    ) : (
+                                        <PremierBadge rating={user.rating} size="sm" />
+                                    )}
                                 </div>
 
                                 {/* Mini-stats do pódio */}
@@ -598,7 +608,11 @@ const GlobalRanking: React.FC = () => {
                             <th className="px-5 py-3.5 w-16">#</th>
                             <th className="px-4 py-3.5">Jogador</th>
                             <th className="px-4 py-3.5">
-                                {sortKey === 'faceitElo' ? 'Faceit ELO' : sortKey === 'gcLevel' ? 'GC Level' : 'SR Premier'}
+                                {sortKey === 'faceitElo' ? 'Faceit ELO' : 
+                                 sortKey === 'gcLevel' ? 'GC Level' : 
+                                 sortKey === 'rankingPoints' ? 'Tropoints' :
+                                 sortKey === 'mixLevel' ? 'Nível Mix' :
+                                 'SR Premier'}
                             </th>
                             <th className="px-4 py-3.5 text-center hidden lg:table-cell">
                                 {platformFilter === 'mix' ? 'Mixes' : 'Partidas'}
@@ -606,8 +620,8 @@ const GlobalRanking: React.FC = () => {
                             <th className="px-4 py-3.5 text-center hidden lg:table-cell">KDR</th>
                             <th className="px-4 py-3.5 text-center hidden md:table-cell">ADR</th>
                             <th className="px-4 py-3.5 text-center hidden md:table-cell">HS%</th>
-                            <th className="px-4 py-3.5 text-center hidden md:table-cell">GC</th>
-                            <th className="px-4 py-3.5 text-center hidden md:table-cell">Faceit</th>
+                            <th className="px-4 py-3.5 text-center hidden md:table-cell">Mix LV</th>
+                            <th className="px-4 py-3.5 text-center hidden md:table-cell">Tropoints</th>
                             <th className="px-4 py-3.5 text-right"></th>
                         </tr>
                     </thead>
@@ -726,6 +740,7 @@ const GlobalRanking: React.FC = () => {
                                                     >
                                                         {sortKey === 'kdr' ? sortVal.toFixed(2) :
                                                          sortKey === 'hsPercentage' ? `${sortVal}%` :
+                                                         sortKey === 'mixLevel' ? `LV ${sortVal}` :
                                                          sortVal.toLocaleString()}
                                                     </span>
                                                     {sortKey === 'rating' && user.rating > 0 && (
@@ -735,13 +750,13 @@ const GlobalRanking: React.FC = () => {
                                                         />
                                                     )}
                                                 </div>
-                                                {sortKey === 'rating' && (
+                                                {(sortKey === 'rating' || sortKey === 'rankingPoints') && (
                                                     <div className="w-20 h-1 bg-white/[0.04] rounded-full overflow-hidden">
                                                         <motion.div
                                                             initial={{ width: 0 }}
                                                             animate={{ width: `${pct}%` }}
                                                             transition={{ delay: 0.3 + idx * 0.02, duration: 0.6, ease: 'easeOut' }}
-                                                            className={`h-full rounded-full ${tierColor.bar}`}
+                                                            className={`h-full rounded-full ${sortKey === 'rankingPoints' ? 'bg-amber-500' : tierColor.bar}`}
                                                         />
                                                     </div>
                                                 )}
@@ -788,13 +803,20 @@ const GlobalRanking: React.FC = () => {
                                             </span>
                                         </td>
 
-                                        {/* GC */}
+                                        {/* Mix Level */}
                                         <td className="px-4 py-3.5 text-center hidden md:table-cell">
-                                            {user.gcLevel > 0 ? (
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 text-[10px] font-black uppercase tracking-wide">
-                                                    <Shield size={9} /> {user.gcLevel}
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-[11px] font-black text-amber-500">
+                                                    LV {user.mixLevel || 5}
                                                 </span>
-                                            ) : <span className="text-zinc-800">—</span>}
+                                            </div>
+                                        </td>
+
+                                        {/* Tropoints */}
+                                        <td className="px-4 py-3.5 text-center hidden md:table-cell">
+                                            <span className="text-[11px] font-black text-white">
+                                                {(user.rankingPoints || 500).toLocaleString()}
+                                            </span>
                                         </td>
 
                                         {/* Faceit */}
