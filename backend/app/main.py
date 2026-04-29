@@ -109,6 +109,24 @@ async def get_match_stats(match_id: str, db: AsyncSession = Depends(get_db)):
     }
 
 
+@app.post("/api/match/{match_id}/parse", tags=["Tracker"])
+async def trigger_match_parse(match_id: str, payload: dict):
+    """
+    Enfileira o processamento de uma demo específica.
+    Payload: { "demo_url": "...", "steamid": "...", "source": "..." }
+    """
+    from app.tasks.match_tasks import process_match_task
+    demo_url = payload.get("demo_url")
+    steamid = payload.get("steamid")
+    source = payload.get("source", "matchmaking")
+    
+    if not demo_url:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="demo_url is required")
+        
+    process_match_task.delay(match_id=match_id, steamid=steamid, demo_url=demo_url, source=source)
+    return {"status": "queued", "match_id": match_id}
+
 @app.get("/api/match/list", tags=["Tracker"])
 async def list_matches(steamid: Optional[str] = None, db: AsyncSession = Depends(get_db)):
     from app.models.tracker import Match, MatchPlayer

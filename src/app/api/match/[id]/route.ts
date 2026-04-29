@@ -134,25 +134,59 @@ export async function GET(
             // Tentar puxar avatares
             localStats = await fetchAvatars(localStats);
 
+            // Fetch detailed stats from tracker tables (using raw query since they are not in Prisma)
+            const trackerWeaponStatsRaw = await prisma.$queryRaw`
+                SELECT * FROM public.tracker_weapon_stats WHERE match_id = ${matchId}
+            `.catch(() => []) as any[];
+
+            const trackerClutchEvents = await prisma.$queryRaw`
+                SELECT * FROM public.tracker_clutch_events WHERE match_id = ${matchId}
+            `.catch(() => []) as any[];
+
+            const trackerMatchPlayers = await prisma.$queryRaw`
+                SELECT * FROM public.tracker_match_players WHERE match_id = ${matchId}
+            `.catch(() => []) as any[];
+
+            // Normalize weapon stats to match frontend expectations (weapon_name, player_id)
+            const trackerWeaponStats = trackerWeaponStatsRaw.map(ws => ({
+                ...ws,
+                weapon_name: ws.weapon,
+                player_id: String(ws.steamid64)
+            }));
+
+            // Merge advanced stats from tracker into localStats
+            localStats = localStats.map(p => {
+                const tp = trackerMatchPlayers.find(x => String(x.steamid64) === String(p.steam64_id));
+                if (tp) {
+                    return {
+                        ...p,
+                        avg_ttd: tp.avg_ttd,
+                        avg_kill_distance: tp.avg_kill_distance,
+                        enemies_flashed: tp.enemies_flashed,
+                        blind_time: tp.total_blind_duration
+                    };
+                }
+                return p;
+            });
+
             const data = {
                 match_id: localMatch.id,
                 map_name: localMatch.mapName,
                 game_mode: localMatch.source,
                 data_source: localMatch.source,
                 match_date: localMatch.matchDate.toISOString(),
-                // Team A (internal 'A'/'CT'/'3') maps to numeric team 2 → team_2_score
-                // Team B (internal 'B'/'T'/'2') maps to numeric team 3 → team_3_score
-                // computeScore() on the frontend looks for team_{initial_team_number}_score
                 team_2_score: localMatch.scoreA ?? 0,
                 team_3_score: localMatch.scoreB ?? 0,
-                // result from the profile owner's perspective (null if unknown)
                 result: profileResult,
                 demo_url: localMeta.demoUrl || null,
+                weapon_stats: trackerWeaponStats,
+                clutch_events: trackerClutchEvents,
                 metadata: {
                     ...localMeta,
-                    // Expose team scores by numeric key so computeScore() can find them
                     team_2_score: localMatch.scoreA ?? 0,
                     team_3_score: localMatch.scoreB ?? 0,
+                    weapon_stats: trackerWeaponStats,
+                    clutch_events: trackerClutchEvents,
                 },
                 stats: localStats
             };

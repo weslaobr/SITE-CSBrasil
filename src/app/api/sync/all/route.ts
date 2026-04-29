@@ -94,8 +94,20 @@ export async function POST(req: NextRequest) {
                         matchMetaExtra = {
                             leetify_ratings: detail.ratings,
                             teamA: detail.teamA,
-                            teamB: detail.teamB
+                            teamB: detail.teamB,
+                            demo_url: detail.demo_url || detail.demoUrl || null
                         };
+
+                        // Trigger deep analysis in Python Tracker if demo_url exists
+                        const trackerDemoUrl = detail.demo_url || detail.demoUrl;
+                        if (trackerDemoUrl) {
+                            const TRACKER_API = process.env.PYTHON_API_URL || 'http://localhost:8000';
+                            axios.post(`${TRACKER_API}/api/match/${m.id}/parse`, {
+                                demo_url: trackerDemoUrl,
+                                steamid: user.steamId,
+                                source: m.data_source || 'matchmaking'
+                            }).catch(err => console.warn(`[Sync] Trigger parse failed for ${m.id}:`, err.message));
+                        }
 
                         try {
                             const globalMatchData = {
