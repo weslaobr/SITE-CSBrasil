@@ -660,16 +660,15 @@ const MatchReportModal: React.FC<Props> = ({
         const allPlayers = [...t1, ...t2];
         const summaries = currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries;
         if (!summaries) return (
-            <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
-                <Clock size={40} className="mb-4 opacity-20" />
-                <p className="text-xs font-black uppercase tracking-widest">Linha do tempo indisponível</p>
-                <p className="text-[10px] lowercase text-zinc-700 mt-1">Requer demo processada pelo bot</p>
+            <div className="flex flex-col items-center justify-center py-24 text-zinc-600 bg-black/20 rounded-[32px] border border-white/[0.03]">
+                <Clock size={48} strokeWidth={1} className="mb-4 text-yellow-500/20" />
+                <h4 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-500">Linha do tempo indisponível</h4>
+                <p className="text-[10px] uppercase text-zinc-700 mt-2 font-bold tracking-widest">Requer análise profunda da demo</p>
             </div>
         );
         
         const rounds = Object.keys(summaries).map(Number).sort((a, b) => a - b);
         
-        // Helper para cores de time
         const getSideColor = (side: string) => {
             if (side === 'CT') return 'text-sky-400';
             if (side === 'T') return 'text-orange-400';
@@ -683,210 +682,196 @@ const MatchReportModal: React.FC<Props> = ({
         };
 
         return (
-            <div className="flex flex-col gap-6 mt-4 relative">
-                {/* Linha vertical decorativa */}
-                <div className="absolute left-[22px] top-0 bottom-0 w-px bg-gradient-to-b from-white/10 via-white/[0.02] to-transparent" />
+            <div className="flex flex-col gap-8 mt-6 relative pb-10">
+                {/* Linha vertical centralizada estilo battlelog */}
+                <div className="absolute left-[24px] top-4 bottom-0 w-[2px] bg-gradient-to-b from-yellow-500/30 via-white/5 to-transparent hidden md:block" />
 
-                {rounds.map(rNum => {
+                {rounds.map((rNum, idx) => {
                     const r = summaries[rNum];
                     const kills = r.kills || [];
                     const winner = r.winner || "";
                     const reason = r.reason || "";
-                    
-                    const isWin = (winner === "CT" && t1[0]?.team === "CT") || (winner === "T" && t1[0]?.team === "T");
-
-                    // Cálculo de sobreviventes
                     const survivors = allPlayers.filter(p => !kills.some((k: any) => k.victimName === p.nickname));
 
                     return (
-                        <div key={rNum} className="relative pl-12">
-                            {/* Marcador de Round */}
-                            <div className={`absolute left-0 top-0 w-11 h-11 rounded-2xl border-2 flex flex-col items-center justify-center z-10 shadow-2xl transition-transform hover:scale-110 ${
-                                winner === 'CT' ? 'bg-[#0f172a] border-sky-500/50 text-sky-400' : 
-                                winner === 'T' ? 'bg-[#1c1917] border-orange-500/50 text-orange-400' : 
+                        <motion.div 
+                            key={rNum}
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: idx * 0.05 }}
+                            className="relative md:pl-16 group"
+                        >
+                            {/* Marcador de Round Flutuante */}
+                            <div className={`absolute left-0 top-0 w-12 h-12 rounded-[18px] border-2 flex flex-col items-center justify-center z-10 shadow-2xl transition-all duration-300 group-hover:scale-110 group-hover:shadow-yellow-500/10 ${
+                                winner === 'CT' ? 'bg-[#0f172a] border-sky-500/40 text-sky-400' : 
+                                winner === 'T' ? 'bg-[#1c1917] border-orange-500/40 text-orange-400' : 
                                 'bg-zinc-900 border-white/10 text-zinc-500'
                             }`}>
-                                <span className="text-[7px] font-black uppercase leading-none mb-0.5 tracking-tighter opacity-70">Round</span>
-                                <span className="text-lg font-black italic leading-none">{rNum}</span>
+                                <span className="text-[7px] font-black uppercase leading-none mb-0.5 tracking-tighter opacity-50">RD</span>
+                                <span className="text-xl font-black italic leading-none">{rNum}</span>
                             </div>
 
-                            <motion.div 
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="bg-[#0c0f15] border border-white/[0.05] rounded-[24px] overflow-hidden"
-                            >
-                                {/* Round Header Inside */}
-                                <div className="px-6 py-3 border-b border-white/[0.03] flex items-center justify-between bg-white/[0.01]">
-                                    <div className="flex items-center gap-4">
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-                                            Resultado do Round
-                                        </h4>
-                                        {winner && (
-                                            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getSideColor(winner)} ${getSideBg(winner)} border`}>
-                                                {winner === 'CT' ? <Shield size={10} /> : <Target size={10} />}
-                                                VENCEU: {winner}
+                            <div className="bg-[#0c0f15] border border-white/[0.04] rounded-[32px] overflow-hidden shadow-xl transition-all group-hover:border-white/10">
+                                {/* Round Header - Estilo Minimalista Premium */}
+                                <div className="px-8 py-5 border-b border-white/[0.03] flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-white/[0.02] to-transparent">
+                                    <div className="flex items-center gap-6">
+                                        <div className="flex flex-col">
+                                            <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-1">Resultado do Round</h4>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`px-4 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 border ${getSideBg(winner)} ${getSideColor(winner)}`}>
+                                                    {winner === 'CT' ? <Shield size={12} fill="currentColor" className="opacity-40" /> : <Target size={12} fill="currentColor" className="opacity-40" />}
+                                                    {winner === 'CT' ? 'Counter-Terrorists' : 'Terrorists'}
+                                                </div>
                                                 {reason && (
-                                                    <span className="text-zinc-600 lowercase font-normal ml-1 border-l border-white/10 pl-2">
+                                                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter bg-white/[0.03] px-3 py-1.5 rounded-xl border border-white/[0.05]">
                                                         {reason.replace('ct_win_', '').replace('t_win_', '').replace('_', ' ')}
                                                     </span>
                                                 )}
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Activity size={10} className="text-zinc-700" />
-                                        <span className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest">
-                                            {kills.length} eventos
-                                        </span>
+
+                                    <div className="flex items-center gap-6">
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-xl font-black italic text-zinc-300">{kills.length}</span>
+                                            <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest">Baixas</span>
+                                        </div>
+                                        <div className="w-px h-8 bg-white/5" />
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-xl font-black italic text-zinc-300">{survivors.length}</span>
+                                            <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest">Vivos</span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="p-3 bg-black/20">
-                                    <div className="space-y-1">
+                                <div className="p-4 bg-black/10">
+                                    {/* Kill Feed do Round */}
+                                    <div className="space-y-1 mb-6">
                                         {kills.length === 0 ? (
-                                            <p className="text-[10px] text-zinc-600 italic px-4 py-3">Sem baixas registradas.</p>
+                                            <div className="py-6 text-center">
+                                                <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-widest italic italic">Nenhum evento registrado</p>
+                                            </div>
                                         ) : (
                                             kills.map((k: any, kIdx: number) => {
                                                 const attSide = k.attackerSide || (allPlayers.find(p => p.nickname === k.attackerName)?.team) || "unknown";
                                                 const vicSide = k.victimSide || (allPlayers.find(p => p.nickname === k.victimName)?.team) || "unknown";
-                                                const weapon = k.weapon?.replace("weapon_", "").replace("_", "-").toUpperCase() || "unknown";
+                                                const weapon = k.weapon?.replace("weapon_", "").replace("_", " ").toUpperCase() || "unknown";
                                                 const dmg = k.damage || k.dmg || k.hp_dmg || null;
                                                 
                                                 return (
-                                                    <div key={kIdx} className="group relative flex items-center gap-4 px-4 py-2 rounded-xl transition-all hover:bg-white/[0.02]">
-                                                        {/* Attacker */}
-                                                        <div className="flex-1 flex justify-end items-center gap-3">
+                                                    <div key={kIdx} className="group/kill relative flex items-center gap-4 px-6 py-2.5 rounded-2xl transition-all hover:bg-white/[0.03]">
+                                                        {/* Atacante */}
+                                                        <div className="flex-1 flex justify-end items-center gap-4">
                                                             <div className="flex flex-col items-end">
-                                                                <span className={`text-[12px] font-black italic tracking-tight ${getSideColor(attSide)}`}>
+                                                                <span className={`text-[13px] font-black italic tracking-tight transition-all group-hover/kill:scale-105 ${getSideColor(attSide)}`}>
                                                                     {k.attackerName}
                                                                 </span>
-                                                                <span className="text-[7px] font-black uppercase text-zinc-600 tracking-widest">{attSide}</span>
+                                                                <span className="text-[8px] font-black uppercase text-zinc-700 tracking-widest opacity-60">{attSide}</span>
                                                             </div>
-                                                            <div className={`w-1 h-6 rounded-full ${attSide === 'CT' ? 'bg-sky-500 shadow-[0_0_8px_rgba(56,189,248,0.4)]' : 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]'}`} />
+                                                            <div className={`w-1.5 h-7 rounded-full ${attSide === 'CT' ? 'bg-sky-500 shadow-[0_0_12px_rgba(56,189,248,0.4)]' : 'bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.4)]'}`} />
                                                         </div>
 
-                                                        {/* Action Arrow / Weapon */}
-                                                        <div className="flex flex-col items-center gap-1 min-w-[140px]">
-                                                            <div className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/5 flex items-center gap-3 shadow-inner relative overflow-hidden">
+                                                        {/* Weapon / Action */}
+                                                        <div className="flex flex-col items-center gap-1 min-w-[160px]">
+                                                            <div className="w-full px-4 py-2 rounded-xl bg-zinc-950/50 border border-white/[0.03] flex items-center justify-center gap-3 group-hover/kill:border-white/10 transition-all shadow-inner">
                                                                 <img 
                                                                     src={weaponImg(k.weapon)} 
                                                                     alt={weapon}
-                                                                    title={weapon}
-                                                                    className="h-[14px] w-auto brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity"
-                                                                    onError={(e) => {
-                                                                        (e.target as HTMLImageElement).style.display = 'none';
-                                                                        const next = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
-                                                                        if (next) next.style.display = 'block';
-                                                                    }}
+                                                                    className="h-[16px] w-auto brightness-0 invert opacity-40 group-hover/kill:opacity-100 transition-opacity drop-shadow-lg"
                                                                 />
-                                                                <span className="text-[8px] font-mono font-black text-zinc-500 hidden text-center">{weapon}</span>
-
-                                                                {dmg && (
-                                                                    <div className="flex items-center gap-1 ml-auto">
-                                                                        <div className="w-[1px] h-3 bg-white/10" />
-                                                                        <span className="text-[8px] font-black text-emerald-500/70">{dmg}</span>
-                                                                        <span className="text-[7px] font-bold text-zinc-600">DMG</span>
+                                                                {k.isHeadshot && (
+                                                                    <div className="w-6 h-6 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20">
+                                                                        <Target size={12} strokeWidth={3} />
                                                                     </div>
                                                                 )}
-                                                                {k.isHeadshot && (
-                                                                    <div className="flex items-center gap-1">
-                                                                        <div className="w-[1px] h-3 bg-white/10" />
-                                                                        <Target size={10} className="text-rose-500" />
+                                                                {dmg && (
+                                                                    <div className="flex items-center gap-1.5 ml-2 border-l border-white/5 pl-3">
+                                                                        <span className="text-[10px] font-black text-emerald-400/80">{dmg}</span>
+                                                                        <span className="text-[7px] font-black text-zinc-700 uppercase">dmg</span>
                                                                     </div>
                                                                 )}
                                                             </div>
                                                         </div>
 
-                                                        {/* Victim */}
-                                                        <div className="flex-1 flex items-center gap-3">
-                                                            <div className={`w-1 h-6 rounded-full ${vicSide === 'CT' ? 'bg-sky-500' : 'bg-orange-500'} opacity-30`} />
+                                                        {/* Vítima */}
+                                                        <div className="flex-1 flex items-center gap-4">
+                                                            <div className={`w-1.5 h-7 rounded-full ${vicSide === 'CT' ? 'bg-sky-500' : 'bg-orange-500'} opacity-20`} />
                                                             <div className="flex flex-col items-start">
-                                                                <span className={`text-[12px] font-bold tracking-tight ${getSideColor(vicSide)} opacity-60`}>
+                                                                <span className={`text-[13px] font-bold tracking-tight text-zinc-500 group-hover/kill:text-zinc-400 transition-all`}>
                                                                     {k.victimName}
                                                                 </span>
-                                                                <span className="text-[7px] font-bold uppercase text-zinc-700 tracking-widest">{vicSide}</span>
+                                                                <span className="text-[8px] font-bold uppercase text-zinc-800 tracking-widest">{vicSide}</span>
                                                             </div>
                                                         </div>
-
-                                                        {/* Background line effect */}
-                                                        <div className="absolute inset-x-4 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                                     </div>
                                                 );
                                             })
                                         )}
                                     </div>
                                     
-                                    {/* Dano por Jogador */}
-                                    {r.damage && Object.keys(r.damage).length > 0 && (
-                                        <div className="mt-4 pt-3 border-t border-white/[0.03] px-4">
-                                            <div className="flex items-center gap-3 flex-wrap">
-                                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/[0.03] border border-white/5">
-                                                    <Flame size={10} className="text-orange-500/70" />
-                                                    <span className="text-[8px] font-black uppercase text-zinc-500 tracking-widest">Danos do Round</span>
+                                    {/* Dano e Sobreviventes - Seção Unificada e Minimalista */}
+                                    {(r.damage || survivors.length > 0) && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-2 pt-4 border-t border-white/[0.03]">
+                                            {r.damage && Object.keys(r.damage).length > 0 && (
+                                                <div className="flex flex-col gap-2">
+                                                    <span className="text-[8px] font-black uppercase text-zinc-600 tracking-[0.2em] px-2 flex items-center gap-2">
+                                                        <Flame size={10} className="text-orange-500/50" /> Maiores Danos
+                                                    </span>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {Object.entries(r.damage)
+                                                            .sort(([, a], [, b]) => (b as any) - (a as any))
+                                                            .slice(0, 5)
+                                                            .map(([sid, dmg]) => {
+                                                                const p = allPlayers.find(px => String(px.steamId) === sid);
+                                                                if (!p || (dmg as number) <= 0) return null;
+                                                                return (
+                                                                    <div key={sid} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-colors">
+                                                                        <span className={`text-[10px] font-bold ${getSideColor(p.team || '')}`}>{p.nickname}</span>
+                                                                        <div className="w-[1px] h-3 bg-white/10" />
+                                                                        <span className="text-[10px] font-black text-orange-400">{dmg as number}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                    </div>
                                                 </div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {Object.entries(r.damage)
-                                                        .sort(([, a], [, b]) => (b as any) - (a as any))
-                                                        .map(([sid, dmg]) => {
-                                                            const p = allPlayers.find(px => String(px.steamId) === sid);
-                                                            if (!p || (dmg as number) <= 0) return null;
-                                                            return (
-                                                                <div key={sid} className={`flex items-center gap-2 px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.05] shadow-sm`}>
-                                                                    <span className={`text-[9px] font-bold ${getSideColor(p.team || '')}`}>{p.nickname}</span>
-                                                                    <div className="w-[1px] h-2 bg-white/10" />
-                                                                    <span className="text-[9px] font-black text-orange-400">{dmg as number}</span>
-                                                                    <span className="text-[7px] font-bold text-zinc-600 uppercase">dmg</span>
+                                            )}
+                                            {survivors.length > 0 && (
+                                                <div className="flex flex-col gap-2">
+                                                    <span className="text-[8px] font-black uppercase text-zinc-600 tracking-[0.2em] px-2 flex items-center gap-2">
+                                                        <Eye size={10} className="text-zinc-600" /> Sobreviventes
+                                                    </span>
+                                                    <div className="flex flex-wrap gap-2">
                                                                 </div>
                                                             );
                                                         })}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {survivors.length > 0 && (
-                                        <div className="mt-4 pt-3 border-t border-white/[0.03] px-4 pb-1">
-                                            <div className="flex items-center gap-3 flex-wrap">
-                                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/[0.03] border border-white/5">
-                                                    <Eye size={10} className="text-zinc-600" />
-                                                    <span className="text-[8px] font-black uppercase text-zinc-500 tracking-widest">Sobreviventes</span>
-                                                </div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {survivors.map(s => {
-                                                        const side = s.team || (t1.some(p => p.nickname === s.nickname) ? 'CT' : 'T');
-                                                        return (
-                                                            <div key={s.nickname} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${getSideBg(side)} border border-white/5 shadow-sm`}>
-                                                                <div className={`w-1 h-1 rounded-full ${side === 'CT' ? 'bg-sky-500' : 'bg-orange-500'}`} />
-                                                                <span className={`text-[9px] font-bold ${getSideColor(side)}`}>{s.nickname}</span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
-                            </motion.div>
-                        </div>
+                            </div>
+                        </motion.div>
                     );
                 })}
             </div>
         );
     };
+
     const DuelsLog = () => {
         const [selectedSid, setSelectedSid] = useState<string | null>(null);
         const allPlayers = [...t1, ...t2];
         const summaries = currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries;
 
         if (!summaries) return (
-            <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
-                <Swords size={40} className="mb-4 opacity-20" />
-                <p className="text-xs font-black uppercase tracking-widest">Duelos indisponíveis</p>
-                <p className="text-[10px] lowercase text-zinc-700 mt-1">Requer demo processada pelo bot</p>
+            <div className="flex flex-col items-center justify-center py-24 text-zinc-600 bg-black/20 rounded-[32px] border border-white/[0.03]">
+                <Swords size={48} strokeWidth={1} className="mb-4 text-yellow-500/20" />
+                <h4 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-500">Duelos indisponíveis</h4>
+                <p className="text-[10px] uppercase text-zinc-700 mt-2 font-bold tracking-widest">Requer análise profunda da demo</p>
             </div>
         );
 
-        // Se nenhum jogador selecionado, tenta selecionar o usuário ou o primeiro da lista
         React.useEffect(() => {
             if (!selectedSid && allPlayers.length > 0) {
                 const user = allPlayers.find(p => p.isUser);
@@ -896,26 +881,21 @@ const MatchReportModal: React.FC<Props> = ({
 
         const selectedPlayer = allPlayers.find(p => String(p.steamId) === String(selectedSid));
         
-        // Coletar todos os eventos onde o selecionado está envolvido (como atacante ou vítima)
         const allEvents: any[] = [];
         Object.entries(summaries).forEach(([rNum, r]: [string, any]) => {
             if (r.kills) {
                 r.kills.forEach((k: any) => {
                     if (k.attackerName === selectedPlayer?.nickname || k.victimName === selectedPlayer?.nickname) {
-                        allEvents.push({ ...k, round: rNum });
+                        allEvents.push({ ...k, round: Number(rNum) });
                     }
                 });
             }
         });
 
-        // Agrupar por oponente para ver os duelos individuais
         const duelStats: Record<string, { myKills: number, myDeaths: number, headshots: number, events: any[] }> = {};
-        
         allEvents.forEach(e => {
             const isAttacker = e.attackerName === selectedPlayer?.nickname;
             const opponentName = isAttacker ? e.victimName : e.attackerName;
-            
-            // Ignorar suicídios ou eventos sem oponente claro
             if (!opponentName || opponentName === selectedPlayer?.nickname) return;
 
             if (!duelStats[opponentName]) {
@@ -928,103 +908,98 @@ const MatchReportModal: React.FC<Props> = ({
             } else {
                 duelStats[opponentName].myDeaths++;
             }
-            
             duelStats[opponentName].events.push(e);
         });
 
-        // Ordenar oponentes por volume de confronto (total de kills + deaths)
         const sortedOpponents = Object.entries(duelStats).sort((a, b) => 
             (b[1].myKills + b[1].myDeaths) - (a[1].myKills + a[1].myDeaths)
         );
 
-        const getSideColor = (side: string) => {
-            if (side === 'CT') return 'text-sky-400';
-            if (side === 'T') return 'text-orange-400';
-            return 'text-zinc-500';
-        };
-
         return (
-            <div className="flex flex-col lg:flex-row gap-6 mt-4">
-                {/* Lista de Jogadores para Seleção */}
-                <div className="lg:w-1/4 flex flex-col gap-2">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-2 px-2">
-                        Selecionar Jogador
-                    </h4>
-                    <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
+            <div className="flex flex-col lg:flex-row gap-8 mt-6">
+                {/* Seleção de Jogador - Estilo Sidebar Premium */}
+                <div className="lg:w-1/3 xl:w-1/4 flex flex-col gap-4">
+                    <div className="flex items-center justify-between px-2">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Selecionar Jogador</h4>
+                        <span className="text-[9px] font-black text-zinc-700 bg-white/5 px-2 py-0.5 rounded-full">{allPlayers.length} total</span>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 max-h-[640px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
                         {allPlayers.map(p => (
                             <button
                                 key={p.steamId}
                                 onClick={() => setSelectedSid(p.steamId || null)}
-                                className={`flex items-center gap-3 p-2.5 rounded-2xl border transition-all ${
+                                className={`flex items-center gap-4 p-3 rounded-[24px] border transition-all relative overflow-hidden group ${
                                     selectedSid === p.steamId 
-                                    ? 'bg-yellow-500/10 border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.1)]' 
-                                    : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05]'
+                                    ? 'bg-yellow-500/10 border-yellow-500/30 shadow-lg' 
+                                    : 'bg-white/[0.01] border-white/5 hover:bg-white/[0.04]'
                                 }`}
                             >
                                 <div className="relative shrink-0">
-                                    <img src={p.avatar} alt="" className="w-9 h-9 rounded-xl border border-white/10" />
-                                    {p.isUser && (
-                                        <div className="absolute -top-1 -right-1 bg-yellow-500 text-black rounded-full p-0.5 shadow-lg">
-                                            <Star size={8} fill="currentColor" />
-                                        </div>
-                                    )}
+                                    <img src={p.avatar} alt="" className="w-10 h-10 rounded-2xl border border-white/10 group-hover:scale-105 transition-transform" />
+                                    {p.isUser && <div className="absolute -top-1 -right-1 bg-yellow-500 text-black rounded-full p-1 shadow-lg border-2 border-[#0c0f15]"><Star size={8} fill="currentColor" /></div>}
                                 </div>
-                                <div className="flex flex-col items-start min-w-0">
-                                    <span className={`text-[11px] font-black italic truncate w-full ${selectedSid === p.steamId ? 'text-yellow-400' : 'text-zinc-300'}`}>
+                                <div className="flex flex-col items-start min-w-0 flex-1">
+                                    <span className={`text-xs font-black italic truncate w-full ${selectedSid === p.steamId ? 'text-yellow-400' : 'text-zinc-300'}`}>
                                         {p.nickname}
                                     </span>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[8px] font-black uppercase text-zinc-600">
-                                            {p.kills} K
-                                        </span>
-                                        <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                                        <span className="text-[8px] font-black uppercase text-zinc-600">
-                                            {p.deaths} D
-                                        </span>
+                                    <div className="flex items-center gap-3 mt-1">
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-[10px] font-black text-white/80">{p.kills}</span>
+                                            <span className="text-[7px] font-bold text-zinc-600 uppercase">K</span>
+                                        </div>
+                                        <div className="w-px h-2 bg-white/10" />
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-[10px] font-black text-zinc-500">{p.deaths}</span>
+                                            <span className="text-[7px] font-bold text-zinc-600 uppercase">D</span>
+                                        </div>
                                     </div>
                                 </div>
+                                {selectedSid === p.steamId && (
+                                    <motion.div layoutId="duel-active" className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-500" />
+                                )}
                             </button>
                         ))}
                     </div>
                 </div>
 
-                {/* Detalhes dos Duelos */}
-                <div className="lg:w-3/4 flex flex-col gap-4">
+                {/* Painel de Duelos - Estilo Grid de Combate */}
+                <div className="lg:w-2/3 xl:w-3/4 flex flex-col gap-6">
                     {!selectedPlayer ? (
-                        <div className="flex-1 flex items-center justify-center p-20 bg-black/20 rounded-3xl border border-dashed border-white/5">
-                            <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest">Selecione um jogador ao lado</p>
+                        <div className="flex-1 flex flex-col items-center justify-center p-24 bg-black/20 rounded-[40px] border border-dashed border-white/[0.03]">
+                            <Swords size={40} className="text-zinc-800 mb-4" />
+                            <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest">Escolha um jogador para ver seus duelos</p>
                         </div>
                     ) : (
                         <>
-                            <div className="flex items-center justify-between px-2 bg-white/[0.02] p-4 rounded-2xl border border-white/5 mb-2">
-                                <div className="flex items-center gap-4">
-                                    <img src={selectedPlayer.avatar} className="w-12 h-12 rounded-2xl border-2 border-yellow-500/30" alt="" />
+                            {/* Header do Jogador Selecionado */}
+                            <div className="flex items-center justify-between p-6 bg-gradient-to-br from-white/[0.03] to-transparent rounded-[32px] border border-white/[0.05] shadow-xl">
+                                <div className="flex items-center gap-6">
+                                    <div className="relative">
+                                        <img src={selectedPlayer.avatar} className="w-16 h-16 rounded-[24px] border-2 border-yellow-500/40 shadow-2xl shadow-yellow-500/10" alt="" />
+                                        <div className="absolute -bottom-2 -right-2 bg-[#0c0f15] border border-white/10 rounded-xl px-2 py-0.5 text-[8px] font-black text-yellow-500 uppercase">Pro</div>
+                                    </div>
                                     <div>
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1">
-                                            Histórico de Confrontos
-                                        </h4>
-                                        <span className="text-2xl font-black italic text-white leading-none">
-                                            {selectedPlayer.nickname}
-                                        </span>
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-1">Histórico de Confrontos</h4>
+                                        <span className="text-3xl font-black italic text-white tracking-tighter leading-none">{selectedPlayer.nickname}</span>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-8">
+                                <div className="flex items-center gap-10 mr-4">
                                     <div className="flex flex-col items-center">
-                                        <span className="text-2xl font-black italic text-emerald-400">{allEvents.filter(e => e.attackerName === selectedPlayer.nickname).length}</span>
-                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Total Vitórias</span>
+                                        <span className="text-3xl font-black italic text-emerald-400">{allEvents.filter(e => e.attackerName === selectedPlayer.nickname).length}</span>
+                                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mt-1">Vitórias</span>
                                     </div>
-                                    <div className="w-px h-8 bg-white/5" />
+                                    <div className="w-px h-10 bg-white/10" />
                                     <div className="flex flex-col items-center">
-                                        <span className="text-2xl font-black italic text-red-500">{allEvents.filter(e => e.victimName === selectedPlayer.nickname).length}</span>
-                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Total Derrotas</span>
+                                        <span className="text-3xl font-black italic text-red-500">{allEvents.filter(e => e.victimName === selectedPlayer.nickname).length}</span>
+                                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mt-1">Derrotas</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                                 {sortedOpponents.length === 0 ? (
-                                    <div className="col-span-full py-20 text-center bg-black/20 rounded-3xl border border-white/5">
-                                        <p className="text-zinc-700 text-[10px] font-black uppercase tracking-widest">Nenhum confronto direto registrado.</p>
+                                    <div className="col-span-full py-24 text-center bg-black/20 rounded-[40px] border border-white/[0.03]">
+                                        <p className="text-zinc-700 text-[10px] font-black uppercase tracking-widest italic tracking-widest">Nenhum duelo registrado nesta partida.</p>
                                     </div>
                                 ) : (
                                     sortedOpponents.map(([oppName, stats]) => {
@@ -1033,78 +1008,100 @@ const MatchReportModal: React.FC<Props> = ({
                                         const winRatio = stats.myKills / (stats.myKills + stats.myDeaths || 1);
                                         
                                         return (
-                                            <div key={oppName} className="bg-black/30 border border-white/[0.05] rounded-[28px] overflow-hidden flex flex-col transition-all hover:border-white/10 group">
-                                                {/* Header do Duelo */}
-                                                <div className="px-6 py-4 bg-white/[0.02] border-b border-white/[0.04] flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`w-1.5 h-8 rounded-full ${side === 'CT' ? 'bg-sky-500 shadow-[0_0_12px_rgba(56,189,248,0.4)]' : 'bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.4)]'}`} />
+                                            <motion.div 
+                                                key={oppName}
+                                                layout
+                                                className="bg-zinc-950/40 border border-white/[0.04] rounded-[32px] overflow-hidden flex flex-col transition-all hover:border-white/10 hover:shadow-2xl hover:shadow-black group"
+                                            >
+                                                {/* VS Header */}
+                                                <div className="px-6 py-5 bg-white/[0.02] border-b border-white/[0.04] flex items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`w-2 h-10 rounded-full ${side === 'CT' ? 'bg-sky-500 shadow-[0_0_15px_rgba(56,189,248,0.5)]' : 'bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.5)]'}`} />
                                                         <div className="flex flex-col">
-                                                            <span className={`text-base font-black italic tracking-tight ${getSideColor(side)}`}>{oppName}</span>
-                                                            <span className="text-[8px] font-black uppercase text-zinc-600 tracking-widest">{side}</span>
+                                                            <span className={`text-xl font-black italic tracking-tighter leading-none ${getSideColor(side)}`}>{oppName}</span>
+                                                            <span className="text-[9px] font-black uppercase text-zinc-700 tracking-[0.2em] mt-1">{side}</span>
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-4">
+                                                    <div className="flex items-center gap-5">
                                                         <div className="flex flex-col items-end">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className={`text-2xl font-black italic ${stats.myKills > stats.myDeaths ? 'text-emerald-400' : stats.myKills < stats.myDeaths ? 'text-red-500' : 'text-zinc-400'}`}>
+                                                            <div className="flex items-center gap-3">
+                                                                <span className={`text-3xl font-black italic ${stats.myKills > stats.myDeaths ? 'text-emerald-400' : stats.myKills < stats.myDeaths ? 'text-red-500' : 'text-zinc-500'}`}>
                                                                     {stats.myKills}
                                                                 </span>
-                                                                <span className="text-zinc-700 font-black italic">—</span>
-                                                                <span className={`text-2xl font-black italic ${stats.myDeaths > stats.myKills ? 'text-emerald-400' : stats.myDeaths < stats.myKills ? 'text-red-500' : 'text-zinc-400'}`}>
+                                                                <span className="text-zinc-800 font-black italic text-xl">—</span>
+                                                                <span className={`text-3xl font-black italic ${stats.myDeaths > stats.myKills ? 'text-emerald-400' : stats.myDeaths < stats.myKills ? 'text-red-500' : 'text-zinc-500'}`}>
                                                                     {stats.myDeaths}
                                                                 </span>
                                                             </div>
-                                                            <div className="w-20 h-1 bg-zinc-900 rounded-full mt-1 overflow-hidden flex">
-                                                                <div className="h-full bg-emerald-500/60" style={{ width: `${winRatio * 100}%` }} />
-                                                                <div className="h-full bg-red-500/60 flex-1" />
+                                                            <div className="w-24 h-1.5 bg-zinc-900 rounded-full mt-2 overflow-hidden flex shadow-inner">
+                                                                <motion.div 
+                                                                    initial={{ width: 0 }}
+                                                                    animate={{ width: `${winRatio * 100}%` }}
+                                                                    className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]" 
+                                                                />
+                                                                <div className="h-full bg-red-500/30 flex-1" />
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                {/* Lista de Eventos do Duelo */}
-                                                <div className="p-4 space-y-2">
+                                                <div className="p-4 space-y-2 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/5">
                                                     {stats.events.sort((a: any, b: any) => a.round - b.round).map((e: any, idx: number) => {
                                                         const isVictorious = e.attackerName === selectedPlayer.nickname;
                                                         return (
-                                                            <div key={idx} className={`flex items-center justify-between gap-4 px-4 py-3 rounded-2xl border transition-all ${
+                                                            <div key={idx} className={`flex items-center justify-between gap-4 px-5 py-3.5 rounded-2xl border transition-all ${
                                                                 isVictorious 
-                                                                ? 'bg-emerald-500/[0.03] border-emerald-500/10 hover:bg-emerald-500/[0.06]' 
-                                                                : 'bg-red-500/[0.03] border-red-500/10 hover:bg-red-500/[0.06]'
+                                                                ? 'bg-emerald-500/[0.04] border-emerald-500/10 hover:bg-emerald-500/[0.08] hover:border-emerald-500/20' 
+                                                                : 'bg-red-500/[0.04] border-red-500/10 hover:bg-red-500/[0.08] hover:border-red-500/20'
                                                             }`}>
-                                                                <div className="flex items-center gap-4">
-                                                                    <div className={`flex flex-col items-center justify-center w-9 h-9 rounded-xl border ${
+                                                                <div className="flex items-center gap-5">
+                                                                    <div className={`flex flex-col items-center justify-center w-10 h-10 rounded-xl border-2 ${
                                                                         isVictorious ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
                                                                     }`}>
-                                                                        <span className="text-[7px] font-black uppercase leading-none mb-0.5">RD</span>
-                                                                        <span className="text-sm font-black italic leading-none">{e.round}</span>
+                                                                        <span className="text-[8px] font-black uppercase leading-none mb-0.5">RD</span>
+                                                                        <span className="text-base font-black italic leading-none">{e.round}</span>
                                                                     </div>
                                                                     <div className="flex flex-col">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <img src={weaponImg(e.weapon)} className="h-3 brightness-0 invert opacity-70" alt="" />
-                                                                            <span className={`text-[10px] font-black uppercase tracking-tight ${isVictorious ? 'text-emerald-400/80' : 'text-red-400/80'}`}>
-                                                                                {isVictorious ? 'Venceu' : 'Perdeu'}
+                                                                        <div className="flex items-center gap-2 mb-0.5">
+                                                                            <img src={weaponImg(e.weapon)} className="h-4 brightness-0 invert opacity-60" alt="" />
+                                                                            <span className={`text-[11px] font-black uppercase italic ${isVictorious ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                                {isVictorious ? 'Win' : 'Loss'}
                                                                             </span>
                                                                         </div>
-                                                                        <span className="text-[9px] font-bold text-zinc-500 uppercase">
+                                                                        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-tighter">
                                                                             {e.weapon?.replace('weapon_', '').replace('_', ' ')}
                                                                         </span>
                                                                     </div>
                                                                 </div>
-                                                                <div className="flex items-center gap-4">
+                                                                <div className="flex items-center gap-5">
                                                                     {e.isHeadshot && (
-                                                                        <div className={`p-1.5 rounded-lg ${isVictorious ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                                                                            <Target size={12} strokeWidth={3} />
+                                                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isVictorious ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400 shadow-inner'}`}>
+                                                                            <Target size={14} strokeWidth={3} />
                                                                         </div>
                                                                     )}
                                                                     <div className="flex flex-col items-end">
-                                                                        <span className={`text-xs font-black italic ${isVictorious ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                        <span className={`text-sm font-black italic leading-none ${isVictorious ? 'text-emerald-400' : 'text-red-400'}`}>
                                                                             {e.damage || e.hp_dmg || 100}
                                                                         </span>
-                                                                        <span className="text-[7px] font-black text-zinc-700 uppercase">Dano</span>
+                                                                        <span className="text-[8px] font-black text-zinc-700 uppercase">HP</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        );
+    };
+      </div>
                                                         );
                                                     })}
                                                 </div>
@@ -1267,23 +1264,69 @@ const MatchReportModal: React.FC<Props> = ({
     const WeaponRow = ({ p }: { p: PlayerStats }) => {
         const weaponStats = currentMatch?.metadata?.weapon_stats || [];
         const playerWeapons = weaponStats.filter((ws: any) => String(ws.player_id) === String(p.steamId));
+        
+        const sortedWeapons = [...playerWeapons].sort((a, b) => b.kills - a.kills);
 
         return (
-            <tr className={`border-b border-white/[0.04] ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
+            <tr className={`border-b border-white/[0.04] transition-colors ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
                 <PlayerCell p={p} />
-                <td colSpan={6} className="py-2 px-3">
-                    <div className="flex flex-wrap gap-2 py-1">
-                        {playerWeapons.length > 0 ? (
-                            playerWeapons.map((ws: any, idx: number) => (
-                                <div key={idx} className="flex items-center gap-2 px-2 py-1 rounded-lg bg-black/40 border border-white/5">
-                                    <img src={weaponImg(ws.weapon_name)} className="h-3 brightness-0 invert opacity-60" alt="" />
-                                    <span className="text-[9px] font-black text-zinc-300">{ws.kills}K</span>
-                                    {ws.headshots > 0 && <span className="text-[8px] font-bold text-rose-500/80">{Math.round((ws.headshots / ws.kills) * 100)}% HS</span>}
-                                    <span className="text-[8px] font-bold text-zinc-600">{Math.round(ws.damage)} DMG</span>
-                                </div>
-                            ))
+                <td colSpan={6} className="py-4 px-6">
+                    <div className="flex flex-wrap gap-3">
+                        {sortedWeapons.length > 0 ? (
+                            sortedWeapons.map((ws: any, idx: number) => {
+                                const hsRate = ws.kills > 0 ? Math.round((ws.headshots / ws.kills) * 100) : 0;
+                                const isMainWeapon = idx === 0;
+                                
+                                return (
+                                    <div 
+                                        key={idx} 
+                                        className={`flex flex-col gap-2 p-3 rounded-2xl border transition-all hover:scale-105 ${
+                                            isMainWeapon 
+                                            ? 'bg-yellow-500/[0.05] border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.05)]' 
+                                            : 'bg-black/40 border-white/[0.05] hover:border-white/10'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="relative group/w">
+                                                    <img 
+                                                        src={weaponImg(ws.weapon_name)} 
+                                                        className={`h-5 brightness-0 invert transition-opacity ${isMainWeapon ? 'opacity-100' : 'opacity-40 group-hover/w:opacity-80'}`} 
+                                                        alt={ws.weapon_name} 
+                                                    />
+                                                </div>
+                                                <span className={`text-[11px] font-black italic ${isMainWeapon ? 'text-yellow-400' : 'text-zinc-400'}`}>
+                                                    {ws.weapon_name?.replace('weapon_', '').toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black/40 border border-white/5">
+                                                <span className="text-[11px] font-black text-white">{ws.kills}</span>
+                                                <span className="text-[8px] font-black text-zinc-600 uppercase">Kills</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-4 mt-1">
+                                            <div className="flex flex-col">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Target size={10} className={hsRate > 50 ? 'text-rose-500' : 'text-zinc-600'} />
+                                                    <span className={`text-[10px] font-black ${hsRate > 50 ? 'text-rose-400' : 'text-zinc-400'}`}>{hsRate}%</span>
+                                                </div>
+                                                <span className="text-[7px] font-black text-zinc-700 uppercase tracking-tighter">Precisão HS</span>
+                                            </div>
+                                            <div className="w-px h-5 bg-white/5" />
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-emerald-400/80 leading-none">{Math.round(ws.damage)}</span>
+                                                <span className="text-[7px] font-black text-zinc-700 uppercase tracking-tighter mt-1">Dano Total</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
                         ) : (
-                            <span className="text-[9px] text-zinc-700 italic">Nenhum dado de arma</span>
+                            <div className="flex items-center gap-2 py-2 opacity-30 italic">
+                                <Activity size={12} className="text-zinc-600" />
+                                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Nenhum dado detalhado</span>
+                            </div>
                         )}
                     </div>
                 </td>
