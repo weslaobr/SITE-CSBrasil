@@ -534,74 +534,106 @@ const GlobalRanking: React.FC = () => {
                 )}
             </div>
 
-            {/* ── CONTROLES: BUSCA + SORT + FILTRO ───────────────────────── */}
-            <div className="flex flex-col gap-3">
-                {/* Linha 1: busca + contador */}
-                <div className="flex items-center justify-between gap-4">
-                    <div className="relative w-full md:w-72">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                        <input
-                            type="text"
-                            placeholder="Buscar jogador..."
-                            className="w-full bg-zinc-950/70 border border-white/[0.07] rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:border-yellow-500/40 placeholder:text-zinc-700 transition-all"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+            {/* ── CONTROLES: BUSCA + FILTROS ───────────────────────────── */}
+            <div className="bg-zinc-900/30 border border-white/5 rounded-[32px] p-6 space-y-6 backdrop-blur-md">
+                {/* Linha 1: Busca e Plataformas */}
+                <div className="flex flex-col xl:flex-row gap-6 items-start xl:items-center justify-between">
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center gap-2 text-zinc-500">
+                            <Trophy size={14} className="text-yellow-500/50" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Selecionar Liga</span>
+                        </div>
+                        <div className="flex gap-2 p-1 bg-black/40 rounded-2xl border border-white/5">
+                            {PLATFORM_FILTERS.map(pf => (
+                                <button
+                                    key={pf.key}
+                                    onClick={() => {
+                                        setPlatformFilter(pf.key);
+                                        if (pf.key === 'mix') setSortKey('rankingPoints');
+                                        else if (pf.key === 'faceit') setSortKey('faceitElo');
+                                        else if (pf.key === 'gc') setSortKey('gcLevel');
+                                        else if (pf.key === 'premier' || pf.key === 'all') setSortKey('rating');
+                                    }}
+                                    className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                        platformFilter === pf.key
+                                            ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.1)]'
+                                            : 'text-zinc-500 hover:text-white hover:bg-white/5'
+                                    }`}
+                                >
+                                    {pf.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                    <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest whitespace-nowrap">
-                        {filteredAndSorted.length} jogadores
-                    </span>
+
+                    <div className="flex flex-col gap-3 w-full xl:w-72">
+                        <div className="flex items-center gap-2 text-zinc-500">
+                            <Search size={14} />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Pesquisar</span>
+                        </div>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Procurar jogador..."
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl py-3 pl-4 pr-4 text-sm focus:outline-none focus:border-yellow-500/40 placeholder:text-zinc-700 transition-all shadow-inner"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    </div>
                 </div>
 
-                {/* Linha 2: Ordenação */}
-                <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center gap-1.5 text-zinc-700">
-                        <SortAsc size={12} />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Ordenar</span>
-                    </div>
-                    <div className="flex gap-1.5 flex-wrap">
-                        {SORT_OPTIONS.map(opt => (
-                            <button
-                                key={opt.key}
-                                onClick={() => setSortKey(opt.key)}
-                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${
-                                    sortKey === opt.key
-                                        ? 'bg-yellow-500 text-black border-yellow-500 shadow-[0_0_10px_rgba(246,203,2,0.3)]'
-                                        : 'bg-white/[0.03] text-zinc-500 border-white/[0.05] hover:border-white/[0.1] hover:text-zinc-300'
-                                }`}
-                            >
-                                {opt.icon} {opt.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                <div className="h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
-                {/* Linha 3: Filtro por plataforma */}
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 text-zinc-700">
-                        <Filter size={12} />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Plataforma</span>
+                {/* Linha 2: Métricas de Ordenação */}
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-2 text-zinc-500">
+                        <SortAsc size={14} className="text-sky-500/50" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Rankear por</span>
                     </div>
-                    <div className="flex gap-1.5">
-                        {PLATFORM_FILTERS.map(pf => (
-                            <button
-                                key={pf.key}
-                                onClick={() => {
-                                    setPlatformFilter(pf.key);
-                                    if (pf.key === 'mix') setSortKey('rankingPoints');
-                                    else if (pf.key === 'faceit') setSortKey('faceitElo');
-                                    else if (pf.key === 'gc') setSortKey('gcLevel');
-                                    else if (pf.key === 'premier') setSortKey('rating');
-                                }}
-                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${
-                                    platformFilter === pf.key
-                                        ? 'bg-zinc-200 text-black border-zinc-200'
-                                        : 'bg-white/[0.03] text-zinc-500 border-white/[0.05] hover:border-white/[0.1] hover:text-zinc-300'
-                                }`}
-                            >
-                                {pf.label}
-                            </button>
-                        ))}
+                    
+                    <div className="flex flex-wrap gap-6">
+                        {/* Grupo 1: Score Principal */}
+                        <div className="flex flex-col gap-2">
+                            <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest ml-1">Pontuação</span>
+                            <div className="flex gap-1.5 flex-wrap">
+                                {SORT_OPTIONS.filter(opt => ['rating', 'faceitElo', 'gcLevel', 'rankingPoints', 'mixLevel'].includes(opt.key)).map(opt => (
+                                    <button
+                                        key={opt.key}
+                                        onClick={() => setSortKey(opt.key)}
+                                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
+                                            sortKey === opt.key
+                                                ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/40 shadow-[0_0_15px_rgba(234,179,8,0.1)]'
+                                                : 'bg-white/[0.02] text-zinc-500 border-white/5 hover:border-white/10 hover:text-zinc-300'
+                                        }`}
+                                    >
+                                        {opt.icon} {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="w-px h-10 bg-white/5 hidden md:block self-end" />
+
+                        {/* Grupo 2: Stats de Combate */}
+                        <div className="flex flex-col gap-2">
+                            <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest ml-1">Desempenho</span>
+                            <div className="flex gap-1.5 flex-wrap">
+                                {SORT_OPTIONS.filter(opt => ['kdr', 'adr', 'hsPercentage', 'matchesPlayed', 'winRate'].includes(opt.key as any)).map(opt => (
+                                    <button
+                                        key={opt.key}
+                                        onClick={() => setSortKey(opt.key)}
+                                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
+                                            sortKey === opt.key
+                                                ? 'bg-sky-500/10 text-sky-400 border-sky-500/40 shadow-[0_0_15px_rgba(14,165,233,0.1)]'
+                                                : 'bg-white/[0.02] text-zinc-500 border-white/5 hover:border-white/10 hover:text-zinc-300'
+                                        }`}
+                                    >
+                                        {opt.icon} {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
