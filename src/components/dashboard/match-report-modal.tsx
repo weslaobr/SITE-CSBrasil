@@ -42,6 +42,10 @@ interface PlayerStats {
     flashThrown: number;
     smokesThrown: number;
     molotovThrown: number;
+    // New Advanced Stats
+    enemiesFlashed?: number;
+    ttd?: number;
+    killDist?: number;
     isUser?: boolean;
     steamId?: string;
     team?: string;
@@ -90,7 +94,7 @@ const MatchReportModal: React.FC<Props> = ({
     const [editScoreA, setEditScoreA] = useState(0);
     const [editScoreB, setEditScoreB] = useState(0);
     const [isSavingScore, setIsSavingScore] = useState(false);
-    const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos' | 'linha-tempo' | 'duelos'>('placar');
+    const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'armas' | 'confrontos' | 'linha-tempo' | 'duelos'>('placar');
     const [fetchError, setFetchError] = useState(false);
 
     const match = initialMatch || internalMatch;
@@ -435,6 +439,9 @@ const MatchReportModal: React.FC<Props> = ({
             flashThrown: Number(p.flashThrown ?? p.flash_thrown ?? p.flashbang_thrown ?? 0),
             smokesThrown: Number(p.smokesThrown ?? p.smokes_thrown ?? p.smoke_thrown ?? 0),
             molotovThrown: Number(p.molotovThrown ?? p.molotovs_thrown ?? p.molotov_thrown ?? 0),
+            enemiesFlashed: Number(p.enemies_flashed ?? p.flashbang_hit_foe ?? 0),
+            ttd: Number(p.avg_ttd ?? 0),
+            killDist: Number(p.avg_kill_distance ?? 0),
             isUser,
             steamId: p.steam64_id || p.player_id || p.steamId || p.steam_id,
             team
@@ -1114,10 +1121,11 @@ const MatchReportModal: React.FC<Props> = ({
     };
 
     // ── TABS CONFIG ───────────────────────────────────────────────────────────
-    const tabs: { id: 'placar'|'desempenho'|'utilitarios'|'confrontos'|'linha-tempo'|'duelos'; label: string; icon: React.ReactNode }[] = [
+    const tabs: { id: 'placar'|'desempenho'|'utilitarios'|'armas'|'confrontos'|'linha-tempo'|'duelos'; label: string; icon: React.ReactNode }[] = [
         { id: 'placar',       label: 'Placar',       icon: <Shield size={12} /> },
         { id: 'desempenho',   label: 'Desempenho',   icon: <TrendingUp size={12} /> },
         { id: 'utilitarios',  label: 'Utilitários',  icon: <Zap size={12} /> },
+        { id: 'armas',        label: 'Armas',        icon: <Swords size={12} /> },
         { id: 'confrontos',   label: 'Confrontos',   icon: <Crosshair size={12} /> },
         { id: 'linha-tempo',  label: 'Linha do Tempo', icon: <Clock size={12} /> },
         { id: 'duelos',       label: 'Duelos',       icon: <Swords size={12} /> },
@@ -1228,11 +1236,55 @@ const MatchReportModal: React.FC<Props> = ({
                     {p.trades > 0 ? <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-lg">{p.trades}</span> : <span className="text-zinc-700">—</span>}
                 </td>
                 <td className="py-2.5 px-3 text-center">
+                    <div className="flex flex-col items-center gap-0.5">
+                        <span className={`text-[10px] font-black ${p.ttd && p.ttd > 0 ? (p.ttd < 400 ? 'text-emerald-400' : 'text-zinc-400') : 'text-zinc-700'}`}>
+                            {p.ttd && p.ttd > 0 ? `${Math.round(p.ttd)}ms` : '—'}
+                        </span>
+                        <span className="text-[7px] font-black text-zinc-600 uppercase">TTD</span>
+                    </div>
+                </td>
+                <td className="py-2.5 px-3 text-center">
+                    <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-[10px] font-black text-zinc-400">
+                            {p.killDist && p.killDist > 0 ? `${(p.killDist / 50).toFixed(1)}m` : '—'}
+                        </span>
+                        <span className="text-[7px] font-black text-zinc-600 uppercase">Dist.</span>
+                    </div>
+                </td>
+                <td className="py-2.5 px-3 text-center">
                     <div className="flex items-center justify-center gap-1 flex-wrap">
                         {p.triples > 0 && <span className="text-[8px] font-black text-amber-400 bg-amber-500/15 px-1 py-0.5 rounded">{p.triples}×3K</span>}
                         {p.quads > 0 && <span className="text-[8px] font-black text-orange-400 bg-orange-500/15 px-1 py-0.5 rounded">{p.quads}×4K</span>}
                         {p.aces > 0 && <span className="text-[8px] font-black text-purple-300 bg-purple-500/20 px-1 py-0.5 rounded animate-pulse">{p.aces}×ACE</span>}
                         {p.triples===0 && p.quads===0 && p.aces===0 && <span className="text-zinc-700 text-[10px]">—</span>}
+                    </div>
+                </td>
+            </tr>
+        );
+    };
+
+    /** Breakdown de Armas */
+    const WeaponRow = ({ p }: { p: PlayerStats }) => {
+        const weaponStats = currentMatch?.metadata?.weapon_stats || [];
+        const playerWeapons = weaponStats.filter((ws: any) => String(ws.player_id) === String(p.steamId));
+
+        return (
+            <tr className={`border-b border-white/[0.04] ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
+                <PlayerCell p={p} />
+                <td colSpan={6} className="py-2 px-3">
+                    <div className="flex flex-wrap gap-2 py-1">
+                        {playerWeapons.length > 0 ? (
+                            playerWeapons.map((ws: any, idx: number) => (
+                                <div key={idx} className="flex items-center gap-2 px-2 py-1 rounded-lg bg-black/40 border border-white/5">
+                                    <img src={weaponImg(ws.weapon_name)} className="h-3 brightness-0 invert opacity-60" alt="" />
+                                    <span className="text-[9px] font-black text-zinc-300">{ws.kills}K</span>
+                                    {ws.headshots > 0 && <span className="text-[8px] font-bold text-rose-500/80">{Math.round((ws.headshots / ws.kills) * 100)}% HS</span>}
+                                    <span className="text-[8px] font-bold text-zinc-600">{Math.round(ws.damage)} DMG</span>
+                                </div>
+                            ))
+                        ) : (
+                            <span className="text-[9px] text-zinc-700 italic">Nenhum dado de arma</span>
+                        )}
                     </div>
                 </td>
             </tr>
@@ -1265,7 +1317,10 @@ const MatchReportModal: React.FC<Props> = ({
                     </div>
                 </td>
                 <td className="py-3 px-2 text-center">
-                    <div className="flex items-center justify-center gap-1"><span className="text-[9px]">💣</span><span className={`text-xs font-bold ${p.heThrown>0?'text-red-400':'text-zinc-700'}`}>{p.heThrown||'0'}</span></div>
+                    <div className="flex flex-col items-center gap-1">
+                        <span className={`text-xs font-black leading-none ${p.enemiesFlashed && p.enemiesFlashed > 0 ? 'text-blue-400' : 'text-zinc-700'}`}>{p.enemiesFlashed || '—'}</span>
+                        {p.enemiesFlashed && p.enemiesFlashed > 0 && <span className="text-[7px] font-bold text-zinc-600 uppercase">inimigos</span>}
+                    </div>
                 </td>
                 <td className="py-3 px-2 text-center">
                     <div className="flex items-center justify-center gap-1"><span className="text-[9px]">⚡</span><span className={`text-xs font-bold ${p.flashThrown>0?'text-blue-400':'text-zinc-700'}`}>{p.flashThrown||'0'}</span></div>
@@ -1412,8 +1467,8 @@ const MatchReportModal: React.FC<Props> = ({
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Performance Rating (Leetify Rating)">Rating</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Kill, Assist, Survived, or Traded (Impacto por round)">KAST</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Headshot Percentage (Porcentagem de tiros na cabeça)">HS%</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Vitórias em situações de desvantagem numérica">Clutch</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Mortes vingadas por aliados ou baixas que vingaram aliados">Trade</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Tempo de Reação (Time to Damage)">TTD</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Média de Distância das Kills">Dist.</th>
                                         <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center" title="Múltiplas eliminações no mesmo round (3k, 4k, Ace)">Multikills</th>
                                     </>}
                                     {tab === 'utilitarios' && <>
@@ -1421,10 +1476,14 @@ const MatchReportModal: React.FC<Props> = ({
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Dano total causado com granadas">Dano Util</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Eliminações de aliados facilitadas por suas flashbangs">Flash Ass.</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Tempo total que inimigos ficaram cegos por suas flashbangs">Cegueira</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Granadas HE lançadas">💣 HE</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Inimigos Cegados">Cegados</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Flashbangs lançadas">⚡ Flas.</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Smokes lançadas">💨 Smoke</th>
                                         <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center" title="Molotovs lançadas">🔥 Molotov</th>
+                                    </>}
+                                    {tab === 'armas' && <>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600" title="Nome do Jogador">Jogador</th>
+                                        <th colSpan={6} className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600">Breakdown por Arma (Kills, HS%, Dano)</th>
                                     </>}
                                     {tab === 'confrontos' && <>
                                         <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600" title="Nome do Jogador">Jogador</th>
@@ -1440,6 +1499,7 @@ const MatchReportModal: React.FC<Props> = ({
                                 {players.map((p, i) => tab === 'placar' ? <ScoreRow key={i} p={p} isAlly={ally} onRemove={onRemovePlayer} />
                                     : tab === 'desempenho' ? <PerfRow key={i} p={p} />
                                     : tab === 'utilitarios' ? <UtilRow key={i} p={p} maxUtil={maxUtil} />
+                                    : tab === 'armas' ? <WeaponRow key={i} p={p} />
                                     : <DuelRow key={i} p={p} />
                                 )}
                             </tbody>
