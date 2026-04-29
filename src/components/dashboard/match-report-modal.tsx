@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Play, Download, Calendar, Activity, Target, Zap, Clock, Shield, Search, RefreshCw, X, 
     AlertCircle, Crosshair, TrendingUp, Star, Flame, Eye, MapPin, Trophy, Swords, Info, Edit2, Check,
-    Trash2
+    Trash2, Heart
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
