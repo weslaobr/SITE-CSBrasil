@@ -90,7 +90,7 @@ const MatchReportModal: React.FC<Props> = ({
     const [editScoreA, setEditScoreA] = useState(0);
     const [editScoreB, setEditScoreB] = useState(0);
     const [isSavingScore, setIsSavingScore] = useState(false);
-    const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos' | 'linha-tempo'>('placar');
+    const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'confrontos' | 'linha-tempo' | 'duelos'>('placar');
     const [fetchError, setFetchError] = useState(false);
 
     const match = initialMatch || internalMatch;
@@ -861,15 +861,261 @@ const MatchReportModal: React.FC<Props> = ({
                 })}
             </div>
         );
+    const DuelsLog = () => {
+        const [selectedSid, setSelectedSid] = useState<string | null>(null);
+        const allPlayers = [...t1, ...t2];
+        const summaries = currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries;
+
+        if (!summaries) return (
+            <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
+                <Swords size={40} className="mb-4 opacity-20" />
+                <p className="text-xs font-black uppercase tracking-widest">Duelos indisponíveis</p>
+                <p className="text-[10px] lowercase text-zinc-700 mt-1">Requer demo processada pelo bot</p>
+            </div>
+        );
+
+        // Se nenhum jogador selecionado, tenta selecionar o usuário ou o primeiro da lista
+        React.useEffect(() => {
+            if (!selectedSid && allPlayers.length > 0) {
+                const user = allPlayers.find(p => p.isUser);
+                setSelectedSid(user?.steamId || allPlayers[0].steamId || null);
+            }
+        }, [allPlayers, selectedSid]);
+
+        const selectedPlayer = allPlayers.find(p => String(p.steamId) === String(selectedSid));
+        
+        // Coletar todos os eventos onde o selecionado está envolvido (como atacante ou vítima)
+        const allEvents: any[] = [];
+        Object.entries(summaries).forEach(([rNum, r]: [string, any]) => {
+            if (r.kills) {
+                r.kills.forEach((k: any) => {
+                    if (k.attackerName === selectedPlayer?.nickname || k.victimName === selectedPlayer?.nickname) {
+                        allEvents.push({ ...k, round: rNum });
+                    }
+                });
+            }
+        });
+
+        // Agrupar por oponente para ver os duelos individuais
+        const duelStats: Record<string, { myKills: number, myDeaths: number, headshots: number, events: any[] }> = {};
+        
+        allEvents.forEach(e => {
+            const isAttacker = e.attackerName === selectedPlayer?.nickname;
+            const opponentName = isAttacker ? e.victimName : e.attackerName;
+            
+            // Ignorar suicídios ou eventos sem oponente claro
+            if (!opponentName || opponentName === selectedPlayer?.nickname) return;
+
+            if (!duelStats[opponentName]) {
+                duelStats[opponentName] = { myKills: 0, myDeaths: 0, headshots: 0, events: [] };
+            }
+
+            if (isAttacker) {
+                duelStats[opponentName].myKills++;
+                if (e.isHeadshot) duelStats[opponentName].headshots++;
+            } else {
+                duelStats[opponentName].myDeaths++;
+            }
+            
+            duelStats[opponentName].events.push(e);
+        });
+
+        // Ordenar oponentes por volume de confronto (total de kills + deaths)
+        const sortedOpponents = Object.entries(duelStats).sort((a, b) => 
+            (b[1].myKills + b[1].myDeaths) - (a[1].myKills + a[1].myDeaths)
+        );
+
+        const getSideColor = (side: string) => {
+            if (side === 'CT') return 'text-sky-400';
+            if (side === 'T') return 'text-orange-400';
+            return 'text-zinc-500';
+        };
+
+        return (
+            <div className="flex flex-col lg:flex-row gap-6 mt-4">
+                {/* Lista de Jogadores para Seleção */}
+                <div className="lg:w-1/4 flex flex-col gap-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-2 px-2">
+                        Selecionar Jogador
+                    </h4>
+                    <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
+                        {allPlayers.map(p => (
+                            <button
+                                key={p.steamId}
+                                onClick={() => setSelectedSid(p.steamId || null)}
+                                className={`flex items-center gap-3 p-2.5 rounded-2xl border transition-all ${
+                                    selectedSid === p.steamId 
+                                    ? 'bg-yellow-500/10 border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.1)]' 
+                                    : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05]'
+                                }`}
+                            >
+                                <div className="relative shrink-0">
+                                    <img src={p.avatar} alt="" className="w-9 h-9 rounded-xl border border-white/10" />
+                                    {p.isUser && (
+                                        <div className="absolute -top-1 -right-1 bg-yellow-500 text-black rounded-full p-0.5 shadow-lg">
+                                            <Star size={8} fill="currentColor" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex flex-col items-start min-w-0">
+                                    <span className={`text-[11px] font-black italic truncate w-full ${selectedSid === p.steamId ? 'text-yellow-400' : 'text-zinc-300'}`}>
+                                        {p.nickname}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[8px] font-black uppercase text-zinc-600">
+                                            {p.kills} K
+                                        </span>
+                                        <div className="w-1 h-1 rounded-full bg-zinc-800" />
+                                        <span className="text-[8px] font-black uppercase text-zinc-600">
+                                            {p.deaths} D
+                                        </span>
+                                    </div>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Detalhes dos Duelos */}
+                <div className="lg:w-3/4 flex flex-col gap-4">
+                    {!selectedPlayer ? (
+                        <div className="flex-1 flex items-center justify-center p-20 bg-black/20 rounded-3xl border border-dashed border-white/5">
+                            <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest">Selecione um jogador ao lado</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex items-center justify-between px-2 bg-white/[0.02] p-4 rounded-2xl border border-white/5 mb-2">
+                                <div className="flex items-center gap-4">
+                                    <img src={selectedPlayer.avatar} className="w-12 h-12 rounded-2xl border-2 border-yellow-500/30" alt="" />
+                                    <div>
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1">
+                                            Histórico de Confrontos
+                                        </h4>
+                                        <span className="text-2xl font-black italic text-white leading-none">
+                                            {selectedPlayer.nickname}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-8">
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-2xl font-black italic text-emerald-400">{allEvents.filter(e => e.attackerName === selectedPlayer.nickname).length}</span>
+                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Total Vitórias</span>
+                                    </div>
+                                    <div className="w-px h-8 bg-white/5" />
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-2xl font-black italic text-red-500">{allEvents.filter(e => e.victimName === selectedPlayer.nickname).length}</span>
+                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Total Derrotas</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {sortedOpponents.length === 0 ? (
+                                    <div className="col-span-full py-20 text-center bg-black/20 rounded-3xl border border-white/5">
+                                        <p className="text-zinc-700 text-[10px] font-black uppercase tracking-widest">Nenhum confronto direto registrado.</p>
+                                    </div>
+                                ) : (
+                                    sortedOpponents.map(([oppName, stats]) => {
+                                        const oppPlayer = allPlayers.find(p => p.nickname === oppName);
+                                        const side = oppPlayer?.team || 'unknown';
+                                        const winRatio = stats.myKills / (stats.myKills + stats.myDeaths || 1);
+                                        
+                                        return (
+                                            <div key={oppName} className="bg-black/30 border border-white/[0.05] rounded-[28px] overflow-hidden flex flex-col transition-all hover:border-white/10 group">
+                                                {/* Header do Duelo */}
+                                                <div className="px-6 py-4 bg-white/[0.02] border-b border-white/[0.04] flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-1.5 h-8 rounded-full ${side === 'CT' ? 'bg-sky-500 shadow-[0_0_12px_rgba(56,189,248,0.4)]' : 'bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.4)]'}`} />
+                                                        <div className="flex flex-col">
+                                                            <span className={`text-base font-black italic tracking-tight ${getSideColor(side)}`}>{oppName}</span>
+                                                            <span className="text-[8px] font-black uppercase text-zinc-600 tracking-widest">{side}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex flex-col items-end">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`text-2xl font-black italic ${stats.myKills > stats.myDeaths ? 'text-emerald-400' : stats.myKills < stats.myDeaths ? 'text-red-500' : 'text-zinc-400'}`}>
+                                                                    {stats.myKills}
+                                                                </span>
+                                                                <span className="text-zinc-700 font-black italic">—</span>
+                                                                <span className={`text-2xl font-black italic ${stats.myDeaths > stats.myKills ? 'text-emerald-400' : stats.myDeaths < stats.myKills ? 'text-red-500' : 'text-zinc-400'}`}>
+                                                                    {stats.myDeaths}
+                                                                </span>
+                                                            </div>
+                                                            <div className="w-20 h-1 bg-zinc-900 rounded-full mt-1 overflow-hidden flex">
+                                                                <div className="h-full bg-emerald-500/60" style={{ width: `${winRatio * 100}%` }} />
+                                                                <div className="h-full bg-red-500/60 flex-1" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Lista de Eventos do Duelo */}
+                                                <div className="p-4 space-y-2">
+                                                    {stats.events.sort((a: any, b: any) => a.round - b.round).map((e: any, idx: number) => {
+                                                        const isVictorious = e.attackerName === selectedPlayer.nickname;
+                                                        return (
+                                                            <div key={idx} className={`flex items-center justify-between gap-4 px-4 py-3 rounded-2xl border transition-all ${
+                                                                isVictorious 
+                                                                ? 'bg-emerald-500/[0.03] border-emerald-500/10 hover:bg-emerald-500/[0.06]' 
+                                                                : 'bg-red-500/[0.03] border-red-500/10 hover:bg-red-500/[0.06]'
+                                                            }`}>
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className={`flex flex-col items-center justify-center w-9 h-9 rounded-xl border ${
+                                                                        isVictorious ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
+                                                                    }`}>
+                                                                        <span className="text-[7px] font-black uppercase leading-none mb-0.5">RD</span>
+                                                                        <span className="text-sm font-black italic leading-none">{e.round}</span>
+                                                                    </div>
+                                                                    <div className="flex flex-col">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <img src={weaponImg(e.weapon)} className="h-3 brightness-0 invert opacity-70" alt="" />
+                                                                            <span className={`text-[10px] font-black uppercase tracking-tight ${isVictorious ? 'text-emerald-400/80' : 'text-red-400/80'}`}>
+                                                                                {isVictorious ? 'Venceu' : 'Perdeu'}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className="text-[9px] font-bold text-zinc-500 uppercase">
+                                                                            {e.weapon?.replace('weapon_', '').replace('_', ' ')}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-4">
+                                                                    {e.isHeadshot && (
+                                                                        <div className={`p-1.5 rounded-lg ${isVictorious ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                                                                            <Target size={12} strokeWidth={3} />
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="flex flex-col items-end">
+                                                                        <span className={`text-xs font-black italic ${isVictorious ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                            {e.damage || e.hp_dmg || 100}
+                                                                        </span>
+                                                                        <span className="text-[7px] font-black text-zinc-700 uppercase">Dano</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        );
     };
 
     // ── TABS CONFIG ───────────────────────────────────────────────────────────
-    const tabs: { id: 'placar'|'desempenho'|'utilitarios'|'confrontos'|'linha-tempo'; label: string; icon: React.ReactNode }[] = [
+    const tabs: { id: 'placar'|'desempenho'|'utilitarios'|'confrontos'|'linha-tempo'|'duelos'; label: string; icon: React.ReactNode }[] = [
         { id: 'placar',       label: 'Placar',       icon: <Shield size={12} /> },
         { id: 'desempenho',   label: 'Desempenho',   icon: <TrendingUp size={12} /> },
         { id: 'utilitarios',  label: 'Utilitários',  icon: <Zap size={12} /> },
         { id: 'confrontos',   label: 'Confrontos',   icon: <Crosshair size={12} /> },
         { id: 'linha-tempo',  label: 'Linha do Tempo', icon: <Clock size={12} /> },
+        { id: 'duelos',       label: 'Duelos',       icon: <Swords size={12} /> },
     ];
 
     // ── SUB-COMPONENTS ────────────────────────────────────────────────────────
@@ -1410,7 +1656,7 @@ const MatchReportModal: React.FC<Props> = ({
                                     >
                                         <span className={tab === t.id ? 'text-yellow-500' : 'text-zinc-600 group-hover:text-zinc-400'}>{t.icon}</span>
                                         {t.label}
-                                        {!hasRichData && (t.id === 'utilitarios' || t.id === 'confrontos') && (
+                                        {!hasRichData && (t.id === 'utilitarios' || t.id === 'confrontos' || t.id === 'duelos') && (
                                             <span className="ml-0.5 text-[8px] text-zinc-700 normal-case font-bold tracking-normal">(limitado)</span>
                                         )}
                                         {tab === t.id && (
@@ -1453,6 +1699,8 @@ const MatchReportModal: React.FC<Props> = ({
                                 >
                                     {tab === 'linha-tempo' && (currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries) ? (
                                         <RoundLog />
+                                    ) : tab === 'duelos' && (currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries) ? (
+                                        <DuelsLog />
                                     ) : (
                                         <div className="flex gap-3 items-start">
                                             {(() => {
