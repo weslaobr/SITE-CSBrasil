@@ -1107,21 +1107,6 @@ const MatchReportModal: React.FC<Props> = ({
             </div>
         );
     };
-      </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-        );
-    };
 
     // ── TABS CONFIG ───────────────────────────────────────────────────────────
     const tabs: { id: 'placar'|'desempenho'|'utilitarios'|'armas'|'confrontos'|'linha-tempo'|'duelos'; label: string; icon: React.ReactNode }[] = [
