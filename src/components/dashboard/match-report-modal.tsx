@@ -377,7 +377,7 @@ const MatchReportModal: React.FC<Props> = ({
         
         // rating: Bot (advancedMeta.rating), Leetify (leetify_rating)
         const rawRating = p.rating ?? p.leetify_rating ?? p.leetifyRating ?? p.ratingRatio ?? null;
-        const rating  = rawRating !== null ? Number(rawRating) : (kills / deaths);
+        const rating  = rawRating !== null ? Number(rawRating) : (kills / (deaths || 1));
         
         // kast: Bot (0-100), Leetify (0-1 fraction or 0-100)
         let kast = 0;
@@ -650,8 +650,8 @@ const MatchReportModal: React.FC<Props> = ({
                      : isTie ? 'EMPATE'
                      : 'PARTIDA';
     const mode = detectMode();
-    const mapDisplay = currentMatch.mapName?.replace('de_','').split('_').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Mapa';
-    const dateStr = new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
+    const mapDisplay = (currentMatch.mapName?.replace('de_','') || '').split('_').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Mapa';
+    const dateStr = currentMatch.matchDate ? new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' }) : 'Data desconhecida';
     const hasRichData = !!(currentMatch?.metadata?.fullStats || currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries);
     const isVerified = hasRichData;
     const userData = t1.find(p => p.isUser) || t2.find(p => p.isUser);
@@ -725,7 +725,7 @@ const MatchReportModal: React.FC<Props> = ({
                                                 </div>
                                                 {reason && (
                                                     <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter bg-white/[0.03] px-3 py-1.5 rounded-xl border border-white/[0.05]">
-                                                        {reason.replace('ct_win_', '').replace('t_win_', '').replace('_', ' ')}
+                                                        {String(reason).replace('ct_win_', '').replace('t_win_', '').replace('_', ' ')}
                                                     </span>
                                                 )}
                                             </div>
@@ -750,7 +750,7 @@ const MatchReportModal: React.FC<Props> = ({
                                     <div className="space-y-1 mb-6">
                                         {kills.length === 0 ? (
                                             <div className="py-6 text-center">
-                                                <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-widest italic italic">Nenhum evento registrado</p>
+                                                <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-widest italic">Nenhum evento registrado</p>
                                             </div>
                                         ) : (
                                             kills.map((k: any, kIdx: number) => {
@@ -870,6 +870,13 @@ const MatchReportModal: React.FC<Props> = ({
         const allPlayers = [...t1, ...t2];
         const summaries = currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries;
 
+        React.useEffect(() => {
+            if (!selectedSid && allPlayers.length > 0) {
+                const user = allPlayers.find(p => p.isUser);
+                setSelectedSid(user?.steamId || allPlayers[0].steamId || null);
+            }
+        }, [allPlayers, selectedSid]);
+
         if (!summaries) return (
             <div className="flex flex-col items-center justify-center py-24 text-zinc-600 bg-black/20 rounded-[32px] border border-white/[0.03]">
                 <Swords size={48} strokeWidth={1} className="mb-4 text-yellow-500/20" />
@@ -877,13 +884,6 @@ const MatchReportModal: React.FC<Props> = ({
                 <p className="text-[10px] uppercase text-zinc-700 mt-2 font-bold tracking-widest">Requer análise profunda da demo</p>
             </div>
         );
-
-        React.useEffect(() => {
-            if (!selectedSid && allPlayers.length > 0) {
-                const user = allPlayers.find(p => p.isUser);
-                setSelectedSid(user?.steamId || allPlayers[0].steamId || null);
-            }
-        }, [allPlayers, selectedSid]);
 
         const selectedPlayer = allPlayers.find(p => String(p.steamId) === String(selectedSid));
         
@@ -1287,7 +1287,7 @@ const MatchReportModal: React.FC<Props> = ({
                                                     />
                                                 </div>
                                                 <span className={`text-[11px] font-black italic ${isMainWeapon ? 'text-yellow-400' : 'text-zinc-400'}`}>
-                                                    {ws.weapon_name?.replace('weapon_', '').toUpperCase()}
+                                                    {String(ws.weapon_name || '').replace('weapon_', '').toUpperCase()}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black/40 border border-white/5">
