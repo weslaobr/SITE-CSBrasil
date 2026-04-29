@@ -1087,10 +1087,13 @@ const MatchReportModal: React.FC<Props> = ({
                                                                         </div>
                                                                     )}
                                                                     <div className="flex flex-col items-end">
-                                                                        <span className={`text-sm font-black italic leading-none ${isVictorious ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                                            {e.damage || e.hp_dmg || 100}
-                                                                        </span>
-                                                                        <span className="text-[8px] font-black text-zinc-700 uppercase">HP</span>
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <Heart size={10} className={isVictorious ? 'text-emerald-500' : 'text-red-500'} fill="currentColor" />
+                                                                            <span className={`text-sm font-black italic leading-none ${isVictorious ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                                {e.attackerHp || '0'}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className="text-[7px] font-black text-zinc-700 uppercase tracking-tighter mt-1">HP Restante</span>
                                                                     </div>
                                                                 </div>
                                                             </div>

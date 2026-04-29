@@ -701,9 +701,11 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                             "attackerName": player_info[k_att]["name"],
                             "attackerSteamId": k_att,
                             "attackerSide": att_side,
+                            "attackerHp": int(safe_val(k_row.get("attacker_hp", 100))),
                             "victimName": player_info.get(k_vic, {}).get("name", "Jogador"),
                             "victimSteamId": k_vic,
                             "victimSide": vic_side,
+                            "victimHp": 0, # HP after death is 0, but could be 'hp_before' if we parsed damage
                             "assisterSteamId": k_ass,
                             "weapon": w,
                             "isHeadshot": bool(k_row.get("headshot") or k_row.get("is_headshot") or False),

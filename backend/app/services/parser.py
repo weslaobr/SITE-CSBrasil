@@ -322,7 +322,8 @@ class ParserService:
             db.add(KillEvent(match_id=match_id, round_id=get_round_id(int(row["tick"])), tick=int(row["tick"]), attacker_steamid=int(row["attacker_steamid"]) if row["attacker_steamid"] else None,
                             victim_steamid=int(row["victim_steamid"]) if row["victim_steamid"] else None, weapon=row["weapon"], is_headshot=bool(row["is_headshot"]), distance=float(row.get("distance", 0.0)),
                             attacker_x=float(row.get("attacker_pos_x", 0)), attacker_y=float(row.get("attacker_pos_y", 0)), attacker_z=float(row.get("attacker_pos_z", 0)),
-                            victim_x=float(row.get("victim_pos_x", 0)), victim_y=float(row.get("victim_pos_y", 0)), victim_z=float(row.get("victim_pos_z", 0))))
+                            victim_x=float(row.get("victim_pos_x", 0)), victim_y=float(row.get("victim_pos_y", 0)), victim_z=float(row.get("victim_pos_z", 0)),
+                            attacker_hp=int(row.get("attacker_hp", 100)), victim_hp=int(row.get("victim_hp", 0))))
 
         # 5. Damage
         for _, row in self.dem.damages.iterrows():

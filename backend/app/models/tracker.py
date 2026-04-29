@@ -103,6 +103,8 @@ class KillEvent(Base):
     victim_y = Column(Float)
     victim_z = Column(Float)
     distance = Column(Float)
+    attacker_hp = Column(Integer)
+    victim_hp = Column(Integer) # HP before fatal shot
 
 class DamageEvent(Base):
     __tablename__ = "tracker_damage_events"
