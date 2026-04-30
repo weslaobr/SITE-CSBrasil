@@ -631,24 +631,47 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
             # --- EXTRACT VICTIM WEAPON ---
             victim_weapon_map = {}
             try:
+                import pandas as pd
+                w_dfs = []
+                
+                # Try item_equip
                 df_ie = _parse("item_equip")
-                if is_empty(df_ie): df_ie = _parse("weapon_fire")
-                if not is_empty(df_ie) and not df_k.empty:
+                if not is_empty(df_ie):
                     w_col = next((c for c in ["item", "weapon"] if c in df_ie.columns), None)
                     u_col = next((c for c in ["user_steamid", "userid"] if c in df_ie.columns), None)
+                    if w_col and u_col:
+                        temp = df_ie[["tick", u_col, w_col]].rename(columns={u_col: "user_steamid", w_col: "weapon"}).dropna(subset=["user_steamid"])
+                        w_dfs.append(temp)
+                
+                # Try weapon_fire
+                df_wf = _parse("weapon_fire")
+                if not is_empty(df_wf):
+                    w_col = next((c for c in ["weapon", "weapon_name"] if c in df_wf.columns), None)
+                    u_col = next((c for c in ["user_steamid", "userid"] if c in df_wf.columns), None)
+                    if w_col and u_col:
+                        temp = df_wf[["tick", u_col, w_col]].rename(columns={u_col: "user_steamid", w_col: "weapon"}).dropna(subset=["user_steamid"])
+                        w_dfs.append(temp)
+                
+                # Try player_hurt (when the victim dealt damage, they were the attacker)
+                if not is_empty(df_dmg):
+                    w_col = next((c for c in ["weapon", "weapon_name"] if c in df_dmg.columns), None)
+                    a_col = next((c for c in ["attacker_steamid", "attacker"] if c in df_dmg.columns), None)
+                    if w_col and a_col:
+                        temp = df_dmg[["tick", a_col, w_col]].rename(columns={a_col: "user_steamid", w_col: "weapon"}).dropna(subset=["user_steamid"])
+                        w_dfs.append(temp)
+                
+                if w_dfs and not df_k.empty:
                     v_col = next((c for c in ["victim_steamid", "user_steamid"] if c in df_k.columns), None)
-                    
-                    if w_col and u_col and v_col:
-                        ie_df = df_ie[["tick", u_col, w_col]].dropna(subset=[u_col]).sort_values("tick")
-                        ie_df[u_col] = ie_df[u_col].apply(sid_norm)
+                    if v_col:
+                        ie_df = pd.concat(w_dfs).sort_values("tick")
+                        ie_df["user_steamid"] = ie_df["user_steamid"].apply(sid_norm)
                         k_df = df_k[["tick", v_col]].dropna(subset=[v_col]).sort_values("tick")
                         k_df[v_col] = k_df[v_col].apply(sid_norm)
                         
-                        import pandas as pd
-                        merged = pd.merge_asof(k_df, ie_df, on="tick", left_by=v_col, right_by=u_col, direction="backward")
+                        merged = pd.merge_asof(k_df, ie_df, on="tick", left_by=v_col, right_by="user_steamid", direction="backward", tolerance=15000)
                         for _, r in merged.iterrows():
-                            if pd.notna(r.get(w_col)):
-                                victim_weapon_map[(int(r["tick"]), str(r[v_col]))] = str(r[w_col])
+                            if pd.notna(r.get("weapon")):
+                                victim_weapon_map[(int(r["tick"]), str(r[v_col]))] = str(r["weapon"])
             except Exception as e:
                 log_fn(f"⚠️ Erro ao extrair arma da vitima: {e}")
 

@@ -1077,26 +1077,8 @@ const MatchReportModal: React.FC<Props> = ({
                                                                     <div className="flex flex-col items-center">
                                                                         <div className="flex items-center gap-3 mb-1">
                                                                             {(() => {
-                                                                                const getMostUsedWeapon = (player: any) => {
-                                                                                    if (player?.metadata?.weaponStats) {
-                                                                                        const stats = player.metadata.weaponStats;
-                                                                                        const sorted = Object.keys(stats).sort((a, b) => stats[b] - stats[a]);
-                                                                                        if (sorted.length > 0) return sorted[0];
-                                                                                    }
-                                                                                    if (currentMatch?.metadata?.weapon_stats) {
-                                                                                        const ws = currentMatch.metadata.weapon_stats.filter((ws: any) => String(ws.player_id) === String(player?.steamId)).sort((a: any, b: any) => b.kills - a.kills);
-                                                                                        if (ws.length > 0) return ws[0].weapon_name;
-                                                                                    }
-                                                                                    return null;
-                                                                                };
-
-                                                                                const myWeaponStr = isVictorious 
-                                                                                    ? e.weapon 
-                                                                                    : (e.victimWeapon || getMostUsedWeapon(selectedPlayer));
-                                                                                    
-                                                                                const oppWeaponStr = !isVictorious 
-                                                                                    ? e.weapon 
-                                                                                    : (e.victimWeapon || getMostUsedWeapon(oppPlayer));
+                                                                                const myWeaponStr = isVictorious ? e.weapon : e.victimWeapon;
+                                                                                const oppWeaponStr = !isVictorious ? e.weapon : e.victimWeapon;
                                                                                 
                                                                                 return (
                                                                                     <>
