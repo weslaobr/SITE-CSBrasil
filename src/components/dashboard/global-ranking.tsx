@@ -7,6 +7,7 @@ import {
     Star, ExternalLink, Shield, Users, Zap, Target, Crosshair,
     SortAsc, Filter, TrendingUp, Flame
 } from 'lucide-react';
+import { getMixLevelFromPoints } from '@/lib/mix-level';
 
 interface RankUser {
     rank: number;
@@ -484,9 +485,13 @@ const GlobalRanking: React.FC = () => {
                                         <AnimatedNumber value={sortKey === 'rankingPoints' ? (user.rankingPoints || 0) : sortKey === 'mixLevel' ? (user.mixLevel || 0) : user.rating} />
                                     </span>
                                     {sortKey === 'rankingPoints' ? (
-                                        <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">Tropoints</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20" style={{ color: getMixLevelFromPoints(user.rankingPoints || 500).color }}>
+                                            Tropoints
+                                        </span>
                                     ) : sortKey === 'mixLevel' ? (
-                                        <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">Nível Mix</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                                            LV {getMixLevelFromPoints(user.rankingPoints || 500).level} • {getMixLevelFromPoints(user.rankingPoints || 500).label}
+                                        </span>
                                     ) : (
                                         <PremierBadge rating={user.rating} size="sm" />
                                     )}
@@ -808,7 +813,6 @@ const GlobalRanking: React.FC = () => {
                                         </td>
 
                                         {/* KDR */}
-                                        {/* KDR */}
                                         <td className="px-4 py-3.5 text-center hidden lg:table-cell">
                                             <span className={`text-[11px] font-black ${
                                                 pStats.kdr >= 1.5 ? 'text-emerald-400' :
@@ -844,9 +848,14 @@ const GlobalRanking: React.FC = () => {
                                         {/* Mix Level */}
                                         <td className="px-4 py-3.5 text-center hidden md:table-cell">
                                             <div className="flex flex-col items-center">
-                                                <span className="text-[11px] font-black text-amber-500">
-                                                    LV {user.mixLevel || 5}
-                                                </span>
+                                                {(() => {
+                                                    const lvl = getMixLevelFromPoints(user.rankingPoints || 500);
+                                                    return (
+                                                        <span className="text-[11px] font-black" style={{ color: lvl.color }}>
+                                                            LV {lvl.level}
+                                                        </span>
+                                                    );
+                                                })()}
                                             </div>
                                         </td>
 

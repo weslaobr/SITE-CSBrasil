@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Trophy } from 'lucide-react';
+import { getMixLevelFromPoints } from '@/lib/mix-level';
 
 interface ProfileSidebarProps {
     profile: any;
@@ -161,59 +162,68 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile, steamStats, in
 
                     <div className="grid grid-cols-2 gap-3">
                         {/* CSBrasil Mix Ranking — Proprietary System (Levels 1-20) */}
-                        <div
-                            className="col-span-2 p-5 rounded-[2rem] border text-center flex flex-col justify-center relative overflow-hidden group transition-all"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%)',
-                                borderColor: 'rgba(251, 191, 36, 0.3)',
-                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(251, 191, 36, 0.05)',
-                            }}
-                        >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-[40px] -mr-16 -mt-16 rounded-full" />
-                            
-                            <div className="flex items-center justify-between mb-3 relative z-10">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-4 bg-amber-500 rounded-full" />
-                                    <p className="text-[10px] uppercase font-black italic tracking-[0.2em] text-amber-500">MIX RANKING</p>
-                                </div>
-                                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500 bg-black/40 px-2 py-0.5 rounded-lg border border-white/5">
-                                    PROPRIETÁRIO
-                                </span>
-                            </div>
-
-                            <div className="flex items-center gap-6 relative z-10 px-2">
-                                <div className="relative">
-                                    <div className="w-16 h-16 rounded-2xl bg-zinc-900 border-2 border-amber-500/40 flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform duration-500 shadow-xl shadow-amber-500/10">
-                                        <span className="text-3xl font-black italic text-amber-500 leading-none -ml-0.5">
-                                            {playerStats?.mixLevel || 5}
-                                        </span>
+                        {(() => {
+                            const pts = playerStats?.rankingPoints || 500;
+                            const lvl = getMixLevelFromPoints(pts);
+                            return (
+                            <div
+                                className="col-span-2 p-5 rounded-[2rem] border text-center flex flex-col justify-center relative overflow-hidden group transition-all"
+                                style={{
+                                    background: `linear-gradient(135deg, ${lvl.color}18 0%, ${lvl.color}08 100%)`,
+                                    borderColor: `${lvl.color}50`,
+                                    boxShadow: `0 8px 32px rgba(0,0,0,0.2), inset 0 0 20px ${lvl.color}08`,
+                                }}
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 blur-[40px] -mr-16 -mt-16 rounded-full" style={{ background: `${lvl.color}08` }} />
+                                
+                                <div className="flex items-center justify-between mb-3 relative z-10">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-4 rounded-full" style={{ background: lvl.color }} />
+                                        <p className="text-[10px] uppercase font-black italic tracking-[0.2em]" style={{ color: lvl.color }}>MIX RANKING</p>
                                     </div>
-                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center text-[8px] font-black text-black">
-                                        LV
-                                    </div>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500 bg-black/40 px-2 py-0.5 rounded-lg border border-white/5">
+                                        {lvl.label.toUpperCase()}
+                                    </span>
                                 </div>
 
-                                <div className="flex flex-col items-start gap-1">
-                                    <div className="flex items-baseline gap-1.5">
-                                        <span className="text-4xl font-black italic uppercase leading-none tracking-tighter text-white">
-                                            {playerStats?.rankingPoints?.toLocaleString('pt-BR') || '500'}
-                                        </span>
-                                        <span className="text-xs font-bold text-amber-500/80 italic uppercase tracking-widest">TROPOINTS</span>
+                                <div className="flex items-center gap-6 relative z-10 px-2">
+                                    <div className="relative">
+                                        <div className="w-16 h-16 rounded-2xl bg-zinc-900 border-2 flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform duration-500 shadow-xl"
+                                            style={{ borderColor: `${lvl.color}60`, boxShadow: `0 8px 24px ${lvl.color}20` }}>
+                                            <span className="text-3xl font-black italic leading-none -ml-0.5" style={{ color: lvl.color }}>
+                                                {lvl.level}
+                                            </span>
+                                        </div>
+                                        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black text-black"
+                                            style={{ background: lvl.color }}>
+                                            LV
+                                        </div>
                                     </div>
-                                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest text-left max-w-[140px] leading-relaxed">
-                                        {(playerStats?.mixLevel || 5) >= 18 ? 'Elite do Servidor' : (playerStats?.mixLevel || 5) >= 15 ? 'Competidor Avançado' : 'Jogador de Mix'}
-                                    </p>
+
+                                    <div className="flex flex-col items-start gap-1">
+                                        <div className="flex items-baseline gap-1.5">
+                                            <span className="text-4xl font-black italic uppercase leading-none tracking-tighter text-white">
+                                                {pts.toLocaleString('pt-BR')}
+                                            </span>
+                                            <span className="text-xs font-bold italic uppercase tracking-widest" style={{ color: lvl.color }}>TROPOINTS</span>
+                                        </div>
+                                        <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest text-left leading-relaxed">
+                                            {lvl.pointsToNext != null ? `+${lvl.pointsToNext} pts para LV${lvl.level + 1}` : 'Nível Máximo!'}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-4 w-full h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5 p-[1px]">
+                                    <motion.div 
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${lvl.progress}%` }}
+                                        className="h-full rounded-full"
+                                        style={{ background: `linear-gradient(90deg, ${lvl.color}99, ${lvl.color})`, boxShadow: `0 0 8px ${lvl.color}80` }}
+                                    />
                                 </div>
                             </div>
-                            
-                            <div className="mt-4 w-full h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5 p-[1px]">
-                                <motion.div 
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${(playerStats?.rankingPoints || 500) % 100}%` }}
-                                    className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)]"
-                                />
-                            </div>
-                        </div>
+                            );
+                        })()}
 
                         {/* ── Premier Rating — sistema de cores idêntico ao ranking ── */}
                         <div
