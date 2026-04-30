@@ -362,9 +362,11 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                             player_info[sid] = {"name": f"Jogador_{sid[-4:]}", "team": "unknown"}
 
     # Inicializar kda para todos os encontrados
+    weapon_stats = {}
     for sid in player_info:
         kda[sid] = {"kills": 0, "deaths": 0, "assists": 0, "hs_kills": 0}
         dmg_total[sid] = 0
+        weapon_stats[sid] = {}
     
     if not is_empty(df_dmg):
         dmg_col = next((c for c in ["dmg_health", "damage", "health_damage", "dmg"] if c in df_dmg.columns), "dmg_health")
@@ -538,7 +540,6 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     } for sid in player_info}
     
     kast_data = {sid: [False] * (rounds + 1) for sid in player_info}
-    weapon_stats = {sid: {} for sid in player_info}
     
 
     # Granadas Lançadas — tenta parse_grenades() (nativo 0.41.x) antes dos eventos individuais
