@@ -30,6 +30,7 @@ def normalize_side(side) -> str:
 import pandas as pd
 from typing import Dict, Any, List
 from app.models.tracker import Match, MatchPlayer, Round, KillEvent, Player, DamageEvent, GrenadeEvent, WeaponStat, ClutchEvent
+from app.models.global_match import GlobalMatch, GlobalMatchPlayer, PublicUserLookup
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 import json
@@ -339,6 +340,93 @@ class ParserService:
         match.parsed_at = pd.Timestamp.now()
         await db.commit()
         logger.info(f"Parser: Successfully finished match {match_id}")
+
+        # 7. Sync with GlobalMatch System (for main site history and Tropoints)
+        try:
+            from sqlalchemy.dialects.postgresql import insert
+            
+            # Upsert GlobalMatch
+            match_meta = {
+                "demo_url": demo_url,
+                "score_ct": score_a,
+                "score_t": score_b,
+                "duration_seconds": match.duration_seconds
+            }
+            
+            gm_stmt = insert(GlobalMatch).values(
+                id=match_id,
+                source=source or "demo",
+                mapName=map_name,
+                duration=f"{match.duration_seconds // 60} min" if match.duration_seconds else "45 min",
+                matchDate=match_date or datetime.now(),
+                scoreA=score_a,
+                scoreB=score_b,
+                metadata=match_meta
+            ).on_conflict_do_update(
+                index_elements=['id'],
+                set_={
+                    "scoreA": score_a,
+                    "scoreB": score_b,
+                    "mapName": map_name,
+                    "metadata": match_meta
+                }
+            )
+            await db.execute(gm_stmt)
+
+            # Upsert GlobalMatchPlayer for each player
+            for _, row in player_stats_agg.iterrows():
+                sid = str(int(row["steamid"]))
+                p_logical_team = team_mapping.get(int(sid), row["team_name"])
+                
+                # Try to link to a User ID
+                user_stmt = select(PublicUserLookup).where(PublicUserLookup.steamId == sid)
+                user_res = await db.execute(user_stmt)
+                user_lookup = user_res.scalar_one_or_none()
+                user_id = user_lookup.id if user_lookup else None
+
+                p_res = "tie"
+                if last_round_winner == "A":
+                    p_res = "win" if p_logical_team == "A" else "loss"
+                elif last_round_winner == "B":
+                    p_res = "win" if p_logical_team == "B" else "loss"
+
+                gmp_stmt = insert(GlobalMatchPlayer).values(
+                    id=f"{match_id}_{sid}",
+                    globalMatchId=match_id,
+                    steamId=sid,
+                    userId=user_id,
+                    team=str(p_logical_team),
+                    kills=int(kills_by_player.get(int(sid), 0)),
+                    deaths=int(deaths_by_player.get(int(sid), 0)),
+                    assists=int(row["assists"]),
+                    score=int(row.get("score", 0)),
+                    mvps=int(row.get("mvps", 0)),
+                    adr=float(dmg_by_player.get(int(sid), 0)) / num_rounds if num_rounds > 0 else 0.0,
+                    hsPercentage=round((int(hs_by_player.get(int(sid), 0)) / int(kills_by_player.get(int(sid), 0)) * 100), 1) if kills_by_player.get(int(sid), 0) > 0 else 0.0,
+                    matchResult=p_res,
+                    metadata={
+                        "name": row["name"],
+                        "rating": float(row["rating"]),
+                        "kast": float(row["kast"]),
+                        "utility_damage": int(row["utility_damage"]),
+                        "flash_assists": int(row["flash_assists"])
+                    }
+                ).on_conflict_do_update(
+                    constraint="GlobalMatchPlayer_pkey", # Or index_elements=['globalMatchId', 'steamId']
+                    set_={
+                        "kills": int(kills_by_player.get(int(sid), 0)),
+                        "deaths": int(deaths_by_player.get(int(sid), 0)),
+                        "matchResult": p_res,
+                        "userId": user_id
+                    }
+                )
+                await db.execute(gmp_stmt)
+            
+            await db.commit()
+            logger.info(f"Parser: Successfully synced GlobalMatch tables for {match_id}")
+
+        except Exception as sync_err:
+            logger.error(f"Parser: Error syncing GlobalMatch tables for {match_id}: {sync_err}")
 
         # Trigger Ranking update
         try:
