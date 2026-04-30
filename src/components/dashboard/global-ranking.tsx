@@ -320,8 +320,11 @@ const GlobalRanking: React.FC = () => {
             user.nickname.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
-        // Se o filtro for mix/faceit/gc/premier, filtramos quem tem pelo menos 1 partida nessa plataforma
-        if (platformFilter !== 'all') {
+        // Se o filtro for mix/faceit/gc/premier, filtramos quem tem pelo menos 1 partida nessa plataforma.
+        // Para MIX especificamente: mínimo de 10 partidas para garantir ranking representativo.
+        if (platformFilter === 'mix') {
+            result = result.filter(u => (u.stats?.mix?.matchesPlayed || 0) >= 10);
+        } else if (platformFilter !== 'all') {
             result = result.filter(u => (u.stats?.[platformFilter]?.matchesPlayed || 0) > 0);
         }
 
@@ -587,6 +590,18 @@ const GlobalRanking: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Aviso mínimo de partidas — Mix */}
+                {platformFilter === 'mix' && (
+                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl border border-amber-500/20 bg-amber-500/5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-500/80">
+                            Ranking Mix — exibe apenas jogadores com
+                            <span className="text-amber-400 mx-1">mínimo de 10 partidas Mix</span>
+                            para garantir dados representativos.
+                        </p>
+                    </div>
+                )}
 
                 <div className="h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
