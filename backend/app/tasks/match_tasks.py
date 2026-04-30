@@ -11,7 +11,9 @@ def process_match_task(match_id: str, steamid: str, demo_url: str, match_date: s
     Background task to download and parse a demo.
     """
     # Downloader
-    filename = f"{match_id}.dem.bz2"
+    # Determine extension from URL
+    ext = ".dem.bz2" if ".bz2" in demo_url.lower() else ".dem"
+    filename = f"{match_id}{ext}"
     local_path = DownloaderService.download_demo(demo_url, filename)
     
     # Parser
