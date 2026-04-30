@@ -15,8 +15,8 @@ export async function POST(req: NextRequest) {
         const data = await req.json();
         const { url } = data;
 
-        if (!url || (!url.includes('.dem') && !url.startsWith('CSGO-'))) {
-            return NextResponse.json({ error: "URL inválida ou formato incorreto." }, { status: 400 });
+        if (!url || (!url.startsWith('http') && !url.startsWith('CSGO-'))) {
+            return NextResponse.json({ error: "URL ou Código de compartilhamento inválido." }, { status: 400 });
         }
 
         const userId = (session.user as any).id;
