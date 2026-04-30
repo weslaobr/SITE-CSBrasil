@@ -1325,8 +1325,21 @@ const MatchReportModal: React.FC<Props> = ({
 
     /** Breakdown de Armas */
     const WeaponRow = ({ p }: { p: PlayerStats }) => {
-        const weaponStats = currentMatch?.metadata?.weapon_stats || [];
-        const playerWeapons = weaponStats.filter((ws: any) => String(ws.player_id) === String(p.steamId));
+        let playerWeapons: any[] = [];
+
+        // Verifica o padrão da API Tracker (lista global)
+        if (currentMatch?.metadata?.weapon_stats) {
+            playerWeapons = currentMatch.metadata.weapon_stats.filter((ws: any) => String(ws.player_id) === String(p.steamId));
+        } 
+        // Verifica o padrão do processador local (dicionário dentro do metadata do jogador)
+        else if (p.metadata?.weaponStats) {
+            playerWeapons = Object.entries(p.metadata.weaponStats).map(([weaponName, kills]) => ({
+                weapon_name: weaponName,
+                kills: kills as number,
+                headshots: 0, // Processador local não extrai HS por arma
+                damage: 0     // Processador local não extrai dano por arma
+            }));
+        }
         
         const sortedWeapons = [...playerWeapons].sort((a, b) => b.kills - a.kills);
 
