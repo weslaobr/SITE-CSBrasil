@@ -126,6 +126,8 @@ export async function GET(
                     // Flash
                     flash_assists: m.flashAssists ?? m.flash_assist ?? m.flash_assists ?? m.flashbang_assists ?? 0,
                     is_user: !!(profileSteamId && p.steamId && String(p.steamId) === String(profileSteamId)),
+                    // MVP Stars — comes directly from GlobalMatchPlayer.mvps column
+                    mvps: p.mvps ?? 0,
                     metadata: m
                 };
             });
