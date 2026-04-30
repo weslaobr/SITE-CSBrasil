@@ -149,6 +149,15 @@ export default function PlayerProfilePage() {
     const { profile, steamStats, dbUser, playerStats, leetifyData, inventory, steamLevel, trustRating, trustBreakdown, anomalies, inventoryValue, matches } = data;
     const isOwner = (session?.user as any)?.steamId === steamId;
 
+    // ── WinRate exclusivo de MIX ─────────────────────────────────────────────
+    // Calcula dinamicamente com base nas partidas MIX já carregadas,
+    // evitando que o campo dbUser.winRate (que inclui Leetify/MM) distorça o número.
+    const mixMatches = (matches || []).filter((m: any) =>
+        ['mix', 'demo', 'local'].some(s => (m.source || m.gameMode || '').toLowerCase().includes(s))
+    );
+    const mixWins = mixMatches.filter((m: any) => (m.result || '').toLowerCase() === 'win').length;
+    const mixWinRate = mixMatches.length > 0 ? `${Math.round((mixWins / mixMatches.length) * 100)}%` : 'N/A';
+
     // Filter Medals for the sidebar
     const medals = inventory.filter((item: any) =>
         item.category_internal === 'Collectible' ||
@@ -269,7 +278,7 @@ export default function PlayerProfilePage() {
                                 hsPercentage:       playerStats?.hsPercentage || dbUser?.hsPercentage || 0,
                                 awpKillPercentage,
                                 matchesPlayed:      playerStats?.matchesPlayed || dbUser?.matchesPlayed || 0,
-                                winRate:            dbUser?.winRate ? `${Math.round(dbUser.winRate)}%` : 'N/A',
+                                winRate:            mixWinRate,
                                 gcLevel:            playerStats?.gcLevel || 0,
                                 faceitLevel:        playerStats?.faceitLevel || 0,
                                 faceitElo:          playerStats?.faceitElo || 0,

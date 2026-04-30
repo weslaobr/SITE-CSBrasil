@@ -344,7 +344,9 @@ export async function GET() {
                     nickname: userData?.name || (p as any).steamName || p.faceitName || `Player #${p.steamId.slice(-4)}`,
                     avatar: userData?.image || (p as any).steamAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.steamId}`,
                     rating: rating || 0,
-                    ...statsBreakdown.all, // Padrão
+                    ...statsBreakdown.all, // Padrão para KDR, ADR, HS, matchesPlayed
+                    // WinRate padrão exibe apenas MIX — se não tiver dados de MIX, usa 'all'
+                    winRate: statsBreakdown.mix?.winRate !== 'N/A' ? statsBreakdown.mix?.winRate : statsBreakdown.all.winRate,
                     stats: statsBreakdown,
                     hasSync: !!userData?.steamMatchAuthCode && !!userData?.steamLatestMatchCode,
                     trend: 'neutral' as const,
