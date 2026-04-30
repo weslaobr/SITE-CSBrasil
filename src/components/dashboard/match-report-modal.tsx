@@ -774,25 +774,42 @@ const MatchReportModal: React.FC<Props> = ({
                                                                 <span className={`text-[13px] font-black italic tracking-tight transition-all group-hover/kill:scale-105 ${getSideColor(attSide)}`}>
                                                                     {k.attackerName}
                                                                 </span>
-                                                                <span className="text-[8px] font-black uppercase text-zinc-700 tracking-widest opacity-60">{attSide}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    {k.attackerHp !== undefined && (
+                                                                        <span className="text-[9px] font-black text-emerald-500/80" title="HP no momento do confronto">{k.attackerHp} HP</span>
+                                                                    )}
+                                                                    <span className="text-[8px] font-black uppercase text-zinc-700 tracking-widest opacity-60">{attSide}</span>
+                                                                </div>
                                                             </div>
                                                             <div className={`w-1.5 h-7 rounded-full ${attSide === 'CT' ? 'bg-sky-500 shadow-[0_0_12px_rgba(56,189,248,0.4)]' : 'bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.4)]'}`} />
                                                         </div>
 
                                                         {/* Weapon / Action */}
-                                                        <div className="flex flex-col items-center gap-1 min-w-[160px]">
+                                                        <div className="flex flex-col items-center gap-1 min-w-[180px]">
                                                             <div className="w-full px-4 py-2 rounded-xl bg-zinc-950/50 border border-white/[0.03] flex items-center justify-center gap-3 group-hover/kill:border-white/10 transition-all shadow-inner">
                                                                 <img 
                                                                     src={weaponImg(k.weapon)} 
                                                                     alt={weapon}
-                                                                    className="h-[16px] w-auto brightness-0 invert opacity-40 group-hover/kill:opacity-100 transition-opacity drop-shadow-lg"
+                                                                    title="Arma do Atacante"
+                                                                    className="h-[16px] w-auto brightness-0 invert opacity-60 group-hover/kill:opacity-100 transition-opacity drop-shadow-lg"
                                                                 />
                                                                 {k.isHeadshot && (
-                                                                    <div className="w-6 h-6 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20">
+                                                                    <div className="w-6 h-6 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20" title="Headshot">
                                                                         <Target size={12} strokeWidth={3} />
                                                                     </div>
                                                                 )}
-                                                                {dmg && (
+                                                                {k.victimWeapon && k.victimWeapon !== 'unknown' && (
+                                                                    <>
+                                                                        <span className="text-[9px] font-black text-zinc-700 italic">vs</span>
+                                                                        <img 
+                                                                            src={weaponImg(k.victimWeapon)} 
+                                                                            alt="Arma da Vítima"
+                                                                            title="Arma da Vítima (Pré-Duelo)"
+                                                                            className="h-[14px] w-auto brightness-0 invert opacity-30 group-hover/kill:opacity-60 transition-opacity drop-shadow-lg"
+                                                                        />
+                                                                    </>
+                                                                )}
+                                                                {dmg && !k.victimWeapon && (
                                                                     <div className="flex items-center gap-1.5 ml-2 border-l border-white/5 pl-3">
                                                                         <span className="text-[10px] font-black text-emerald-400/80">{dmg}</span>
                                                                         <span className="text-[7px] font-black text-zinc-700 uppercase">dmg</span>
@@ -808,7 +825,12 @@ const MatchReportModal: React.FC<Props> = ({
                                                                 <span className={`text-[13px] font-bold tracking-tight text-zinc-500 group-hover/kill:text-zinc-400 transition-all`}>
                                                                     {k.victimName}
                                                                 </span>
-                                                                <span className="text-[8px] font-bold uppercase text-zinc-800 tracking-widest">{vicSide}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[8px] font-bold uppercase text-zinc-800 tracking-widest">{vicSide}</span>
+                                                                    {k.victimHp !== undefined && (
+                                                                        <span className="text-[9px] font-black text-red-500/80" title="HP no momento do confronto">{k.victimHp} HP</span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
