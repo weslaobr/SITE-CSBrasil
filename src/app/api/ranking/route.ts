@@ -97,8 +97,8 @@ export async function GET() {
                 }
                 
                 const updateData: any = {};
-                let faceitNeedsUpdate = !currentStats.faceitLevel || currentStats.faceitLevel === 0;
-                let premierNeedsUpdate = !currentStats.premierRating || currentStats.premierRating === 0;
+                let faceitNeedsUpdate = !currentStats || !currentStats.faceitLevel || currentStats.faceitLevel === 0;
+                let premierNeedsUpdate = !currentStats || !currentStats.premierRating || currentStats.premierRating === 0;
 
                 try {
                     const cs2space = await getCS2SpacePlayerInfo(player.steamId);
@@ -126,24 +126,24 @@ export async function GET() {
                         const finalUpdate: any = {};
                         
                         if (updateData.premierRating !== undefined) {
-                            finalUpdate.premierRating = Math.max(currentStats.premierRating || 0, updateData.premierRating);
+                            finalUpdate.premierRating = Math.max((currentStats as any).premierRating || 0, updateData.premierRating);
                         }
                         
                         if (updateData.faceitElo !== undefined) {
-                            finalUpdate.faceitElo = Math.max(currentStats.faceitElo || 0, updateData.faceitElo);
+                            finalUpdate.faceitElo = Math.max((currentStats as any).faceitElo || 0, updateData.faceitElo);
                         }
 
                         if (updateData.faceitLevel !== undefined) {
-                            finalUpdate.faceitLevel = Math.max(currentStats.faceitLevel || 0, updateData.faceitLevel);
+                            finalUpdate.faceitLevel = Math.max((currentStats as any).faceitLevel || 0, updateData.faceitLevel);
                         }
 
                         if (updateData.gcLevel !== undefined) {
-                            finalUpdate.gcLevel = Math.max(currentStats.gcLevel || 0, updateData.gcLevel);
+                            finalUpdate.gcLevel = Math.max((currentStats as any).gcLevel || 0, updateData.gcLevel);
                         }
 
                         if (Object.keys(finalUpdate).length > 0) {
                             const updatedStats = await (prisma as any).stats.update({
-                                where: { id: currentStats.id },
+                                where: { id: (currentStats as any).id },
                                 data: finalUpdate
                             });
                             (player as any).Stats = updatedStats;
@@ -188,10 +188,10 @@ export async function GET() {
                         hsPercentage: true
                     }
                 }
-            }
+            } as any
         });
 
-        const userMap = new Map(users.map(u => [u.steamId, u]));
+        const userMap = new Map<any, any>(users.map(u => [u.steamId, u]));
 
         // 4. Buscar todos os registros de GlobalMatchPlayer para agregar por plataforma
         const allMatchPlayers = await (prisma as any).globalMatchPlayer.findMany({
@@ -285,7 +285,7 @@ export async function GET() {
         // 6. Mapear para o formato do frontend
         const rankedUsers = players
             .map(p => {
-                const userData = userMap.get(p.steamId);
+                const userData = userMap.get(p.steamId) as any;
                 const stats = p.Stats;
                 const pStats = playerPlatformStats.get(p.steamId);
                 
@@ -318,10 +318,10 @@ export async function GET() {
                 if (statsBreakdown.all.matchesPlayed === 0 && userData) {
                     statsBreakdown.all = {
                         kdr: 0,
-                        adr: Math.round(userData.adr || 0),
-                        hsPercentage: Math.round(userData.hsPercentage || 0),
-                        matchesPlayed: userData.matchesPlayed || 0,
-                        winRate: userData.winRate ? `${Math.round(userData.winRate)}%` : 'N/A'
+                        adr: Math.round(Number(userData.adr || 0)),
+                        hsPercentage: Math.round(Number(userData.hsPercentage || 0)),
+                        matchesPlayed: Number(userData.matchesPlayed || 0),
+                        winRate: userData.winRate ? `${Math.round(Number(userData.winRate))}%` : 'N/A'
                     };
                 }
 
@@ -341,8 +341,8 @@ export async function GET() {
                     gcLevel: stats?.gcLevel || 0,
                     faceitLevel: stats?.faceitLevel || 0,
                     faceitElo: stats?.faceitElo || 0,
-                    rankingPoints: userData?.rankingPoints ?? 500,
-                    mixLevel: userData?.mixLevel ?? 5,
+                    rankingPoints: (userData as any)?.rankingPoints ?? 500,
+                    mixLevel: (userData as any)?.mixLevel ?? 5,
                 };
             })
             .filter(user => !user.steamId.endsWith('_temp'));
