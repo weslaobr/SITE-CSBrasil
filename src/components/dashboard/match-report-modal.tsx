@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Play, Download, Calendar, Activity, Target, Zap, Clock, Shield, Search, RefreshCw, X, 
     AlertCircle, Crosshair, TrendingUp, Star, Flame, Eye, MapPin, Trophy, Swords, Info, Edit2, Check,
-    Trash2, Heart
+    Trash2, Heart, Calculator
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -97,6 +97,7 @@ const MatchReportModal: React.FC<Props> = ({
     const [editScoreA, setEditScoreA] = useState(0);
     const [editScoreB, setEditScoreB] = useState(0);
     const [isSavingScore, setIsSavingScore] = useState(false);
+    const [isRecalculating, setIsRecalculating] = useState(false);
     const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'armas' | 'confrontos' | 'linha-tempo' | 'duelos'>('placar');
     const [fetchError, setFetchError] = useState(false);
 
@@ -214,6 +215,20 @@ const MatchReportModal: React.FC<Props> = ({
             toast.error("Erro ao atualizar o placar.");
         } finally {
             setIsSavingScore(false);
+        }
+    };
+
+    const handleRecalculateTropoints = async () => {
+        if (isRecalculating || !currentMatch?.id) return;
+        setIsRecalculating(true);
+        try {
+            const res = await axios.post('/api/admin/recalculate-match-elo', { matchId: currentMatch.id });
+            toast.success(res.data.message || 'Tropoints recalculados com sucesso!');
+            await fetchMatchData();
+        } catch (error: any) {
+            toast.error('Erro ao recalcular: ' + (error.response?.data?.error || error.message));
+        } finally {
+            setIsRecalculating(false);
         }
     };
 
@@ -1786,6 +1801,19 @@ const MatchReportModal: React.FC<Props> = ({
                                         <RefreshCw size={12} className={isSyncing ? "animate-spin text-yellow-500" : ""} />
                                         <span className="hidden sm:inline">{isSyncing ? 'Atualizando...' : 'Atualizar'}</span>
                                     </button>
+
+                                    {/* Botão Recalcular Tropoints — apenas admin, apenas MIX */}
+                                    {(session?.user as any)?.isAdmin && (currentMatch?.source || currentMatch?.gameMode || '').toLowerCase().includes('mix') && (
+                                        <button
+                                            onClick={handleRecalculateTropoints}
+                                            disabled={isRecalculating}
+                                            className="h-8 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300 flex items-center gap-2 border border-amber-500/30 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Forçar recálculo dos Tropoints de todos os jogadores desta partida"
+                                        >
+                                            <Calculator size={12} className={isRecalculating ? "animate-spin" : ""} />
+                                            <span className="hidden sm:inline">{isRecalculating ? 'Calculando...' : 'Tropoints'}</span>
+                                        </button>
+                                    )}
 
                                     {currentMatch && (() => {
                                             const meta = currentMatch.metadata || {};
