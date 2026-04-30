@@ -266,6 +266,7 @@ export async function GET(
                                 attackerName: nameMap.get(String(k.attacker_steamid)) || String(k.attacker_steamid),
                                 victimName: nameMap.get(String(k.victim_steamid)) || String(k.victim_steamid),
                                 weapon: k.weapon,
+                                victimWeapon: k.victim_weapon,
                                 isHeadshot: k.is_headshot,
                                 attackerHp: k.attacker_hp,
                                 victimHp: k.victim_hp

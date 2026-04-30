@@ -326,9 +326,32 @@ class ParserService:
             return None
 
         # 4. Kills
+        victim_weapon_map = {}
+        try:
+            if hasattr(self.dem, 'events'):
+                ie_df = pd.DataFrame()
+                if "item_equip" in self.dem.events and not self.dem.events["item_equip"].empty:
+                    ie_df = self.dem.events["item_equip"][["tick", "user_steamid", "item"]].rename(columns={"item": "weapon"})
+                elif "weapon_fire" in self.dem.events and not self.dem.events["weapon_fire"].empty:
+                    ie_df = self.dem.events["weapon_fire"][["tick", "user_steamid", "weapon"]]
+                
+                if not ie_df.empty and not self.dem.kills.empty:
+                    ie_df = ie_df.dropna(subset=["user_steamid"]).sort_values("tick")
+                    ie_df["user_steamid"] = ie_df["user_steamid"].astype(str)
+                    k_df = self.dem.kills[["tick", "victim_steamid"]].dropna(subset=["victim_steamid"]).sort_values("tick")
+                    k_df["victim_steamid"] = k_df["victim_steamid"].astype(str)
+                    merged = pd.merge_asof(k_df, ie_df, on="tick", left_by="victim_steamid", right_by="user_steamid", direction="backward")
+                    for _, r in merged.iterrows():
+                        if pd.notna(r.get("weapon")):
+                            victim_weapon_map[(int(r["tick"]), str(r["victim_steamid"]))] = str(r["weapon"])
+        except Exception as e:
+            logger.warning(f"Parser: Could not extract victim weapons: {e}")
+
         for _, row in self.dem.kills.iterrows():
+            v_steamid = int(row["victim_steamid"]) if row["victim_steamid"] else None
+            v_weap = victim_weapon_map.get((int(row["tick"]), str(v_steamid))) if v_steamid else None
             db.add(KillEvent(match_id=match_id, round_id=get_round_id(int(row["tick"])), tick=int(row["tick"]), attacker_steamid=int(row["attacker_steamid"]) if row["attacker_steamid"] else None,
-                            victim_steamid=int(row["victim_steamid"]) if row["victim_steamid"] else None, weapon=row["weapon"], is_headshot=bool(row["is_headshot"]), distance=float(row.get("distance", 0.0)),
+                            victim_steamid=v_steamid, weapon=row["weapon"], victim_weapon=v_weap, is_headshot=bool(row["is_headshot"]), distance=float(row.get("distance", 0.0)),
                             attacker_x=float(row.get("attacker_pos_x", 0)), attacker_y=float(row.get("attacker_pos_y", 0)), attacker_z=float(row.get("attacker_pos_z", 0)),
                             victim_x=float(row.get("victim_pos_x", 0)), victim_y=float(row.get("victim_pos_y", 0)), victim_z=float(row.get("victim_pos_z", 0)),
                             attacker_hp=int(row.get("attacker_hp", 100)), victim_hp=int(row.get("victim_hp", 0))))

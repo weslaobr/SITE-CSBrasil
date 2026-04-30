@@ -1072,32 +1072,50 @@ const MatchReportModal: React.FC<Props> = ({
                                                                         <span className="text-[8px] font-black uppercase leading-none mb-0.5">RD</span>
                                                                         <span className="text-base font-black italic leading-none">{e.round}</span>
                                                                     </div>
-                                                                    <div className="flex flex-col">
-                                                                        <div className="flex items-center gap-2 mb-0.5">
-                                                                            <img src={weaponImg(e.weapon)} className="h-4 brightness-0 invert opacity-60" alt="" />
-                                                                            <span className={`text-[11px] font-black uppercase italic ${isVictorious ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                                                {isVictorious ? 'Win' : 'Loss'}
-                                                                            </span>
+                                                                    <div className="flex flex-col items-center">
+                                                                        <div className="flex items-center gap-3 mb-1">
+                                                                            <img src={weaponImg(isVictorious ? e.weapon : (e.victimWeapon || currentMatch?.metadata?.weapon_stats?.filter((ws: any) => String(ws.player_id) === String(selectedPlayer.steamId)).sort((a: any, b: any) => b.kills - a.kills)[0]?.weapon_name || 'unknown'))} className="h-4 brightness-0 invert opacity-60" alt="" title={isVictorious ? "Sua Arma (Abate)" : "Sua Arma (Pré-Duelo)"} />
+                                                                            <span className="text-[10px] font-black text-zinc-500 italic">VS</span>
+                                                                            <img src={weaponImg(!isVictorious ? e.weapon : (e.victimWeapon || currentMatch?.metadata?.weapon_stats?.filter((ws: any) => String(ws.player_id) === String(oppPlayer?.steamId)).sort((a: any, b: any) => b.kills - a.kills)[0]?.weapon_name || 'unknown'))} className="h-4 brightness-0 invert opacity-60" alt="" title={!isVictorious ? "Arma do Inimigo (Abate)" : "Arma do Inimigo (Pré-Duelo)"} />
                                                                         </div>
-                                                                        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-tighter">
-                                                                            {e.weapon?.replace('weapon_', '').replace('_', ' ')}
+                                                                        <span className={`text-[11px] font-black uppercase italic ${isVictorious ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                            {isVictorious ? 'Win' : 'Loss'}
                                                                         </span>
                                                                     </div>
                                                                 </div>
-                                                                <div className="flex items-center gap-5">
+                                                                <div className="flex items-center gap-4">
                                                                     {e.isHeadshot && (
-                                                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isVictorious ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400 shadow-inner'}`}>
+                                                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isVictorious ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400 shadow-inner'} mr-2`}>
                                                                             <Target size={14} strokeWidth={3} />
                                                                         </div>
                                                                     )}
-                                                                    <div className="flex flex-col items-end">
+                                                                    
+                                                                    {/* SEU HP */}
+                                                                    <div className="flex flex-col items-center min-w-[50px]">
                                                                         <div className="flex items-center gap-1.5">
-                                                                            <Heart size={10} className={isVictorious ? 'text-emerald-500' : 'text-red-500'} fill="currentColor" />
-                                                                            <span className={`text-sm font-black italic leading-none ${isVictorious ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                                                {e.attackerHp || '0'}
+                                                                            <Heart size={10} className={isVictorious ? 'text-emerald-500' : 'text-zinc-500'} fill="currentColor" />
+                                                                            <span className={`text-sm font-black italic leading-none ${isVictorious ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                                                                                {isVictorious ? (e.attackerHp ?? '100') : (e.victimHp ?? '100')}
                                                                             </span>
                                                                         </div>
-                                                                        <span className="text-[7px] font-black text-zinc-700 uppercase tracking-tighter mt-1">HP Restante</span>
+                                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-tighter mt-1">
+                                                                            Seu HP
+                                                                        </span>
+                                                                    </div>
+
+                                                                    <div className="w-px h-6 bg-white/10" />
+
+                                                                    {/* HP INIMIGO */}
+                                                                    <div className="flex flex-col items-center min-w-[50px]">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <span className={`text-sm font-black italic leading-none ${!isVictorious ? 'text-red-400' : 'text-zinc-500'}`}>
+                                                                                {!isVictorious ? (e.attackerHp ?? '100') : (e.victimHp ?? '100')}
+                                                                            </span>
+                                                                            <Heart size={10} className={!isVictorious ? 'text-red-500' : 'text-zinc-600'} fill="currentColor" />
+                                                                        </div>
+                                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-tighter mt-1">
+                                                                            HP Inimigo
+                                                                        </span>
                                                                     </div>
                                                                 </div>
                                                             </div>

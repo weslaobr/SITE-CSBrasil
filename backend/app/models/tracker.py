@@ -97,6 +97,7 @@ class KillEvent(Base):
     victim_steamid = Column(BigInteger, ForeignKey("public.tracker_players.steamid64"))
     assister_steamid = Column(BigInteger)
     weapon = Column(Text)
+    victim_weapon = Column(Text)
     is_headshot = Column(Boolean, default=False)
     is_wallbang = Column(Boolean, default=False)
     # Posições como colunas separadas (Sem PostGIS)
