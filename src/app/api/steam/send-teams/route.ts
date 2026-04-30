@@ -19,29 +19,25 @@ export async function POST(request: NextRequest) {
             : (p.tempRating !== undefined ? p.tempRating : p.rating);
 
         const message = `
-[b]🎮 PARTIDA GERADA - TropaCS 🎮[/b]
+🎮 PARTIDA GERADA - TropaCS 🎮
 
-[b]🗺️ MAPA:[/b] ${mapName || "A definir"}
-[b]🎲 MÉTODO:[/b] ${pickMethod || "Manual"}
+🗺️ MAPA: ${mapName || "A definir"}
+🎲 MÉTODO: ${pickMethod || "Manual"}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[b]🟡 TIME TR:[/b] (Média: ${avgA} ${ratingLabel})
-[code]
+🟡 TIME TR: (Média: ${avgA} ${ratingLabel})
 ${teamA.map((p: any) => `• ${p.nickname.padEnd(14)} [${getPScore(p)}]`).join('\n')}
-[/code]
 
-[b]🔵 TIME CT:[/b] (Média: ${avgB} ${ratingLabel})
-[code]
+🔵 TIME CT: (Média: ${avgB} ${ratingLabel})
 ${teamB.map((p: any) => `• ${p.nickname.padEnd(14)} [${getPScore(p)}]`).join('\n')}
-[/code]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[b]🤖 ADICIONE O BOT PARA RECEBER TIMES:[/b]
+🤖 ADICIONE O BOT PARA RECEBER TIMES:
 https://steamcommunity.com/id/tropacs
 
-[b]🎭 SKINS PERSONALIZADAS:[/b]
+🎭 SKINS PERSONALIZADAS:
 https://inventory.cstrike.app/
 `.trim();
 
@@ -63,7 +59,7 @@ https://inventory.cstrike.app/
             if (player.steamId && !String(player.steamId).startsWith('guest_')) {
                 try {
                     // Pequeno delay para não sobrecarregar o bot ou ser bloqueado pela Steam
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    await new Promise(resolve => setTimeout(resolve, 1000));
 
                     console.log(`➡️ Enviando para: ${player.nickname} (ID: ${player.steamId})`);
                     

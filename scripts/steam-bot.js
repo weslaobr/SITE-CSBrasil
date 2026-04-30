@@ -58,6 +58,20 @@ user.on('loggedOn', () => {
     user.gamesPlayed([730]); // CS2 appid
 });
 
+// Aceitar pedidos de amizade automaticamente
+user.on('friendRelationship', (steamID, relationship) => {
+    if (relationship === SteamUser.EFriendRelationship.RequestRecipient) {
+        console.log(`🤝 Recebido pedido de amizade de ${steamID}. Aceitando...`);
+        user.addFriend(steamID, (err, name) => {
+            if (err) {
+                console.error(`❌ Erro ao aceitar amizade de ${steamID}:`, err.message);
+                return;
+            }
+            console.log(`✅ Agora somos amigos de ${name || steamID}`);
+        });
+    }
+});
+
 user.on('error', (err) => {
     console.error('❌ Erro de login na Steam:', err.message);
     
