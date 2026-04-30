@@ -274,9 +274,19 @@ app.post('/send-message', async (req, res) => {
     }
 
     try {
-        console.log(`💬 Enviando mensagem para ${steamId}`);
-        // A biblioteca steam-user permite enviar mesmo que a pessoa esteja offline
-        // Na v5, sendFriendMessage retorna uma Promise
+        console.log(`💬 Solicitação de mensagem para: ${steamId}`);
+        
+        // Verificar se são amigos
+        const relationship = user.myFriends[steamId];
+        if (relationship !== SteamUser.EFriendRelationship.Friend) {
+            console.warn(`⚠️ Não é possível enviar: Usuário ${steamId} não é amigo do bot (Rel: ${relationship})`);
+            return res.status(403).json({ 
+                error: 'O bot não é amigo deste usuário', 
+                relationship: relationship === undefined ? 'None' : relationship 
+            });
+        }
+
+        // Enviar a mensagem
         await user.chat.sendFriendMessage(steamId, message);
         console.log(`✅ Mensagem enviada com sucesso para ${steamId}`);
         res.json({ success: true, message: 'Mensagem enviada com sucesso' });

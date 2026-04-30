@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
-const STEAM_BOT_PORT = process.env.STEAM_BOT_PORT || '8080';
+const STEAM_BOT_PORT = process.env.STEAM_BOT_PORT || '3005';
+// STEAM_BOT_URL deve apontar para o bot local (ex: http://localhost:3005) ou uma URL pública se hospedado
 const STEAM_BOT_URL = process.env.STEAM_BOT_URL || process.env.NEXT_PUBLIC_BOT_API_URL || `http://localhost:${STEAM_BOT_PORT}`;
+
+// Necessário para evitar timeout do Next.js em requisições longas (10 jogadores * delay)
+export const maxDuration = 60; // segundos
 
 export async function POST(request: NextRequest) {
     try {
@@ -59,7 +63,7 @@ https://inventory.cstrike.app/
             if (player.steamId && !String(player.steamId).startsWith('guest_')) {
                 try {
                     // Pequeno delay para não sobrecarregar o bot ou ser bloqueado pela Steam
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 300));
 
                     console.log(`➡️ Enviando para: ${player.nickname} (ID: ${player.steamId})`);
                     
@@ -67,23 +71,37 @@ https://inventory.cstrike.app/
                         steamId: player.steamId,
                         message: message
                     }, {
-                        timeout: 5000 // 5 segundos de timeout para cada envio
+                        timeout: 10000 // 10 segundos de timeout para cada envio
                     });
 
                     results.push({ nickname: player.nickname, success: true, data: botRes.data });
                     console.log(`✅ Sucesso para ${player.nickname}`);
                 } catch (err: any) {
+                    const status = err.response?.status;
                     const errorMsg = err.response?.data?.error || err.response?.data?.details || err.message;
                     const relationship = err.response?.data?.relationship;
                     
-                    console.error(`❌ Erro para ${player.nickname}:`, errorMsg);
+                    // Se o bot está offline (ECONNREFUSED), para o loop inteiro - não adianta tentar os outros
+                    if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT') {
+                        console.error(`🔴 Bot Steam inacessível em ${STEAM_BOT_URL}:`, err.message);
+                        results.push({ nickname: player.nickname, success: false, error: 'Bot Steam offline ou inacessível', botOffline: true });
+                        // Adiciona todos os jogadores restantes como falha e encerra
+                        for (const remaining of allPlayers.slice(allPlayers.indexOf(player) + 1)) {
+                            if (remaining.steamId && !String(remaining.steamId).startsWith('guest_')) {
+                                results.push({ nickname: remaining.nickname, success: false, error: 'Bot Steam offline', botOffline: true });
+                            }
+                        }
+                        break;
+                    }
+
+                    console.error(`❌ Erro para ${player.nickname} (HTTP ${status}):`, errorMsg);
                     
                     results.push({ 
                         nickname: player.nickname, 
                         success: false, 
                         error: errorMsg,
                         relationship: relationship,
-                        status: err.response?.status
+                        status: status
                     });
                 }
             } else {
@@ -94,10 +112,20 @@ https://inventory.cstrike.app/
         const successCount = results.filter(r => r.success).length;
         const totalAttempts = results.length;
         
+        const botOffline = results.some((r: any) => r.botOffline);
+        
+        if (botOffline) {
+            return NextResponse.json({ 
+                success: false, 
+                message: `❌ Bot Steam offline! Execute "npm run bot" localmente e tente novamente.\nURL configurada: ${STEAM_BOT_URL}`,
+                results 
+            }, { status: 503 });
+        }
+
         if (successCount === 0 && totalAttempts > 0) {
             return NextResponse.json({ 
                 success: false, 
-                message: 'Nenhuma mensagem pôde ser enviada. Verifique se o bot está online e logado.',
+                message: 'Nenhuma mensagem pôde ser enviada. Verifique se o bot está online e os jogadores são amigos do bot.',
                 results 
             }, { status: 500 });
         }
