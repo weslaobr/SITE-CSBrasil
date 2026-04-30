@@ -125,7 +125,8 @@ export async function GET(
                     clutches_won: m.clutches ?? m.clutch_count ?? m.clutches_won ?? m.clutchesWon ?? 0,
                     // Flash
                     flash_assists: m.flashAssists ?? m.flash_assist ?? m.flash_assists ?? m.flashbang_assists ?? 0,
-                    is_user: !!(profileSteamId && p.steamId && String(p.steamId) === String(profileSteamId))
+                    is_user: !!(profileSteamId && p.steamId && String(p.steamId) === String(profileSteamId)),
+                    metadata: m
                 };
             });
 
