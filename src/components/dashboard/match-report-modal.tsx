@@ -450,6 +450,7 @@ const MatchReportModal: React.FC<Props> = ({
             })(),
             // Trades: Leetify v2 usa trade_kills_succeed
             trades: Number(p.trades ?? p.trade_kills_succeed ?? p.trade_count ?? p.tradeKills ?? 0),
+            mvps: p.mvps !== undefined ? Number(p.mvps) : undefined,
             // Campos extra do Leetify v2 para aba Confrontos
             tradeKillOpp: Number(p.tradeKillOpp ?? p.trade_kill_opportunities ?? 0),
             tradedDeathOpp: Number(p.tradedDeathOpp ?? p.traded_death_opportunities ?? 0),
@@ -1253,6 +1254,12 @@ const MatchReportModal: React.FC<Props> = ({
                         </div>
                     </div>
                 </td>
+                <td className="py-2.5 px-2 text-center">
+                    {(p.mvps ?? 0) > 0
+                        ? <span className="text-[11px] font-black text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md">⭐ {p.mvps}</span>
+                        : <span className="text-zinc-700 text-xs">—</span>
+                    }
+                </td>
                 <td className="py-2.5 px-1 text-right">
                     {(session?.user as any)?.isAdmin && (
                         <button 
@@ -1600,7 +1607,8 @@ const MatchReportModal: React.FC<Props> = ({
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Assists (Assistências)">A</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Kill/Death Ratio (Média de mortes por vida)">K/D</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Average Damage per Round (Dano médio por rodada)">ADR</th>
-                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center" title="Headshot Percentage (Porcentagem de tiros na cabeça)">HS%</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Headshot Percentage (Porcentagem de tiros na cabeça)">HS%</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-amber-600/70 text-center" title="MVPs (Estrelas de MVP ganhas na partida)">⭐ MVP</th>
                                         <th className="py-2 px-1 w-8"></th>
                                     </>}
                                     {tab === 'desempenho' && <>
