@@ -219,22 +219,27 @@ def insert_match(match_data: dict, players_data: list[dict]) -> tuple[bool, str]
             adr = float(p.get("adr", 0.0))
             mvps = int(p.get("mvps", 0))
 
-            elo_change = 0
-            if match_result == "win": elo_change = 15
-            elif match_result == "loss": elo_change = -10
-            
-            if match_result in ["win", "loss"]:
-                if kills > deaths: elo_change += 2
-                elif deaths > kills + 3: elo_change -= 2
-                if adr > 90: elo_change += 3
-                elif adr < 50: elo_change -= 2
-                elo_change += (mvps * 1) # Bônus de MVP
+            elo_change = None
+            elo_after = None
+
+            # Apenas calcula pontos para partidas da plataforma MIX
+            if match_data.get("source", "mix").lower() == "mix":
+                elo_change = 0
+                if match_result == "win": elo_change = 15
+                elif match_result == "loss": elo_change = -10
                 
-            elo_after = max(0, base_elo + elo_change)
+                if match_result in ["win", "loss"]:
+                    if kills > deaths: elo_change += 2
+                    elif deaths > kills + 3: elo_change -= 2
+                    if adr > 90: elo_change += 3
+                    elif adr < 50: elo_change -= 2
+                    elo_change += (mvps * 1) # Bônus de MVP
+                    
+                elo_after = max(0, base_elo + elo_change)
 
             try:
-                # Atualizar Tropoints na tabela User
-                if user_id:
+                # Atualizar Tropoints na tabela User (apenas se for MIX e tiver conta)
+                if user_id and elo_after is not None:
                     cur.execute('UPDATE "User" SET "rankingPoints" = %s WHERE id = %s;', (elo_after, user_id))
 
                 # Garantir que o nome esteja no metadata para o site ler
