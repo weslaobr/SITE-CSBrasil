@@ -184,6 +184,13 @@ class ParserService:
             score_a = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0]) if not rounds_df.empty else 0
             score_b = int(rounds_df[rounds_df["winner_side"] == "T"].shape[0]) if not rounds_df.empty else 0
 
+        # --- MEMORY OPTIMIZATION: Ticks are no longer needed after this point ---
+        if hasattr(self.dem, 'ticks'):
+            logger.info("Parser: Freeing 'ticks' memory")
+            del self.dem.ticks
+            import gc
+            gc.collect()
+
         if last_round_winner == "A":
             s1, s2 = max(score_a, score_b), min(score_a, score_b)
             score_a, score_b = s1, s2
