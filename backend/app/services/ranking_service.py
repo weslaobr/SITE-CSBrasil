@@ -53,9 +53,6 @@ class RankingService:
             user_stmt = select(PublicUser).where(PublicUser.steamId == str(p.steamid64))
             user_result = await db.execute(user_stmt)
             user = user_result.scalar_one_or_none()
-            
-            if not user:
-                continue
 
             # 2.5 Idempotency: Revert old points if they exist
             from sqlalchemy import text
@@ -64,7 +61,7 @@ class RankingService:
             ), {"mid": match_id, "sid": str(p.steamid64)})
             old_change = old_gmp_res.scalar_one_or_none()
             
-            if old_change is not None:
+            if old_change is not None and user is not None:
                 user.rankingPoints -= old_change
                 logger.info(f"Ranking: Reverted {old_change} points for {p.steamid64} before recalculating.")
 
@@ -95,13 +92,14 @@ class RankingService:
             # Minimum -50, Maximum +50 to prevent extreme jumps
             total_delta = min(max(total_delta, -50), 50)
             
-            old_points = user.rankingPoints or 1000
+            old_points = user.rankingPoints if user else 1000
             new_points = max(0, old_points + total_delta)
             new_level = cls.calculate_level(new_points)
 
-            # 5. Update User
-            user.rankingPoints = new_points
-            user.mixLevel = new_level
+            # 5. Update User if they exist
+            if user:
+                user.rankingPoints = new_points
+                user.mixLevel = new_level
             
             # Update MatchPlayer stats (for history in matches dashboard)
             p.elo_change = total_delta
