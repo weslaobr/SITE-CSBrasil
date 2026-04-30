@@ -266,6 +266,10 @@ const MatchReportModal: React.FC<Props> = ({
         if (!name) return '';
         let cleanName = name.toLowerCase().replace('weapon_', '').trim();
         
+        if (cleanName === 'world' || cleanName === 'worldspawn') {
+            return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></svg>';
+        }
+        
         // Manual mapping for special cases to match the ChetdeJong/cs2-killfeed-generator naming
         const MAPPING: Record<string, string> = {
             'm4a1_s': 'm4a1_silencer',
@@ -1332,12 +1336,26 @@ const MatchReportModal: React.FC<Props> = ({
         } 
         // Verifica o padrão do processador local (dicionário dentro do metadata do jogador)
         else if (p.metadata?.weaponStats) {
-            playerWeapons = Object.entries(p.metadata.weaponStats).map(([weaponName, kills]) => ({
-                weapon_name: weaponName,
-                kills: kills as number,
-                headshots: 0, // Processador local não extrai HS por arma
-                damage: 0     // Processador local não extrai dano por arma
-            }));
+            playerWeapons = Object.entries(p.metadata.weaponStats).map(([weaponName, stats]) => {
+                // Retrocompatibilidade: se a demo foi processada antes do update (apenas número de kills)
+                if (typeof stats === 'number') {
+                    return {
+                        weapon_name: weaponName,
+                        kills: stats,
+                        headshots: 0,
+                        damage: 0
+                    };
+                }
+                
+                // Nova estrutura: objeto com kills, hs e damage
+                const ws = stats as any;
+                return {
+                    weapon_name: weaponName,
+                    kills: ws.kills || 0,
+                    headshots: ws.hs || 0,
+                    damage: ws.damage || 0
+                };
+            });
         }
         
         const sortedWeapons = [...playerWeapons].sort((a, b) => b.kills - a.kills);

@@ -368,10 +368,19 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     
     if not is_empty(df_dmg):
         dmg_col = next((c for c in ["dmg_health", "damage", "health_damage", "dmg"] if c in df_dmg.columns), "dmg_health")
+        w_col = next((c for c in ["weapon", "weapon_name"] if c in df_dmg.columns), "weapon")
         for _, row in df_dmg.iterrows():
             sid = sid_norm(row.get("attacker_steamid"))
+            dmg_val = int(row.get(dmg_col, 0) or 0)
             if sid in dmg_total: 
-                dmg_total[sid] += int(row.get(dmg_col, 0) or 0)
+                dmg_total[sid] += dmg_val
+            
+            # Weapon damage tracking
+            w = str(row.get(w_col, "unknown")).replace("weapon_", "")
+            if sid in player_info:
+                if w not in weapon_stats[sid]:
+                    weapon_stats[sid][w] = {"kills": 0, "hs": 0, "damage": 0}
+                weapon_stats[sid][w]["damage"] += dmg_val
 
     if not is_empty(df_kills):
         for _, row in df_kills.iterrows():
@@ -751,7 +760,11 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                     if k_att and k_att in player_info:
                         # Weapon Stats
                         w = str(k_row.get("weapon", "unknown")).replace("weapon_", "")
-                        weapon_stats[k_att][w] = weapon_stats[k_att].get(w, 0) + 1
+                        if w not in weapon_stats[k_att]:
+                            weapon_stats[k_att][w] = {"kills": 0, "hs": 0, "damage": 0}
+                        weapon_stats[k_att][w]["kills"] += 1
+                        if k_row.get("headshot") or k_row.get("is_headshot"):
+                            weapon_stats[k_att][w]["hs"] += 1
                         
                         # KAST (Kill)
                         if r_num <= rounds: kast_data[k_att][r_num] = True
