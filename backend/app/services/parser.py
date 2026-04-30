@@ -347,14 +347,59 @@ class ParserService:
         except Exception as e:
             logger.warning(f"Parser: Could not extract victim weapons: {e}")
 
+        # Precalculate victim HP before fatal shot
+        pre_duel_hp_map = {}
+        try:
+            if hasattr(self.dem, 'damages') and not self.dem.damages.empty:
+                dmg_df = self.dem.damages.copy().sort_values("tick")
+                # Group by victim_steamid
+                # Calculate running HP loss
+                
+                # A simpler approach: For each kill, find all damages to this victim in the same round, BEFORE this tick.
+                # Since pandas iterrows is slow for nested loops, we will do a fast grouping.
+                if not dmg_df.empty:
+                    dmg_df['round_id'] = dmg_df['tick'].apply(get_round_id)
+                    
+                    for _, row in self.dem.kills.iterrows():
+                        k_tick = int(row["tick"])
+                        v_sid = int(row["victim_steamid"]) if row["victim_steamid"] else None
+                        a_sid = int(row["attacker_steamid"]) if row["attacker_steamid"] else None
+                        r_id = get_round_id(k_tick)
+                        
+                        if v_sid:
+                            past_dmg_v = dmg_df[(dmg_df['round_id'] == r_id) & (dmg_df['victim_steamid'] == v_sid) & (dmg_df['tick'] < k_tick)]
+                            if 'health_damage' in past_dmg_v.columns: total_dmg_v = past_dmg_v['health_damage'].sum()
+                            else: total_dmg_v = past_dmg_v['hp_damage'].apply(lambda x: min(x, 100)).sum()
+                            pre_duel_hp_map[(k_tick, str(v_sid))] = max(1, 100 - total_dmg_v)
+                            
+                        if a_sid:
+                            past_dmg_a = dmg_df[(dmg_df['round_id'] == r_id) & (dmg_df['victim_steamid'] == a_sid) & (dmg_df['tick'] < k_tick)]
+                            if 'health_damage' in past_dmg_a.columns: total_dmg_a = past_dmg_a['health_damage'].sum()
+                            else: total_dmg_a = past_dmg_a['hp_damage'].apply(lambda x: min(x, 100)).sum()
+                            pre_duel_hp_map[(k_tick, str(a_sid))] = max(1, 100 - total_dmg_a)
+        except Exception as e:
+            logger.warning(f"Parser: Could not calculate pre-duel HP: {e}")
+
         for _, row in self.dem.kills.iterrows():
             v_steamid = int(row["victim_steamid"]) if row["victim_steamid"] else None
+            a_steamid = int(row["attacker_steamid"]) if row["attacker_steamid"] else None
             v_weap = victim_weapon_map.get((int(row["tick"]), str(v_steamid))) if v_steamid else None
-            db.add(KillEvent(match_id=match_id, round_id=get_round_id(int(row["tick"])), tick=int(row["tick"]), attacker_steamid=int(row["attacker_steamid"]) if row["attacker_steamid"] else None,
+            
+            # Use calculated pre-duel HP if available, otherwise default to 100
+            v_hp = pre_duel_hp_map.get((int(row["tick"]), str(v_steamid)))
+            if v_hp is None:
+                v_hp = int(row.get("victim_hp", 100))
+                if v_hp == 0: v_hp = 100 # If parser outputs 0, assume 100 as fallback for pre-duel
+                
+            a_hp = pre_duel_hp_map.get((int(row["tick"]), str(a_steamid)))
+            if a_hp is None:
+                a_hp = int(row.get("attacker_hp", 100))
+                
+            db.add(KillEvent(match_id=match_id, round_id=get_round_id(int(row["tick"])), tick=int(row["tick"]), attacker_steamid=a_steamid,
                             victim_steamid=v_steamid, weapon=row["weapon"], victim_weapon=v_weap, is_headshot=bool(row["is_headshot"]), distance=float(row.get("distance", 0.0)),
                             attacker_x=float(row.get("attacker_pos_x", 0)), attacker_y=float(row.get("attacker_pos_y", 0)), attacker_z=float(row.get("attacker_pos_z", 0)),
                             victim_x=float(row.get("victim_pos_x", 0)), victim_y=float(row.get("victim_pos_y", 0)), victim_z=float(row.get("victim_pos_z", 0)),
-                            attacker_hp=int(row.get("attacker_hp", 100)), victim_hp=int(row.get("victim_hp", 0))))
+                            attacker_hp=a_hp, victim_hp=v_hp))
 
         # 5. Damage
         for _, row in self.dem.damages.iterrows():

@@ -1074,9 +1074,30 @@ const MatchReportModal: React.FC<Props> = ({
                                                                     </div>
                                                                     <div className="flex flex-col items-center">
                                                                         <div className="flex items-center gap-3 mb-1">
-                                                                            <img src={weaponImg(isVictorious ? e.weapon : (e.victimWeapon || currentMatch?.metadata?.weapon_stats?.filter((ws: any) => String(ws.player_id) === String(selectedPlayer.steamId)).sort((a: any, b: any) => b.kills - a.kills)[0]?.weapon_name || 'unknown'))} className="h-4 brightness-0 invert opacity-60" alt="" title={isVictorious ? "Sua Arma (Abate)" : "Sua Arma (Pré-Duelo)"} />
-                                                                            <span className="text-[10px] font-black text-zinc-500 italic">VS</span>
-                                                                            <img src={weaponImg(!isVictorious ? e.weapon : (e.victimWeapon || currentMatch?.metadata?.weapon_stats?.filter((ws: any) => String(ws.player_id) === String(oppPlayer?.steamId)).sort((a: any, b: any) => b.kills - a.kills)[0]?.weapon_name || 'unknown'))} className="h-4 brightness-0 invert opacity-60" alt="" title={!isVictorious ? "Arma do Inimigo (Abate)" : "Arma do Inimigo (Pré-Duelo)"} />
+                                                                            {(() => {
+                                                                                const myWeaponStr = isVictorious 
+                                                                                    ? e.weapon 
+                                                                                    : (e.victimWeapon || currentMatch?.metadata?.weapon_stats?.filter((ws: any) => String(ws.player_id) === String(selectedPlayer.steamId)).sort((a: any, b: any) => b.kills - a.kills)[0]?.weapon_name);
+                                                                                const oppWeaponStr = !isVictorious 
+                                                                                    ? e.weapon 
+                                                                                    : (e.victimWeapon || currentMatch?.metadata?.weapon_stats?.filter((ws: any) => String(ws.player_id) === String(oppPlayer?.steamId)).sort((a: any, b: any) => b.kills - a.kills)[0]?.weapon_name);
+                                                                                
+                                                                                return (
+                                                                                    <>
+                                                                                        {myWeaponStr && myWeaponStr !== 'unknown' ? (
+                                                                                            <img src={weaponImg(myWeaponStr)} className="h-4 brightness-0 invert opacity-60" alt="" title={isVictorious ? "Sua Arma (Abate)" : "Sua Arma (Pré-Duelo)"} />
+                                                                                        ) : (
+                                                                                            <span className="text-[10px] font-bold text-zinc-600 italic">?</span>
+                                                                                        )}
+                                                                                        <span className="text-[10px] font-black text-zinc-500 italic">VS</span>
+                                                                                        {oppWeaponStr && oppWeaponStr !== 'unknown' ? (
+                                                                                            <img src={weaponImg(oppWeaponStr)} className="h-4 brightness-0 invert opacity-60" alt="" title={!isVictorious ? "Arma do Inimigo (Abate)" : "Arma do Inimigo (Pré-Duelo)"} />
+                                                                                        ) : (
+                                                                                            <span className="text-[10px] font-bold text-zinc-600 italic">?</span>
+                                                                                        )}
+                                                                                    </>
+                                                                                );
+                                                                            })()}
                                                                         </div>
                                                                         <span className={`text-[11px] font-black uppercase italic ${isVictorious ? 'text-emerald-400' : 'text-red-400'}`}>
                                                                             {isVictorious ? 'Win' : 'Loss'}
