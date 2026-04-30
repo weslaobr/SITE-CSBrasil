@@ -92,16 +92,18 @@ def steam_id_to_64(steam_id_str: str) -> str | None:
         return None
 
 
-def get_user_id_by_steam(conn, steam_id: str) -> str | None:
-    """Busca o userId do site (tabela User) pelo steamId."""
+def get_user_id_by_steam(conn, steam_id: str) -> tuple[str | None, int]:
+    """Busca o userId e rankingPoints do site (tabela User) pelo steamId."""
     try:
         cur = conn.cursor()
-        cur.execute('SELECT id FROM "User" WHERE "steamId" = %s LIMIT 1;', (steam_id,))
+        cur.execute('SELECT id, "rankingPoints" FROM "User" WHERE "steamId" = %s LIMIT 1;', (steam_id,))
         row = cur.fetchone()
         cur.close()
-        return row[0] if row else None
+        if row:
+            return row[0], (row[1] if row[1] is not None else 500)
+        return None, 500
     except Exception:
-        return None
+        return None, 500
 
 
 def match_exists(match_id: str) -> bool:
@@ -160,6 +162,16 @@ def insert_match(match_data: dict, players_data: list[dict]) -> tuple[bool, str]
         # Antes de salvar os novos dados, removemos todos os jogadores anteriores desta partida
         # para garantir que se a demo foi reprocessada com menos pessoas, herde apenas as novas.
         match_id = match_data["id"]
+
+        # --- Reversão de Tropoints (Elo) em caso de reprocessamento ---
+        # Antes de deletar os jogadores antigos, precisamos reverter os pontos que eles ganharam nesta partida
+        try:
+            cur.execute('SELECT "userId", "eloChange" FROM "GlobalMatchPlayer" WHERE "globalMatchId" = %s AND "userId" IS NOT NULL AND "eloChange" IS NOT NULL;', (match_id,))
+            for uid, old_elo_change in cur.fetchall():
+                cur.execute('UPDATE "User" SET "rankingPoints" = "rankingPoints" - %s WHERE id = %s;', (old_elo_change, uid))
+        except Exception as e:
+            pass # Pode falhar se a coluna não existir, ignoramos
+
         cur.execute('DELETE FROM "GlobalMatchPlayer" WHERE "globalMatchId" = %s;', (match_id,))
         
         # --- Insere GlobalMatch ---
@@ -198,9 +210,33 @@ def insert_match(match_data: dict, players_data: list[dict]) -> tuple[bool, str]
                 errors.append(f"Jogador sem SteamID: {p.get('displayName', '?')}")
                 continue
 
-            user_id = get_user_id_by_steam(conn, steam_id)
+            user_id, base_elo = get_user_id_by_steam(conn, steam_id)
+
+            # --- Cálculo do Tropoints (Elo) ---
+            match_result = str(p.get("matchResult", "tie")).lower()
+            kills = int(p.get("kills", 0))
+            deaths = int(p.get("deaths", 0))
+            adr = float(p.get("adr", 0.0))
+            mvps = int(p.get("mvps", 0))
+
+            elo_change = 0
+            if match_result == "win": elo_change = 15
+            elif match_result == "loss": elo_change = -10
+            
+            if match_result in ["win", "loss"]:
+                if kills > deaths: elo_change += 2
+                elif deaths > kills + 3: elo_change -= 2
+                if adr > 90: elo_change += 3
+                elif adr < 50: elo_change -= 2
+                elo_change += (mvps * 1) # Bônus de MVP
+                
+            elo_after = max(0, base_elo + elo_change)
 
             try:
+                # Atualizar Tropoints na tabela User
+                if user_id:
+                    cur.execute('UPDATE "User" SET "rankingPoints" = %s WHERE id = %s;', (elo_after, user_id))
+
                 # Garantir que o nome esteja no metadata para o site ler
                 p_meta = p.get("metadata", {})
                 if "name" not in p_meta: p_meta["name"] = p.get("displayName", "Jogador")
@@ -210,19 +246,10 @@ def insert_match(match_data: dict, players_data: list[dict]) -> tuple[bool, str]
                     """
                     INSERT INTO "GlobalMatchPlayer"
                         (id, "globalMatchId", "steamId", "userId", team, kills, deaths, assists,
-                         score, mvps, adr, "hsPercentage", "matchResult", metadata)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT ("globalMatchId", "steamId") DO UPDATE SET
-                        kills = EXCLUDED.kills,
-                        deaths = EXCLUDED.deaths,
-                        assists = EXCLUDED.assists,
-                        score = EXCLUDED.score,
-                        mvps = EXCLUDED.mvps,
-                        adr = EXCLUDED.adr,
-                        "hsPercentage" = EXCLUDED."hsPercentage",
-                        "matchResult" = EXCLUDED."matchResult",
-                        metadata = EXCLUDED.metadata;
-                    """,
+                         score, mvps, adr, "hsPercentage", "matchResult", "eloChange", "eloAfter", metadata)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """
+                    ,
                     (
                         str(uuid.uuid4()),
                         match_data["id"],
@@ -237,6 +264,8 @@ def insert_match(match_data: dict, players_data: list[dict]) -> tuple[bool, str]
                         float(p.get("adr", 0.0)),
                         float(p.get("hsPercentage", 0.0)),
                         p.get("matchResult", "tie"),
+                        elo_change,
+                        elo_after,
                         json.dumps(p_meta),
                     ),
                 )
