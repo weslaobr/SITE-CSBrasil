@@ -210,15 +210,6 @@ export async function syncUserStats(steamId: string) {
             if (cs2space.ranks?.premier) {
                 updateData.premierRating = cs2space.ranks.premier;
             }
-        }
-
-        // Fallback: Leetify Max Rating
-        if (!updateData.premierRating || updateData.premierRating === 0) {
-            const leetifyMax = await getLeetifyMaxRating(steamId);
-            if (leetifyMax > 0) {
-                updateData.premierRating = leetifyMax;
-            }
-        }
             if (cs2space.faceit) {
                 updateData.faceitLevel = cs2space.faceit.level || 0;
                 updateData.faceitElo = cs2space.faceit.elo || 0;
@@ -226,6 +217,14 @@ export async function syncUserStats(steamId: string) {
             // Leetify often has GC level in its ranks data via cs2space or direct
             if (cs2space.leetify?.gamersClubLevel) {
                 updateData.gcLevel = cs2space.leetify.gamersClubLevel;
+            }
+        }
+
+        // Fallback: Leetify Max Rating
+        if (!updateData.premierRating || updateData.premierRating === 0) {
+            const leetifyMax = await getLeetifyMaxRating(steamId);
+            if (leetifyMax > 0) {
+                updateData.premierRating = leetifyMax;
             }
         }
 
