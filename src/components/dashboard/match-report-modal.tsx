@@ -1323,12 +1323,11 @@ const MatchReportModal: React.FC<Props> = ({
         );
     };
 
-    /** Breakdown de Armas */
     const WeaponRow = ({ p }: { p: PlayerStats }) => {
         let playerWeapons: any[] = [];
 
         // Verifica o padrão da API Tracker (lista global)
-        if (currentMatch?.metadata?.weapon_stats) {
+        if (currentMatch?.metadata?.weapon_stats?.length > 0) {
             playerWeapons = currentMatch.metadata.weapon_stats.filter((ws: any) => String(ws.player_id) === String(p.steamId));
         } 
         // Verifica o padrão do processador local (dicionário dentro do metadata do jogador)
