@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import axios from 'axios';
 import { getFaceitPlayerBySteamId } from "@/services/faceit-service";
 import { getCS2SpacePlayerInfo } from "@/services/cs2space-service";
+import { getLeetifyMaxRating } from "@/services/leetify-tropacs";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -85,7 +86,7 @@ export async function GET() {
         
         if (playersNeedingStats.length > 0) {
             // Limit to 5 to avoid blocking the API for too long on first load
-            const toUpdate = playersNeedingStats.slice(0, 5);
+            const toUpdate = playersNeedingStats.slice(0, 10);
             
             await Promise.all(toUpdate.map(async (player) => {
                 let currentStats = player.Stats;
@@ -105,11 +106,20 @@ export async function GET() {
                     if (cs2space) {
                         if (premierNeedsUpdate && cs2space.ranks?.premier) {
                             updateData.premierRating = cs2space.ranks.premier;
+                            premierNeedsUpdate = false;
                         }
                         if (faceitNeedsUpdate && cs2space.faceit) {
                             updateData.faceitLevel = cs2space.faceit.level || 0;
                             updateData.faceitElo = cs2space.faceit.elo || 0;
                             faceitNeedsUpdate = false;
+                        }
+                    }
+
+                    // Fallback para Premier: Leetify Max Rating
+                    if (premierNeedsUpdate) {
+                        const leetifyMax = await getLeetifyMaxRating(player.steamId);
+                        if (leetifyMax > 0) {
+                            updateData.premierRating = leetifyMax;
                         }
                     }
 

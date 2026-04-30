@@ -101,3 +101,30 @@ export const getLeetifyPlayerData = async (steamId64: string): Promise<LeetifyPl
         return null;
     }
 };
+/**
+ * Busca o rating máximo histórico do jogador no Leetify (Premier/Matchmaking)
+ * Útil como fallback quando a API pública retorna null
+ */
+export const getLeetifyMaxRating = async (steamId64: string): Promise<number> => {
+    try {
+        const response = await axios.get(`https://api.cs-prod.leetify.com/api/profile/id/${steamId64}`, {
+            headers: {
+                'Origin': 'https://leetify.com',
+                'Referer': 'https://leetify.com/',
+                'Accept': 'application/json'
+            },
+            timeout: 5000
+        });
+
+        const games = response.data?.games || [];
+        // Filtra jogos de matchmaking/premier e pega o maior skillLevel visto
+        const max = games
+            .filter((g: any) => g.dataSource === 'matchmaking' && g.skillLevel > 0)
+            .reduce((m: number, g: any) => Math.max(m, g.skillLevel), 0);
+            
+        return max;
+    } catch (error: any) {
+        console.error(`[Leetify MaxRating] Error for ${steamId64}:`, error.message);
+        return 0;
+    }
+};

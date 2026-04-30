@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getLeetifyPlayerData } from "@/services/leetify-tropacs";
+import { getLeetifyPlayerData, getLeetifyMaxRating } from "@/services/leetify-tropacs";
 import axios from "axios";
 
 const LEETIFY_API_KEY = process.env.LEETIFY_API_KEY || '4549d73d-8a0d-40ff-9051-a3166c518dae';
@@ -210,6 +210,15 @@ export async function syncUserStats(steamId: string) {
             if (cs2space.ranks?.premier) {
                 updateData.premierRating = cs2space.ranks.premier;
             }
+        }
+
+        // Fallback: Leetify Max Rating
+        if (!updateData.premierRating || updateData.premierRating === 0) {
+            const leetifyMax = await getLeetifyMaxRating(steamId);
+            if (leetifyMax > 0) {
+                updateData.premierRating = leetifyMax;
+            }
+        }
             if (cs2space.faceit) {
                 updateData.faceitLevel = cs2space.faceit.level || 0;
                 updateData.faceitElo = cs2space.faceit.elo || 0;
