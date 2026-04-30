@@ -51,6 +51,7 @@ interface PlayerStats {
     team?: string;
     eloChange?: number | null;
     eloAfter?: number | null;
+    metadata?: any;
 }
 
 
@@ -460,7 +461,8 @@ const MatchReportModal: React.FC<Props> = ({
             eloAfter: p.eloAfter !== undefined ? p.eloAfter : (p.elo_after ?? null),
             isUser,
             steamId: p.steam64_id || p.player_id || p.steamId || p.steam_id,
-            team
+            team,
+            metadata: p.metadata
         };
     };
 
