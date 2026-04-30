@@ -57,6 +57,17 @@ class RankingService:
             if not user:
                 continue
 
+            # 2.5 Idempotency: Revert old points if they exist
+            from sqlalchemy import text
+            old_gmp_res = await db.execute(text(
+                'SELECT "eloChange" FROM public."GlobalMatchPlayer" WHERE "globalMatchId" = :mid AND "steamId" = :sid'
+            ), {"mid": match_id, "sid": str(p.steamid64)})
+            old_change = old_gmp_res.scalar_one_or_none()
+            
+            if old_change is not None:
+                user.rankingPoints -= old_change
+                logger.info(f"Ranking: Reverted {old_change} points for {p.steamid64} before recalculating.")
+
             # 3. Determine base delta
             is_win = False
             is_loss = False
@@ -64,10 +75,10 @@ class RankingService:
 
             # Logical Team A (CT start) vs Team B (T start)
             if match.score_ct > match.score_t:
-                if p.team == 'A': is_win = True
+                if p.team in ['A', 'CT', 'CT_INITIAL', '3', 'Counter-Terrorists']: is_win = True
                 else: is_loss = True
             elif match.score_t > match.score_ct:
-                if p.team == 'B': is_win = True
+                if p.team in ['B', 'T', 'T_INITIAL', '2', 'TERRORIST', 'Terrorists']: is_win = True
                 else: is_loss = True
             else:
                 is_tie = True
