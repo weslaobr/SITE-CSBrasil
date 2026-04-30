@@ -628,6 +628,60 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         if not is_empty(df_k) and "tick" in df_k.columns:
             df_k = df_k.sort_values(by="tick")
 
+            # --- EXTRACT VICTIM WEAPON ---
+            victim_weapon_map = {}
+            try:
+                df_ie = _parse("item_equip")
+                if is_empty(df_ie): df_ie = _parse("weapon_fire")
+                if not is_empty(df_ie) and not df_k.empty:
+                    w_col = next((c for c in ["item", "weapon"] if c in df_ie.columns), None)
+                    u_col = next((c for c in ["user_steamid", "userid"] if c in df_ie.columns), None)
+                    v_col = next((c for c in ["victim_steamid", "user_steamid"] if c in df_k.columns), None)
+                    
+                    if w_col and u_col and v_col:
+                        ie_df = df_ie[["tick", u_col, w_col]].dropna(subset=[u_col]).sort_values("tick")
+                        ie_df[u_col] = ie_df[u_col].apply(sid_norm)
+                        k_df = df_k[["tick", v_col]].dropna(subset=[v_col]).sort_values("tick")
+                        k_df[v_col] = k_df[v_col].apply(sid_norm)
+                        
+                        import pandas as pd
+                        merged = pd.merge_asof(k_df, ie_df, on="tick", left_by=v_col, right_by=u_col, direction="backward")
+                        for _, r in merged.iterrows():
+                            if pd.notna(r.get(w_col)):
+                                victim_weapon_map[(int(r["tick"]), str(r[v_col]))] = str(r[w_col])
+            except Exception as e:
+                log_fn(f"⚠️ Erro ao extrair arma da vitima: {e}")
+
+            # --- CALCULATE PRE-DUEL HP ---
+            pre_duel_hp_map = {}
+            try:
+                if not is_empty(df_dmg):
+                    dmg_df = df_dmg.copy().sort_values("tick")
+                    d_v_col = next((c for c in ["victim_steamid", "user_steamid", "userid"] if c in dmg_df.columns), None)
+                    d_dmg_col = next((c for c in ["health_damage", "dmg_health", "damage", "dmg"] if c in dmg_df.columns), "dmg_health")
+                    k_v_col = next((c for c in ["victim_steamid", "user_steamid"] if c in df_k.columns), None)
+                    k_a_col = next((c for c in ["attacker_steamid", "attacker"] if c in df_k.columns), None)
+                    
+                    if d_v_col and d_dmg_col and k_v_col and k_a_col:
+                        for r_num, r_kills in df_k.groupby("round_num"):
+                            r_dmg = dmg_df[dmg_df["round_num"] == r_num]
+                            for _, row in r_kills.iterrows():
+                                k_tick = int(row["tick"])
+                                v_sid = sid_norm(row.get(k_v_col, ""))
+                                a_sid = sid_norm(row.get(k_a_col, ""))
+                                
+                                if v_sid and v_sid != "0":
+                                    past_dmg_v = r_dmg[(r_dmg[d_v_col].apply(sid_norm) == v_sid) & (r_dmg["tick"] < k_tick)]
+                                    total_dmg_v = past_dmg_v[d_dmg_col].apply(lambda x: min(float(x or 0), 100)).sum()
+                                    pre_duel_hp_map[(k_tick, v_sid)] = max(1, 100 - int(total_dmg_v))
+                                
+                                if a_sid and a_sid != "0":
+                                    past_dmg_a = r_dmg[(r_dmg[d_v_col].apply(sid_norm) == a_sid) & (r_dmg["tick"] < k_tick)]
+                                    total_dmg_a = past_dmg_a[d_dmg_col].apply(lambda x: min(float(x or 0), 100)).sum()
+                                    pre_duel_hp_map[(k_tick, a_sid)] = max(1, 100 - int(total_dmg_a))
+            except Exception as e:
+                log_fn(f"⚠️ Erro ao calcular HP pre-duelo: {e}")
+
             # Mapear vencedores e motivos por round usando round_end
             round_ends = {} # round_num -> {winner, reason}
             if not is_empty(df_re):
@@ -696,20 +750,35 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                         # Tenta pegar assister
                         _ass_col = next((c for c in ["assister_steamid", "assister_pawn_steamid", "assister_steamid64"] if c in k_row.index), None)
                         k_ass = sid_norm(k_row.get(_ass_col)) if _ass_col else None
+                        
+                        tick = int(k_row.get("tick", 0))
+                        
+                        # Use calculated pre-duel HP if available
+                        a_hp = pre_duel_hp_map.get((tick, k_att))
+                        if a_hp is None:
+                            a_hp = int(safe_val(k_row.get("attacker_hp", 100)))
+                            
+                        v_hp = pre_duel_hp_map.get((tick, k_vic))
+                        if v_hp is None:
+                            v_hp = int(safe_val(k_row.get("victim_hp", 100)))
+                            if v_hp == 0: v_hp = 100
+                            
+                        v_weap = victim_weapon_map.get((tick, k_vic), "")
 
                         round_summaries[r_num]["kills"].append({
                             "attackerName": player_info[k_att]["name"],
                             "attackerSteamId": k_att,
                             "attackerSide": att_side,
-                            "attackerHp": int(safe_val(k_row.get("attacker_hp", 100))),
+                            "attackerHp": a_hp,
                             "victimName": player_info.get(k_vic, {}).get("name", "Jogador"),
                             "victimSteamId": k_vic,
                             "victimSide": vic_side,
-                            "victimHp": 0, # HP after death is 0, but could be 'hp_before' if we parsed damage
+                            "victimHp": v_hp,
+                            "victimWeapon": v_weap,
                             "assisterSteamId": k_ass,
                             "weapon": w,
                             "isHeadshot": bool(k_row.get("headshot") or k_row.get("is_headshot") or False),
-                            "tick": int(k_row.get("tick", 0)),
+                            "tick": tick,
                             "attX": round(safe_val(k_row.get("attacker_x", 0)), 1),
                             "attY": round(safe_val(k_row.get("attacker_y", 0)), 1),
                             "vicX": round(safe_val(k_row.get("victim_x", 0)), 1),
