@@ -321,7 +321,7 @@ export default function MatchesTab() {
                                             className="w-4 h-4 rounded shadow-sm"
                                         />
                                         <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-tight truncate max-w-[80px]">
-                                            {p.user?.name || "Jogador"}
+                                            {p.user?.name || (p.metadata as any)?.name || (p.metadata as any)?.nickname || "Jogador"}
                                         </span>
                                     </div>
                                 ))}

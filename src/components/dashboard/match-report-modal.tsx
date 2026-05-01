@@ -443,7 +443,8 @@ const MatchReportModal: React.FC<Props> = ({
 
 
         return {
-            nickname: p.name || p.nickname || p.playerNickname || p.user?.name || (isUser ? '[Você]' : 'Jogador'),
+            nickname: p.name || p.nickname || p.playerNickname || p.user?.name || (p.metadata as any)?.name || (p.metadata as any)?.nickname || (isUser ? '[Você]' : 'Jogador'),
+
 
             avatar, kills, deaths, assists, adr, rating,
             hs: hsRaw, kast,
