@@ -46,6 +46,7 @@ interface PlayerStats {
     enemiesFlashed?: number;
     ttd?: number;
     killDist?: number;
+    totalDamage: number;
     isUser?: boolean;
     steamId?: string;
     team?: string;
@@ -485,6 +486,7 @@ const MatchReportModal: React.FC<Props> = ({
             enemiesFlashed: Number(p.enemies_flashed ?? p.flashbang_hit_foe ?? 0),
             ttd: Number(p.avg_ttd ?? 0),
             killDist: Number(p.avg_kill_distance ?? 0),
+            totalDamage: Number(p.total_damage ?? p.totalDamage ?? (adr * (p.rounds_count ?? currentMatch?.metadata?.rounds_count ?? (currentMatch?.metadata?.roundSummaries ? Object.keys(currentMatch.metadata.roundSummaries).length : 0) ?? 0))),
             eloChange: p.eloChange !== undefined ? p.eloChange : (p.elo_change ?? null),
             eloAfter: p.eloAfter !== undefined ? p.eloAfter : (p.elo_after ?? null),
             isUser,
@@ -838,7 +840,7 @@ const MatchReportModal: React.FC<Props> = ({
                                                                         />
                                                                     </>
                                                                 )}
-                                                                {dmg && !k.victimWeapon && (
+                                                                {dmg && (
                                                                     <div className="flex items-center gap-1.5 ml-2 border-l border-white/5 pl-3">
                                                                         <span className="text-[10px] font-black text-emerald-400/80">{dmg}</span>
                                                                         <span className="text-[7px] font-black text-zinc-700 uppercase">dmg</span>
@@ -1151,6 +1153,11 @@ const MatchReportModal: React.FC<Props> = ({
                                                                         <span className={`text-[11px] font-black uppercase italic ${isVictorious ? 'text-emerald-400' : 'text-red-400'}`}>
                                                                             {isVictorious ? 'Win' : 'Loss'}
                                                                         </span>
+                                                                        {e.damage && (
+                                                                            <span className="text-[9px] font-black text-zinc-600 mt-0.5">
+                                                                                {e.damage} DMG
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex items-center gap-4">
@@ -1265,6 +1272,14 @@ const MatchReportModal: React.FC<Props> = ({
                 <td className="py-2.5 px-2 text-center"><span className="text-xs font-bold text-zinc-600">{p.assists}</span></td>
                 <td className="py-2.5 px-2 text-center"><span className={`text-xs font-black px-1.5 py-0.5 rounded-lg bg-black/30 ${kdColor}`}>{kd}</span></td>
                 <td className="py-2.5 px-2 text-center"><span className={`text-xs font-bold ${p.adr>=80?'text-yellow-400':p.adr>0?'text-yellow-500/60':'text-zinc-700'}`}>{p.adr > 0 ? Math.round(p.adr) : '—'}</span></td>
+                <td className="py-2.5 px-2 text-center">
+                    <div className="flex flex-col items-center gap-0.5">
+                        <span className={`text-[11px] font-black italic ${p.totalDamage >= 3000 ? 'text-orange-400' : p.totalDamage >= 2000 ? 'text-yellow-400' : 'text-zinc-300'}`}>
+                            {p.totalDamage > 0 ? Math.round(p.totalDamage).toLocaleString() : '—'}
+                        </span>
+                        <span className="text-[7px] font-black text-zinc-700 uppercase tracking-tighter">Dano Total</span>
+                    </div>
+                </td>
                 <td className="py-2.5 px-3 text-center">
                     <div className="flex flex-col items-center gap-0.5">
                         <span className={`text-[10px] font-bold ${p.hs>=50?'text-rose-400':p.hs>0?'text-zinc-400':'text-zinc-700'}`}>{p.hs}%</span>
@@ -1626,6 +1641,7 @@ const MatchReportModal: React.FC<Props> = ({
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Assists (Assistências)">A</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Kill/Death Ratio (Média de mortes por vida)">K/D</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Average Damage per Round (Dano médio por rodada)">ADR</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Total Damage (Dano total causado)">Dano</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Headshot Percentage (Porcentagem de tiros na cabeça)">HS%</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-amber-600/70 text-center" title="MVPs (Estrelas de MVP ganhas na partida)">⭐ MVP</th>
                                         <th className="py-2 px-1 w-8"></th>

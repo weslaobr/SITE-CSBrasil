@@ -46,6 +46,7 @@ export default function MatchHistory({ matches, onSync, loading, steamId, steamN
         assists: m.assists || 0,
         hsPercentage: m.hsPercentage || m.hs_percentage || 0,
         adr: m.adr || 0,
+        totalDamage: m.totalDamage || m.total_damage || 0,
         kast: m.kast,
         matchDate: m.matchDate || m.finished_at || new Date().toISOString(),
         result: (() => {

@@ -43,6 +43,7 @@ interface Match {
     assists: number;
     mvps?: number;
     adr?: number;
+    totalDamage?: number;
     kast?: number;
     impact?: number;
     rating2?: number;
@@ -748,6 +749,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     <th className="px-3 py-3.5 text-center" title="Deaths (Mortes)">D</th>
                                     <th className="px-3 py-3.5 text-center" title="Assists (Assistências)">A</th>
                                     <th className="px-3 py-3.5 text-center" title="Average Damage per Round (Dano médio por rodada)">ADR</th>
+                                    <th className="px-3 py-3.5 text-center" title="Total Damage (Dano total causado)">Dano</th>
                                     <th className="px-3 py-3.5 text-center" title="Headshot Percentage (Porcentagem de eliminações com tiro na cabeça)">HS%</th>
                                     <th className="px-3 py-3.5 text-center" title="Kill, Assist, Survived, or Traded (Porcentagem de rounds com impacto direto)">KAST</th>
                                     <th className="px-3 py-3.5 text-center" title="Performance Rating (Leetify Rating ou K/D)">Rating</th>
@@ -945,6 +947,21 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                 }`}>
                                                     {(match.adr || match.metadata?.adr) ? Math.round(match.adr || match.metadata?.adr) : '—'}
                                                 </span>
+                                            </td>
+                                            {/* Dano Total */}
+                                            <td className="px-3 py-4 text-center">
+                                                {(() => {
+                                                    const adr = match.adr || match.metadata?.adr || 0;
+                                                    const rounds = match.metadata?.rounds_count || 
+                                                                  (match.score ? match.score.split('-').map(Number).reduce((a:number,b:number)=>a+b, 0) : 0);
+                                                    const td = match.totalDamage || match.metadata?.total_damage || (adr * rounds);
+                                                    
+                                                    return td > 0 ? (
+                                                        <span className={`font-black text-sm italic tracking-tighter ${td >= 3000 ? 'text-orange-400' : td >= 2000 ? 'text-yellow-400' : 'text-zinc-500'}`}>
+                                                            {Math.round(td).toLocaleString()}
+                                                        </span>
+                                                    ) : <span className="text-zinc-800">—</span>;
+                                                })()}
                                             </td>
                                             {/* HS% */}
                                             <td className="px-3 py-4 text-center">

@@ -1148,6 +1148,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                             "victimWeapon": v_weap,
                             "assisterSteamId": k_ass,
                             "weapon": w,
+                            "damage": int(safe_val(k_row.get("dmg_health") or k_row.get("damage", 100))), # Novo
                             "isHeadshot": bool(hs_val) if hs_val is not None else False,
                             "tick": tick,
                             "attX": round(safe_val(k_row.get("attacker_x", 0)), 1),
@@ -1665,6 +1666,19 @@ class DemoProcessorApp(ctk.CTk):
                 errors += 1
                 self._log(f"❌ Erro inesperado: {str(e)}")
             
+            # Detecção de Lado Robusta: Ver time mais frequente do jogador
+            try:
+                df_teams = parser.parse_ticks(["steamid", "team_name"])
+                if not is_empty(df_teams):
+                    for sid in player_info:
+                        p_ticks = df_teams[df_teams["steamid"] == sid_norm(sid)]
+                        if not p_ticks.empty:
+                            # Pega o time que mais aparece (moda)
+                            most_freq_team = p_ticks["team_name"].mode()
+                            if not most_freq_team.empty:
+                                player_info[sid]["team"] = normalize_team(most_freq_team.iloc[0])
+            except: pass
+
             # Pequeno delay para UI respirar
             self.after(100)
 
@@ -1783,14 +1797,14 @@ class DemoProcessorApp(ctk.CTk):
                 row_f.grid_columnconfigure(i, weight=w)
 
             res_color = result_colors.get(p.get("matchResult", "Tie"), "gray")
-            team_label = "CT (Início)" if p.get("team") == "CT" else "TR (Início)"
+            team_label_str = "CT (Início)" if p.get("team") == "CT" else "TR (Início)"
             team_color = "#5dade2" if p.get("team") == "CT" else "#e59866"
             m = p.get("metadata", {})
 
             values = [
                 (p.get("displayName", "?"),    "white"),
                 (p.get("steamId", "0"),         "#888"),
-                (team_label,                    team_color),
+                (team_label_str,                team_color),
                 (str(p.get("kills", 0)),        "white"),
                 (str(p.get("deaths", 0)),       "#e74c3c"),
                 (str(p.get("assists", 0)),      "#f1c40f"),
@@ -1807,7 +1821,15 @@ class DemoProcessorApp(ctk.CTk):
                     text_color=color, anchor="w"
                 )
                 lbl.grid(row=0, column=i, padx=6, pady=5, sticky="w")
-                lbl.bind("<Button-3>", lambda e, player=p: self._on_table_right_click(e, player))
+                
+                # Se for a coluna de "Time" (índice 2), habilita o clique para troca rápida
+                if i == 2:
+                    lbl.configure(cursor="hand2")
+                    lbl.bind("<Button-1>", lambda e, player=p: self._swap_player_team_direct(player))
+                else:
+                    # Mantém o botão direito como fallback em toda a linha
+                    row_f.bind("<Button-3>", lambda e, player=p: self._on_table_right_click(e, player))
+                    lbl.bind("<Button-3>", lambda e, player=p: self._on_table_right_click(e, player))
 
         # ── Linha do Tempo (Rounds) ────────────────
         ctk.CTkLabel(
@@ -1878,12 +1900,15 @@ class DemoProcessorApp(ctk.CTk):
         menu.add_command(label="🔄 Trocar de Time", command=self._swap_player_team)
         menu.post(event.x_root, event.y_root)
 
-    def _swap_player_team(self):
-        if not self._selected_player: return
-        current = self._selected_player.get("team", "CT")
-        self._selected_player["team"] = "T" if current == "CT" else "CT"
-        self._log(f"👤 Time de {self._selected_player['displayName']} alterado para {self._selected_player['team']}.")
+    def _swap_player_team_direct(self, player):
+        current = player.get("team", "CT")
+        player["team"] = "T" if current == "CT" else "CT"
+        self._log(f"👤 Time de {player['displayName']} alterado para {player['team']}.")
         self._render_preview(self._demo_data)
+
+    def _swap_player_team(self):
+        if not hasattr(self, '_selected_player'): return
+        self._swap_player_team_direct(self._selected_player)
 
     def _on_swap_result(self):
         if not self._demo_data: return

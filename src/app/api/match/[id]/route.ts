@@ -128,6 +128,7 @@ export async function GET(
                     is_user: !!(profileSteamId && p.steamId && String(p.steamId) === String(profileSteamId)),
                     // MVP Stars — comes directly from GlobalMatchPlayer.mvps column
                     mvps: p.mvps ?? 0,
+                    total_damage: m.totalDamage ?? m.total_damage ?? (p.adr && m.rounds_count ? Math.round(p.adr * m.rounds_count) : 0),
                     metadata: m
                 };
             });
@@ -243,6 +244,7 @@ export async function GET(
                     molotovs_thrown: p.molotovs_thrown || 0,
                     eloChange: p.elo_change,
                     eloAfter: p.elo_after,
+                    total_damage: p.total_damage || (p.adr && p.rounds_count ? Math.round(p.adr * p.rounds_count) : 0),
                     initial_team_number: p.team === 'A' ? 3 : 2,
                     is_user: !!(profileSteamId && String(p.steamid64) === String(profileSteamId))
                 }));
@@ -374,7 +376,8 @@ export async function GET(
                     traded_death_opportunities: p.traded_death_opportunities ?? 0,
                     trade_kills_succeed: p.trade_kills_succeed ?? 0,
                     traded_deaths_succeed: p.traded_deaths_succeed ?? 0,
-                    is_user: !!(profileSteamId && (p.steam64_id || p.player_id || p.steamId) && String(p.steam64_id || p.player_id || p.steamId) === String(profileSteamId))
+                    is_user: !!(profileSteamId && (p.steam64_id || p.player_id || p.steamId) && String(p.steam64_id || p.player_id || p.steamId) === String(profileSteamId)),
+                    total_damage: p.total_damage ?? p.totalDamage ?? ( (p.dpr ?? p.adr ?? 0) * (p.rounds_count ?? 0) )
                 };
             });
             data.demo_url = data.demo_url || data.demoUrl || null;
