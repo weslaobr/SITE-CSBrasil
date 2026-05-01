@@ -437,12 +437,14 @@ const MatchReportModal: React.FC<Props> = ({
             : p.hs_percent ?? p.hs_percentage ?? p.hsPercentage
               ?? (isUser && currentMatch?.hsPercentage ? Math.round(Number(currentMatch.hsPercentage)) : 0);
         
-        const avatar  = p.avatar_url || p.avatarUrl || p.avatar
+        const avatar  = p.avatar_url || p.avatarUrl || p.avatar || p.user?.image
                       || (isUser ? (currentMatch?.metadata?.steam_avatar ?? currentMatch?.metadata?.avatarUrl ?? '') : '')
                       || '';
 
+
         return {
-            nickname: p.name || p.nickname || p.playerNickname || (isUser ? '[Você]' : 'Jogador'),
+            nickname: p.name || p.nickname || p.playerNickname || p.user?.name || (isUser ? '[Você]' : 'Jogador'),
+
             avatar, kills, deaths, assists, adr, rating,
             hs: hsRaw, kast,
             // First Kills / Deaths — não disponível na Leetify v2, será 0
@@ -526,10 +528,11 @@ const MatchReportModal: React.FC<Props> = ({
                 t2: t2.map((p:any)=>normalizeP(p,isUserP(p), 'T')).sort(byKills)
             };
         }
-        if (meta.players && Array.isArray(meta.players)) {
+        const players = meta.players || currentMatch?.players;
+        if (players && Array.isArray(players)) {
             return {
-                t1: meta.players.slice(0,5).map((p:any)=>normalizeP(p,isUserP(p), 'CT')).sort(byKills),
-                t2: meta.players.slice(5,10).map((p:any)=>normalizeP(p,isUserP(p), 'T')).sort(byKills)
+                t1: players.slice(0,5).map((p:any)=>normalizeP(p,isUserP(p), 'CT')).sort(byKills),
+                t2: players.slice(5,10).map((p:any)=>normalizeP(p,isUserP(p), 'T')).sort(byKills)
             };
         }
         return {
