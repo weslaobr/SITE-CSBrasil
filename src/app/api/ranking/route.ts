@@ -4,6 +4,8 @@ import axios from 'axios';
 import { getFaceitPlayerBySteamId } from "@/services/faceit-service";
 import { getCS2SpacePlayerInfo } from "@/services/cs2space-service";
 import { getLeetifyMaxRating } from "@/services/leetify-tropacs";
+import { getMixLevelFromPoints } from '@/lib/mix-level';
+
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -354,7 +356,8 @@ export async function GET() {
                     faceitLevel: stats?.faceitLevel || 0,
                     faceitElo: stats?.faceitElo || 0,
                     rankingPoints: (userData as any)?.rankingPoints ?? 500,
-                    mixLevel: (userData as any)?.mixLevel ?? 5,
+                    mixLevel: getMixLevelFromPoints((userData as any)?.rankingPoints ?? 500).level,
+
                 };
             })
             .filter(user => !user.steamId.endsWith('_temp'));

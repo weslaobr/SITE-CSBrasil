@@ -3,6 +3,8 @@ import { getPlayerProfile, getCS2Stats, getPlayerInventory, getSteamLevel, getPl
 import { prisma } from "@/lib/prisma";
 import { getLeetifyPlayerData } from "@/services/leetify-tropacs";
 import { getCS2SpacePlayerInfo } from "@/services/cs2space-service";
+import { getMixLevelFromPoints } from "@/lib/mix-level";
+
 
 export async function GET(
     req: NextRequest,
@@ -226,7 +228,8 @@ export async function GET(
             maxCompetitiveRank: dbPlayer.Stats.maxCompetitiveRank || maxCompetitiveRank || null,
             // Proprietary ranking
             rankingPoints: dbUser?.rankingPoints ?? 500,
-            mixLevel: dbUser?.mixLevel ?? 5,
+            mixLevel: getMixLevelFromPoints(dbUser?.rankingPoints ?? 500).level,
+
         } : cs2space ? {
             faceitName:    cs2space.faceit?.nickname || null,
             faceitId:      cs2space.faceit?.id       || null,
@@ -240,7 +243,8 @@ export async function GET(
             maxCompetitiveRank: maxCompetitiveRank || null,
             // Proprietary ranking
             rankingPoints: dbUser?.rankingPoints ?? 500,
-            mixLevel: dbUser?.mixLevel ?? 5,
+            mixLevel: getMixLevelFromPoints(dbUser?.rankingPoints ?? 500).level,
+
         } : leetifyData ? {
             // Jogador sem dbPlayer e sem CS2.space — apenas dados do Leetify
             faceitName:    null,
@@ -253,10 +257,12 @@ export async function GET(
             maxCompetitiveRank: maxCompetitiveRank || null,
             // Proprietary ranking
             rankingPoints: dbUser?.rankingPoints ?? 500,
-            mixLevel: dbUser?.mixLevel ?? 5,
+            mixLevel: getMixLevelFromPoints(dbUser?.rankingPoints ?? 500).level,
+
         } : {
             rankingPoints: dbUser?.rankingPoints ?? 500,
-            mixLevel: dbUser?.mixLevel ?? 5,
+            mixLevel: getMixLevelFromPoints(dbUser?.rankingPoints ?? 500).level,
+
         };
 
         // 3. Format Global Matches to match the old Match schema for the frontend

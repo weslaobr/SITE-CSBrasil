@@ -332,6 +332,12 @@ const GlobalRanking: React.FC = () => {
             const getVal = (u: RankUser) => {
                 const s = platformFilter !== 'all' ? (u.stats?.[platformFilter] || u) : u;
                 let v = (s as any)[sortKey] ?? (u as any)[sortKey] ?? 0;
+                
+                // Garantir que Nível Mix seja sempre dinâmico com base nos Tropoints
+                if (sortKey === 'mixLevel') {
+                    v = getMixLevelFromPoints(u.rankingPoints || 500).level;
+                }
+
                 if (sortKey === 'winRate' as any) {
                     v = parseInt(String(v || '0').replace('%', ''));
                     if (isNaN(v)) v = 0;
@@ -485,7 +491,8 @@ const GlobalRanking: React.FC = () => {
                                         className="text-3xl font-black italic tracking-tighter"
                                         style={{ color: podiumTier.color, textShadow: `0 0 20px ${podiumTier.color}80` }}
                                     >
-                                        <AnimatedNumber value={sortKey === 'rankingPoints' ? (user.rankingPoints || 0) : sortKey === 'mixLevel' ? (user.mixLevel || 0) : user.rating} />
+                                        <AnimatedNumber value={sortKey === 'rankingPoints' ? (user.rankingPoints || 0) : sortKey === 'mixLevel' ? getMixLevelFromPoints(user.rankingPoints || 500).level : user.rating} />
+
                                     </span>
                                     {sortKey === 'rankingPoints' ? (
                                         <span className="text-[10px] font-black uppercase tracking-widest bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20" style={{ color: getMixLevelFromPoints(user.rankingPoints || 500).color }}>
@@ -717,10 +724,10 @@ const GlobalRanking: React.FC = () => {
                                     winRate: user.winRate
                                 };
 
-                                const sortVal = (pStats[sortKey as keyof typeof pStats] ?? user[sortKey as keyof typeof user]) as number;
+                                const sortVal = (sortKey === 'mixLevel' ? getMixLevelFromPoints(user.rankingPoints || 500).level : (pStats[sortKey as keyof typeof pStats] ?? user[sortKey as keyof typeof user])) as number;
                                 const maxSortVal = Math.max(...filteredAndSorted.map(u => {
                                     const us = u.stats?.[platformFilter] || u;
-                                    return (us[sortKey as keyof typeof us] ?? u[sortKey as keyof typeof u]) as number;
+                                    return (sortKey === 'mixLevel' ? getMixLevelFromPoints((u as any)?.rankingPoints || user.rankingPoints || 500).level : (us[sortKey as keyof typeof us] ?? u[sortKey as keyof typeof u])) as number;
                                 }));
                                 
                                 const pct = Math.min(maxSortVal > 0 ? (sortVal / maxSortVal) * 100 : 0, 100);
@@ -798,7 +805,7 @@ const GlobalRanking: React.FC = () => {
                                                     >
                                                         {sortKey === 'kdr' ? sortVal.toFixed(2) :
                                                          sortKey === 'hsPercentage' ? `${sortVal}%` :
-                                                         sortKey === 'mixLevel' ? `LV ${sortVal}` :
+                                                         sortKey === 'mixLevel' ? `LV ${getMixLevelFromPoints(user.rankingPoints || 500).level}` :
                                                          sortVal.toLocaleString()}
                                                     </span>
                                                     {sortKey === 'rating' && user.rating > 0 && (

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { getAuthOptions } from '@/lib/auth';
+import { getMixLevelFromPoints } from '@/lib/mix-level';
+
 
 /**
  * POST /api/admin/recalculate-match-elo
@@ -75,8 +77,9 @@ export async function POST(req: NextRequest) {
             if (user) {
                 const newPoints = Math.max(0, (user.rankingPoints ?? 500) + diff);
 
-                // Calcular nível correto
-                const newLevel = getLevel(newPoints);
+                // Calcular nível correto usando o utilitário padrão
+                const newLevel = getMixLevelFromPoints(newPoints).level;
+
 
                 await prisma.user.update({
                     where: { id: p.userId },
@@ -96,17 +99,4 @@ export async function POST(req: NextRequest) {
     });
 }
 
-// Tabela de níveis — idêntica ao mix-level.ts
-function getLevel(pts: number): number {
-    const table = [
-        [1, 0, 299], [2, 300, 499], [3, 500, 699], [4, 700, 899],
-        [5, 900, 1099], [6, 1100, 1349], [7, 1350, 1599], [8, 1600, 1899],
-        [9, 1900, 2199], [10, 2200, 2549], [11, 2550, 2899], [12, 2900, 3299],
-        [13, 3300, 3749], [14, 3750, 4249], [15, 4250, 4799], [16, 4800, 5399],
-        [17, 5400, 5999], [18, 6000, 6699], [19, 6700, 7499], [20, 7500, 999999]
-    ];
-    for (const [lv, mn, mx] of table) {
-        if (pts >= mn && pts <= mx) return lv;
-    }
-    return 1;
-}
+
