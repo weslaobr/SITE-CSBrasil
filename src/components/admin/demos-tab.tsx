@@ -219,97 +219,109 @@ export default function DemosTab() {
                     <p className="text-[10px] text-zinc-600 mt-1">Os jogos gravados aparecerão aqui automaticamente.</p>
                 </div>
             ) : (
-                <div className="bg-white/5 border border-white/5 rounded-2xl overflow-hidden">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-white/5 bg-white/[0.02]">
-                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">Arquivo</th>
-                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">Tamanho</th>
-                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">Data de Gravação</th>
-                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500 text-right">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {filteredDemos.map((demo) => (
-                                <tr key={demo.name} className="group hover:bg-yellow-500/[0.02] transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-zinc-800/50 flex items-center justify-center text-zinc-500 group-hover:text-yellow-500 transition-colors border border-white/5">
-                                                <FileText size={16} />
+                <div className="flex flex-col gap-3">
+                    {filteredDemos
+                        .sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime())
+                        .map((demo, index, array) => {
+                            let showSeparator = false;
+                            let gapText = "";
+                            if (index > 0) {
+                                const prevDate = new Date(array[index - 1].modifiedAt).getTime();
+                                const currDate = new Date(demo.modifiedAt).getTime();
+                                const diffHours = (prevDate - currDate) / (1000 * 60 * 60);
+                                if (diffHours > 4) {
+                                    showSeparator = true;
+                                    if (diffHours > 48) {
+                                        gapText = `Jogos de ${Math.floor(diffHours / 24)} dias atrás`;
+                                    } else if (diffHours > 24) {
+                                        gapText = `Jogos do dia anterior`;
+                                    } else {
+                                        gapText = `Sessões Anteriores (+${Math.floor(diffHours)}h atrás)`;
+                                    }
+                                }
+                            }
+
+                            return (
+                                <React.Fragment key={demo.name}>
+                                    {showSeparator && (
+                                        <div className="flex items-center gap-4 mt-8 mb-4">
+                                            <div className="h-px bg-white/10 flex-1" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 bg-zinc-900/50 px-4 py-1.5 rounded-full border border-white/5">{gapText}</span>
+                                            <div className="h-px bg-white/10 flex-1" />
+                                        </div>
+                                    )}
+                                    <div className="bg-zinc-900/40 border border-white/5 hover:border-yellow-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group transition-all">
+                                        <div className="flex items-start gap-4 min-w-0">
+                                            <div className="w-12 h-12 rounded-xl bg-black/40 flex items-center justify-center text-zinc-600 group-hover:text-yellow-500 transition-colors border border-white/5 flex-shrink-0 mt-1">
+                                                <FileText size={24} />
                                             </div>
-                                            <div>
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <p className="text-[11px] font-bold text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight">
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <p className="text-sm font-black text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight">
                                                         {formatDemoName(demo.name).title}
                                                     </p>
                                                     {formatDemoName(demo.name).mapDisplay && (
-                                                        <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20 text-[9px] font-bold text-yellow-500 uppercase flex-shrink-0">
+                                                        <span className="px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20 text-[10px] font-bold text-yellow-500 uppercase flex-shrink-0">
                                                             {formatDemoName(demo.name).mapDisplay}
                                                         </span>
                                                     )}
                                                     {formatDemoName(demo.name).timeDisplay && (
-                                                        <span className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[9px] font-bold text-blue-400 uppercase flex-shrink-0">
+                                                        <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400 uppercase flex-shrink-0">
                                                             {formatDemoName(demo.name).timeDisplay}
                                                         </span>
                                                     )}
                                                 </div>
-                                                <p className="text-[9px] font-mono text-zinc-600 mt-1 truncate max-w-[300px]" title={demo.name}>
-                                                    <span className="opacity-50 italic">orig:</span> {demo.name}
+                                                <p className="text-[10px] font-mono text-zinc-600 break-all leading-relaxed">
+                                                    <span className="text-zinc-500 font-bold">Original:</span> {demo.name}
                                                 </p>
+                                                <div className="flex flex-wrap items-center gap-4 mt-2 text-[10px] font-bold text-zinc-500 uppercase">
+                                                    <span className="flex items-center gap-1.5"><Clock size={12} className="text-zinc-600" /> {formatDate(demo.modifiedAt)}</span>
+                                                    <span className="flex items-center gap-1.5"><HardDrive size={12} className="text-zinc-600" /> {formatSize(demo.size)}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2 text-zinc-400">
-                                            <HardDrive size={12} className="text-zinc-600" />
-                                            <span className="text-[10px] font-mono">{formatSize(demo.size)}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2 text-zinc-400">
-                                            <Clock size={12} className="text-zinc-600" />
-                                            <span className="text-[10px] font-mono">{formatDate(demo.modifiedAt)}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-2">
+
+                                        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                                             <button 
                                                 onClick={() => handleProcess(demo)}
                                                 disabled={processingFile === demo.name || downloadingFile === demo.name}
-                                                className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${
+                                                className={`flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 font-black uppercase tracking-widest text-[10px] w-full sm:w-auto border ${
                                                     processingStatus[demo.name] === 'success' ? 'bg-green-600/10 text-green-400 border-green-500/20' :
                                                     processingStatus[demo.name] === 'error' ? 'bg-red-600/10 text-red-400 border-red-500/20' :
                                                     'bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border-blue-500/20'
                                                 }`}
                                             >
                                                 {processingFile === demo.name ? (
-                                                    <Loader2 size={12} className="animate-spin" />
+                                                    <Loader2 size={16} className="animate-spin" />
+                                                ) : processingStatus[demo.name] === 'success' ? (
+                                                    <Check size={16} className="text-green-500" />
+                                                ) : processingStatus[demo.name] === 'error' ? (
+                                                    <FileWarning size={16} className="text-red-500" />
                                                 ) : (
-                                                    <RefreshCw size={12} className={processingStatus[demo.name] === 'success' ? '' : ''} />
+                                                    <RefreshCw size={16} />
                                                 )}
                                                 {processingFile === demo.name ? 'Processando...' : 
-                                                 processingStatus[demo.name] === 'success' ? 'Concluído' :
+                                                 processingStatus[demo.name] === 'success' ? 'Enviado!' :
                                                  processingStatus[demo.name] === 'error' ? 'Falhou' : 'Analisar Demo'}
                                             </button>
 
                                             <button 
                                                 onClick={() => handleDownload(demo)}
                                                 disabled={downloadingFile === demo.name || processingFile === demo.name}
-                                                className="inline-flex items-center gap-2 px-3 py-2 bg-zinc-800 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-zinc-700 transition-all border border-white/5 disabled:opacity-50"
+                                                className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition-all active:scale-95 disabled:opacity-50 font-black uppercase tracking-widest text-[10px] w-full sm:w-auto border border-white/5"
                                             >
                                                 {downloadingFile === demo.name ? (
-                                                    <Loader2 size={12} className="animate-spin" />
+                                                    <Loader2 size={16} className="animate-spin" />
                                                 ) : (
-                                                    <Download size={12} />
+                                                    <Download size={16} />
                                                 )}
-                                                {downloadingFile === demo.name ? '...' : 'Download'}
+                                                {downloadingFile === demo.name ? 'Gerando...' : 'Download'}
                                             </button>
                                         </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                    </div>
+                                </React.Fragment>
+                            );
+                        })}
                 </div>
             )}
             
