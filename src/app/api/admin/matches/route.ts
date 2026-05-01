@@ -15,8 +15,18 @@ export async function GET(req: NextRequest) {
     }
 
     try {
+        const { searchParams } = new URL(req.url);
+        const source = searchParams.get('source');
+
+        const where: any = {};
+        if (source && source !== 'all') {
+            where.source = { contains: source, mode: 'insensitive' };
+        }
+
         const matches = await prisma.globalMatch.findMany({
+            where,
             include: {
+
                 players: {
                     include: {
                         user: {

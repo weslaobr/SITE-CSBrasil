@@ -43,6 +43,8 @@ export default function MatchesTab() {
     const [editingMatch, setEditingMatch] = useState<string | null>(null);
     const [editData, setEditData] = useState({ scoreA: 0, scoreB: 0, mapName: '' });
     const [isSaving, setIsSaving] = useState(false);
+    const [platformFilter, setPlatformFilter] = useState('all');
+
 
     // Modal state
     const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
@@ -50,17 +52,20 @@ export default function MatchesTab() {
 
     useEffect(() => {
         fetchMatches();
-    }, []);
+    }, [platformFilter]);
+
 
     const fetchMatches = async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('/api/admin/matches');
+            const url = platformFilter === 'all' ? '/api/admin/matches' : `/api/admin/matches?source=${platformFilter}`;
+            const res = await fetch(url);
             if (!res.ok) throw new Error('Erro ao carregar partidas');
             const data = await res.json();
             setMatches(data.matches || []);
         } catch (err: any) {
+
             setError(err.message);
         } finally {
             setLoading(false);
@@ -154,12 +159,25 @@ export default function MatchesTab() {
                         />
                     </div>
                     
+                    <select 
+                        value={platformFilter}
+                        onChange={(e) => setPlatformFilter(e.target.value)}
+                        className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-[10px] text-zinc-400 font-bold uppercase tracking-widest outline-none focus:border-yellow-500/40 transition-all appearance-none cursor-pointer"
+                    >
+                        <option value="all" className="bg-zinc-900">Todas Plataformas</option>
+                        <option value="mix" className="bg-zinc-900">Apenas MIX</option>
+                        <option value="premier" className="bg-zinc-900">Premier</option>
+                        <option value="faceit" className="bg-zinc-900">Faceit</option>
+                        <option value="gc" className="bg-zinc-900">GamersClub</option>
+                    </select>
+
                     <button 
                         onClick={fetchMatches}
                         className="p-2.5 bg-white/5 border border-white/5 rounded-xl text-zinc-500 hover:text-yellow-500 hover:bg-yellow-500/5 transition-all"
                     >
                         <RefreshCw size={16} />
                     </button>
+
                 </div>
             </div>
 
