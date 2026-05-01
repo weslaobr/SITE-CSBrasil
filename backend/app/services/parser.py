@@ -150,23 +150,99 @@ class ParserService:
                     if len(team_mapping) >= 10: break
             
             rounds_df = self.dem.rounds
+            
+            # --- Heuristic: Check if the last round is missing from rounds_df ---
+            if not self.dem.kills.empty and not rounds_df.empty:
+                last_kill_tick = self.dem.kills["tick"].max()
+                last_round_end = rounds_df["end_tick"].max()
+                
+                max_kill_round = self.dem.kills["round"].max() if "round" in self.dem.kills.columns else 0
+                max_round_num = rounds_df["round"].max() if "round" in rounds_df.columns else len(rounds_df)
+                
+                if (max_kill_round > max_round_num) or (last_kill_tick > last_round_end + 64):
+                    logger.info(f"Parser: Heuristic - Missing round(s) detected. KillRound: {max_kill_round} vs RoundDF: {max_round_num}")
+                    
+                    target_rounds = range(int(max_round_num) + 1, int(max_kill_round) + 1) if max_kill_round > max_round_num else [int(max_round_num) + 1]
+                    
+                    for r_num in target_rounds:
+                        if "round" in self.dem.kills.columns:
+                            r_kills = self.dem.kills[self.dem.kills["round"] == r_num]
+                            if r_kills.empty: continue
+                            last_k = r_kills.iloc[-1]
+                        else:
+                            last_k = self.dem.kills.iloc[-1]
+                        
+                        # Aggressive Side Detection
+                        winner_side = "UNKNOWN"
+                        for field in ["attacker_side", "attacker_team_name", "attacker_team"]:
+                            if field in last_k and last_k[field]:
+                                winner_side = str(last_k[field])
+                                break
+                        
+                        if winner_side == "UNKNOWN" and "attacker_team_num" in last_k:
+                            t_num = last_k["attacker_team_num"]
+                            winner_side = "CT" if t_num == 3 else ("T" if t_num == 2 else "UNKNOWN")
+                        
+                        # Final fallback: who had more kills in this round?
+                        if winner_side == "UNKNOWN" and "round" in self.dem.kills.columns:
+                            ct_k = len(self.dem.kills[(self.dem.kills["round"] == r_num) & (self.dem.kills.get("attacker_side") == "CT")])
+                            t_k = len(self.dem.kills[(self.dem.kills["round"] == r_num) & (self.dem.kills.get("attacker_side") == "T")])
+                            winner_side = "CT" if ct_k >= t_k else "T"
+
+                        # Use team_mapping to be sure who this CT/T belongs to
+                        atk_sid = int(last_k["attacker_steamid"]) if last_k.get("attacker_steamid") else None
+                        determined_winner_team = team_mapping.get(atk_sid) # "A" or "B"
+                        
+                        logger.info(f"Parser: Recovered Round {r_num} won by {winner_side} (Team {determined_winner_team})")
+                        
+                        new_r = pd.DataFrame([{
+                            "round": r_num,
+                            "winner_side": normalize_side(winner_side) if winner_side != "UNKNOWN" else "CT",
+                            "winner_team_override": determined_winner_team,
+                            "end_tick": last_k["tick"] + 32,
+                            "reason": "recovered_from_kills"
+                        }])
+                        rounds_df = pd.concat([rounds_df, new_r], ignore_index=True)
+                    
+                    self.dem.rounds = rounds_df
+
             if not rounds_df.empty and team_mapping:
                 last_side_a = "CT"
                 for _, r_row in rounds_df.iterrows():
                     winner_side = r_row["winner_side"]
                     end_tick = r_row["end_tick"]
+                    
+                    # Check if we already know the winner team (for recovered rounds)
+                    if r_row.get("winner_team_override") == "A":
+                        score_a += 1
+                        last_round_winner = "A"
+                        continue
+                    if r_row.get("winner_team_override") == "B":
+                        score_b += 1
+                        last_round_winner = "B"
+                        continue
+
                     current_side_a = "unknown"
                     sids_a = [sid for sid, t in team_mapping.items() if t == "A"]
                     if sids_a and hasattr(self.dem, 'ticks'):
-                        end_ticks_df = self.dem.ticks[(self.dem.ticks["tick"] >= end_tick - 64) & (self.dem.ticks["tick"] <= end_tick)]
+                        # Wider window for ticks
+                        end_ticks_df = self.dem.ticks[(self.dem.ticks["tick"] >= end_tick - 256) & (self.dem.ticks["tick"] <= end_tick + 128)]
                         players_at_end = end_ticks_df[end_ticks_df["steamid"].isin(sids_a)]
                         if not players_at_end.empty:
-                            m = players_at_end.groupby("steamid").last()["team_num"] if "team_num" in players_at_end.columns else players_at_end.groupby("steamid").last().get("team_number")
+                            # Try multiple possible columns for team number
+                            m = None
+                            for col in ["team_num", "team_number", "team"]:
+                                if col in players_at_end.columns:
+                                    m = players_at_end.groupby("steamid").last()[col]
+                                    break
+                            
                             if m is not None and not m.empty:
                                 team_nums_mode = m.mode()
                                 if not team_nums_mode.empty:
                                     dominant_team = team_nums_mode[0]
-                                    current_side_a = "CT" if dominant_team == 3 else "T"
+                                    # Normalize numeric or string team
+                                    is_ct = str(dominant_team) in ["3", "CT"]
+                                    current_side_a = "CT" if is_ct else "T"
                                     last_side_a = current_side_a
 
                     det_side_a = current_side_a if current_side_a != "unknown" else last_side_a
@@ -177,8 +253,11 @@ class ParserService:
                         score_b += 1
                         last_round_winner = "B"
             else:
+
+
                 score_a = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0]) if not rounds_df.empty else 0
                 score_b = int(rounds_df[rounds_df["winner_side"] == "T"].shape[0]) if not rounds_df.empty else 0
+
         except Exception as e:
             logger.warning(f"Parser: Error calculating logical scores: {e}")
             score_a = int(rounds_df[rounds_df["winner_side"] == "CT"].shape[0]) if not rounds_df.empty else 0

@@ -198,11 +198,58 @@ class DemoAnalyzerService:
         
         try:
             rounds_df = dem.rounds
+            
+            # --- Heuristic: Check if the last round is missing from rounds_df ---
+            if not dem.kills.empty and not rounds_df.empty:
+                last_kill_tick = dem.kills["tick"].max()
+                last_round_end = rounds_df["end_tick"].max()
+                
+                # Check 1: Kills exist in a round number higher than any round_end event
+                max_kill_round = dem.kills["round"].max() if "round" in dem.kills.columns else 0
+                max_round_num = len(rounds_df)
+                
+                # Check 2: Kills exist significantly after the last round end
+                if (max_kill_round > max_round_num) or (last_kill_tick > last_round_end + 64):
+                    logger.info(f"DemoAnalyzer: Heuristic - Missing round(s) detected. KillRound: {max_kill_round} vs RoundDF: {max_round_num}")
+                    
+                    target_rounds = range(int(max_round_num) + 1, int(max_kill_round) + 1) if max_kill_round > max_round_num else [int(max_round_num) + 1]
+                    for r_num in target_rounds:
+                        if "round" in dem.kills.columns:
+                            r_kills = dem.kills[dem.kills["round"] == r_num]
+                            if r_kills.empty: continue
+                            last_k = r_kills.iloc[-1]
+                        else:
+                            last_k = dem.kills.iloc[-1]
+                        
+                        # Aggressive Side Detection
+                        w_side = "UNKNOWN"
+                        for field in ["attacker_side", "attacker_team_name", "attacker_team"]:
+                            if field in last_k and last_k[field]:
+                                w_side = str(last_k[field])
+                                break
+                        
+                        if w_side == "UNKNOWN" and "attacker_team_num" in last_k:
+                            t_num = last_k["attacker_team_num"]
+                            w_side = "CT" if t_num == 3 else ("T" if t_num == 2 else "UNKNOWN")
+
+                        # Use team_mapping
+                        atk_sid = int(last_k["attacker_steamid"]) if last_k.get("attacker_steamid") else None
+                        determined_winner_team = team_mapping.get(str(atk_sid)) if atk_sid else None
+                        
+                        new_r = pd.DataFrame([{
+                            "round": r_num,
+                            "winner_side": normalize_side(w_side) if w_side != "UNKNOWN" else "CT",
+                            "winner_team_override": determined_winner_team,
+                            "end_tick": last_k["tick"] + 32,
+                            "reason": "recovered_from_kills"
+                        }])
+
+                        rounds_df = pd.concat([rounds_df, new_r], ignore_index=True)
+                    dem.rounds = rounds_df
+
             if not rounds_df.empty and "winner_side" in rounds_df.columns:
-                # 1. Identify teams at the start (Robust window)
-                # We look for player sides at the beginning of the match
+                # 1. Identify teams at the start
                 if hasattr(dem, "ticks") and not dem.ticks.empty:
-                    # In awpy, ticks DF has steamid and team_num
                     for offset in [64, 128, 256, 512]:
                         start_ticks = dem.ticks[(dem.ticks["tick"] >= start_tick + offset - 5) & (dem.ticks["tick"] <= start_tick + offset + 5)]
                         if not start_ticks.empty:
@@ -214,25 +261,41 @@ class DemoAnalyzerService:
                                     elif t_num == 2: team_mapping[sid] = "B"
                         if len(team_mapping) >= 10: break
 
-                # 2. Track score using sides (Checking multiple players for robustness)
+                # 2. Track score using sides
                 last_side_a = "CT"
                 for idx, r_row in rounds_df.iterrows():
                     w_side = r_row["winner_side"]
                     end_tick = r_row["end_tick"]
                     
+                    if r_row.get("winner_team_override") == "A":
+                        score_a += 1
+                        last_round_winner = "A"
+                        continue
+                    if r_row.get("winner_team_override") == "B":
+                        score_b += 1
+                        last_round_winner = "B"
+                        continue
+
                     current_side_a = "unknown"
                     sids_a = [sid for sid, t in team_mapping.items() if t == "A"]
                     if sids_a and hasattr(dem, "ticks"):
-                        end_ticks = dem.ticks[(dem.ticks["tick"] >= end_tick - 64) & (dem.ticks["tick"] <= end_tick)]
+                        end_ticks = dem.ticks[(dem.ticks["tick"] >= end_tick - 256) & (dem.ticks["tick"] <= end_tick + 128)]
                         players_a = end_ticks[end_ticks["steamid"].astype(str).isin(sids_a)]
                         if not players_a.empty:
-                            m = players_a.groupby("steamid").last()["team_num"] if "team_num" in players_a.columns else players_a.groupby("steamid").last().get("team_number")
+                            m = None
+                            for col in ["team_num", "team_number", "team"]:
+                                if col in players_a.columns:
+                                    m = players_a.groupby("steamid").last()[col]
+                                    break
+                            
                             if m is not None and not m.empty:
                                 team_nums_mode = m.mode()
                                 if not team_nums_mode.empty:
                                     dominant_team = team_nums_mode[0]
-                                    current_side_a = "CT" if dominant_team == 3 else "T"
+                                    is_ct = str(dominant_team) in ["3", "CT"]
+                                    current_side_a = "CT" if is_ct else "T"
                                     last_side_a = current_side_a
+
                     
                     det_side_a = current_side_a if current_side_a != "unknown" else last_side_a
                     if normalize_side(det_side_a) == normalize_side(w_side):
@@ -241,6 +304,7 @@ class DemoAnalyzerService:
                     else:
                         score_b += 1
                         last_round_winner = "B"
+
 
                 # Duration: estimate from total rounds
                 total_rounds = len(rounds_df)

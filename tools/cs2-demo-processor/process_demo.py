@@ -427,10 +427,12 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     
     # Tenta múltiplos offsets para garantir que pegamos os times após o freeze-time do round 1
     for offset in [128, 256, 512, 1024]:
-        probe = parser.parse_ticks(["team_name", "team_num"], ticks=[first_round_tick + offset])
+        probe = parser.parse_ticks(["team_name", "team_num", "steamid"], ticks=[first_round_tick + offset])
         if not probe.empty:
             for _, p_row in probe.iterrows():
-                sid = str(p_row["steamid"])
+                sid = sid_norm(p_row.get("steamid"))
+                if not sid: continue
+                
                 team = str(p_row.get("team_name", ""))
                 t_num = p_row.get("team_num", 0)
                 
@@ -440,32 +442,37 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                     elif team == "T" or "TERRORIST" in team.upper() or t_num == 2:
                         team_mapping[sid] = "B"
             
-            if len(team_mapping) >= 5: break # Já temos dados suficientes
+            if len(team_mapping) >= 10: break # Já temos dados suficientes
+
 
     log_fn(f"👥 Mapeamento de times concluído ({len(team_mapping)} jogadores identificados).")
 
     # ── Halftime detection e rounds_per_half ──
-    # Tenta detectar via convars (mp_maxrounds)
+    # No CS2 (MR12), o halftime padrão é SEMPRE 12.
+    # Demos de MIX costumam ter eventos de halftime falsos por causa do warmup.
     rounds_per_half = 12
+    
     try:
         convars = parser.parse_convars()
         if convars and "mp_maxrounds" in convars:
             rounds_per_half = int(convars["mp_maxrounds"]) // 2
-            log_fn(f"⚙️ Configuração detectada: MR{rounds_per_half*2}")
+            log_fn(f"⚙️ Configuração detectada via convar: MR{rounds_per_half*2}")
     except: pass
 
-    # Tenta detectar via eventos de halftime (mais preciso se houver mudança no meio do jogo)
+    # Se detectarmos um halftime via evento, só aceitamos se for 12, 15 ou 3 (OT)
     try:
         df_ht = _parse("cs_intermission")
         if is_empty(df_ht): df_ht = _parse("round_announce_halftime")
         if not is_empty(df_ht):
             ht_tick = int(df_ht["tick"].min())
-            # O halftime acontece DEPOIS do último round da primeira metade
             rounds_before_ht = int((df_re["tick"] < ht_tick).sum())
-            if rounds_before_ht > 0:
+            if rounds_before_ht in [12, 15, 3]:
                 rounds_per_half = rounds_before_ht
-                log_fn(f"🌓 Halftime detectado após {rounds_per_half} rounds.")
+                log_fn(f"🌓 Halftime detectado e validado após {rounds_per_half} rounds.")
+            else:
+                log_fn(f"⚠️ Halftime detectado após {rounds_before_ht} rounds ignorado (provável warmup). Usando padrão MR{rounds_per_half*2}.")
     except: pass
+
 
     def side_of_a(r_num):
         if r_num <= rounds_per_half: return "CT"
@@ -479,26 +486,50 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         pts_a, pts_b = 0, 0
         w_col = next((c for c in ["winner", "winner_name"] if c in df_re.columns), "winner")
         last_round_winner = None
+        
+        # Mapeamento dinâmico por round para evitar bugs de halftime
+        sids_a = [sid for sid, t in team_mapping.items() if t == "A"]
+        
         for i, (_, r_end) in enumerate(df_re.iterrows()):
             r_num = i + 1
             w_side = normalize_team(str(r_end[w_col]))
+            end_tick = int(r_end["tick"])
             
-            # Só conta ponto se houver um vencedor claro (CT ou T)
-            if w_side in ("CT", "T"):
-                cur_a_side = side_of_a(r_num)
-                is_a_win = (w_side == cur_a_side)
-                if is_a_win: 
-                    pts_a += 1
-                    last_round_winner = "A"
-                else: 
-                    pts_b += 1
-                    last_round_winner = "B"
+            if w_side not in ("CT", "T"):
+                continue
+
+            # Identifica qual lado o Time A estava jogando NESTE round
+            current_side_a = "unknown"
+            if sids_a:
+                try:
+                    # Verifica posição dos jogadores do Time A perto do fim do round
+                    probe = parser.parse_ticks(["team_name", "team_num", "steamid"], ticks=[end_tick - 128])
+                    if not probe.empty:
+                        # Pega os jogadores do Time A que estão na demo
+                        players_a = probe[probe["steamid"].apply(sid_norm).isin(sids_a)]
+                        if not players_a.empty:
+                            t_num = players_a.iloc[0].get("team_num", 0)
+                            current_side_a = "CT" if t_num == 3 else "T"
+                except: pass
+            
+            # Se não conseguiu detectar via tick, usa a lógica de fallback (MR12)
+            if current_side_a == "unknown":
+                current_side_a = "CT" if r_num <= rounds_per_half else "T"
+
+            is_a_win = (w_side == current_side_a)
+            if is_a_win: 
+                pts_a += 1
+                last_round_winner = "A"
+            else: 
+                pts_b += 1
+                last_round_winner = "B"
             
             round_summaries[r_num] = {
                 "kills":[], "damage":{}, "winner": w_side, 
                 "reason": str(r_end.get("reason", "")), 
-                "logical_winner": "A" if (w_side in ("CT", "T") and w_side == side_of_a(r_num)) else ("B" if w_side in ("CT", "T") else "Draw")
+                "logical_winner": "A" if is_a_win else "B"
             }
+
         
         # Sovereign Winner Logic: The winner of the last round is the match winner
         if last_round_winner == "A":
@@ -508,8 +539,73 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
             final_a, final_b = min(pts_a, pts_b), max(pts_a, pts_b)
             pts_a, pts_b = final_a, final_b
 
-        log_fn(f"📊 Placar via Rounds: {pts_a} x {pts_b}")
+        # --- Heuristic: Check for rounds with kills but no round_end event ---
+        max_kill_round = int(df_kills["round_num"].max()) if not is_empty(df_kills) else 0
+        current_rounds = len(df_re) if not is_empty(df_re) else 0
+        
+        if max_kill_round > current_rounds:
+            log_fn(f"⚠️  Heurística: Detectados {max_kill_round - current_rounds} rounds com kills sem evento de fim. Recuperando...")
+            for r_num in range(current_rounds + 1, max_kill_round + 1):
+                # Determina vencedor do round recuperado
+                r_kills = df_kills[df_kills["round_num"] == r_num]
+                if r_kills.empty: continue
+                
+                last_k = r_kills.iloc[-1]
+                atk_sid = sid_norm(last_k.get("attacker_steamid"))
+                
+                # Tenta identificar o lado vencedor
+                w_side = "UNKNOWN"
+                for field in ["attacker_side", "attacker_team_name", "attacker_team"]:
+                    if field in last_k and last_k[field]:
+                        w_side = normalize_team(str(last_k[field]))
+                        break
+                
+                # Determina time lógico (A ou B)
+                winner_team = team_mapping.get(atk_sid)
+                if not winner_team:
+                    cur_a_side = side_of_a(r_num)
+                    if w_side != "UNKNOWN":
+                        winner_team = "A" if w_side == cur_a_side else "B"
+                
+                if winner_team == "A":
+                    pts_a += 1
+                    last_round_winner = "A"
+                    w_side = side_of_a(r_num)
+                elif winner_team == "B":
+                    pts_b += 1
+                    last_round_winner = "B"
+                    w_side = "T" if side_of_a(r_num) == "CT" else "CT"
+                
+                round_summaries[r_num] = {
+                    "kills": [], "damage": {}, "winner": w_side,
+                    "reason": "recovered_from_kills",
+                    "logical_winner": winner_team if winner_team else "Draw"
+                }
+
+        # ── Lógica de Vencedor Soberano Final ──────────────────────────
+        # O vencedor do ÚLTIMO round encontrado (oficial ou recuperado) é o vencedor da partida.
+        # Isso garante que ele sempre fique com o placar maior (ex: 13, 16 ou 19).
+        if last_round_winner == "A":
+            s_high, s_low = max(pts_a, pts_b), min(pts_a, pts_b)
+            # Se for MR12 e está 12x12 ou menos, o vencedor deve ter pelo menos 13
+            if s_high < 13: s_high = 13
+            # Se for Overtime (ex: 15-15 -> 16), garante o ponto de vitória
+            elif s_high in [15, 18, 21]: s_high += 1
+            
+            pts_a, pts_b = s_high, s_low
+            log_fn(f"🏆 Vitória confirmada para TIME A (venceu último round). Placar: {pts_a}x{pts_b}")
+        elif last_round_winner == "B":
+            s_high, s_low = max(pts_a, pts_b), min(pts_a, pts_b)
+            if s_high < 13: s_high = 13
+            elif s_high in [15, 18, 21]: s_high += 1
+            
+            pts_a, pts_b = s_low, s_high
+            log_fn(f"🏆 Vitória confirmada para TIME B (venceu último round). Placar: {pts_a}x{pts_b}")
+
+        log_fn(f"📊 Placar Final: {pts_a} x {pts_b}")
         score_a, score_b = pts_a, pts_b
+
+
 
     # ── Scoreboard Fallback (Se o placar via rounds for suspeito ou 0-0) ──
     if score_a == 0 and score_b == 0:
