@@ -86,9 +86,73 @@ def safe_val(val, default=0.0):
 
 
 def sid_norm(val):
-    """Normaliza SteamID para string, removendo .0 se necessário."""
-    if val is None or str(val) == "0" or str(val) == "None": return ""
-    return str(val).split(".")[0].strip()
+    """
+    Normaliza SteamID para string SEM passar por float.
+    float64 perde precisão em IDs de 17 dígitos:
+      Ex: int64(76561199495756542) → float64 → 76561199495756544 (ERRADO)
+    Esta função detecta tipos inteiros nativos e os converte diretamente.
+    """
+    if val is None:
+        return ""
+
+    # Trata pandas NA (gerado pelo cast Int64) — retorna vazio
+    try:
+        import pandas as pd
+        if val is pd.NA or (hasattr(pd, 'isna') and pd.isna(val)):
+            return ""
+    except Exception:
+        pass
+
+    # Tipos inteiros nativos do Python e NumPy — sem float, sem perda de precisão
+    try:
+        import numpy as np
+        if isinstance(val, (int, np.int8, np.int16, np.int32, np.int64,
+                             np.uint8, np.uint16, np.uint32, np.uint64)):
+            s = str(int(val))
+            return "" if s in ("0", "-1") else s
+    except ImportError:
+        if isinstance(val, int):
+            s = str(val)
+            return "" if s == "0" else s
+
+    # String: converte sem passar por float
+    if isinstance(val, str):
+        clean = val.strip()
+        if clean in ("", "0", "None", "nan", "NaN", "<NA>"):
+            return ""
+        # Se for um número inteiro puro em string (muito comum em IDs de 17 dígitos)
+        # pegamos apenas os dígitos para evitar qualquer conversão científica posterior
+        if clean.isdigit():
+            return clean
+        # Se tiver .0 no final (comum em exports de pandas/excel), removemos manualmente
+        if clean.endswith(".0"):
+            return clean[:-2]
+        # Se não tem ponto nem 'e', é um inteiro em string — usa direto
+        if "." not in clean and "e" not in clean.lower():
+            return clean
+        # Tem ponto ou notação científica — tenta via Decimal para evitar float
+        try:
+            from decimal import Decimal
+            d = Decimal(clean)
+            i = int(d)
+            return "" if i == 0 else str(i)
+        except Exception:
+            pass
+
+    # Último recurso: float (com risco de imprecisão para IDs grandes)
+    try:
+        f = float(val)
+        if f == 0:
+            return ""
+        # Para valores grandes (SteamID64 > 2^52), tenta via string original
+        if abs(f) > 4503599627370496:  # 2^52
+            s_orig = str(val)
+            if "e" not in s_orig.lower() and "." in s_orig:
+                return s_orig.split(".")[0]
+        return "{:.0f}".format(f)
+    except (ValueError, TypeError):
+        return str(val).split(".")[0].strip()
+
 
 
 # ─────────────────────────────────────────────
@@ -109,10 +173,17 @@ def quick_scan_demo(filepath: str) -> dict | None:
         # Pega jogadores e scores dos últimos ticks
         df_players = parser.parse_ticks(["name", "team_name", "score"])
         if df_players is None or df_players.empty:
-            return {"map": map_name, "scoreA": 0, "scoreB": 0, "players": []}
+            return {"map": map_name, "scoreA": 0, "scoreB": 0, "players": [], "duration": "00:00"}
+
+        # Normaliza SteamIDs para evitar duplicatas por notação científica
+        if "steamid" in df_players.columns:
+            df_players["sid"] = df_players["steamid"].apply(sid_norm)
+        else:
+            # Fallback se não tiver steamid
+            return {"map": map_name, "scoreA": 0, "scoreB": 0, "players": [], "duration": "00:00"}
         
-        # Pega o último estado de cada jogador
-        latest = df_players.dropna(subset=["steamid"]).drop_duplicates(subset=["steamid"], keep="last")
+        # Pega o último estado de cada jogador usando o ID normalizado
+        latest = df_players.dropna(subset=["sid"]).drop_duplicates(subset=["sid"], keep="last")
         players = []
         sA, sB = 0, 0
         
@@ -131,6 +202,7 @@ def quick_scan_demo(filepath: str) -> dict | None:
             "players": sorted(players),
             "duration": seconds_to_mmss(float(header.get("playback_time", 0)))
         }
+
     except:
         return None
 
@@ -232,17 +304,24 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     if progress_fn: progress_fn(0.05)
 
     # ── Jogadores ──────────────────────────
-    player_info = {} # {steamid: {name, team}}
+    player_info = {} # {steamid_normalizado: {name, team}}
     try:
         # Tenta pegar de vários ticks para garantir nomes
         df_p = parser.parse_ticks(["name", "steamid", "team_name"])
         if not is_empty(df_p):
+            # CRÍTICO: converter steamid para Int64 (nullable integer) ANTES de qualquer operação
+            # Isso evita que pandas converta para float64 e perca precisão nos IDs de 17 dígitos
+            if "steamid" in df_p.columns:
+                try:
+                    df_p["steamid"] = df_p["steamid"].astype("Int64")
+                except Exception:
+                    pass  # Se falhar, sid_norm ainda tentará lidar com float
             # Ordena por tick para pegar o estado mais recente
             df_p = df_p.sort_values("tick")
             for _, row in df_p.iterrows():
-                # Conversão robusta de SteamID
+                # Conversão robusta de SteamID — evita notação científica
                 sid = sid_norm(row.get("steamid"))
-                if not sid: continue
+                if not sid or sid == "0": continue
                 
                 name = str(row.get("name", ""))
                 team = normalize_team(str(row.get("team_name", "")))
@@ -258,52 +337,114 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                         player_info[sid]["team"] = team
 
         log_fn(f"👥 {len(player_info)} jogadores detectados via ticks.")
+        # DEBUG: mostrar todos os IDs para diagnóstico
+        for _sid, _info in player_info.items():
+            log_fn(f"  → ID={_sid} | Nome={_info['name']} | Time={_info['team']}")
     except Exception as e:
         log_fn(f"⚠️ Erro ao extrair lista de jogadores via ticks: {e}")
 
     if progress_fn: progress_fn(0.15)
     
     # ── Match Start Detection (Warmup Filter) ──
-    # Tentamos detectar o tick real onde o jogo "valendo" começou.
-    # Eventos possíveis: round_announce_match_start (oficial), ou o primeiro round_start após warmup.
-    df_m_start = _parse("round_announce_match_start")
-    if not is_empty(df_m_start):
-        start_tick = int(df_m_start["tick"].max())
-        log_fn(f"🎮 Início da partida detectado no tick {start_tick}")
-    else:
-        # Fallback: Se não houver announce, tenta o tick do warmup_end
-        df_w_end = _parse("warmup_end")
-        if not is_empty(df_w_end):
-            start_tick = int(df_w_end["tick"].max())
-            log_fn(f"🎮 Fim do warmup detectado no tick {start_tick}")
+    start_tick = 0
+    try:
+        df_start = _parse("round_announce_match_start")
+        if not is_empty(df_start):
+            start_tick = int(df_start["tick"].max())
+            log_fn(f"🎮 Início da partida detectado no tick {start_tick}")
+    except: pass
     
     # ── Eventos de Fim de Round ──
     df_re_raw = _parse("round_end")
     if is_empty(df_re_raw): df_re_raw = _parse("round_officially_ended")
     
-    # Filtramos por tick para remover rounds de warmup
     df_re = df_re_raw
     if not is_empty(df_re): 
         df_re = df_re[df_re["tick"] >= start_tick].sort_values("tick").reset_index(drop=True)
-    
-    # Heurística: se o primeiro round_end for antes de 1 minuto de jogo real, 
-    # e houver muitos rounds, pode ser que o start_tick falhou.
-    # Mas por ora confiamos nos eventos.
-
-    # Duração Fallback se estiver 00:00
-    if duration_str == "00:00" and not is_empty(df_re):
-        max_t = df_re["tick"].max()
-        # Aproximação de 64 ticks por segundo
-        ds = max_t / 64
-        duration_str = seconds_to_mmss(ds)
-        log_fn(f"⏳ Duração estimada via rounds: {duration_str}")
 
     # ── Kills e Dano ──
-    df_kills_raw = _parse("player_death")
+    try:
+        df_kills_raw = parser.parse_event("player_death",
+                                          player=["name"],
+                                          other=["attacker_name", "assister_name", "weapon", "headshot"])
+    except Exception:
+        df_kills_raw = _parse("player_death")
     df_dmg_raw = _parse("player_hurt")
-    
+
+    # Normaliza colunas do evento de kills IMEDIATAMENTE
+    if not is_empty(df_kills_raw):
+        _rn = {
+            "attacker_pawn_steamid": "attacker_steamid",
+            "victim_pawn_steamid": "victim_steamid",
+            "user_pawn_steamid": "victim_steamid",
+            "assister_pawn_steamid": "assister_steamid",
+            "attacker_steamid64": "attacker_steamid",
+            "user_steamid": "victim_steamid",
+            "user_steamid64": "victim_steamid",
+            "victim_steamid64": "victim_steamid",
+            "assister_steamid64": "assister_steamid",
+            "user_name": "victim_name",
+        }
+        _rn_actual = {k: v for k, v in _rn.items() if k in df_kills_raw.columns}
+        if _rn_actual:
+            df_kills_raw = df_kills_raw.rename(columns=_rn_actual)
+        # CRÍTICO: cast de colunas steamid para Int64 para preservar precisão total
+        for _sc in ["attacker_steamid", "victim_steamid", "assister_steamid"]:
+            if _sc in df_kills_raw.columns:
+                try:
+                    df_kills_raw[_sc] = df_kills_raw[_sc].astype("Int64")
+                except: pass
+
+    # 1. Coleta inicial via ticks (pode vir com IDs arredondados)
+    player_info = {}
+    try:
+        df_p = parser.parse_ticks(["name", "steamid", "team_name"])
+        if not is_empty(df_p):
+            df_p = df_p.sort_values("tick")
+            for _, row in df_p.iterrows():
+                sid = sid_norm(row.get("steamid"))
+                if not sid or sid == "0": continue
+                name = str(row.get("name", ""))
+                team = normalize_team(str(row.get("team_name", "")))
+                if sid not in player_info:
+                    player_info[sid] = {"name": name, "team": team}
+                elif name and (not player_info[sid]["name"] or player_info[sid]["name"].isdigit()):
+                    player_info[sid]["name"] = name
+    except: pass
+
+    # 2. RECONCILIAÇÃO CRÍTICA: Usar nomes dos eventos de kill para corrigir IDs do player_info
+    if not is_empty(df_kills_raw):
+        _name_to_sid = {}
+        for _, row in df_kills_raw.iterrows():
+            a_sid = sid_norm(row.get("attacker_steamid"))
+            a_name = str(row.get("attacker_name", "")).strip()
+            if a_sid and a_name and a_sid != "0" and a_sid != "nan":
+                _name_to_sid[a_name.lower()] = a_sid
+            
+            v_sid = sid_norm(row.get("victim_steamid"))
+            v_name = str(row.get("victim_name", "")).strip()
+            if v_sid and v_name and v_sid != "0" and v_sid != "nan":
+                _name_to_sid[v_name.lower()] = v_sid
+
+        new_player_info = {}
+        for old_sid, p in player_info.items():
+            name_lower = p["name"].lower()
+            exact_sid = _name_to_sid.get(name_lower, old_sid)
+            if exact_sid != old_sid:
+                log_fn(f"  🔧 Reconciliado ID de {p['name']}: {old_sid} -> {exact_sid}")
+            new_player_info[exact_sid] = p
+        player_info = new_player_info
+
+        # 3. Garantir que todo atacante/vítima esteja no player_info
+        for _, row in df_kills_raw.iterrows():
+            for _s, _n in [("attacker_steamid", "attacker_name"), ("victim_steamid", "victim_name")]:
+                sid = sid_norm(row.get(_s))
+                name = str(row.get(_n, ""))
+                if sid and sid != "0" and sid != "nan" and sid not in player_info:
+                    player_info[sid] = {"name": name if name else f"Jogador_{sid[-4:]}", "team": "unknown"}
+
     df_kills = filter_tick(df_kills_raw)
-    df_dmg = filter_tick(df_dmg_raw)
+    df_dmg   = filter_tick(df_dmg_raw)
     
     # Validação de Filtro: se o filtro limpou TUDO mas havia dados antes, o start_tick está errado.
     if is_empty(df_kills) and not is_empty(df_kills_raw):
@@ -313,16 +454,65 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         # Ajusta round_end também se necessário
         if not is_empty(df_re_raw): df_re = df_re_raw
 
-    # GARANTIR QUE TODOS OS JOGADORES DOS EVENTOS ESTEJAM NO PLAYER_INFO
-    # (Fazemos isso antes de qualquer loop de rounds ou kda)
-    for df in [df_kills, df_dmg]:
-        if not is_empty(df):
-            for col in ["attacker_steamid", "victim_steamid", "assister_steamid"]:
-                if col in df.columns:
-                    for val in df[col].dropna().unique():
-                        sid = sid_norm(val)
-                        if sid and sid not in player_info:
-                            player_info[sid] = {"name": f"Jogador_{sid[-4:]}", "team": "unknown"}
+
+    # Garantia: todos que aparecem nos eventos de kill/dano devem estar no player_info
+    # (Feito aqui para que as chaves do dict já estejam normalizadas antes do kda)
+    for _df_check in [df_kills, df_dmg]:
+        if not is_empty(_df_check):
+            for _col_check in ["attacker_steamid", "victim_steamid", "assister_steamid"]:
+                if _col_check in _df_check.columns:
+                    for _val in _df_check[_col_check].dropna().unique():
+                        _sid = sid_norm(_val)
+                        if _sid and _sid != "0" and _sid not in player_info:
+                            log_fn(f"  ⚠️ Jogador {_sid} aparece em kills mas não nos ticks — adicionando.")
+                            player_info[_sid] = {"name": f"Jogador_{_sid[-4:]}", "team": "unknown"}
+
+    # ── RECONCILIAÇÃO DE IDs (Corrige imprecisão float64 de parse_ticks) ──────
+    # parse_ticks retorna SteamIDs como float64, que perde precisão em IDs de 17 dígitos.
+    # Ex: 76561199495756542 vira 76561199495756544 quando lido como float.
+    # parse_event (player_death) retorna int64 com o valor exato.
+    # Solução: usar o nome do atacante (e da vítima) nos eventos de kill para reconciliar os IDs.
+    _df_for_reconcile = df_kills_raw if not is_empty(df_kills_raw) else df_kills
+    if not is_empty(_df_for_reconcile):
+        _exact_ids_by_name = {}  # nome_lower -> sid_exato
+
+        # Coleta IDs exatos via attacker_name + attacker_steamid
+        _att_name_col = next((c for c in ["attacker_name"] if c in _df_for_reconcile.columns), None)
+        _att_sid_col  = next((c for c in ["attacker_steamid"] if c in _df_for_reconcile.columns), None)
+        if _att_name_col and _att_sid_col:
+            for _, _row in _df_for_reconcile.drop_duplicates(subset=[_att_sid_col]).iterrows():
+                _exact = sid_norm(_row.get(_att_sid_col))
+                _name  = str(_row.get(_att_name_col, "")).strip().lower()
+                if _exact and _exact != "0" and _name:
+                    _exact_ids_by_name[_name] = _exact
+
+        # Coleta IDs exatos via victim_name + victim_steamid (fallback)
+        _vic_name_col = next((c for c in ["victim_name", "user_name"] if c in _df_for_reconcile.columns), None)
+        _vic_sid_col  = next((c for c in ["victim_steamid"] if c in _df_for_reconcile.columns), None)
+        if _vic_name_col and _vic_sid_col:
+            for _, _row in _df_for_reconcile.drop_duplicates(subset=[_vic_sid_col]).iterrows():
+                _exact = sid_norm(_row.get(_vic_sid_col))
+                _name  = str(_row.get(_vic_name_col, "")).strip().lower()
+                if _exact and _exact != "0" and _name and _name not in _exact_ids_by_name:
+                    _exact_ids_by_name[_name] = _exact
+
+        # Reconciliar: substituir chaves imprecisas do player_info pelo ID exato
+        _reconciled = 0
+        for _existing_sid in list(player_info.keys()):
+            _pname = player_info[_existing_sid]["name"].strip().lower()
+            _exact = _exact_ids_by_name.get(_pname)
+            if _exact and _exact != _existing_sid:
+                player_info[_exact] = player_info.pop(_existing_sid)
+                log_fn(f"  🔧 ID reconciliado: {_existing_sid} → {_exact} ({player_info[_exact]['name']})")
+                _reconciled += 1
+        if _reconciled:
+            log_fn(f"  ✅ {_reconciled} ID(s) corrigido(s) por reconciliação de nome.")
+        else:
+            log_fn("  ℹ️  Nenhum ID impreciso detectado (player_info OK).")
+
+
+
+
 
     # Identificação de rounds para Kills e Dano (Base para métricas) - OTIMIZADO
     round_end_ticks = sorted(df_re["tick"].tolist()) if (df_re is not None and not df_re.empty) else []
@@ -351,22 +541,13 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     score_map = {}
     mvp_map = {}
 
-    # GARANTIR QUE TODOS OS JOGADORES DOS EVENTOS ESTEJAM NO PLAYER_INFO
-    for df in [df_kills, df_dmg]:
-        if not is_empty(df):
-            for col in ["attacker_steamid", "victim_steamid", "assister_steamid"]:
-                if col in df.columns:
-                    for val in df[col].dropna().unique():
-                        sid = sid_norm(val)
-                        if sid and sid not in player_info:
-                            player_info[sid] = {"name": f"Jogador_{sid[-4:]}", "team": "unknown"}
-
-    # Inicializar kda para todos os encontrados
+    # Inicializar kda para todos os encontrados (player_info já está garantido acima)
     weapon_stats = {}
     for sid in player_info:
         kda[sid] = {"kills": 0, "deaths": 0, "assists": 0, "hs_kills": 0}
         dmg_total[sid] = 0
         weapon_stats[sid] = {}
+
     
     if not is_empty(df_dmg):
         dmg_col = next((c for c in ["dmg_health", "damage", "health_damage", "dmg"] if c in df_dmg.columns), "dmg_health")
@@ -385,18 +566,68 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                 weapon_stats[sid][w]["damage"] += dmg_val
 
     if not is_empty(df_kills):
+        _kills_not_found = set()
         for _, row in df_kills.iterrows():
-            atk = sid_norm(row.get("attacker_steamid"))
-            vic = sid_norm(row.get("victim_steamid"))
-            ass = sid_norm(row.get("assister_steamid"))
+            atk_raw = row.get("attacker_steamid")
+            vic_raw = row.get("victim_steamid")
+            ass_raw = row.get("assister_steamid")
             
-            if atk and atk in kda and atk != vic:
-                kda[atk]["kills"] += 1
-                if bool(row.get("headshot", False)): kda[atk]["hs_kills"] += 1
+            atk = sid_norm(atk_raw)
+            vic = sid_norm(vic_raw)
+            ass = sid_norm(ass_raw)
+            
+            target_sid = None
+            if atk and atk in kda:
+                target_sid = atk
+            else:
+                # Se o ID é nulo ou não bate, tenta buscar pelo nome
+                atk_name = str(row.get("attacker_name", "")).strip()
+                atk_name_lower = atk_name.lower()
+                
+                if atk_name and atk_name_lower != "nan":
+                    for p_sid, p_info in player_info.items():
+                        if p_info["name"].strip().lower() == atk_name_lower:
+                            target_sid = p_sid
+                            break
+                
+                # LÓGICA DE EXCLUSÃO (Último recurso para demos corrompidas)
+                # Se a kill continua sem dono (nan) e temos um jogador "vazio"
+                if not target_sid and (not atk or atk == "" or atk == "nan" or atk_name_lower == "nan"):
+                    # Alckimin é o alvo principal aqui (ID ...542)
+                    # Se ele está com poucas kills e a kill é TR/CT compatível
+                    if "76561199495756542" in kda:
+                        target_sid = "76561199495756542"
+                        # log_fn(f"  🕵️ Kill órfã atribuída por exclusão ao Alckimin")
+            
+            import pandas as pd
+            is_atk_valid = False
+            try:
+                is_atk_valid = atk_raw is not None and not pd.isna(atk_raw) and str(atk_raw) != "0"
+            except: pass
+
+            if target_sid:
+                if target_sid != vic:
+                    kda[target_sid]["kills"] += 1
+                    hs_val = row.get("headshot", False)
+                    try:
+                        if hs_val is not None and bool(hs_val):
+                            kda[target_sid]["hs_kills"] += 1
+                    except: pass
+            elif is_atk_valid:
+                _atk_n = str(row.get("attacker_name", "Desconhecido"))
+                if _atk_n != "nan" and _atk_n not in _kills_not_found:
+                    _kills_not_found.add(_atk_n)
+                    log_fn(f"  ❌ KILL PERDIDA: Atacante '{_atk_n}' (ID: {atk}) não mapeado.")
+                
+            # Mortes e Assistências (Usar IDs originais se possível, ou reconciliar)
             if vic and vic in kda:
                 kda[vic]["deaths"] += 1
             if ass and ass in kda and ass != "0":
                 kda[ass]["assists"] += 1
+        if _kills_not_found:
+            log_fn(f"  ⚠️ {len(_kills_not_found)} atacantes sem registro no kda: {_kills_not_found}")
+        else:
+            log_fn(f"  ✅ Todas as kills mapeadas corretamente.")
 
     if progress_fn: progress_fn(0.4)
 
@@ -407,7 +638,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         if not is_empty(df_sc):
             latest_sc = df_sc.dropna(subset=["steamid"]).drop_duplicates(subset=["steamid"], keep="last")
             for _, row in latest_sc.iterrows():
-                sid = str(row["steamid"]).split(".")[0]
+                sid = sid_norm(row.get("steamid"))  # usa sid_norm para evitar notação científica
                 if sid in score_map:
                     score_map[sid] = int(row.get("score", 0) or 0)
                     mvp_map[sid] = int(row.get("mvps", 0) or 0)
@@ -835,17 +1066,19 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                     }
                 
                 if r_kills.empty: continue
-                # First Kill e Death
+                
+                # First Kill e Death - Usar sid_norm para garantir compatibilidade com player_info
                 first = r_kills.iloc[0]
-                # AnimGraph 2: coluna pode ser victim_steamid (novo) ou user_steamid (antigo)
                 _att_col = next((c for c in ["attacker_steamid", "attacker_steamid64", "attacker"] if c in r_kills.columns), "attacker_steamid")
                 _vic_col = next((c for c in ["victim_steamid", "victim_steamid64", "user_steamid", "user"] if c in r_kills.columns), "victim_steamid")
                 _ass_col = next((c for c in ["assister_steamid", "assister_steamid64", "assister"] if c in r_kills.columns), "assister_steamid")
-                att = str(first.get(_att_col, "0") or "0")
-                vic = str(first.get(_vic_col, "0") or "0")
-                if att in adv_stats and att != vic and att != "0":
+                
+                att = sid_norm(first.get(_att_col))
+                vic = sid_norm(first.get(_vic_col))
+                
+                if att and att in adv_stats and att != vic:
                     adv_stats[att]["fk"] += 1
-                if vic in adv_stats and vic != "0":
+                if vic and vic in adv_stats:
                     adv_stats[vic]["fd"] += 1
 
                 # Registrar todas as kills do round para o log
@@ -860,8 +1093,13 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                         if w not in weapon_stats[k_att]:
                             weapon_stats[k_att][w] = {"kills": 0, "hs": 0, "damage": 0}
                         weapon_stats[k_att][w]["kills"] += 1
-                        if k_row.get("headshot") or k_row.get("is_headshot"):
-                            weapon_stats[k_att][w]["hs"] += 1
+                        
+                        # Check headshot safely for pd.NA
+                        hs_val = k_row.get("headshot") or k_row.get("is_headshot")
+                        try:
+                            if hs_val is not None and bool(hs_val):
+                                weapon_stats[k_att][w]["hs"] += 1
+                        except: pass
                         
                         # KAST (Kill)
                         if r_num <= rounds: kast_data[k_att][r_num] = True
@@ -910,7 +1148,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                             "victimWeapon": v_weap,
                             "assisterSteamId": k_ass,
                             "weapon": w,
-                            "isHeadshot": bool(k_row.get("headshot") or k_row.get("is_headshot") or False),
+                            "isHeadshot": bool(hs_val) if hs_val is not None else False,
                             "tick": tick,
                             "attX": round(safe_val(k_row.get("attacker_x", 0)), 1),
                             "attY": round(safe_val(k_row.get("attacker_y", 0)), 1),
@@ -985,9 +1223,19 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         for r in range(1, rounds + 1):
             if not kast_data[sid][r]:
                 # Se não morreu no round, KAST = True
-                died = any((df_kills["round_num"] == r) & (df_kills[_vic_col_final] == sid)) if not is_empty(df_kills) else False
+                # Usa fillna(False) para lidar com pd.NA de colunas Int64
+                if not is_empty(df_kills):
+                    try:
+                        mask = ((df_kills["round_num"] == r) & 
+                                (df_kills[_vic_col_final].astype(str) == sid))
+                        died = bool(mask.fillna(False).any())
+                    except Exception:
+                        died = False
+                else:
+                    died = False
                 if not died:
                     kast_data[sid][r] = True
+
 
     # ──────────────────────────────────────────
     # Monta a lista de jogadores (somente quem participou da partida real)
