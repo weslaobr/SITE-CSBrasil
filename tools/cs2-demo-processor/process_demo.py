@@ -38,20 +38,24 @@ import db_connector
 
 def generate_match_id(header: dict, filepath: str = "") -> str:
     """Gera um ID único baseado nos dados internos da demo (mapa, tempo e ticks).
-    Inclui o nome do arquivo como fallback para demos de servidor local onde
-    os campos do header (ticks/time/server) podem ser 0/unknown."""
+    Inclui o tamanho do arquivo e o nome do arquivo para garantir unicidade absoluta,
+    especialmente em demos de servidores de mix onde os headers podem ser similares."""
     map_n    = str(header.get("map_name", "unknown"))
     ticks    = str(header.get("playback_ticks", "0"))
     time_str = str(header.get("playback_time", "0"))
     server   = str(header.get("server_name", "local"))
 
-    # Se os campos críticos do header são genéricos (demo local/mix),
-    # usamos o nome do arquivo como âncora para garantir unicidade.
-    header_is_generic = (ticks in ("0", "0.0") and time_str in ("0", "0.0")
-                         and server in ("local", "", "unknown"))
-    filename_anchor = os.path.basename(filepath) if (header_is_generic and filepath) else ""
+    # Adicionamos tamanho do arquivo e nome do arquivo como âncoras de unicidade
+    f_size = 0
+    if filepath and os.path.exists(filepath):
+        try:
+            f_size = os.path.getsize(filepath)
+        except: pass
+    
+    filename = os.path.basename(filepath) if filepath else ""
 
-    raw = f"{map_n}_{ticks}_{time_str}_{server}_{filename_anchor}"
+    # Criamos uma string raw robusta para o hash
+    raw = f"{map_n}_{ticks}_{time_str}_{server}_{f_size}_{filename}"
     return "demo_" + hashlib.md5(raw.encode()).hexdigest()[:24]
 
 
@@ -873,8 +877,8 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     util_dmg      = {sid: 0 for sid in player_info}
     
     adv_stats = {sid: {
-        "fk": 0, "fd": 0, "triples": 0, "quads": 0, "aces": 0,
-        "blind_time": 0.0, "he": 0, "flash": 0, "smoke": 0, "molotov": 0,
+        "fk": 0, "fd": 0, "triples": 0, "quads": 0, "aces": 0, "trades": 0,
+        "blind_time": 0.0, "enemies_flashed": 0, "he": 0, "flash": 0, "smoke": 0, "molotov": 0,
         "total_ttd": 0.0, "ttd_count": 0, "total_dist": 0.0, "dist_count": 0
     } for sid in player_info}
     
@@ -882,6 +886,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     first_damage_tick = {} # (round, sid) -> tick
     
     kast_data = {sid: [False] * (rounds + 1) for sid in player_info}
+    is_traded = {sid: [False] * (rounds + 1) for sid in player_info}
     
 
     # Granadas Lançadas — tenta parse_grenades() (nativo 0.41.x) antes dos eventos individuais
@@ -938,12 +943,25 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
             vic_col = next((c for c in ["victim_steamid", "victim_steamid64", "user_steamid", "user"] if c in df_fa.columns), None)
             dur_col = next((c for c in ["blind_duration", "blind_time", "duration"] if c in df_fa.columns), None)
             if att_col and vic_col and dur_col:
+                # Rastreador de inimigos únicos cegados por round para evitar overcount
+                flashed_this_round = {} # (round, attacker) -> set(victims)
                 for _, row in df_fa.iterrows():
-                    sid = str(row.get(att_col, "0"))
-                    vic = str(row.get(vic_col, "0"))
+                    sid = sid_norm(row.get(att_col, "0"))
+                    vic = sid_norm(row.get(vic_col, "0"))
+                    dur = float(row.get(dur_col, 0) or 0)
+                    tick = int(row.get("tick", 0))
+                    r_num = get_round(tick)
+                    
                     if sid in flash_assists and sid != vic:
                         flash_assists[sid] += 1
-                        adv_stats[sid]["blind_time"] += float(row.get(dur_col, 0) or 0)
+                        adv_stats[sid]["blind_time"] += dur
+                        
+                        # Contador de inimigos únicos cegados
+                        if (r_num, sid) not in flashed_this_round:
+                            flashed_this_round[(r_num, sid)] = set()
+                        if vic not in flashed_this_round[(r_num, sid)]:
+                            flashed_this_round[(r_num, sid)].add(vic)
+                            adv_stats[sid]["enemies_flashed"] += 1
             else:
                 log_fn(f"⚠️  player_blind: campos insuficientes {list(df_fa.columns)}")
     else:
@@ -1068,10 +1086,18 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                         "reason": str(re_row.get("reason", ""))
                     }
 
+            # --- TRADE DETECTION TRACKER ---
+            recent_deaths = [] # List of (tick, victim_sid, attacker_sid, team)
+
             for r_num, r_kills in df_k.groupby("round_num"):
                 r_num = int(r_num)
+                recent_deaths = [] # Reset trades per round
                 r_end_info = round_ends.get(r_num, {})
                 
+                # Definir colunas para este round
+                _att_col = next((c for c in ["attacker_steamid", "attacker"] if c in r_kills.columns), "attacker_steamid")
+                _vic_col = next((c for c in ["victim_steamid", "user_steamid"] if c in r_kills.columns), "victim_steamid")
+
                 if r_num not in round_summaries:
                     round_summaries[r_num] = {
                         "kills": [], 
@@ -1115,6 +1141,24 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                         
                         # KAST (Kill)
                         if r_num <= rounds: kast_data[k_att][r_num] = True
+                        
+                        # --- TRADE DETECTION LOGIC ---
+                        # If Player B kills Player A's attacker within 4 seconds (128*4 = 512 ticks approx at 128tr)
+                        # We use 640 ticks (5s) for safety.
+                        trade_window = 640
+                        for d_tick, d_vic, d_atk, d_team in recent_deaths:
+                            if tick - d_tick <= trade_window:
+                                if k_vic == d_atk and k_att != d_vic:
+                                    # Team check: k_att must be teammate of d_vic
+                                    # (We check if they are on different teams than the guy who died first)
+                                    if player_info.get(k_att, {}).get("team") == d_team:
+                                        adv_stats[k_att]["trades"] += 1
+                                        if r_num <= rounds: is_traded[d_vic][r_num] = True
+                                        break
+                        
+                        # Record this death for future trades
+                        vic_team = player_info.get(k_vic, {}).get("team", "unknown")
+                        recent_deaths.append((tick, k_vic, k_att, vic_team))
                         
                         # Tenta atualizar nome se o atual for ruim
                         att_name = str(k_row.get("attacker_name", ""))
@@ -1293,8 +1337,12 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
         dmg = dmg_total.get(sid, 0)
         adr = round(dmg / max(rounds, 1), 1)
         
-        # KAST %
-        kast = round((sum(kast_data[sid][1:rounds+1]) / max(rounds, 1)) * 100, 1)
+        # KAST % (Kill, Assist, Survival or Traded)
+        kast_rounds = 0
+        for r in range(1, rounds + 1):
+            if kast_data[sid][r] or is_traded[sid][r]:
+                kast_rounds += 1
+        kast = round((kast_rounds / max(rounds, 1)) * 100, 1)
         
         # Rating 2.0 Simplificado
         kpr, dpr = k / max(rounds, 1), d / max(rounds, 1)
@@ -1316,10 +1364,10 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                 "name": info["name"], "nickname": info["name"],
                 "kast": kast, "rating": rating, "weaponStats": weapon_stats[sid],
                 "flashAssists": flash_assists.get(sid, 0), "utilDmg": util_dmg.get(sid, 0), "rawDmg": dmg,
-                "fk": adv_stats[sid]["fk"], "fd": adv_stats[sid]["fd"],
+                "fk": adv_stats[sid]["fk"], "fd": adv_stats[sid]["fd"], "trades": adv_stats[sid]["trades"],
                 "triples": adv_stats[sid]["triples"], "quads": adv_stats[sid]["quads"], "aces": adv_stats[sid]["aces"],
-                "blindTime": round(adv_stats[sid]["blind_time"], 1),
-                "avgTtd": round(adv_stats[sid]["total_ttd"] / max(adv_stats[sid]["ttd_count"], 1), 2) if adv_stats[sid]["ttd_count"] > 0 else 0,
+                "blindTime": round(adv_stats[sid]["blind_time"], 1), "enemiesFlashed": adv_stats[sid]["enemies_flashed"],
+                "avgTtd": round((adv_stats[sid]["total_ttd"] / max(adv_stats[sid]["ttd_count"], 1)) * 1000, 0) if adv_stats[sid]["ttd_count"] > 0 else 0,
                 "avgKillDist": round(adv_stats[sid]["total_dist"] / max(adv_stats[sid]["dist_count"], 1), 1) if adv_stats[sid]["dist_count"] > 0 else 0,
                 "heThrown": adv_stats[sid]["he"], "flashThrown": adv_stats[sid]["flash"], 
                 "smokesThrown": adv_stats[sid]["smoke"], "molotovThrown": adv_stats[sid]["molotov"]

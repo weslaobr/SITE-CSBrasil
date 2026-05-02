@@ -1310,7 +1310,7 @@ const MatchReportModal: React.FC<Props> = ({
                 </td>
                 <td className="py-2.5 px-3 text-center">
                     <div className="flex flex-col items-center gap-0.5">
-                        <span className={`text-[10px] font-bold ${p.hs>=50?'text-rose-400':p.hs>0?'text-zinc-400':'text-zinc-700'}`}>{p.hs}%</span>
+                        <span className={`text-[10px] font-bold ${p.hs>=50?'text-rose-400':p.hs>0?'text-zinc-400':'text-zinc-700'}`}>{Math.round(p.hs)}%</span>
                         <div className="h-0.5 w-10 bg-zinc-800 rounded-full overflow-hidden">
                             <div className="h-full bg-rose-500/60 rounded-full" style={{width:`${Math.min(100,p.hs)}%`}} />
                         </div>
@@ -1375,7 +1375,7 @@ const MatchReportModal: React.FC<Props> = ({
                 </td>
                 <td className="py-2.5 px-2 text-center">
                     <div className="flex flex-col items-center gap-0.5">
-                        <span className={`text-[10px] font-bold ${p.hs>=50?'text-rose-400':p.hs>0?'text-zinc-400':'text-zinc-700'}`}>{p.hs > 0 ? `${p.hs}%` : '—'}</span>
+                        <span className={`text-[10px] font-bold ${p.hs>=50?'text-rose-400':p.hs>0?'text-zinc-400':'text-zinc-700'}`}>{p.hs > 0 ? `${Math.round(p.hs)}%` : '—'}</span>
                         {p.hs > 0 && <div className="h-0.5 w-12 bg-zinc-900 rounded-full overflow-hidden"><div className="h-full bg-rose-500 rounded-full" style={{width:`${Math.min(100,p.hs)}%`}} /></div>}
                     </div>
                 </td>
