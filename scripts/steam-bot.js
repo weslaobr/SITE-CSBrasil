@@ -62,6 +62,14 @@ user.on('friendsList', () => {
     console.log(`👥 Lista de amigos carregada! Total: ${Object.keys(user.myFriends).length} amigos.`);
 });
 
+// Heartbeat para manter o bot online e a sessão viva
+setInterval(() => {
+    if (user.steamID) {
+        // console.log('💓 Heartbeat: Mantendo bot online...');
+        user.setPersona(SteamUser.EPersonaState.Online);
+    }
+}, 30000); // A cada 30 segundos
+
 // Aceitar pedidos de amizade automaticamente
 user.on('friendRelationship', (steamID, relationship) => {
     if (relationship === SteamUser.EFriendRelationship.RequestRecipient) {
@@ -322,14 +330,15 @@ app.post('/send-message', async (req, res) => {
 
         // Enviar notificação de que o bot está digitando (ajuda a "acordar" a sessão de chat)
         try {
+            console.log(`✍️ Notificando 'digitando' para ${targetSteamId}...`);
             user.chat.sendTyping(targetSteamId);
+            // Pequeno delay para a Steam processar o despertar da sessão
+            await new Promise(resolve => setTimeout(resolve, 500));
         } catch (e) {
-            // Ignorar erro no typing
+            console.warn(`⚠️ Erro ao enviar 'typing': ${e.message}`);
         }
 
         // Tentar enviar a mensagem
-        // Alguns usuários relatam que interagir com o bot "acorda" a sessão.
-        // Usar o chat.sendFriendMessage (novo) e chatMessage (legado) pode aumentar a taxa de sucesso.
         try {
             console.log(`📤 Enviando via chat novo para ${targetSteamId}...`);
             await user.chat.sendFriendMessage(targetSteamId, message);

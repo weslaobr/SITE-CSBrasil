@@ -190,10 +190,10 @@ const MatchReportModal: React.FC<Props> = ({
             
             let myLogicalTeam = userP?.team || userP?.initial_team_number || 'A';
             
-            // Normalize team identifiers
+            // Normalize team identifiers - Consistent with isTeamA check in API and elsewhere
             const teamStr = String(myLogicalTeam).toUpperCase();
-            const isTeamB = teamStr === 'B' || teamStr === '2' || teamStr === 'T' || teamStr === 'TR' || teamStr === 'TERRORIST';
-            const normalizedTeam = isTeamB ? 'B' : 'A';
+            const isA = teamStr === 'A' || teamStr === 'CT' || teamStr === '3';
+            const normalizedTeam = isA ? 'A' : 'B';
 
             let finalLogicalA = editScoreA;
             let finalLogicalB = editScoreB;

@@ -441,15 +441,19 @@ export async function PATCH(
             if (scoreA > scoreB) { resA = "win"; resB = "loss"; }
             else if (scoreB > scoreA) { resA = "loss"; resB = "win"; }
 
-            await prisma.globalMatchPlayer.updateMany({
-                where: { globalMatchId: matchId, team: { in: ["A", "CT", "3"] } },
-                data: { matchResult: resA }
+            // Update result for all players based on their team side
+            // We use a more robust check: if they are Team A, they get resA, otherwise they get resB
+            const allPlayers = await prisma.globalMatchPlayer.findMany({
+                where: { globalMatchId: matchId }
             });
 
-            await prisma.globalMatchPlayer.updateMany({
-                where: { globalMatchId: matchId, team: { in: ["B", "T", "TR", "2", "TERRORIST"] } },
-                data: { matchResult: resB }
-            });
+            for (const p of allPlayers) {
+                const isPlayerA = isTeamA(p.team);
+                await prisma.globalMatchPlayer.update({
+                    where: { id: p.id },
+                    data: { matchResult: isPlayerA ? resA : resB }
+                });
+            }
 
             console.log(`[PATCH GlobalMatch] ${matchId} updated to ${scoreA}-${scoreB}`);
             return NextResponse.json({ success: true, match: updatedMatch });
