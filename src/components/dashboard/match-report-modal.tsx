@@ -532,10 +532,43 @@ const MatchReportModal: React.FC<Props> = ({
             };
         }
         const players = meta.stats || meta.players || currentMatch?.players || [];
-        if (players && Array.isArray(players)) {
+        if (players && Array.isArray(players) && players.length > 0) {
+            const teamMap: Record<string, any[]> = {};
+            players.forEach((p: any) => {
+                // Normalize team identifier
+                let t = String(p.team || p.initial_team_number || p.team_id || 'x').toUpperCase();
+                // Treat CT/A/3 as one group and T/B/2 as another
+                if (['A', 'CT', '3'].includes(t)) t = 'TEAM_A';
+                else if (['B', 'T', 'TR', '2', 'TERRORIST'].includes(t)) t = 'TEAM_B';
+                
+                if (!teamMap[t]) teamMap[t] = [];
+                teamMap[t].push(p);
+            });
+
+            const teamIds = Object.keys(teamMap).filter(id => id !== 'x').sort();
+            
+            let t1Raw: any[] = [];
+            let t2Raw: any[] = [];
+
+            if (teamIds.length >= 2) {
+                t1Raw = teamMap[teamIds[0]]; // Usually TEAM_A
+                t2Raw = teamMap[teamIds[1]]; // Usually TEAM_B
+            } else if (teamIds.length === 1) {
+                // Only one team identified? Might be all on one side or others are 'x'
+                t1Raw = teamMap[teamIds[0]];
+                t2Raw = teamMap['x'] || [];
+            } else {
+                t1Raw = players.slice(0, Math.ceil(players.length / 2));
+                t2Raw = players.slice(Math.ceil(players.length / 2));
+            }
+
+            if (t2Raw.some(isUserP)) {
+                [t1Raw, t2Raw] = [t2Raw, t1Raw];
+            }
+
             return {
-                t1: players.slice(0,5).map((p:any)=>normalizeP(p,isUserP(p), 'CT')).sort(byKills),
-                t2: players.slice(5,10).map((p:any)=>normalizeP(p,isUserP(p), 'T')).sort(byKills)
+                t1: t1Raw.map((p:any)=>normalizeP(p,isUserP(p), 'CT')).sort(byKills),
+                t2: t2Raw.map((p:any)=>normalizeP(p,isUserP(p), 'T')).sort(byKills)
             };
         }
         return {
