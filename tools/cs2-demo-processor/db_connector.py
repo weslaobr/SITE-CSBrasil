@@ -120,6 +120,24 @@ def match_exists(match_id: str) -> bool:
         return False
 
 
+def get_match_status(match_id: str) -> dict:
+    """Retorna o status detalhado da partida (se existe e quando foi criada)."""
+    try:
+        conn = _get_connection()
+        cur = conn.cursor()
+        # Nota: createdAt foi adicionado recentemente
+        cur.execute('SELECT "createdAt" FROM "GlobalMatch" WHERE id = %s LIMIT 1;', (match_id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if row:
+            return {"exists": True, "createdAt": row[0]}
+        return {"exists": False, "createdAt": None}
+    except Exception as e:
+        return {"exists": False, "createdAt": None, "error": str(e)}
+
+
 def insert_match(match_data: dict, players_data: list[dict]) -> tuple[bool, str]:
     """
     Insere uma GlobalMatch e seus GlobalMatchPlayers no banco.

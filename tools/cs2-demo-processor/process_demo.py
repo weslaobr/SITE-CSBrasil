@@ -210,7 +210,10 @@ def quick_scan_demo(filepath: str) -> dict | None:
             if name and not name.isdigit():
                 players.append(f"{name} ({team})")
         
+        match_id = generate_match_id(header, filepath)
+        
         return {
+            "id": match_id,
             "map": map_name,
             "scoreA": sA,
             "scoreB": sB,
@@ -1659,6 +1662,20 @@ class DemoProcessorApp(ctk.CTk):
         ctk.CTkLabel(container, text=main_info, font=ctk.CTkFont(size=24, weight="bold")).pack(pady=5)
         
         ctk.CTkLabel(container, text=f"Duração: {info['duration']}", font=ctk.CTkFont(size=12), text_color="gray").pack()
+
+        # Checagem de duplicata (Já Processada?)
+        status = db_connector.get_match_status(info['id'])
+        if status.get("exists"):
+            dt = status.get("createdAt")
+            dt_str = dt.strftime("%d/%m/%Y %H:%M") if hasattr(dt, "strftime") else str(dt)
+            badge_f = ctk.CTkFrame(container, fg_color="#e67e22", corner_radius=6)
+            badge_f.pack(pady=10, padx=20, fill="x")
+            ctk.CTkLabel(
+                badge_f, 
+                text=f"⚠️ PARTIDA JÁ PROCESSADA EM {dt_str}", 
+                font=ctk.CTkFont(size=11, weight="bold"),
+                text_color="white"
+            ).pack(pady=4)
         
         # Lista de Jogadores
         p_frame = ctk.CTkFrame(container, fg_color="transparent")
@@ -1830,14 +1847,20 @@ class DemoProcessorApp(ctk.CTk):
         info_frame = ctk.CTkFrame(self._preview_frame, fg_color="#1a1a2e", corner_radius=8)
         info_frame.pack(fill="x", pady=(0, 10))
 
-        already = db_connector.match_exists(match["id"])
-        dup_badge = " ⚠️ JÁ IMPORTADA" if already else " ✨ Nova partida"
+        status = db_connector.get_match_status(match["id"])
+        already = status.get("exists")
+        dt_str = ""
+        if already:
+            dt = status.get("createdAt")
+            dt_str = f" EM {dt.strftime('%d/%m/%Y %H:%M')}" if hasattr(dt, "strftime") else f" EM {dt}"
+            
+        dup_badge = f" ⚠️ JÁ IMPORTADA{dt_str}" if already else " ✨ Nova partida"
         dup_color = "#e67e22" if already else "#2ecc71"
 
         ctk.CTkLabel(
             info_frame,
             text=f"🗺️  {match['mapName'].upper()}   {dup_badge}",
-            font=ctk.CTkFont(size=16, weight="bold"),
+            font=ctk.CTkFont(size=14, weight="bold"),
             text_color=dup_color,
         ).pack(side="left", padx=14, pady=10)
 
