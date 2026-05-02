@@ -1266,7 +1266,7 @@ const MatchReportModal: React.FC<Props> = ({
                 >
                     {p.isUser ? '★ ' : ''}{p.nickname}
                 </a>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
                     {p.isSub && (
                         <span className="px-1 py-0.5 rounded-[4px] bg-blue-500/20 text-blue-400 text-[7px] font-black uppercase tracking-tighter border border-blue-500/20" title="Substituto (Complete)">
                             SUB
@@ -1278,8 +1278,15 @@ const MatchReportModal: React.FC<Props> = ({
                         </span>
                     )}
                     {p.eloChange !== undefined && p.eloChange !== null && (
-                        <span className={`text-[8px] font-black px-1 rounded-sm ${p.eloChange > 0 ? 'bg-emerald-500/20 text-emerald-400' : p.eloChange < 0 ? 'bg-red-500/20 text-red-400' : 'bg-zinc-800 text-zinc-500'}`}>
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-sm flex items-center gap-0.5 ${
+                            p.eloChange > 0 
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' 
+                            : p.eloChange < 0 
+                            ? 'bg-red-500/15 text-red-400 border border-red-500/20' 
+                            : 'bg-zinc-800/50 text-zinc-500 border border-white/5'
+                        }`} title="Tropoints ganhos/perdidos nesta partida">
                             {p.eloChange > 0 ? `+${p.eloChange}` : p.eloChange}
+                            <span className="text-[7px] opacity-50 font-bold ml-0.5">PTS</span>
                         </span>
                     )}
                 </div>
@@ -1602,8 +1609,19 @@ const MatchReportModal: React.FC<Props> = ({
         return (
             <tr className={`border-b border-white/[0.04] ${p.isUser ? 'bg-yellow-500/[0.05]' : 'hover:bg-white/[0.02]'}`}>
                 <td className="py-3 px-3">
-                    <div className="flex flex-col gap-0.5">
-                        <a href={p.steamId?`/player/${p.steamId}`:'#'} onClick={e=>{if(!p.steamId)e.preventDefault();e.stopPropagation();}} className={`text-[11px] font-bold truncate max-w-[100px] hover:underline ${p.isUser?'text-yellow-400':'text-zinc-300 hover:text-yellow-300'}`}>{p.isUser?'★ ':''}{p.nickname}</a>
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                            <a href={p.steamId?`/player/${p.steamId}`:'#'} onClick={e=>{if(!p.steamId)e.preventDefault();e.stopPropagation();}} className={`text-[11px] font-bold truncate max-w-[100px] hover:underline ${p.isUser?'text-yellow-400':'text-zinc-300 hover:text-yellow-300'}`}>{p.isUser?'★ ':''}{p.nickname}</a>
+                            {p.eloChange !== undefined && p.eloChange !== null && (
+                                <span className={`text-[8px] font-black px-1 py-0.5 rounded border ${
+                                    p.eloChange > 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
+                                    p.eloChange < 0 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                                    'bg-zinc-800/50 text-zinc-500 border-white/5'
+                                }`}>
+                                    {p.eloChange > 0 ? `+${p.eloChange}` : p.eloChange}
+                                </span>
+                            )}
+                        </div>
                         {hasDuel && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded self-start ${badgeColor}`}>{badge}</span>}
                     </div>
                 </td>
