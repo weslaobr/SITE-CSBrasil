@@ -411,78 +411,70 @@ const MatchReportModal: React.FC<Props> = ({
     };
 
     const normalizeP = (p: any, isUser = false, team?: string): PlayerStats => {
-        // Se p for um objeto do Prisma (GlobalMatchPlayer), os dados detalhados estão no JSON metadata.
-        // Se p for um objeto bruto do parser, os dados estão no próprio objeto.
+        // Robust value searcher
         const m = (p.metadata && typeof p.metadata === 'object' && !Array.isArray(p.metadata)) ? p.metadata : {};
+        const get = (...keys: string[]) => {
+            for (const k of keys) {
+                if (p[k] !== undefined && p[k] !== null && p[k] !== '') return p[k];
+                if (m[k] !== undefined && m[k] !== null && m[k] !== '') return m[k];
+            }
+            return undefined;
+        };
+
+        const kills   = Number(get('kills', 'total_kills', 'totalKills') ?? 0);
+        const deaths  = Number(get('deaths', 'total_deaths', 'totalDeaths') ?? 1);
+        const assists = Number(get('assists', 'total_assists', 'totalAssists') ?? 0);
+        const adr     = Number(get('adr', 'dpr', 'avg_damage', 'avgDamage') ?? 0);
         
-        const kills   = p.kills ?? m.kills ?? p.total_kills ?? parseInt(p.player_stats?.Kills ?? '0') ?? 0;
-        const deaths  = p.deaths ?? m.deaths ?? p.total_deaths ?? parseInt(p.player_stats?.Deaths ?? '0') ?? 1;
-        const assists = p.assists ?? m.assists ?? p.total_assists ?? parseInt(p.player_stats?.Assists ?? '0') ?? 0;
+        const hsRaw   = get('hsPercentage', 'accuracy_head', 'hs_percentage', 'hs_percent');
+        const kast    = get('kast', 'kast_percent', 'kastPercent');
         
-        const adr     = p.adr ?? m.adr ?? p.dpr ?? m.dpr ?? p.average_damage_per_round ?? parseFloat(p.player_stats?.ADR ?? '0') ?? (isUser ? currentMatch?.adr ?? 0 : 0);
-        
-        const rawRating = p.rating ?? m.rating ?? p.leetify_rating ?? p.leetifyRating ?? p.ratingRatio ?? null;
-        const rating  = rawRating !== null ? Number(rawRating) : (kills / (deaths || 1));
-        
-        let kast = 0;
-        const rawKast = p.kast ?? m.kast ?? p.kastControl ?? p.kast_percent ?? p.kast_percentage;
-        if (rawKast !== undefined && rawKast !== null && rawKast !== 0) {
-             kast = rawKast > 1 ? Math.round(rawKast) : Math.round(rawKast * 100);
-        } else {
-             const r = rawRating;
-             if (r !== null && r !== 0) kast = Math.round(70 + (Number(r) * 10));
-        }
-        
-        const hsRaw   = p.accuracy_head !== undefined
-            ? (p.accuracy_head > 1 ? Math.round(p.accuracy_head) : Math.round(p.accuracy_head * 100))
-            : p.hs_percent ?? p.hs_percentage ?? p.hsPercentage ?? m.hsPercentage ?? m.hs_percent
-              ?? (isUser && currentMatch?.hsPercentage ? Math.round(Number(currentMatch.hsPercentage)) : 0);
-        
-        const avatar  = p.avatar_url || p.avatarUrl || p.avatar || p.user?.image || m.avatar
-                      || (isUser ? (currentMatch?.metadata?.steam_avatar ?? currentMatch?.metadata?.avatarUrl ?? '') : '')
-                      || '';
+        const nickname = String(get('nickname', 'name', 'personaname', 'playerNickname', 'player_name') || p.user?.name || (isUser ? '[Você]' : 'Jogador'));
+        const avatar   = String(get('avatar_url', 'avatar', 'image') || p.user?.image || '');
 
         return {
-            nickname: p.name || p.nickname || p.playerNickname || p.user?.name || m.name || m.nickname || (isUser ? '[Você]' : 'Jogador'),
-            avatar, kills, deaths, assists, adr, rating,
-            hs: Number(hsRaw || 0), 
-            kast: Number(kast || 0),
-            fk: Number(p.fk ?? m.fk ?? p.fk_count ?? m.fk_count ?? p.firstKills ?? m.firstKills ?? 0),
-            fd: Number(p.fd ?? m.fd ?? p.fd_count ?? m.fd_count ?? p.firstDeaths ?? m.firstDeaths ?? 0),
-            triples: Number(p.triples ?? m.triples ?? p.multi3k ?? m.multi3k ?? p.triple_kills ?? 0),
-            quads: Number(p.quads ?? m.quads ?? p.multi4k ?? m.multi4k ?? p.quadro_kills ?? 0),
-            aces: Number(p.aces ?? m.aces ?? p.multi5k ?? m.multi5k ?? p.penta_kills ?? 0),
-            clutches: (() => {
-                const direct = p.clutches ?? m.clutches ?? p.clutches_won ?? m.clutches_won ?? p.clutch_count;
-                if (direct !== undefined && direct !== null) return Number(direct);
-                const sumV = (p.clutch_v1_wins ?? m.clutch_v1_wins ?? 0) + (p.clutch_v2_wins ?? m.clutch_v2_wins ?? 0) + (p.clutch_v3_wins ?? m.clutch_v3_wins ?? 0);
-                return sumV > 0 ? sumV : (p.multi3k !== undefined ? 0 : null);
-            })(),
-            trades: Number(p.trades ?? m.trades ?? p.trade_kills_succeed ?? m.trade_kills_succeed ?? 0),
-            mvps: Number(p.mvps ?? m.mvps ?? 0),
-            tradeKillOpp: Number(p.tradeKillOpp ?? m.tradeKillOpp ?? p.trade_kill_opportunities ?? m.trade_kill_opportunities ?? 0),
-            tradedDeathOpp: Number(p.tradedDeathOpp ?? m.tradedDeathOpp ?? p.traded_death_opportunities ?? m.traded_death_opportunities ?? 0),
-            tradeKillSucc: Number(p.tradeKillSucc ?? m.tradeKillSucc ?? p.trade_kills_succeed ?? m.trade_kills_succeed ?? 0),
-            tradedDeathSucc: Number(p.tradedDeathSucc ?? m.tradedDeathSucc ?? p.traded_deaths_succeed ?? m.traded_deaths_succeed ?? 0),
-            utilDmg: Number(p.utilDmg ?? m.utilDmg ?? p.util_damage ?? m.util_damage ?? p.utilityDamage ?? 0),
-            flashAssists: Number(p.flashAssists ?? m.flashAssists ?? p.flash_assist ?? m.flash_assist ?? 0),
-            blindTime: Number(p.blindTime ?? m.blindTime ?? p.blind_time ?? m.blind_time ?? 0),
-            heThrown: Number(p.heThrown ?? m.heThrown ?? p.he_thrown ?? m.he_thrown ?? 0),
-            flashThrown: Number(p.flashThrown ?? m.flashThrown ?? p.flash_thrown ?? m.flash_thrown ?? p.flashbang_thrown ?? 0),
-            smokesThrown: Number(p.smokesThrown ?? m.smokesThrown ?? p.smokes_thrown ?? m.smokes_thrown ?? p.smoke_thrown ?? 0),
-            molotovThrown: Number(p.molotovThrown ?? m.molotovThrown ?? p.molotovs_thrown ?? m.molotovs_thrown ?? p.molotov_thrown ?? 0),
-            enemiesFlashed: Number(p.enemiesFlashed ?? m.enemiesFlashed ?? p.enemies_flashed ?? m.enemies_flashed ?? p.flashbang_hit_foe ?? 0),
-            ttd: Number(p.ttd ?? m.ttd ?? p.avg_ttd ?? m.avg_ttd ?? 0),
-            killDist: Number(p.killDist ?? m.killDist ?? p.avg_kill_distance ?? m.avg_kill_distance ?? 0),
-            totalDamage: Number(p.total_damage ?? m.total_damage ?? p.totalDamage ?? m.totalDamage ?? p.rawDmg ?? m.rawDmg ?? p.raw_dmg ?? m.raw_dmg ?? (adr * (p.rounds_count ?? m.rounds_count ?? currentMatch?.metadata?.rounds_count ?? (currentMatch?.metadata?.roundSummaries ? Object.keys(currentMatch.metadata.roundSummaries).length : 0) ?? 0))),
-            eloChange: p.eloChange !== undefined ? p.eloChange : (p.elo_change ?? null),
-            eloAfter: p.eloAfter !== undefined ? p.eloAfter : (p.elo_after ?? null),
+            id: String(p.id || p.steamId || p.steam64_id || ''),
+            steamId: String(p.steamId || p.steam64_id || p.player_id || ''),
+            nickname,
+            avatar,
+            kills,
+            deaths,
+            assists,
+            adr,
+            rating: Number(get('rating', 'leetify_rating', 'impact_rating') ?? 0),
+            hs: Number(hsRaw !== undefined ? (Number(hsRaw) > 1 ? hsRaw : Number(hsRaw) * 100) : 0),
+            kast: Number(kast !== undefined ? (Number(kast) < 1 ? Number(kast) * 100 : kast) : 0),
+            mvps: Number(get('mvps', 'mvp_stars', 'mvp') ?? 0),
+            fk: Number(get('fk', 'firstKills', 'first_kills', 'entry_kill_count') ?? 0),
+            fd: Number(get('fd', 'firstDeaths', 'first_deaths', 'entry_death_count', 'fk_deaths') ?? 0),
+            triples: Number(get('triples', 'multi3k', 'triple_kills', 'tripleKills') ?? 0),
+            quads: Number(get('quads', 'multi4k', 'quad_kills', 'quadKills') ?? 0),
+            aces: Number(get('aces', 'multi5k', 'penta_kills', 'pentaKills', 'ace_kills') ?? 0),
+            trades: Number(get('trades', 'trade_kills_succeed', 'trade_count', 'tradeKills', 'trade_kill_count') ?? 0),
+            tradeKillSucc: Number(get('trade_kills_succeed', 'tradeKillSucc', 'trade_kill_count') ?? 0),
+            tradedDeathSucc: Number(get('traded_deaths_succeed', 'tradedDeathSucc', 'trade_death_count') ?? 0),
+            tradeKillOpp: Number(get('trade_kill_opportunities', 'tradeKillOpp') ?? 0),
+            tradedDeathOpp: Number(get('traded_death_opportunities', 'tradedDeathOpp') ?? 0),
+            clutches: Number(get('clutches', 'clutch_count', 'clutches_won', 'clutchesWon') ?? 0),
+            clutchesWon: Number(get('clutches_won', 'clutchesWon', 'clutch_count') ?? 0),
+            flashAssists: Number(get('flash_assists', 'flashAssists', 'flash_assist') ?? 0),
+            utilDmg: Number(get('utilDmg', 'util_damage', 'utility_damage', 'utilityDamage') ?? 0),
+            blindTime: Number(get('blind_time', 'blindTime', 'total_blind_duration') ?? 0),
+            heThrown: Number(get('he_thrown', 'heThrown') ?? 0),
+            flashThrown: Number(get('flash_thrown', 'flashThrown', 'flashbang_thrown') ?? 0),
+            smokesThrown: Number(get('smokes_thrown', 'smokesThrown', 'smoke_thrown') ?? 0),
+            molotovThrown: Number(get('molotov_thrown', 'molotovThrown', 'molotovs_thrown') ?? 0),
+            enemiesFlashed: Number(get('enemies_flashed', 'enemiesFlashed', 'flashbang_hit_foe') ?? 0),
+            ttd: Number(get('ttd', 'avg_ttd', 'avgTtd') ?? 0),
+            killDist: Number(get('killDist', 'avg_kill_distance', 'avgKillDist') ?? 0),
+            totalDamage: Number(get('total_damage', 'totalDamage', 'rawDmg', 'raw_dmg', 'totalDamageDealt') ?? (adr * (Number(get('rounds_count', 'total_rounds')) || (currentMatch?.metadata?.roundSummaries ? Object.keys(currentMatch.metadata.roundSummaries).length : (currentMatch.scoreA || 0) + (currentMatch.scoreB || 0)) || 0))),
+            eloChange: get('eloChange', 'elo_change') ?? null,
+            eloAfter: get('eloAfter', 'elo_after') ?? null,
             isUser,
-            steamId: p.steam64_id || p.player_id || p.steamId || p.steam_id || m.steamId,
-            team,
+            team: team || String(p.team || p.team_id || ''),
+            metadata: m,
             isSub: p.isSub ?? m.isSub ?? false,
             isLeaver: p.isLeaver ?? m.isLeaver ?? false,
-            metadata: m
         };
     };
 
@@ -539,7 +531,7 @@ const MatchReportModal: React.FC<Props> = ({
                 t2: t2.map((p:any)=>normalizeP(p,isUserP(p), 'T')).sort(byKills)
             };
         }
-        const players = meta.players || currentMatch?.players;
+        const players = meta.stats || meta.players || currentMatch?.players || [];
         if (players && Array.isArray(players)) {
             return {
                 t1: players.slice(0,5).map((p:any)=>normalizeP(p,isUserP(p), 'CT')).sort(byKills),
