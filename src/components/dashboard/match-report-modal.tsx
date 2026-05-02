@@ -1301,12 +1301,9 @@ const MatchReportModal: React.FC<Props> = ({
                 <td className="py-2.5 px-2 text-center"><span className={`text-xs font-black px-1.5 py-0.5 rounded-lg bg-black/30 ${kdColor}`}>{kd}</span></td>
                 <td className="py-2.5 px-2 text-center"><span className={`text-xs font-bold ${p.adr>=80?'text-yellow-400':p.adr>0?'text-yellow-500/60':'text-zinc-700'}`}>{p.adr > 0 ? Math.round(p.adr) : '—'}</span></td>
                 <td className="py-2.5 px-2 text-center">
-                    <div className="flex flex-col items-center gap-0.5">
-                        <span className={`text-[11px] font-black italic ${p.totalDamage >= 3000 ? 'text-orange-400' : p.totalDamage >= 2000 ? 'text-yellow-400' : 'text-zinc-300'}`}>
-                            {p.totalDamage > 0 ? Math.round(p.totalDamage).toLocaleString() : '—'}
-                        </span>
-                        <span className="text-[7px] font-black text-zinc-700 uppercase tracking-tighter">Dano Total</span>
-                    </div>
+                    <span className={`text-[11px] font-black italic ${p.totalDamage >= 3000 ? 'text-orange-400' : p.totalDamage >= 2000 ? 'text-yellow-400' : 'text-zinc-300'}`}>
+                        {p.totalDamage > 0 ? Math.round(p.totalDamage).toLocaleString() : '—'}
+                    </span>
                 </td>
                 <td className="py-2.5 px-3 text-center">
                     <div className="flex flex-col items-center gap-0.5">
