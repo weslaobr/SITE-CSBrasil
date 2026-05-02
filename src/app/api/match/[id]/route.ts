@@ -132,7 +132,7 @@ export async function GET(
                     is_user: !!(profileSteamId && p.steamId && String(p.steamId) === String(profileSteamId)),
                     // MVP Stars — comes directly from GlobalMatchPlayer.mvps column
                     mvps: p.mvps ?? 0,
-                    total_damage: m.totalDamage ?? m.total_damage ?? m.totalDamageDealt ?? (p.adr && (m.rounds_count || localMatch.scoreA + localMatch.scoreB) ? Math.round(p.adr * (m.rounds_count || localMatch.scoreA + localMatch.scoreB)) : 0),
+                    total_damage: m.totalDamage ?? m.total_damage ?? m.rawDmg ?? m.raw_dmg ?? m.totalDamageDealt ?? (p.adr && (m.rounds_count || localMatch.scoreA + localMatch.scoreB) ? Math.round(p.adr * (m.rounds_count || localMatch.scoreA + localMatch.scoreB)) : 0),
                     metadata: m
                 };
             });

@@ -474,7 +474,7 @@ const MatchReportModal: React.FC<Props> = ({
             enemiesFlashed: Number(p.enemiesFlashed ?? m.enemiesFlashed ?? p.enemies_flashed ?? m.enemies_flashed ?? p.flashbang_hit_foe ?? 0),
             ttd: Number(p.ttd ?? m.ttd ?? p.avg_ttd ?? m.avg_ttd ?? 0),
             killDist: Number(p.killDist ?? m.killDist ?? p.avg_kill_distance ?? m.avg_kill_distance ?? 0),
-            totalDamage: Number(p.total_damage ?? m.total_damage ?? p.totalDamage ?? m.totalDamage ?? (adr * (p.rounds_count ?? m.rounds_count ?? currentMatch?.metadata?.rounds_count ?? (currentMatch?.metadata?.roundSummaries ? Object.keys(currentMatch.metadata.roundSummaries).length : 0) ?? 0))),
+            totalDamage: Number(p.total_damage ?? m.total_damage ?? p.totalDamage ?? m.totalDamage ?? p.rawDmg ?? m.rawDmg ?? p.raw_dmg ?? m.raw_dmg ?? (adr * (p.rounds_count ?? m.rounds_count ?? currentMatch?.metadata?.rounds_count ?? (currentMatch?.metadata?.roundSummaries ? Object.keys(currentMatch.metadata.roundSummaries).length : 0) ?? 0))),
             eloChange: p.eloChange !== undefined ? p.eloChange : (p.elo_change ?? null),
             eloAfter: p.eloAfter !== undefined ? p.eloAfter : (p.elo_after ?? null),
             isUser,
