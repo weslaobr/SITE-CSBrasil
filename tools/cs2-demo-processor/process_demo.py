@@ -183,6 +183,7 @@ def quick_scan_demo(filepath: str) -> dict | None:
     try:
         parser = DemoParser(filepath)
         header = parser.parse_header()
+        # print(f"DEBUG HEADER: {header}") # Não temos log_fn aqui, mas podemos tentar imprimir
         map_name = str(header.get("map_name", "unknown")).lower()
         
         # Pega jogadores e scores dos últimos ticks
@@ -214,6 +215,7 @@ def quick_scan_demo(filepath: str) -> dict | None:
         
         return {
             "id": match_id,
+            "filename": os.path.basename(filepath),
             "map": map_name,
             "scoreA": sA,
             "scoreB": sB,
@@ -1664,7 +1666,11 @@ class DemoProcessorApp(ctk.CTk):
         ctk.CTkLabel(container, text=f"Duração: {info['duration']}", font=ctk.CTkFont(size=12), text_color="gray").pack()
 
         # Checagem de duplicata (Já Processada?)
-        status = db_connector.get_match_status(info['id'])
+        m_id = info.get('id', 'unknown')
+        f_name = info.get('filename')
+        status = db_connector.get_match_status(m_id, f_name)
+        self._log(f"🔍 DEBUG ID: {m_id} | Nome: {f_name} | Status: {status}")
+        
         if status.get("exists"):
             dt = status.get("createdAt")
             dt_str = dt.strftime("%d/%m/%Y %H:%M") if hasattr(dt, "strftime") else str(dt)
@@ -1847,7 +1853,9 @@ class DemoProcessorApp(ctk.CTk):
         info_frame = ctk.CTkFrame(self._preview_frame, fg_color="#1a1a2e", corner_radius=8)
         info_frame.pack(fill="x", pady=(0, 10))
 
-        status = db_connector.get_match_status(match["id"])
+        m_id = match["id"]
+        f_name = match.get("metadata", {}).get("demoFile")
+        status = db_connector.get_match_status(m_id, f_name)
         already = status.get("exists")
         dt_str = ""
         if already:

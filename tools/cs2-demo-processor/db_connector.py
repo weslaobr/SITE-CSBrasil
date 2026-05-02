@@ -120,14 +120,22 @@ def match_exists(match_id: str) -> bool:
         return False
 
 
-def get_match_status(match_id: str) -> dict:
+def get_match_status(match_id: str, filename: str = None) -> dict:
     """Retorna o status detalhado da partida (se existe e quando foi criada)."""
     try:
         conn = _get_connection()
         cur = conn.cursor()
-        # Nota: createdAt foi adicionado recentemente
+        
+        # 1. Tenta pelo ID primário
         cur.execute('SELECT "createdAt" FROM "GlobalMatch" WHERE id = %s LIMIT 1;', (match_id,))
         row = cur.fetchone()
+        
+        # 2. Se não achou e temos o nome do arquivo, tenta pelo metadata
+        if not row and filename:
+            # PostgreSQL syntax para buscar dentro do JSONB metadata
+            cur.execute('SELECT "createdAt" FROM "GlobalMatch" WHERE metadata->>\'demoFile\' = %s LIMIT 1;', (filename,))
+            row = cur.fetchone()
+            
         cur.close()
         conn.close()
         
