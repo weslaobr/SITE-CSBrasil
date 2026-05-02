@@ -76,6 +76,17 @@ user.on('friendRelationship', (steamID, relationship) => {
     }
 });
 
+// Responder ou apenas logar mensagens recebidas (ajuda a manter a sessão ativa)
+user.on('friendMessage', (steamID, message) => {
+    const sid = steamID.getSteamID64();
+    console.log(`💬 Mensagem recebida de ${sid}: ${message}`);
+    
+    // Opcional: Responder automaticamente para confirmar que o bot está vivo
+    if (message.toLowerCase().includes('oi') || message.toLowerCase().includes('ola') || message.toLowerCase().includes('bot')) {
+        user.chatMessage(sid, "Olá! Sou o bot da TropaCS. Estou online e pronto para enviar os times quando você solicitar pelo site.");
+    }
+});
+
 user.on('error', (err) => {
     console.error('❌ Erro de login na Steam:', err.message);
     
@@ -309,12 +320,29 @@ app.post('/send-message', async (req, res) => {
             });
         }
 
-        // Enviar a mensagem
-        await user.chat.sendFriendMessage(steamId, message);
-        console.log(`✅ Mensagem enviada com sucesso para ${steamId}`);
+        // Enviar notificação de que o bot está digitando (ajuda a "acordar" a sessão de chat)
+        try {
+            user.chat.sendTyping(targetSteamId);
+        } catch (e) {
+            // Ignorar erro no typing
+        }
+
+        // Tentar enviar a mensagem
+        // Alguns usuários relatam que interagir com o bot "acorda" a sessão.
+        // Usar o chat.sendFriendMessage (novo) e chatMessage (legado) pode aumentar a taxa de sucesso.
+        try {
+            console.log(`📤 Enviando via chat novo para ${targetSteamId}...`);
+            await user.chat.sendFriendMessage(targetSteamId, message);
+            console.log(`✅ Mensagem enviada via chat novo para ${targetSteamId}`);
+        } catch (err) {
+            console.warn(`⚠️ Falha no chat novo (${err.message}), tentando método legado para ${targetSteamId}...`);
+            user.chatMessage(targetSteamId, message);
+            console.log(`✅ Mensagem enviada via chat legado para ${targetSteamId}`);
+        }
+
         res.json({ success: true, message: 'Mensagem enviada com sucesso' });
     } catch (err) {
-        console.error(`❌ Erro ao enviar mensagem para ${steamId}:`, err.message);
+        console.error(`❌ Erro crítico ao enviar mensagem para ${steamId}:`, err.message);
         
         let statusCode = 500;
         let errorMessage = 'Erro ao enviar mensagem';
