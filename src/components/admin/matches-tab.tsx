@@ -33,6 +33,7 @@ interface GlobalMatch {
     scoreB: number;
     players: MatchPlayer[];
     metadata?: any;
+    createdAt?: string;
 }
 
 export default function MatchesTab() {
@@ -262,6 +263,12 @@ export default function MatchesTab() {
                                                             <Users size={10} />
                                                             {match.players.length} JOGADORES
                                                         </span>
+                                                        {match.createdAt && (
+                                                            <span className="flex items-center gap-1 text-yellow-500/60" title="Data de exportação da demo">
+                                                                <RefreshCw size={10} className="animate-pulse" />
+                                                                EXPORTADO: {format(new Date(match.createdAt), "dd/MM/yy HH:mm")}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

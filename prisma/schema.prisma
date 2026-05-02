@@ -52,12 +52,10 @@ model User {
   winRate               Float?
   matchesPlayed         Int                 @default(0)
   isAdmin               Boolean?            @default(false)
-  
-  // Proprietary Ranking System (Levels 1-20)
-  rankingPoints         Int                 @default(500)
-  mixLevel              Int                 @default(5)
-  
+  rankingPoints         Int?                @default(500)
+  mixLevel              Int?                @default(5)
   accounts              Account[]
+  crosshairs            Crosshair[]
   evaluationLists       EvaluationList[]    @relation("EvaluationCreator")
   globalMatchPlayers    GlobalMatchPlayer[]
   lobbiesCreated        Lobby[]             @relation("LobbyCreator")
@@ -67,7 +65,6 @@ model User {
   matches               Match[]
   sessions              Session[]
   inventoryItems        UserInventoryItem[]
-  crosshairs            Crosshair[]
 }
 
 model VerificationToken {
@@ -249,6 +246,8 @@ model GlobalMatch {
   scoreA    Int?
   scoreB    Int?
   metadata  Json?               @default("{}")
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
   players   GlobalMatchPlayer[]
 }
 
@@ -266,12 +265,9 @@ model GlobalMatchPlayer {
   adr           Float?
   hsPercentage  Float?
   matchResult   String
-  
-  // Ranking tracking
+  metadata      Json?       @default("{}")
   eloChange     Int?
   eloAfter      Int?
-  
-  metadata      Json?       @default("{}")
   match         GlobalMatch @relation(fields: [globalMatchId], references: [id], onDelete: Cascade)
   user          User?       @relation(fields: [userId], references: [id])
 
@@ -368,18 +364,185 @@ model AutoClearConfig {
 }
 
 model Crosshair {
-  id            String   @id @default(cuid())
-  userId        String
-  name          String
-  code          String
-  description   String?
-  isPublic      Boolean  @default(true)
-  previewColor  String?  @default("#00ff00")
-  previewSize   Float?   @default(5)
-  previewGap    Float?   @default(0)
-  previewThick  Float?   @default(1)
-  previewDot    Boolean? @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt @default(now())
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  code         String
+  description  String?
+  isPublic     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+  previewColor String?  @default("#00ff00")
+  previewSize  Float?   @default(5)
+  previewGap   Float?   @default(0)
+  previewThick Float?   @default(1)
+  previewDot   Boolean? @default(false)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "crosshair_userid_fkey")
+}
+
+model tracker_clutch_events {
+  clutch_id       Int              @id @default(autoincrement())
+  match_id        String?
+  round_id        Int?
+  steamid64       BigInt?
+  clutch_type     String?          @db.VarChar
+  is_won          Boolean?
+  tracker_matches tracker_matches? @relation(fields: [match_id], references: [match_id], onDelete: Cascade, onUpdate: NoAction)
+  tracker_rounds  tracker_rounds?  @relation(fields: [round_id], references: [round_id], onDelete: Cascade, onUpdate: NoAction)
+  tracker_players tracker_players? @relation(fields: [steamid64], references: [steamid64], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model tracker_damage_events {
+  damage_id        Int              @id @default(autoincrement())
+  match_id         String?
+  round_id         Int?
+  tick             Int
+  attacker_steamid BigInt?
+  victim_steamid   BigInt?
+  weapon           String?
+  hp_damage        Int?
+  armor_damage     Int?
+  hitgroup         Int?
+  tracker_matches  tracker_matches? @relation(fields: [match_id], references: [match_id], onDelete: Cascade, onUpdate: NoAction)
+  tracker_rounds   tracker_rounds?  @relation(fields: [round_id], references: [round_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model tracker_grenade_events {
+  grenade_id      Int              @id @default(autoincrement())
+  match_id        String?
+  round_id        Int?
+  tick            Int
+  steamid64       BigInt?
+  grenade_type    String?
+  x               Float?
+  y               Float?
+  z               Float?
+  blind_duration  Float?
+  tracker_matches tracker_matches? @relation(fields: [match_id], references: [match_id], onDelete: Cascade, onUpdate: NoAction)
+  tracker_rounds  tracker_rounds?  @relation(fields: [round_id], references: [round_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model tracker_kill_events {
+  kill_id                                                               Int              @id @default(autoincrement())
+  match_id                                                              String?
+  round_id                                                              Int?
+  tick                                                                  Int
+  attacker_steamid                                                      BigInt?
+  victim_steamid                                                        BigInt?
+  assister_steamid                                                      BigInt?
+  weapon                                                                String?
+  is_headshot                                                           Boolean?
+  is_wallbang                                                           Boolean?
+  attacker_x                                                            Float?
+  attacker_y                                                            Float?
+  attacker_z                                                            Float?
+  victim_x                                                              Float?
+  victim_y                                                              Float?
+  victim_z                                                              Float?
+  distance                                                              Float?
+  tracker_players_tracker_kill_events_attacker_steamidTotracker_players tracker_players? @relation("tracker_kill_events_attacker_steamidTotracker_players", fields: [attacker_steamid], references: [steamid64], onDelete: NoAction, onUpdate: NoAction)
+  tracker_matches                                                       tracker_matches? @relation(fields: [match_id], references: [match_id], onDelete: Cascade, onUpdate: NoAction)
+  tracker_rounds                                                        tracker_rounds?  @relation(fields: [round_id], references: [round_id], onDelete: Cascade, onUpdate: NoAction)
+  tracker_players_tracker_kill_events_victim_steamidTotracker_players   tracker_players? @relation("tracker_kill_events_victim_steamidTotracker_players", fields: [victim_steamid], references: [steamid64], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model tracker_match_players {
+  match_id             String
+  steamid64            BigInt
+  team                 String?
+  kills                Int?
+  deaths               Int?
+  assists              Int?
+  adr                  Float?
+  kast                 Float?
+  rating               Float?
+  hs_count             Int?
+  utility_damage       Int?
+  flash_assists        Int?
+  fk                   Int?
+  fd                   Int?
+  triples              Int?
+  quads                Int?
+  aces                 Int?
+  clutches             Int?
+  trades               Int?
+  enemies_flashed      Int?
+  total_blind_duration Float?
+  avg_kill_distance    Float?
+  avg_ttd              Float?
+  utility_damage_roi   Float?
+  he_thrown            Int?            @default(0)
+  flash_thrown         Int?            @default(0)
+  smokes_thrown        Int?            @default(0)
+  molotovs_thrown      Int?            @default(0)
+  elo_change           Int?
+  elo_after            Int?
+  tracker_matches      tracker_matches @relation(fields: [match_id], references: [match_id], onDelete: Cascade, onUpdate: NoAction)
+  tracker_players      tracker_players @relation(fields: [steamid64], references: [steamid64], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([match_id, steamid64])
+}
+
+model tracker_matches {
+  match_id               String                   @id
+  map_name               String
+  match_date             DateTime?                @default(now()) @db.Timestamptz(6)
+  duration_seconds       Int?
+  score_ct               Int?
+  score_t                Int?
+  winner_team            String?
+  demo_url               String?
+  is_parsed              Boolean?
+  parsed_at              DateTime?                @db.Timestamptz(6)
+  source                 String?
+  tracker_clutch_events  tracker_clutch_events[]
+  tracker_damage_events  tracker_damage_events[]
+  tracker_grenade_events tracker_grenade_events[]
+  tracker_kill_events    tracker_kill_events[]
+  tracker_match_players  tracker_match_players[]
+  tracker_rounds         tracker_rounds[]
+  tracker_weapon_stats   tracker_weapon_stats[]
+}
+
+model tracker_players {
+  steamid64                                                                 BigInt                  @id @default(autoincrement())
+  personaname                                                               String?
+  avatar_url                                                                String?
+  last_updated                                                              DateTime?               @default(now()) @db.Timestamptz(6)
+  tracker_clutch_events                                                     tracker_clutch_events[]
+  tracker_kill_events_tracker_kill_events_attacker_steamidTotracker_players tracker_kill_events[]   @relation("tracker_kill_events_attacker_steamidTotracker_players")
+  tracker_kill_events_tracker_kill_events_victim_steamidTotracker_players   tracker_kill_events[]   @relation("tracker_kill_events_victim_steamidTotracker_players")
+  tracker_match_players                                                     tracker_match_players[]
+  tracker_weapon_stats                                                      tracker_weapon_stats[]
+}
+
+model tracker_rounds {
+  round_id               Int                      @id @default(autoincrement())
+  match_id               String?
+  round_number           Int
+  winner_side            String?
+  reason                 String?
+  end_tick               Int?
+  ct_equipment_value     Int?
+  t_equipment_value      Int?
+  ct_buy_type            String?
+  t_buy_type             String?
+  tracker_clutch_events  tracker_clutch_events[]
+  tracker_damage_events  tracker_damage_events[]
+  tracker_grenade_events tracker_grenade_events[]
+  tracker_kill_events    tracker_kill_events[]
+  tracker_matches        tracker_matches?         @relation(fields: [match_id], references: [match_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model tracker_weapon_stats {
+  id              Int              @id @default(autoincrement())
+  match_id        String?
+  steamid64       BigInt?
+  weapon          String
+  kills           Int?
+  headshots       Int?
+  damage          Int?
+  accuracy        Float?
+  tracker_matches tracker_matches? @relation(fields: [match_id], references: [match_id], onDelete: Cascade, onUpdate: NoAction)
+  tracker_players tracker_players? @relation(fields: [steamid64], references: [steamid64], onDelete: NoAction, onUpdate: NoAction)
 }
