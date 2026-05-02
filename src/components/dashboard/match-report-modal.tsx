@@ -1318,7 +1318,7 @@ const MatchReportModal: React.FC<Props> = ({
                 </td>
                 <td className="py-2.5 px-2 text-center">
                     {(p.mvps ?? 0) > 0
-                        ? <span className="text-[11px] font-black text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md">⭐ {p.mvps}</span>
+                        ? <span className="inline-flex items-center justify-center gap-1 text-[11px] font-black text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">⭐ {p.mvps}</span>
                         : <span className="text-zinc-700 text-xs">—</span>
                     }
                 </td>
@@ -1707,7 +1707,7 @@ const MatchReportModal: React.FC<Props> = ({
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Average Damage per Round (Dano médio por rodada)">ADR</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Total Damage (Dano total causado)">Dano</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Headshot Percentage (Porcentagem de tiros na cabeça)">HS%</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-amber-600/70 text-center" title="MVPs (Estrelas de MVP ganhas na partida)">⭐ MVP</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-amber-600/70 text-center whitespace-nowrap" title="MVPs (Estrelas de MVP ganhas na partida)">⭐ MVP</th>
                                         <th className="py-2 px-1 w-8"></th>
                                     </>}
                                     {tab === 'desempenho' && <>

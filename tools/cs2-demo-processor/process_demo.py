@@ -1144,6 +1144,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
 
                 # Registrar todas as kills do round para o log
                 for _, k_row in r_kills.iterrows():
+                    tick = int(safe_val(k_row.get("tick", 0)))
                     k_att = sid_norm(k_row.get(_att_col))
                     k_vic = sid_norm(k_row.get(_vic_col))
                     
@@ -1197,9 +1198,6 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                         # Tenta pegar assister
                         _ass_col_cur = next((c for c in ["assister_steamid", "assister_pawn_steamid", "assister_steamid64"] if c in k_row.index), None)
                         k_ass = sid_norm(k_row.get(_ass_col_cur)) if _ass_col_cur else None
-                        
-                        tick = int(safe_val(k_row.get("tick", 0)))
-                        
                         # Use calculated pre-duel HP if available
                         a_hp = pre_duel_hp_map.get((tick, k_att))
                         if a_hp is None:
