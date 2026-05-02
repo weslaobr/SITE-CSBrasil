@@ -1188,16 +1188,8 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                             "vicX": round(vx, 1),
                             "vicY": round(vy, 1)
                         })
-                            "assisterSteamId": k_ass,
-                            "weapon": w,
-                            "damage": int(safe_val(k_row.get("dmg_health") or k_row.get("damage", 100))), # Novo
-                            "isHeadshot": bool(hs_val) if hs_val is not None else False,
-                            "tick": tick,
-                            "attX": round(safe_val(k_row.get("attacker_x", 0)), 1),
-                            "attY": round(safe_val(k_row.get("attacker_y", 0)), 1),
-                            "vicX": round(safe_val(k_row.get("victim_x", 0)), 1),
-                            "vicY": round(safe_val(k_row.get("victim_y", 0)), 1)
-                        })
+                        if k_ass and k_ass != "0" and k_ass in player_info and r_num <= rounds:
+                            kast_data[k_ass][r_num] = True # KAST (Assist)
 
                 # Winner Lógico (A ou B)
                 w_side = round_summaries[r_num]["winner"]
@@ -1205,9 +1197,6 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                     round_summaries[r_num]["logical_winner"] = "A" if w_side == side_of_a(r_num) else "B"
                 else:
                     round_summaries[r_num]["logical_winner"] = "Draw"
-                        
-                    if k_ass != "0" and k_ass in player_info and r_num <= rounds:
-                        kast_data[k_ass][r_num] = True # KAST (Assist)
 
                 # Multi-kills
                 r_counts = r_kills[r_kills[_att_col] != r_kills[_vic_col]].groupby(_att_col).size()
