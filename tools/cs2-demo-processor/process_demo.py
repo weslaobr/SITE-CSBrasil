@@ -74,15 +74,26 @@ def normalize_team(raw: str) -> str:
 
 
 def safe_val(val, default=0.0):
-    """Garante que o valor seja um float válido para JSON (sem NaN/Inf)."""
+    """Garante que o valor seja um float/int válido para JSON (sem NaN/Inf/NA)."""
     try:
         import math
+        import pandas as pd
+        if pd.isna(val): return default
         f = float(val)
         if math.isnan(f) or math.isinf(f):
             return default
         return f
     except:
         return default
+
+def safe_bool(val):
+    """Garante que o valor seja um booleano puro, tratando pd.NA."""
+    try:
+        import pandas as pd
+        if pd.isna(val): return False
+        return bool(val)
+    except:
+        return False
 
 
 def sid_norm(val):
@@ -863,8 +874,12 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     
     adv_stats = {sid: {
         "fk": 0, "fd": 0, "triples": 0, "quads": 0, "aces": 0,
-        "blind_time": 0.0, "he": 0, "flash": 0, "smoke": 0, "molotov": 0
+        "blind_time": 0.0, "he": 0, "flash": 0, "smoke": 0, "molotov": 0,
+        "total_ttd": 0.0, "ttd_count": 0, "total_dist": 0.0, "dist_count": 0
     } for sid in player_info}
+    
+    # Rastreio de primeiro dano sofrido por round para TTD
+    first_damage_tick = {} # (round, sid) -> tick
     
     kast_data = {sid: [False] * (rounds + 1) for sid in player_info}
     
@@ -1085,7 +1100,6 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                 for _, k_row in r_kills.iterrows():
                     k_att = sid_norm(k_row.get(_att_col))
                     k_vic = sid_norm(k_row.get(_vic_col))
-                    k_ass = str(k_row.get(_ass_col, "0") or "0") if "_ass_col" in locals() else "0"
                     
                     if k_att and k_att in player_info:
                         # Weapon Stats
@@ -1094,12 +1108,10 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                             weapon_stats[k_att][w] = {"kills": 0, "hs": 0, "damage": 0}
                         weapon_stats[k_att][w]["kills"] += 1
                         
-                        # Check headshot safely for pd.NA
+                        # Check headshot safely
                         hs_val = k_row.get("headshot") or k_row.get("is_headshot")
-                        try:
-                            if hs_val is not None and bool(hs_val):
-                                weapon_stats[k_att][w]["hs"] += 1
-                        except: pass
+                        if safe_bool(hs_val):
+                            weapon_stats[k_att][w]["hs"] += 1
                         
                         # KAST (Kill)
                         if r_num <= rounds: kast_data[k_att][r_num] = True
@@ -1108,7 +1120,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                         att_name = str(k_row.get("attacker_name", ""))
                         if att_name and (not player_info[k_att]["name"] or player_info[k_att]["name"].isdigit()) and not att_name.isdigit():
                             player_info[k_att]["name"] = att_name
-
+                        
                         if k_vic != "0" and k_vic in player_info:
                             vic_name = str(k_row.get("user_name", ""))
                             if vic_name and (not player_info[k_vic]["name"] or player_info[k_vic]["name"].isdigit()) and not vic_name.isdigit():
@@ -1119,10 +1131,10 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                         vic_side = player_info.get(k_vic, {}).get("team", "unknown")
 
                         # Tenta pegar assister
-                        _ass_col = next((c for c in ["assister_steamid", "assister_pawn_steamid", "assister_steamid64"] if c in k_row.index), None)
-                        k_ass = sid_norm(k_row.get(_ass_col)) if _ass_col else None
+                        _ass_col_cur = next((c for c in ["assister_steamid", "assister_pawn_steamid", "assister_steamid64"] if c in k_row.index), None)
+                        k_ass = sid_norm(k_row.get(_ass_col_cur)) if _ass_col_cur else None
                         
-                        tick = int(k_row.get("tick", 0))
+                        tick = int(safe_val(k_row.get("tick", 0)))
                         
                         # Use calculated pre-duel HP if available
                         a_hp = pre_duel_hp_map.get((tick, k_att))
@@ -1136,6 +1148,26 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                             
                         v_weap = victim_weapon_map.get((tick, k_vic), "")
 
+                        # --- TTD calculation ---
+                        death_tick = tick
+                        first_dmg = first_damage_tick.get((r_num, k_vic))
+                        if first_dmg:
+                            ttd_ticks = death_tick - first_dmg
+                            tr = float(header.get("tickrate", 128) or 128)
+                            ttd_sec = ttd_ticks / tr
+                            if 0 < ttd_sec < 30: 
+                                adv_stats[k_att]["total_ttd"] += ttd_sec
+                                adv_stats[k_att]["ttd_count"] += 1
+
+                        # --- Kill Distance ---
+                        ax, ay, az = safe_val(k_row.get("attacker_x")), safe_val(k_row.get("attacker_y")), safe_val(k_row.get("attacker_z"))
+                        vx, vy, vz = safe_val(k_row.get("victim_x")), safe_val(k_row.get("victim_y")), safe_val(k_row.get("victim_z"))
+                        if any([ax, ay, az]) and any([vx, vy, vz]):
+                            import math
+                            dist = math.sqrt((ax-vx)**2 + (ay-vy)**2 + (az-vz)**2)
+                            adv_stats[k_att]["total_dist"] += dist
+                            adv_stats[k_att]["dist_count"] += 1
+
                         round_summaries[r_num]["kills"].append({
                             "attackerName": player_info[k_att]["name"],
                             "attackerSteamId": k_att,
@@ -1146,6 +1178,16 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                             "victimSide": vic_side,
                             "victimHp": v_hp,
                             "victimWeapon": v_weap,
+                            "assisterSteamId": k_ass,
+                            "weapon": w,
+                            "damage": int(safe_val(k_row.get("dmg_health") or k_row.get("damage", 100))),
+                            "isHeadshot": safe_bool(hs_val),
+                            "tick": tick,
+                            "attX": round(ax, 1),
+                            "attY": round(ay, 1),
+                            "vicX": round(vx, 1),
+                            "vicY": round(vy, 1)
+                        })
                             "assisterSteamId": k_ass,
                             "weapon": w,
                             "damage": int(safe_val(k_row.get("dmg_health") or k_row.get("damage", 100))), # Novo
@@ -1190,6 +1232,13 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                         
                         for _, row in r_dmg.iterrows():
                             sid = sid_norm(row.get(att_col))
+                            vic_sid = sid_norm(row.get("victim_steamid") or row.get("user_steamid"))
+                            tick = int(row.get("tick", 0))
+                            
+                            # TTD tracker: primeiro dano que o victim tomou no round
+                            if vic_sid and (r_num, vic_sid) not in first_damage_tick:
+                                first_damage_tick[(r_num, vic_sid)] = tick
+
                             if sid:
                                 d_val = int(row.get(dmg_col, 0) or 0)
                                 round_summaries[r_num]["damage"][sid] = round_summaries[r_num]["damage"].get(sid, 0) + d_val
@@ -1281,6 +1330,8 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                 "fk": adv_stats[sid]["fk"], "fd": adv_stats[sid]["fd"],
                 "triples": adv_stats[sid]["triples"], "quads": adv_stats[sid]["quads"], "aces": adv_stats[sid]["aces"],
                 "blindTime": round(adv_stats[sid]["blind_time"], 1),
+                "avgTtd": round(adv_stats[sid]["total_ttd"] / max(adv_stats[sid]["ttd_count"], 1), 2) if adv_stats[sid]["ttd_count"] > 0 else 0,
+                "avgKillDist": round(adv_stats[sid]["total_dist"] / max(adv_stats[sid]["dist_count"], 1), 1) if adv_stats[sid]["dist_count"] > 0 else 0,
                 "heThrown": adv_stats[sid]["he"], "flashThrown": adv_stats[sid]["flash"], 
                 "smokesThrown": adv_stats[sid]["smoke"], "molotovThrown": adv_stats[sid]["molotov"]
             },

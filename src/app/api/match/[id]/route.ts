@@ -116,8 +116,8 @@ export async function GET(
                     molotovs_thrown: m.molotovThrown ?? m.molotov_thrown ?? m.molotovs_thrown ?? 0,
                     enemies_flashed: m.enemiesFlashed ?? m.enemies_flashed ?? m.flashbang_hit_foe ?? 0,
                     // Advanced
-                    avg_ttd: m.avg_ttd ?? m.ttd ?? 0,
-                    avg_kill_distance: m.avg_kill_distance ?? m.killDist ?? 0,
+                    avg_ttd: m.avgTtd ?? m.avg_ttd ?? m.ttd ?? 0,
+                    avg_kill_distance: m.avgKillDist ?? m.avg_kill_distance ?? m.killDist ?? 0,
                     // Confrontos
                     trades: m.trades ?? m.trade_kills_succeed ?? m.trade_count ?? m.tradeKills ?? 0,
                     trade_kill_count: m.trades ?? m.trade_kills_succeed ?? m.trade_count ?? m.tradeKills ?? 0,
