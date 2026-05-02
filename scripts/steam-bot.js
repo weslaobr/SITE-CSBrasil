@@ -53,9 +53,13 @@ login();
 
 user.on('loggedOn', () => {
     console.log('✅ Logado na Steam com sucesso!');
-    retryCount = 0; // Reset retry count upon success
+    retryCount = 0; 
     user.setPersona(SteamUser.EPersonaState.Online);
-    user.gamesPlayed([730]); // CS2 appid
+    user.gamesPlayed([730]); 
+});
+
+user.on('friendsList', () => {
+    console.log(`👥 Lista de amigos carregada! Total: ${Object.keys(user.myFriends).length} amigos.`);
 });
 
 // Aceitar pedidos de amizade automaticamente
@@ -127,7 +131,9 @@ app.get('/pulse', (req, res) => {
     res.json({
         online: true,
         steam: user.steamID ? 'Online' : 'Offline',
-        gc: cs2.haveGCCheckedIn ? 'Online' : 'Offline'
+        gc: cs2.haveGCCheckedIn ? 'Online' : 'Offline',
+        friendsCount: user.myFriends ? Object.keys(user.myFriends).length : 0,
+        steamId: user.steamID ? user.steamID.getSteamID64() : null
     });
 });
 
@@ -274,15 +280,32 @@ app.post('/send-message', async (req, res) => {
     }
 
     try {
-        console.log(`💬 Solicitação de mensagem para: ${steamId}`);
+        // Garantir que steamId seja string
+        const targetSteamId = String(steamId);
         
         // Verificar se são amigos
-        const relationship = user.myFriends[steamId];
+        if (!user.myFriends || Object.keys(user.myFriends).length === 0) {
+            console.warn("⚠️ Lista de amigos ainda não carregada ou vazia.");
+        }
+
+        const friendsKeys = Object.keys(user.myFriends || {});
+        const relationship = user.myFriends ? user.myFriends[targetSteamId] : undefined;
+        
+        console.log(`🔍 Verificando amizade para ${targetSteamId}. Rel: ${relationship}. Total amigos carregados: ${friendsKeys.length}`);
+
         if (relationship !== SteamUser.EFriendRelationship.Friend) {
-            console.warn(`⚠️ Não é possível enviar: Usuário ${steamId} não é amigo do bot (Rel: ${relationship})`);
+            console.warn(`⚠️ Não é possível enviar: Usuário ${targetSteamId} não é amigo do bot (Rel: ${relationship})`);
+            
+            // Tentar adicionar se não for amigo (ajuda para a próxima vez)
+            if (relationship === undefined || relationship === SteamUser.EFriendRelationship.None) {
+                console.log(`➕ Enviando convite de amizade para ${targetSteamId}...`);
+                user.addFriend(targetSteamId);
+            }
+
             return res.status(403).json({ 
                 error: 'O bot não é amigo deste usuário', 
-                relationship: relationship === undefined ? 'None' : relationship 
+                relationship: relationship === undefined ? 'None' : relationship,
+                details: `Rel: ${relationship}`
             });
         }
 

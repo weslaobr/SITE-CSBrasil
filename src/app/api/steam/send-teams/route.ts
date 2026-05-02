@@ -63,7 +63,8 @@ https://inventory.cstrike.app/
             if (player.steamId && !String(player.steamId).startsWith('guest_')) {
                 try {
                     // Pequeno delay para não sobrecarregar o bot ou ser bloqueado pela Steam
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    // Aumentado para 1000ms para ser mais seguro contra rate limits da Steam
+                    await new Promise(resolve => setTimeout(resolve, 1000));
 
                     console.log(`➡️ Enviando para: ${player.nickname} (ID: ${player.steamId})`);
                     
@@ -111,28 +112,33 @@ https://inventory.cstrike.app/
 
         const successCount = results.filter(r => r.success).length;
         const totalAttempts = results.length;
+        const failures = results.filter(r => !r.success);
         
         const botOffline = results.some((r: any) => r.botOffline);
         
         if (botOffline) {
             return NextResponse.json({ 
                 success: false, 
-                message: `❌ Bot Steam offline! Execute "npm run bot" localmente e tente novamente.\nURL configurada: ${STEAM_BOT_URL}`,
+                message: `❌ Bot Steam offline! Execute "npm run bot" localmente e tente novamente.\nURL: ${STEAM_BOT_URL}`,
                 results 
             }, { status: 503 });
         }
 
         if (successCount === 0 && totalAttempts > 0) {
+            // Se falhou para todos, detalhar o motivo do primeiro erro
+            const firstError = failures[0]?.error || 'Erro desconhecido';
+            const details = failures[0]?.relationship ? ` (Rel: ${failures[0].relationship})` : '';
+            
             return NextResponse.json({ 
                 success: false, 
-                message: 'Nenhuma mensagem pôde ser enviada. Verifique se o bot está online e os jogadores são amigos do bot.',
+                message: `Nenhuma mensagem enviada. Motivo: ${firstError}${details}. Verifique se o bot está online e se os jogadores são amigos do bot (@tropacs).`,
                 results 
             }, { status: 500 });
         }
 
         return NextResponse.json({ 
             success: true, 
-            message: `Processamento concluído (${successCount}/${totalAttempts} enviadas)`,
+            message: `Times enviados com sucesso para ${successCount} de ${totalAttempts} jogadores.`,
             results 
         });
 
