@@ -712,7 +712,9 @@ const MatchReportModal: React.FC<Props> = ({
     const hasRichData = !!(
         currentMatch?.metadata?.fullStats || 
         currentMatch?.metadata?.roundSummaries || 
+        currentMatch?.metadata?.round_summaries ||
         currentMatch?.metadata?.metadata?.roundSummaries ||
+        currentMatch?.metadata?.metadata?.round_summaries ||
         currentMatch?.metadata?.match_details?.round_summaries ||
         currentMatch?.metadata?.metadata?.match_details?.round_summaries
     );
@@ -722,9 +724,10 @@ const MatchReportModal: React.FC<Props> = ({
     const RoundLog = () => {
         const allPlayers = [...t1, ...t2];
         const summaries = currentMatch?.metadata?.roundSummaries 
+                       || currentMatch?.metadata?.round_summaries
                        || currentMatch?.metadata?.metadata?.roundSummaries
-                       || currentMatch?.metadata?.match_details?.round_summaries
-                       || currentMatch?.metadata?.match_details?.roundSummaries;
+                       || currentMatch?.metadata?.metadata?.round_summaries
+                       || currentMatch?.metadata?.match_details?.round_summaries;
         if (!summaries) return (
             <div className="flex flex-col items-center justify-center py-24 text-zinc-600 bg-black/20 rounded-[32px] border border-white/[0.03]">
                 <Clock size={48} strokeWidth={1} className="mb-4 text-yellow-500/20" />
@@ -946,9 +949,10 @@ const MatchReportModal: React.FC<Props> = ({
         const [selectedSid, setSelectedSid] = useState<string | null>(null);
         const allPlayers = [...t1, ...t2];
         const summaries = currentMatch?.metadata?.roundSummaries 
+                       || currentMatch?.metadata?.round_summaries
                        || currentMatch?.metadata?.metadata?.roundSummaries
-                       || currentMatch?.metadata?.match_details?.round_summaries
-                       || currentMatch?.metadata?.match_details?.roundSummaries;
+                       || currentMatch?.metadata?.metadata?.round_summaries
+                       || currentMatch?.metadata?.match_details?.round_summaries;
 
         React.useEffect(() => {
             if (!selectedSid && allPlayers.length > 0) {

@@ -109,11 +109,15 @@ export async function GET(
                     multi5k: m.aces ?? m.multi5k ?? m.penta_kills ?? m.pentaKills ?? m.ace_kills ?? 0,
                     // Utility
                     utility_damage: m.utilDmg ?? m.utility_damage ?? m.util_damage ?? (m.he_foes_damage_avg != null && m.rounds_count ? Math.round(m.he_foes_damage_avg * m.rounds_count) : 0),
-                    blind_time: m.blindTime ?? m.flashbang_hit_foe_avg_duration ?? m.blind_time ?? m.enemiesFlashedDuration ?? 0,
+                    blind_time: m.blindTime ?? m.flashbang_hit_foe_avg_duration ?? m.blind_time ?? m.enemiesFlashedDuration ?? m.total_blind_duration ?? 0,
                     he_thrown: m.heThrown ?? m.he_thrown ?? 0,
                     flash_thrown: m.flashThrown ?? m.flashbang_thrown ?? m.flash_thrown ?? 0,
                     smokes_thrown: m.smokesThrown ?? m.smoke_thrown ?? m.smokes_thrown ?? 0,
                     molotovs_thrown: m.molotovThrown ?? m.molotov_thrown ?? m.molotovs_thrown ?? 0,
+                    enemies_flashed: m.enemiesFlashed ?? m.enemies_flashed ?? m.flashbang_hit_foe ?? 0,
+                    // Advanced
+                    avg_ttd: m.avg_ttd ?? m.ttd ?? 0,
+                    avg_kill_distance: m.avg_kill_distance ?? m.killDist ?? 0,
                     // Confrontos
                     trades: m.trades ?? m.trade_kills_succeed ?? m.trade_count ?? m.tradeKills ?? 0,
                     trade_kill_count: m.trades ?? m.trade_kills_succeed ?? m.trade_count ?? m.tradeKills ?? 0,
@@ -128,7 +132,7 @@ export async function GET(
                     is_user: !!(profileSteamId && p.steamId && String(p.steamId) === String(profileSteamId)),
                     // MVP Stars — comes directly from GlobalMatchPlayer.mvps column
                     mvps: p.mvps ?? 0,
-                    total_damage: m.totalDamage ?? m.total_damage ?? (p.adr && m.rounds_count ? Math.round(p.adr * m.rounds_count) : 0),
+                    total_damage: m.totalDamage ?? m.total_damage ?? m.totalDamageDealt ?? (p.adr && (m.rounds_count || localMatch.scoreA + localMatch.scoreB) ? Math.round(p.adr * (m.rounds_count || localMatch.scoreA + localMatch.scoreB)) : 0),
                     metadata: m
                 };
             });
