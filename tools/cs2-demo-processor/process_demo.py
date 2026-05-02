@@ -914,22 +914,37 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
     except Exception as _eg:
         log_fn(f"⚠️  parse_grenades falhou ({_eg}), tentando eventos individuais...")
         try:
+            # Eventos de Detonação (Fallback Secundário)
             events_to_parse = [
                 ("hegrenade_detonate", "he"),
                 ("flashbang_detonate", "flash"),
                 ("smokegrenade_detonate", "smoke"),
-                ("inferno_startburn", "molotov")
+                ("inferno_startburn", "molotov"),
+                ("weapon_fire", "fire") # Especial
             ]
             for ev, g_type in events_to_parse:
                 df_g = _parse(ev)
                 if df_g is None: continue
                 df_g = filter_tick(df_g)
                 if not is_empty(df_g):
-                    t_col = next((c for c in ["userid", "user_steamid", "thrower_steamid", "attacker_steamid", "attacker_steamid64", "thrower"] if c in df_g.columns), None)
+                    # Tenta achar a coluna de quem jogou (thrower/user/attacker/victim)
+                    # victim_steamid é incluído porque o _parse renomeia user_steamid para victim_steamid
+                    t_col = next((c for c in ["userid", "user_steamid", "thrower_steamid", "attacker_steamid", "victim_steamid", "thrower"] if c in df_g.columns), None)
                     if t_col:
                         for _, row in df_g.iterrows():
                             sid = sid_norm(row[t_col])
-                            if sid in adv_stats:
+                            if sid not in adv_stats: continue
+                            
+                            if g_type == "fire":
+                                # Se for weapon_fire, filtra por tipo de granada
+                                w_col = next((c for c in ["weapon", "weapon_name"] if c in df_g.columns), None)
+                                if w_col:
+                                    weapon = str(row[w_col]).lower()
+                                    if "hegrenade" in weapon: adv_stats[sid]["he"] += 1
+                                    elif "flashbang" in weapon: adv_stats[sid]["flash"] += 1
+                                    elif "smokegrenade" in weapon: adv_stats[sid]["smoke"] += 1
+                                    elif "molotov" in weapon or "incen" in weapon: adv_stats[sid]["molotov"] += 1
+                            else:
                                 adv_stats[sid][g_type] += 1
         except Exception as e:
             log_fn(f"⚠️  Granadas (lançadas) não extraídas: {e}")
