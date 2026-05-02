@@ -48,17 +48,32 @@ export async function POST(req: NextRequest) {
         const mvps    = p.mvps    ?? 0;
         const result  = (p.matchResult ?? '').toLowerCase();
 
+        const metadata = (p.metadata as any) || {};
+        const isSub = metadata.isSub === true;
+        const isLeaver = metadata.isLeaver === true;
+
         // ── Novo cálculo (mesmo critério do db_connector.py) ────────────────
         let newEloChange = 0;
-        if (result === 'win')  newEloChange = 15;
-        if (result === 'loss') newEloChange = -10;
 
-        if (result === 'win' || result === 'loss') {
-            if (kills > deaths)          newEloChange += 2;
-            else if (deaths > kills + 3) newEloChange -= 2;
-            if (adr > 90)                newEloChange += 3;
-            else if (adr < 50)           newEloChange -= 2;
-            newEloChange += mvps * 1;
+        if (isLeaver) {
+            // Penalidade fixa para quem abandonou a partida
+            newEloChange = -15;
+        } else {
+            if (result === 'win')  newEloChange = 15;
+            if (result === 'loss') newEloChange = -10;
+
+            if (result === 'win' || result === 'loss') {
+                if (kills > deaths)          newEloChange += 2;
+                else if (deaths > kills + 3) newEloChange -= 2;
+                if (adr > 90)                newEloChange += 3;
+                else if (adr < 50)           newEloChange -= 2;
+                newEloChange += mvps * 1;
+            }
+
+            // Se for substituto (complete), ganha/perde apenas metade dos pontos
+            if (isSub) {
+                newEloChange = Math.round(newEloChange * 0.5);
+            }
         }
 
         // ── Atualizar o registro do jogador na partida ───────────────────────

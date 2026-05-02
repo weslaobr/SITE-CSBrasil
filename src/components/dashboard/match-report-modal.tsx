@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Play, Download, Calendar, Activity, Target, Zap, Clock, Shield, Search, RefreshCw, X, 
     AlertCircle, Crosshair, TrendingUp, Star, Flame, Eye, MapPin, Trophy, Swords, Info, Edit2, Check,
-    Trash2, Heart, Calculator
+    Trash2, Heart, Calculator, LogOut, UserPlus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -52,6 +52,8 @@ interface PlayerStats {
     team?: string;
     eloChange?: number | null;
     eloAfter?: number | null;
+    isSub?: boolean;
+    isLeaver?: boolean;
     metadata?: any;
 }
 
@@ -83,12 +85,13 @@ interface Props {
     onClose: () => void;
     userSteamId?: string;
     userNickname?: string;
+    onSync?: () => void;
 }
 
 // ── COMPONENT ────────────────────────────────────────────────────────────────
 
 const MatchReportModal: React.FC<Props> = ({
-    match: initialMatch, matchId, isOpen, onClose, userSteamId, userNickname
+    match: initialMatch, matchId, isOpen, onClose, userSteamId, userNickname, onSync
 }) => {
     const { data: session } = useSession();
     const [internalMatch, setInternalMatch] = useState<Match | null>(null);
@@ -408,92 +411,97 @@ const MatchReportModal: React.FC<Props> = ({
     };
 
     const normalizeP = (p: any, isUser = false, team?: string): PlayerStats => {
-        const kills   = p.kills ?? p.total_kills ?? parseInt(p.player_stats?.Kills ?? '0') ?? 0;
-        const deaths  = p.deaths ?? p.total_deaths ?? parseInt(p.player_stats?.Deaths ?? '0') ?? 1; // avoid /0
-        const assists = p.assists ?? p.total_assists ?? parseInt(p.player_stats?.Assists ?? '0') ?? 0;
+        // Se p for um objeto do Prisma (GlobalMatchPlayer), os dados detalhados estão no JSON metadata.
+        // Se p for um objeto bruto do parser, os dados estão no próprio objeto.
+        const m = (p.metadata && typeof p.metadata === 'object' && !Array.isArray(p.metadata)) ? p.metadata : {};
         
-        // adr: bot saves as p.dpr (alias adr), Leetify uses p.dpr or p.adr
-        const adr     = p.adr ?? p.dpr ?? p.average_damage_per_round ?? parseFloat(p.player_stats?.ADR ?? '0') ?? (isUser ? currentMatch?.adr ?? 0 : 0);
+        const kills   = p.kills ?? m.kills ?? p.total_kills ?? parseInt(p.player_stats?.Kills ?? '0') ?? 0;
+        const deaths  = p.deaths ?? m.deaths ?? p.total_deaths ?? parseInt(p.player_stats?.Deaths ?? '0') ?? 1;
+        const assists = p.assists ?? m.assists ?? p.total_assists ?? parseInt(p.player_stats?.Assists ?? '0') ?? 0;
         
-        // rating: Bot (advancedMeta.rating), Leetify (leetify_rating)
-        const rawRating = p.rating ?? p.leetify_rating ?? p.leetifyRating ?? p.ratingRatio ?? null;
+        const adr     = p.adr ?? m.adr ?? p.dpr ?? m.dpr ?? p.average_damage_per_round ?? parseFloat(p.player_stats?.ADR ?? '0') ?? (isUser ? currentMatch?.adr ?? 0 : 0);
+        
+        const rawRating = p.rating ?? m.rating ?? p.leetify_rating ?? p.leetifyRating ?? p.ratingRatio ?? null;
         const rating  = rawRating !== null ? Number(rawRating) : (kills / (deaths || 1));
         
-        // kast: Bot (0-100), Leetify (0-1 fraction or 0-100)
         let kast = 0;
-        const rawKast = p.kast ?? p.kastControl ?? p.kast_percent ?? p.kast_percentage;
+        const rawKast = p.kast ?? m.kast ?? p.kastControl ?? p.kast_percent ?? p.kast_percentage;
         if (rawKast !== undefined && rawKast !== null && rawKast !== 0) {
              kast = rawKast > 1 ? Math.round(rawKast) : Math.round(rawKast * 100);
         } else {
-             // HEURISTIC REPAIR: If missing, estimate from rating
-             const r = p.rating ?? p.leetify_rating ?? p.leetifyRating ?? p.ratingRatio ?? null;
-             if (r !== null && r !== 0) {
-                 kast = Math.round(70 + (Number(r) * 10));
-             }
+             const r = rawRating;
+             if (r !== null && r !== 0) kast = Math.round(70 + (Number(r) * 10));
         }
         
-        // hs: bot saves as hsPercentage (0-100), Leetify uses accuracy_head (0-1)
         const hsRaw   = p.accuracy_head !== undefined
             ? (p.accuracy_head > 1 ? Math.round(p.accuracy_head) : Math.round(p.accuracy_head * 100))
-            : p.hs_percent ?? p.hs_percentage ?? p.hsPercentage
+            : p.hs_percent ?? p.hs_percentage ?? p.hsPercentage ?? m.hsPercentage ?? m.hs_percent
               ?? (isUser && currentMatch?.hsPercentage ? Math.round(Number(currentMatch.hsPercentage)) : 0);
         
-        const avatar  = p.avatar_url || p.avatarUrl || p.avatar || p.user?.image
+        const avatar  = p.avatar_url || p.avatarUrl || p.avatar || p.user?.image || m.avatar
                       || (isUser ? (currentMatch?.metadata?.steam_avatar ?? currentMatch?.metadata?.avatarUrl ?? '') : '')
                       || '';
 
-
         return {
-            nickname: p.name || p.nickname || p.playerNickname || p.user?.name || (p.metadata as any)?.name || (p.metadata as any)?.nickname || (isUser ? '[Você]' : 'Jogador'),
-
-
+            nickname: p.name || p.nickname || p.playerNickname || p.user?.name || m.name || m.nickname || (isUser ? '[Você]' : 'Jogador'),
             avatar, kills, deaths, assists, adr, rating,
-            hs: hsRaw, kast,
-            // First Kills / Deaths — não disponível na Leetify v2, será 0
-            fk: Number(p.fk ?? p.fk_count ?? p.fkd ?? p.firstKills ?? p.first_kill_count ?? 0),
-            fd: Number(p.fd ?? p.fd_count ?? p.fk_deaths ?? p.firstDeaths ?? p.first_death_count ?? 0),
-            // Multi-kills: Leetify v2 usa multi3k/multi4k/multi5k
-            triples: Number(p.triples ?? p.multi3k ?? p.triple_kills ?? p.tripleKills ?? 0),
-            quads: Number(p.quads ?? p.multi4k ?? p.quadro_kills ?? p.quad_kills ?? p.quadKills ?? 0),
-            aces: Number(p.aces ?? p.multi5k ?? p.penta_kills ?? p.ace_kills ?? p.pentaKills ?? 0),
-            // Misc
-            // Clutches: sum of 1vX wins or direct count. Use null if data is completely missing.
+            hs: Number(hsRaw || 0), 
+            kast: Number(kast || 0),
+            fk: Number(p.fk ?? m.fk ?? p.fk_count ?? m.fk_count ?? p.firstKills ?? m.firstKills ?? 0),
+            fd: Number(p.fd ?? m.fd ?? p.fd_count ?? m.fd_count ?? p.firstDeaths ?? m.firstDeaths ?? 0),
+            triples: Number(p.triples ?? m.triples ?? p.multi3k ?? m.multi3k ?? p.triple_kills ?? 0),
+            quads: Number(p.quads ?? m.quads ?? p.multi4k ?? m.multi4k ?? p.quadro_kills ?? 0),
+            aces: Number(p.aces ?? m.aces ?? p.multi5k ?? m.multi5k ?? p.penta_kills ?? 0),
             clutches: (() => {
-                const direct = p.clutches ?? p.clutches_won ?? p.clutchesWon ?? p.clutch_count;
+                const direct = p.clutches ?? m.clutches ?? p.clutches_won ?? m.clutches_won ?? p.clutch_count;
                 if (direct !== undefined && direct !== null) return Number(direct);
-                const sumV = (p.clutch_v1_wins ?? 0) + (p.clutch_v2_wins ?? 0) + (p.clutch_v3_wins ?? 0) + (p.clutch_v4_wins ?? 0) + (p.clutch_v5_wins ?? 0);
-                if (sumV > 0) return sumV;
-                // Se temos dados de multikills mas nada de clutch, é provável que clutches não existam nesta fonte
-                if (p.multi3k !== undefined || p.triples !== undefined) return 0;
-                return null;
+                const sumV = (p.clutch_v1_wins ?? m.clutch_v1_wins ?? 0) + (p.clutch_v2_wins ?? m.clutch_v2_wins ?? 0) + (p.clutch_v3_wins ?? m.clutch_v3_wins ?? 0);
+                return sumV > 0 ? sumV : (p.multi3k !== undefined ? 0 : null);
             })(),
-            // Trades: Leetify v2 usa trade_kills_succeed
-            trades: Number(p.trades ?? p.trade_kills_succeed ?? p.trade_count ?? p.tradeKills ?? 0),
-            mvps: p.mvps !== undefined ? Number(p.mvps) : undefined,
-            // Campos extra do Leetify v2 para aba Confrontos
-            tradeKillOpp: Number(p.tradeKillOpp ?? p.trade_kill_opportunities ?? 0),
-            tradedDeathOpp: Number(p.tradedDeathOpp ?? p.traded_death_opportunities ?? 0),
-            tradeKillSucc: Number(p.tradeKillSucc ?? p.trade_kills_succeed ?? p.trades ?? 0),
-            tradedDeathSucc: Number(p.tradedDeathSucc ?? p.traded_deaths_succeed ?? 0),
-            // Utilities: Leetify v2 usa flash_assist (singular), flashbang_thrown, smoke_thrown, molotov_thrown
-            utilDmg: Number(p.utilDmg ?? p.util_damage ?? p.utility_damage ?? p.utilityDamage ?? 0),
-            flashAssists: Number(p.flashAssists ?? p.flash_assist ?? p.flash_assists ?? p.flashbang_assists ?? 0),
-            blindTime: Number(p.blindTime ?? p.blind_time ?? p.flashbang_hit_foe_avg_duration ?? p.enemiesFlashedDuration ?? 0),
-            heThrown: Number(p.heThrown ?? p.he_thrown ?? 0),
-            flashThrown: Number(p.flashThrown ?? p.flash_thrown ?? p.flashbang_thrown ?? 0),
-            smokesThrown: Number(p.smokesThrown ?? p.smokes_thrown ?? p.smoke_thrown ?? 0),
-            molotovThrown: Number(p.molotovThrown ?? p.molotovs_thrown ?? p.molotov_thrown ?? 0),
-            enemiesFlashed: Number(p.enemies_flashed ?? p.flashbang_hit_foe ?? 0),
-            ttd: Number(p.avg_ttd ?? 0),
-            killDist: Number(p.avg_kill_distance ?? 0),
-            totalDamage: Number(p.total_damage ?? p.totalDamage ?? (adr * (p.rounds_count ?? currentMatch?.metadata?.rounds_count ?? (currentMatch?.metadata?.roundSummaries ? Object.keys(currentMatch.metadata.roundSummaries).length : 0) ?? 0))),
+            trades: Number(p.trades ?? m.trades ?? p.trade_kills_succeed ?? m.trade_kills_succeed ?? 0),
+            mvps: Number(p.mvps ?? m.mvps ?? 0),
+            tradeKillOpp: Number(p.tradeKillOpp ?? m.tradeKillOpp ?? p.trade_kill_opportunities ?? m.trade_kill_opportunities ?? 0),
+            tradedDeathOpp: Number(p.tradedDeathOpp ?? m.tradedDeathOpp ?? p.traded_death_opportunities ?? m.traded_death_opportunities ?? 0),
+            tradeKillSucc: Number(p.tradeKillSucc ?? m.tradeKillSucc ?? p.trade_kills_succeed ?? m.trade_kills_succeed ?? 0),
+            tradedDeathSucc: Number(p.tradedDeathSucc ?? m.tradedDeathSucc ?? p.traded_deaths_succeed ?? m.traded_deaths_succeed ?? 0),
+            utilDmg: Number(p.utilDmg ?? m.utilDmg ?? p.util_damage ?? m.util_damage ?? p.utilityDamage ?? 0),
+            flashAssists: Number(p.flashAssists ?? m.flashAssists ?? p.flash_assist ?? m.flash_assist ?? 0),
+            blindTime: Number(p.blindTime ?? m.blindTime ?? p.blind_time ?? m.blind_time ?? 0),
+            heThrown: Number(p.heThrown ?? m.heThrown ?? p.he_thrown ?? m.he_thrown ?? 0),
+            flashThrown: Number(p.flashThrown ?? m.flashThrown ?? p.flash_thrown ?? m.flash_thrown ?? p.flashbang_thrown ?? 0),
+            smokesThrown: Number(p.smokesThrown ?? m.smokesThrown ?? p.smokes_thrown ?? m.smokes_thrown ?? p.smoke_thrown ?? 0),
+            molotovThrown: Number(p.molotovThrown ?? m.molotovThrown ?? p.molotovs_thrown ?? m.molotovs_thrown ?? p.molotov_thrown ?? 0),
+            enemiesFlashed: Number(p.enemiesFlashed ?? m.enemiesFlashed ?? p.enemies_flashed ?? m.enemies_flashed ?? p.flashbang_hit_foe ?? 0),
+            ttd: Number(p.ttd ?? m.ttd ?? p.avg_ttd ?? m.avg_ttd ?? 0),
+            killDist: Number(p.killDist ?? m.killDist ?? p.avg_kill_distance ?? m.avg_kill_distance ?? 0),
+            totalDamage: Number(p.total_damage ?? m.total_damage ?? p.totalDamage ?? m.totalDamage ?? (adr * (p.rounds_count ?? m.rounds_count ?? currentMatch?.metadata?.rounds_count ?? (currentMatch?.metadata?.roundSummaries ? Object.keys(currentMatch.metadata.roundSummaries).length : 0) ?? 0))),
             eloChange: p.eloChange !== undefined ? p.eloChange : (p.elo_change ?? null),
             eloAfter: p.eloAfter !== undefined ? p.eloAfter : (p.elo_after ?? null),
             isUser,
-            steamId: p.steam64_id || p.player_id || p.steamId || p.steam_id,
+            steamId: p.steam64_id || p.player_id || p.steamId || p.steam_id || m.steamId,
             team,
-            metadata: p.metadata
+            isSub: p.isSub ?? m.isSub ?? false,
+            isLeaver: p.isLeaver ?? m.isLeaver ?? false,
+            metadata: m
         };
+    };
+
+    const handleUpdatePlayerStatus = async (steamId: string, field: 'isSub' | 'isLeaver', value: boolean) => {
+        try {
+            const res = await axios.post('/api/admin/match-player-status', {
+                matchId: currentMatch?.id,
+                steamId,
+                field,
+                value
+            });
+            if (res.data.success) {
+                toast.success('Status do jogador atualizado!');
+                await fetchMatchData();
+            }
+        } catch (error: any) {
+            console.error('Error updating player status:', error);
+            toast.error('Erro ao atualizar status: ' + (error.response?.data?.error || error.message));
+        }
     };
 
     const getTeams = (): { t1: PlayerStats[]; t2: PlayerStats[] } => {
@@ -701,13 +709,22 @@ const MatchReportModal: React.FC<Props> = ({
     const mode = detectMode();
     const mapDisplay = (currentMatch.mapName?.replace('de_','') || '').split('_').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Mapa';
     const dateStr = currentMatch.matchDate ? new Date(currentMatch.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' }) : 'Data desconhecida';
-    const hasRichData = !!(currentMatch?.metadata?.fullStats || currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries);
+    const hasRichData = !!(
+        currentMatch?.metadata?.fullStats || 
+        currentMatch?.metadata?.roundSummaries || 
+        currentMatch?.metadata?.metadata?.roundSummaries ||
+        currentMatch?.metadata?.match_details?.round_summaries ||
+        currentMatch?.metadata?.metadata?.match_details?.round_summaries
+    );
     const isVerified = hasRichData;
     const userData = t1.find(p => p.isUser) || t2.find(p => p.isUser);
     
     const RoundLog = () => {
         const allPlayers = [...t1, ...t2];
-        const summaries = currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries;
+        const summaries = currentMatch?.metadata?.roundSummaries 
+                       || currentMatch?.metadata?.metadata?.roundSummaries
+                       || currentMatch?.metadata?.match_details?.round_summaries
+                       || currentMatch?.metadata?.match_details?.roundSummaries;
         if (!summaries) return (
             <div className="flex flex-col items-center justify-center py-24 text-zinc-600 bg-black/20 rounded-[32px] border border-white/[0.03]">
                 <Clock size={48} strokeWidth={1} className="mb-4 text-yellow-500/20" />
@@ -928,7 +945,10 @@ const MatchReportModal: React.FC<Props> = ({
     const DuelsLog = () => {
         const [selectedSid, setSelectedSid] = useState<string | null>(null);
         const allPlayers = [...t1, ...t2];
-        const summaries = currentMatch?.metadata?.roundSummaries || currentMatch?.metadata?.metadata?.roundSummaries;
+        const summaries = currentMatch?.metadata?.roundSummaries 
+                       || currentMatch?.metadata?.metadata?.roundSummaries
+                       || currentMatch?.metadata?.match_details?.round_summaries
+                       || currentMatch?.metadata?.match_details?.roundSummaries;
 
         React.useEffect(() => {
             if (!selectedSid && allPlayers.length > 0) {
@@ -1250,11 +1270,23 @@ const MatchReportModal: React.FC<Props> = ({
                 >
                     {p.isUser ? '★ ' : ''}{p.nickname}
                 </a>
-                {p.eloChange !== undefined && p.eloChange !== null && (
-                    <span className={`text-[8px] font-black ml-1.5 px-1 rounded-sm ${p.eloChange > 0 ? 'bg-emerald-500/20 text-emerald-400' : p.eloChange < 0 ? 'bg-red-500/20 text-red-400' : 'bg-zinc-800 text-zinc-500'}`}>
-                        {p.eloChange > 0 ? `+${p.eloChange}` : p.eloChange}
-                    </span>
-                )}
+                <div className="flex items-center gap-1">
+                    {p.isSub && (
+                        <span className="px-1 py-0.5 rounded-[4px] bg-blue-500/20 text-blue-400 text-[7px] font-black uppercase tracking-tighter border border-blue-500/20" title="Substituto (Complete)">
+                            SUB
+                        </span>
+                    )}
+                    {p.isLeaver && (
+                        <span className="px-1 py-0.5 rounded-[4px] bg-red-500/20 text-red-400 text-[7px] font-black uppercase tracking-tighter border border-red-500/20" title="Desistência (Leaver)">
+                            SAIU
+                        </span>
+                    )}
+                    {p.eloChange !== undefined && p.eloChange !== null && (
+                        <span className={`text-[8px] font-black px-1 rounded-sm ${p.eloChange > 0 ? 'bg-emerald-500/20 text-emerald-400' : p.eloChange < 0 ? 'bg-red-500/20 text-red-400' : 'bg-zinc-800 text-zinc-500'}`}>
+                            {p.eloChange > 0 ? `+${p.eloChange}` : p.eloChange}
+                        </span>
+                    )}
+                </div>
             </div>
         </td>
     );
@@ -1296,13 +1328,29 @@ const MatchReportModal: React.FC<Props> = ({
                 </td>
                 <td className="py-2.5 px-1 text-right">
                     {(session?.user as any)?.isAdmin && (
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); onRemove(p.steamId); }}
-                            className="p-1.5 text-zinc-800 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                            title="Remover jogador desta partida"
-                        >
-                            <Trash2 size={12} />
-                        </button>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleUpdatePlayerStatus(p.steamId!, 'isSub', !p.isSub); }}
+                                className={`p-1.5 rounded-lg border transition-all ${p.isSub ? 'bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/20' : 'bg-white/5 border-white/5 text-zinc-500 hover:text-blue-400'}`}
+                                title={p.isSub ? "Remover status de Substituto" : "Marcar como Substituto (Complete)"}
+                            >
+                                <UserPlus size={12} />
+                            </button>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleUpdatePlayerStatus(p.steamId!, 'isLeaver', !p.isLeaver); }}
+                                className={`p-1.5 rounded-lg border transition-all ${p.isLeaver ? 'bg-red-500 text-white border-red-400 shadow-lg shadow-red-500/20' : 'bg-white/5 border-white/5 text-zinc-500 hover:text-red-400'}`}
+                                title={p.isLeaver ? "Remover status de Desistência" : "Marcar como Desistência (Leaver)"}
+                            >
+                                <LogOut size={12} />
+                            </button>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onRemove(p.steamId!); }}
+                                className="p-1.5 bg-white/5 border border-white/5 rounded-lg text-zinc-500 hover:text-red-500 transition-all"
+                                title="Remover jogador desta partida"
+                            >
+                                <Trash2 size={12} />
+                            </button>
+                        </div>
                     )}
                 </td>
             </tr>
@@ -1368,6 +1416,26 @@ const MatchReportModal: React.FC<Props> = ({
                         {p.aces > 0 && <span className="text-[8px] font-black text-purple-300 bg-purple-500/20 px-1 py-0.5 rounded animate-pulse">{p.aces}×ACE</span>}
                         {p.triples===0 && p.quads===0 && p.aces===0 && <span className="text-zinc-700 text-[10px]">—</span>}
                     </div>
+                </td>
+                <td className="py-2.5 px-1 text-right">
+                    {(session?.user as any)?.isAdmin && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleUpdatePlayerStatus(p.steamId!, 'isSub', !p.isSub); }}
+                                className={`p-1 rounded-lg border transition-all ${p.isSub ? 'bg-blue-500 text-white border-blue-400' : 'bg-white/5 border-white/5 text-zinc-500'}`}
+                                title="Marcar como Substituto"
+                            >
+                                <UserPlus size={10} />
+                            </button>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleUpdatePlayerStatus(p.steamId!, 'isLeaver', !p.isLeaver); }}
+                                className={`p-1 rounded-lg border transition-all ${p.isLeaver ? 'bg-red-500 text-white border-red-400' : 'bg-white/5 border-white/5 text-zinc-500'}`}
+                                title="Marcar como Desistência"
+                            >
+                                <LogOut size={10} />
+                            </button>
+                        </div>
+                    )}
                 </td>
             </tr>
         );
@@ -1654,6 +1722,7 @@ const MatchReportModal: React.FC<Props> = ({
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Tempo de Reação (Time to Damage)">TTD</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Média de Distância das Kills">Dist.</th>
                                         <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center" title="Múltiplas eliminações no mesmo round (3k, 4k, Ace)">Multikills</th>
+                                        <th className="py-2 px-1 w-8"></th>
                                     </>}
                                     {tab === 'utilitarios' && <>
                                         <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600" title="Nome do Jogador">Jogador</th>

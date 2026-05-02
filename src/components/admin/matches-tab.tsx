@@ -376,6 +376,7 @@ export default function MatchesTab() {
                 matchId={selectedMatch?.id}
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
+                onSync={fetchMatches}
             />
         </div>
     );
