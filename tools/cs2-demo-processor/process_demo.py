@@ -903,7 +903,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
             _type_col = next((c for c in ["grenade_type", "type", "weapon"] if c in df_grenades_native.columns), None)
             if _sid_col and _type_col:
                 for _, row in df_grenades_native.iterrows():
-                    sid = str(row[_sid_col] or "0").split(".")[0]
+                    sid = sid_norm(row[_sid_col])
                     gtype_raw = str(row[_type_col]).lower().replace("weapon_", "")
                     gtype = _grenade_type_map.get(gtype_raw)
                     if sid in adv_stats and gtype and gtype in adv_stats[sid]:
@@ -928,7 +928,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                     t_col = next((c for c in ["userid", "user_steamid", "thrower_steamid", "attacker_steamid", "attacker_steamid64", "thrower"] if c in df_g.columns), None)
                     if t_col:
                         for _, row in df_g.iterrows():
-                            sid = str(row[t_col] or "0").split(".")[0]
+                            sid = sid_norm(row[t_col])
                             if sid in adv_stats:
                                 adv_stats[sid][g_type] += 1
         except Exception as e:
@@ -978,7 +978,7 @@ def parse_demo(filepath: str, log_fn=print, match_date=None, progress_fn=None) -
                 weap_col = next((c for c in ["weapon", "weapon_name"] if c in df_ud.columns), None)
                 if att_col and dmg_col and weap_col:
                     for _, row in df_ud.iterrows():
-                        sid = str(row.get(att_col, "0"))
+                        sid = sid_norm(row.get(att_col))
                         weapon = str(row.get(weap_col, "")).lower()
                         if sid in util_dmg and any(uw in weapon for uw in util_weapons):
                             util_dmg[sid] += int(row.get(dmg_col, 0) or 0)
