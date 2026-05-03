@@ -35,7 +35,7 @@ export async function GET(
                 where: { steamId: steamId },
                 include: { match: true },
                 orderBy: { match: { matchDate: 'desc' } },
-                take: 50
+                take: 200
             }).catch(() => [])
         ]);
 
