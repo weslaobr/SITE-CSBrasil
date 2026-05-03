@@ -206,6 +206,8 @@ export async function syncUserStats(steamId: string) {
     const updateData: any = {};
     try {
         const cs2space = await getCS2SpacePlayerInfo(steamId);
+        const leetifyData = await getLeetifyPlayerData(steamId);
+
         if (cs2space) {
             if (cs2space.ranks?.premier) {
                 updateData.premierRating = cs2space.ranks.premier;
@@ -217,6 +219,20 @@ export async function syncUserStats(steamId: string) {
             // Leetify often has GC level in its ranks data via cs2space or direct
             if (cs2space.leetify?.gamersClubLevel) {
                 updateData.gcLevel = cs2space.leetify.gamersClubLevel;
+            }
+        }
+
+        // Leetify Fallback/Augmentation
+        if (leetifyData) {
+            if (!updateData.premierRating && leetifyData.ranks.premier) {
+                updateData.premierRating = leetifyData.ranks.premier;
+            }
+            if (!updateData.faceitLevel && leetifyData.ranks.faceitLevel) {
+                updateData.faceitLevel = leetifyData.ranks.faceitLevel;
+                updateData.faceitElo = leetifyData.ranks.faceitElo || 0;
+            }
+            if (!updateData.gcLevel && leetifyData.ranks.gamersClubLevel) {
+                updateData.gcLevel = leetifyData.ranks.gamersClubLevel;
             }
         }
 

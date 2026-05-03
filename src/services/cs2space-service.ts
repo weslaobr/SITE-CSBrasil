@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const CS2SPACE_API_KEY = process.env.CS2SPACE_API_KEY;
-const BASE_URL = 'https://cs2.space/api';
+const BASE_URL = 'https://cs2.space/api/profile';
 
 export interface CS2SpacePlayerData {
     steam: {
@@ -31,6 +31,7 @@ export interface CS2SpacePlayerData {
         clutch: number;
         ct_rating?: number;
         t_rating?: number;
+        gamersClubLevel?: number;
     };
     ranks?: {
         premier?: number;
@@ -50,10 +51,9 @@ export const getCS2SpacePlayerInfo = async (steamId64: string): Promise<CS2Space
     }
 
     try {
-        const response = await axios.get(`${BASE_URL}/lookup`, {
-            params: {
-                key: CS2SPACE_API_KEY,
-                id: steamId64
+        const response = await axios.get(`${BASE_URL}/${steamId64}`, {
+            headers: {
+                'x-api-key': CS2SPACE_API_KEY
             }
         });
 
@@ -72,7 +72,9 @@ export const getCS2SpacePlayerInfo = async (steamId64: string): Promise<CS2Space
             ranks: d.ranks
         };
     } catch (error: any) {
-        console.error("Falha ao consultar CS2.space:", error.message);
+        if (error.response?.status !== 404) {
+            console.error("Falha ao consultar CS2.space:", error.message);
+        }
         return null;
     }
 };
