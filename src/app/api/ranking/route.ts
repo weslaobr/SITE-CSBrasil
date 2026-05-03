@@ -222,14 +222,23 @@ export async function GET() {
 
         // 5. Agregar stats por player e plataforma com desduplicação
         const playerPlatformStats = new Map<string, any>();
-        const processedMatches = new Set<string>(); // Key: steamId + map + time_bin
+        const processedMatches = new Set<string>(); // Key: steamId + normalized_match_id OR steamId + map + time_bin
 
         // Função de utilidade para normalizar dados de ambas as tabelas
         const processMatchData = (sid: string, mData: any, pStats: any) => {
             const matchTime = new Date(mData.matchDate).getTime();
-            const timeBin = Math.floor(matchTime / (15 * 60 * 1000));
-            const mapNorm = (mData.mapName || '').toLowerCase().replace('de_', '').trim();
-            const dedupeKey = `${sid}_${mapNorm}_${timeBin}`;
+            // Usar janela de 2 horas para deduplicação baseada em tempo (evita contar a mesma partida com horários de início/fim diferentes)
+            const timeBin = Math.floor(matchTime / (120 * 60 * 1000));
+            const mapNorm = (mData.mapName || 'unknown').toLowerCase().replace('de_', '').trim();
+            
+            // Tentar extrair um ID único da partida para desduplicação mais precisa
+            // GlobalMatch usa o ID puro (ex: 123), Match usa externalId (ex: leetify-123)
+            let matchId = mData.id || mData.externalId || mData.globalMatchId || '';
+            const normalizedMatchId = String(matchId).replace('leetify-', '').replace('manual-', '');
+            
+            const dedupeKey = normalizedMatchId 
+                ? `${sid}_id_${normalizedMatchId}` 
+                : `${sid}_${mapNorm}_${timeBin}`;
             
             if (processedMatches.has(dedupeKey)) return;
             processedMatches.add(dedupeKey);
@@ -266,12 +275,12 @@ export async function GET() {
                 
                 // Determinação de resultado consistente
                 const resLower = (mData.matchResult || mData.result || '').toLowerCase();
-                if (resLower === 'win') {
+                if (resLower === 'win' || resLower === 'victory') {
                     bucket.wins++;
                 } else if (resLower === 'loss' || resLower === 'defeat') {
                     // Perda
                 } else if (mData.scoreA != null && mData.scoreB != null) {
-                    const isA = !mData.team || ['A', 'CT', '2'].includes(String(mData.team).toUpperCase());
+                    const isA = !mData.team || ['A', 'CT', '2', 'TEAM_A'].includes(String(mData.team).toUpperCase());
                     if (isA ? mData.scoreA > mData.scoreB : mData.scoreB > mData.scoreA) bucket.wins++;
                 }
             };

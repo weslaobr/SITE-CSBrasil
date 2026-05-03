@@ -265,8 +265,9 @@ export async function GET(
 
         };
 
-        // 3. Format Global Matches to match the old Match schema for the frontend
+        // 3. Format Global Matches and Merge with deduplication
         const isTeamA = (t: string | null) => !t || ['A', 'CT', '2'].includes(t.toUpperCase());
+        const processedMatchKeys = new Set<string>();
 
         const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
             const resLower = (gmp.matchResult || '').toLowerCase();
@@ -287,7 +288,7 @@ export async function GET(
                 ? (isTeamA(gmp.team) ? `${gmp.match.scoreA}-${gmp.match.scoreB}` : `${gmp.match.scoreB}-${gmp.match.scoreA}`)
                 : '0-0';
 
-            return {
+            const m = {
                 id: gmp.id,
                 externalId: gmp.match.externalId || gmp.globalMatchId,
                 source: gmp.match.source || 'mix',
@@ -308,30 +309,46 @@ export async function GET(
                 url: (gmp.match.metadata as any)?.demoUrl || (gmp.match.metadata as any)?.demo_url || null,
                 metadata: { ...(gmp.match.metadata as any || {}), ...meta }
             };
+
+            // Add to dedupe set
+            const normId = String(m.externalId || m.id).replace('leetify-', '').replace('manual-', '');
+            const timeBin = Math.floor(new Date(m.matchDate).getTime() / (120 * 60 * 1000));
+            const mapKey = (m.mapName || '').toLowerCase().replace('de_', '').trim();
+            processedMatchKeys.add(normId ? `id_${normId}` : `time_${mapKey}_${timeBin}`);
+
+            return m;
         });
 
-        // Merge Leetify matches and Local Demo matches, sort by date
+        // Merge and deduplicate User matches
         const allMatches = [
+            ...formattedGlobalMatches,
             ...(dbUser?.matches || [])
                 .filter((m: any) => m.source === 'Leetify')
                 .map((m: any) => {
                     const meta = m.metadata || {};
                     let kast = m.kast ?? meta.kast ?? meta.kast_percent ?? meta.kast_percentage ?? null;
                     
-                    // Heuristic repair for legacy matches
                     if ((kast == null || kast <= 0) && (meta.leetify_rating != null || m.rating != null)) {
                         const r = Number(meta.leetify_rating ?? m.rating ?? 0);
                         kast = Math.round(70 + (r * 10));
                     }
 
-                    return {
+                    const match = {
                         ...m,
                         kast,
                         rank: m.rank || meta.rank || meta.skill_level || null
                     };
-                }),
-            ...formattedGlobalMatches
-        ].sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
+
+                    const normId = String(match.externalId || match.id).replace('leetify-', '').replace('manual-', '');
+                    const timeBin = Math.floor(new Date(match.matchDate).getTime() / (120 * 60 * 1000));
+                    const mapKey = (match.mapName || '').toLowerCase().replace('de_', '').trim();
+                    const key = normId ? `id_${normId}` : `time_${mapKey}_${timeBin}`;
+
+                    if (processedMatchKeys.has(key)) return null;
+                    processedMatchKeys.add(key);
+                    return match;
+                })
+        ].filter(Boolean).sort((a: any, b: any) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
 
         return NextResponse.json({
             profile,
