@@ -209,7 +209,7 @@ export async function syncUserStats(steamId: string) {
         const leetifyData = await getLeetifyPlayerData(steamId);
 
         if (cs2space) {
-            if (cs2space.ranks?.premier) {
+            if (cs2space.ranks?.premier && cs2space.ranks.premier > 100) {
                 updateData.premierRating = cs2space.ranks.premier;
             }
             if (cs2space.faceit) {
@@ -224,7 +224,7 @@ export async function syncUserStats(steamId: string) {
 
         // Leetify Fallback/Augmentation
         if (leetifyData) {
-            if (!updateData.premierRating && leetifyData.ranks.premier) {
+            if (!updateData.premierRating && leetifyData.ranks.premier && leetifyData.ranks.premier > 100) {
                 updateData.premierRating = leetifyData.ranks.premier;
             }
             if (!updateData.faceitLevel && leetifyData.ranks.faceitLevel) {
@@ -237,9 +237,9 @@ export async function syncUserStats(steamId: string) {
         }
 
         // Fallback: Leetify Max Rating
-        if (!updateData.premierRating || updateData.premierRating === 0) {
+        if (!updateData.premierRating || updateData.premierRating <= 100) {
             const leetifyMax = await getLeetifyMaxRating(steamId);
-            if (leetifyMax > 0) {
+            if (leetifyMax > 100) {
                 updateData.premierRating = leetifyMax;
             }
         }
@@ -257,7 +257,14 @@ export async function syncUserStats(steamId: string) {
         // Peak Rating logic
         if (Object.keys(updateData).length > 0) {
             const finalUpdate: any = {};
-            finalUpdate.premierRating = Math.max(currentStats.premierRating || 0, updateData.premierRating || 0);
+            
+            // Premier: Se o valor atual for um "Rank" (<= 100) e o novo for "Rating" (> 100), substitui. 
+            // Caso contrário, mantém o máximo entre os dois (se ambos forem ratings).
+            if ((currentStats.premierRating || 0) <= 100 && (updateData.premierRating || 0) > 100) {
+                finalUpdate.premierRating = updateData.premierRating;
+            } else {
+                finalUpdate.premierRating = Math.max(currentStats.premierRating || 0, updateData.premierRating || 0);
+            }
             finalUpdate.faceitElo = Math.max(currentStats.faceitElo || 0, updateData.faceitElo || 0);
             finalUpdate.faceitLevel = Math.max(currentStats.faceitLevel || 0, updateData.faceitLevel || 0);
             finalUpdate.gcLevel = Math.max(currentStats.gcLevel || 0, updateData.gcLevel || 0);

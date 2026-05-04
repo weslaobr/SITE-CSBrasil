@@ -106,7 +106,7 @@ export async function GET() {
                 try {
                     const cs2space = await getCS2SpacePlayerInfo(player.steamId);
                     if (cs2space) {
-                        if (premierNeedsUpdate && cs2space.ranks?.premier) {
+                        if (premierNeedsUpdate && cs2space.ranks?.premier && cs2space.ranks.premier > 100) {
                             updateData.premierRating = cs2space.ranks.premier;
                             premierNeedsUpdate = false;
                         }
@@ -120,7 +120,7 @@ export async function GET() {
                     // Fallback para Premier: Leetify Max Rating
                     if (premierNeedsUpdate) {
                         const leetifyMax = await getLeetifyMaxRating(player.steamId);
-                        if (leetifyMax > 0) {
+                        if (leetifyMax > 100) {
                             updateData.premierRating = leetifyMax;
                         }
                     }
@@ -138,7 +138,12 @@ export async function GET() {
                         const finalUpdate: any = {};
                         
                         if (updateData.premierRating !== undefined) {
-                            finalUpdate.premierRating = Math.max((currentStats as any).premierRating || 0, updateData.premierRating);
+                            // Se o atual for Rank (<= 100) e o novo for Rating (> 100), limpa o rank.
+                            if (((currentStats as any).premierRating || 0) <= 100 && updateData.premierRating > 100) {
+                                finalUpdate.premierRating = updateData.premierRating;
+                            } else {
+                                finalUpdate.premierRating = Math.max((currentStats as any).premierRating || 0, updateData.premierRating);
+                            }
                         }
                         
                         if (updateData.faceitElo !== undefined) {

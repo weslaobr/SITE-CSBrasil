@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
                 const updateData: any = {};
 
                 if (cs2space) {
-                    if (premierNeedsUpdate && cs2space.ranks?.premier) {
+                    if (premierNeedsUpdate && cs2space.ranks?.premier && cs2space.ranks.premier > 100) {
                         updateData.premierRating = cs2space.ranks.premier;
                         updatedPremier++;
                         updated = true;
@@ -78,7 +78,12 @@ export async function POST(req: NextRequest) {
                 if (updated) {
                     const finalUpdate: any = {};
                     if (updateData.premierRating !== undefined) {
-                        finalUpdate.premierRating = Math.max(currentStats.premierRating || 0, updateData.premierRating);
+                        // Se o atual for Rank (<= 100) e o novo for Rating (> 100), limpa o rank.
+                        if ((currentStats.premierRating || 0) <= 100 && updateData.premierRating > 100) {
+                            finalUpdate.premierRating = updateData.premierRating;
+                        } else {
+                            finalUpdate.premierRating = Math.max(currentStats.premierRating || 0, updateData.premierRating);
+                        }
                     }
                     if (updateData.faceitElo !== undefined) {
                         finalUpdate.faceitElo = Math.max(currentStats.faceitElo || 0, updateData.faceitElo);

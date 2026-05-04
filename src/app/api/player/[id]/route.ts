@@ -222,8 +222,8 @@ export async function GET(
             faceitElo:   dbPlayer.Stats.faceitElo   || cs2space?.faceit?.elo   || leetifyFaceitElo   || null,
             // GamersClub: DB → Leetify (GC não tem API pública, Leetify é a melhor fonte automática)
             gcLevel: dbPlayer.Stats.gcLevel || leetifyGCLevel || null,
-            // Premier máximo vindo do CS2.space se DB não tiver
-            premierRating: dbPlayer.Stats.premierRating || cs2space?.ranks?.premier || null,
+            // Premier máximo: DB → CS2.space (apenas se > 100 para evitar ranks)
+            premierRating: Math.max(dbPlayer.Stats.premierRating || 0, (cs2space?.ranks?.premier > 100 ? cs2space.ranks.premier : 0)),
             // Rank máximo de Competitivo clássico
             maxCompetitiveRank: dbPlayer.Stats.maxCompetitiveRank || maxCompetitiveRank || null,
             // Proprietary ranking
@@ -251,7 +251,7 @@ export async function GET(
             faceitId:      null,
             faceitLevel:   leetifyFaceitLevel,
             faceitElo:     leetifyFaceitElo,
-            premierRating: leetifyData.ranks?.premier || null,
+            premierRating: (leetifyData.ranks?.premier > 100) ? leetifyData.ranks.premier : null,
             gcLevel:       leetifyGCLevel,
             gcNickname:    steamId,
             maxCompetitiveRank: maxCompetitiveRank || null,

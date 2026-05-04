@@ -118,8 +118,9 @@ export const getLeetifyMaxRating = async (steamId64: string): Promise<number> =>
 
         const games = response.data?.games || [];
         // Filtra jogos de matchmaking/premier e pega o maior skillLevel visto
+        // Consideramos apenas skillLevel > 100 para evitar confundir Rank Competitivo (1-18) com Rating Premier
         const max = games
-            .filter((g: any) => g.dataSource === 'matchmaking' && g.skillLevel > 0)
+            .filter((g: any) => g.dataSource === 'matchmaking' && g.skillLevel > 100)
             .reduce((m: number, g: any) => Math.max(m, g.skillLevel), 0);
             
         return max;
