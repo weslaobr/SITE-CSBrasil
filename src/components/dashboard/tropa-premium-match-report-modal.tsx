@@ -110,8 +110,18 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({
     const isTie = !isWin && !isLoss;
 
     const stats = match?.stats || [];
-    const t1 = stats.filter((p: any) => p.initial_team_number === '3' || p.team === '3' || p.team === 'CT');
-    const t2 = stats.filter((p: any) => p.initial_team_number === '2' || p.team === '2' || p.team === 'T');
+    
+    // Filtro robusto para times (aceita string ou número)
+    const t1 = stats.filter((p: any) => 
+        String(p.team) === '3' || 
+        String(p.initial_team_number) === '3' || 
+        p.team === 'CT'
+    );
+    const t2 = stats.filter((p: any) => 
+        String(p.team) === '2' || 
+        String(p.initial_team_number) === '2' || 
+        p.team === 'T'
+    );
 
     // Se o usuário estiver no time 2, invertemos para que ele sempre veja o seu time em cima/esquerda
     const userInT2 = t2.some((p: any) => p.is_user);
@@ -167,7 +177,11 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({
                                     {match?.map_name?.replace('de_', '') || 'PARTIDA'}
                                 </h2>
                                 <div className="flex items-center gap-4 mt-2 text-zinc-500 font-bold text-xs uppercase tracking-widest">
-                                    <span className="flex items-center gap-2"><Calendar size={14} /> {new Date(match?.match_date).toLocaleDateString()}</span>
+                                <div className="flex items-center gap-4 mt-2 text-zinc-500 font-bold text-xs uppercase tracking-widest">
+                                    <span className="flex items-center gap-2">
+                                        <Calendar size={14} /> 
+                                        {match?.match_date ? new Date(match.match_date).toLocaleDateString() : '--/--/----'}
+                                    </span>
                                     <span className="w-1.5 h-1.5 rounded-full bg-zinc-800" />
                                     <span className="flex items-center gap-2"><Clock size={14} /> {match?.duration || '42:00'}</span>
                                 </div>
@@ -178,12 +192,16 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({
                             <div className="flex items-center gap-8 mb-4">
                                 <div className="flex flex-col items-center">
                                     <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-1">MEU TIME</span>
-                                    <span className={`text-6xl font-black italic ${isWin ? 'text-emerald-500' : 'text-white'}`}>{myScore || 0}</span>
+                                    <span className={`text-6xl font-black italic ${isWin ? 'text-emerald-500' : 'text-white'}`}>
+                                        {myScore ?? 0}
+                                    </span>
                                 </div>
                                 <div className="text-4xl font-black text-zinc-800 mt-6">VS</div>
                                 <div className="flex flex-col items-center">
                                     <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-1">INIMIGOS</span>
-                                    <span className={`text-6xl font-black italic ${isLoss ? 'text-red-500' : 'text-zinc-500'}`}>{enemyScore || 0}</span>
+                                    <span className={`text-6xl font-black italic ${isLoss ? 'text-red-500' : 'text-zinc-500'}`}>
+                                        {enemyScore ?? 0}
+                                    </span>
                                 </div>
                             </div>
                         </div>
