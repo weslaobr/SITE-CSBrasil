@@ -206,10 +206,24 @@ export async function GET(
             // Inferir nome do mapa a partir da URL da demo se estiver como "Desconhecido"
             let resolvedMapName = localMatch.mapName || 'Desconhecido';
             if (resolvedMapName === 'Desconhecido' && localMeta.demoUrl) {
-                // Demo filename ex: "2026-05-05_02-46-43_94_de_ancient_team_X_vs_team_Y.dem"
-                const demoFileName = decodeURIComponent(localMeta.demoUrl).split('/').pop() || '';
-                const mapMatch = demoFileName.match(/_(de_[a-z0-9]+|cs_[a-z0-9]+)/i);
-                if (mapMatch) resolvedMapName = mapMatch[1];
+                try {
+                    // Demo URL é um JWT: .../file?token=HEADER.PAYLOAD.SIGNATURE
+                    const tokenMatch = localMeta.demoUrl.match(/token=([^&]+)/);
+                    if (tokenMatch) {
+                        const payloadBase64 = tokenMatch[1].split('.')[1];
+                        if (payloadBase64) {
+                            // Fix base64url encoding padding
+                            let b64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+                            while (b64.length % 4) b64 += '=';
+                            // Use atob which is universally available in Node/Edge/Browser
+                            const payload = atob(b64);
+                            const mapMatch = payload.match(/_(de_[a-zA-Z0-9]+|cs_[a-zA-Z0-9]+)_/i);
+                            if (mapMatch) resolvedMapName = mapMatch[1];
+                        }
+                    }
+                } catch (e) {
+                    console.error('Erro ao decodificar mapa do JWT', e);
+                }
             }
 
             // Inferir resultado a partir do placar se profileResult for null
@@ -422,9 +436,9 @@ export async function GET(
                     trades: p.trade_kills_succeed ?? p.trade_count ?? p.tradeKills ?? p.trades ?? 0,
                     // Clutches: try multiple sources
                     clutches: p.clutch_count ?? p.clutches_won ?? p.clutchesWon ?? p.clutches ?? 
-                             ((p.clutch_v1_wins ?? 0) + (p.clutch_v2_wins ?? 0) + (p.clutch_v3_wins ?? 0) + (p.clutch_v4_wins ?? 0) + (p.clutch_v5_wins ?? 0)) ?? 0,
+                             ((p.clutch_v1_wins ?? 0) + (p.clutch_v2_wins ?? 0) + (p.clutch_v3_wins ?? 0) + (p.clutch_v4_wins ?? 0) + (p.clutch_v5_wins ?? 0)),
                     clutches_won: p.clutch_count ?? p.clutches_won ?? p.clutchesWon ?? p.clutches ?? 
-                                 ((p.clutch_v1_wins ?? 0) + (p.clutch_v2_wins ?? 0) + (p.clutch_v3_wins ?? 0) + (p.clutch_v4_wins ?? 0) + (p.clutch_v5_wins ?? 0)) ?? 0,
+                                 ((p.clutch_v1_wins ?? 0) + (p.clutch_v2_wins ?? 0) + (p.clutch_v3_wins ?? 0) + (p.clutch_v4_wins ?? 0) + (p.clutch_v5_wins ?? 0)),
                     clutch_v1_wins: p.clutch_v1_wins ?? 0,
                     clutch_v2_wins: p.clutch_v2_wins ?? 0,
                     clutch_v3_wins: p.clutch_v3_wins ?? 0,
@@ -469,8 +483,8 @@ export async function GET(
         if (error.response?.status === 404) {
             return NextResponse.json({ error: "Partida não encontrada no Banco nem no Leetify." }, { status: 404 });
         }
-        console.error(`Error fetching match ${matchId}:`, error.message);
-        return NextResponse.json({ error: "Failed to fetch match details" }, { status: 500 });
+        console.error(`Error fetching match ${matchId}:`, error);
+        return NextResponse.json({ error: "Failed to fetch match details", message: error.message, stack: error.stack }, { status: 500 });
     }
 }
 

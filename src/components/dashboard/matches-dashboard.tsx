@@ -1201,6 +1201,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                     (selectedMatch.id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedMatch.id) && !selectedMatch.id.includes('leetify'))
                 );
 
+                const resolvedSteamId = currentUserSteamId || (session as any)?.user?.steamId;
+
                 if (isLocalAnalyzer) {
                     return (
                         <TropaPremiumMatchReportModal
@@ -1210,7 +1212,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                 setIsModalOpen(false);
                                 setSelectedMatch(null);
                             }}
-                            userSteamId={currentUserSteamId}
+                            userSteamId={resolvedSteamId}
                             userNickname={currentFaceit}
                         />
                     );
