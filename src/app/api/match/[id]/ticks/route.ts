@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const TRACKER_API = process.env.PYTHON_API_URL || 'http://localhost:8000';
+const TRACKER_API = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
 
 export async function GET(
   _request: NextRequest,

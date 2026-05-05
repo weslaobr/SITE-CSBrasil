@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
                         // Trigger deep analysis in Python Tracker if demo_url exists
                         const trackerDemoUrl = detail.demo_url || detail.demoUrl;
                         if (trackerDemoUrl) {
-                            const TRACKER_API = process.env.PYTHON_API_URL || 'http://localhost:8000';
+                            const TRACKER_API = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
                             axios.post(`${TRACKER_API}/api/match/${m.id}/parse`, {
                                 demo_url: trackerDemoUrl,
                                 steamid: user.steamId,

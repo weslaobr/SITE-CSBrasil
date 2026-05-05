@@ -212,7 +212,7 @@ export async function GET(
 
         // 2. Se não encontrou no GlobalMatch, tentamos no Tracker API (Python)
         // Isso é essencial para o 2D Viewer de partidas locais que ainda não foram migradas
-        const TRACKER_API = process.env.PYTHON_API_URL || 'http://localhost:8000';
+        const TRACKER_API = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
         try {
             const trackerRes = await axios.get(`${TRACKER_API}/api/match/${matchId}/stats`);
             if (trackerRes.status === 200) {

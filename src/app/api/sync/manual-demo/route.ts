@@ -25,17 +25,23 @@ export async function POST(req: NextRequest) {
             select: { steamId: true }
         });
 
-        const pythonApiUrl = process.env.PYTHON_API_URL || 'http://localhost:8000';
+        const pythonApiUrl = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
+        
+        console.log(`[ManualSync] Forwarding demo to analyzer: ${pythonApiUrl}`);
         
         const response = await axios.post(`${pythonApiUrl}/api/importer/import-match`, {
             steamid: user?.steamId || "0",
             auth_code: "manual",
             share_code: url
-        });
+        }, { timeout: 15000 });
 
         return NextResponse.json({ success: true, python_response: response.data });
     } catch (error: any) {
-        console.error("Manual demo import error:", error.response?.data || error.message);
-        return NextResponse.json({ error: "Falha ao comunicar com o servidor de processamento." }, { status: 500 });
+        const errorMsg = error.response?.data?.error || error.response?.data || error.message;
+        console.error("Manual demo import error:", errorMsg);
+        return NextResponse.json({ 
+            error: "Falha ao comunicar com o servidor de processamento.",
+            details: errorMsg
+        }, { status: 500 });
     }
 }

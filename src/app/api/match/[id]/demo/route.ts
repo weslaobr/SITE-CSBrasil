@@ -7,7 +7,7 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id: matchId } = await params;
-    const TRACKER_API = process.env.PYTHON_API_URL || 'http://localhost:8000';
+    const TRACKER_API = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
 
     console.log(`[DEMO_PROXY] Starting download request for match: ${matchId}`);
 

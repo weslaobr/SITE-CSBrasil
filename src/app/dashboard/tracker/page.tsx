@@ -18,7 +18,8 @@ export default function TrackerPage() {
   useEffect(() => {
     async function fetchMatches() {
       try {
-        const res = await fetch("http://localhost:8000/api/match/list");
+        const baseUrl = process.env.NEXT_PUBLIC_PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
+        const res = await fetch(`${baseUrl}/api/match/list`);
         if (res.ok) {
           const data = await res.json();
           setMatches(data.length > 0 ? data : mockMatches);

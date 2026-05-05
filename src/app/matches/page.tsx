@@ -33,7 +33,8 @@ export default function MatchesPage() {
             let trackerMatches = [];
             try {
                 const steamId = (session?.user as any)?.steamId;
-                const url = steamId ? `http://localhost:8000/api/match/list?steamid=${steamId}` : 'http://localhost:8000/api/match/list';
+                const baseUrl = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
+                const url = steamId ? `${baseUrl}/api/match/list?steamid=${steamId}` : `${baseUrl}/api/match/list`;
                 const resTracker = await fetch(url);
                 if (resTracker.ok) {
                     const rawTracker = await resTracker.json();

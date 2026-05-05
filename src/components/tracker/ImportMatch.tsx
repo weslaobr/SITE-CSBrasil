@@ -22,7 +22,8 @@ export default function ImportMatch() {
     setError(null);
 
     try {
-      const res = await fetch("http://localhost:8000/api/importer/import-match", {
+      const baseUrl = process.env.NEXT_PUBLIC_PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
+      const res = await fetch(`${baseUrl}/api/importer/import-match`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ steamid, auth_code: authCode }),

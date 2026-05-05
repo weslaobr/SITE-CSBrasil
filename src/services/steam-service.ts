@@ -324,7 +324,7 @@ export const getSteamMatchHistory = async (steamId: string, authCode: string, kn
                         // 1. Bate no BOT para obter o link real da demo e placar
                         let botMatchData = null;
                         try {
-                            const botUrl = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:8080';
+                            const botUrl = process.env.NEXT_PUBLIC_BOT_API_URL || 'https://tropacsdemos.discloud.app';
                             console.log(`[Sync] Consultando BOT para partida ${nextCode}`);
                             const botRes = await axios.get(`${botUrl}/match/${nextCode}`);
                             botMatchData = botRes.data;
@@ -341,7 +341,7 @@ export const getSteamMatchHistory = async (steamId: string, authCode: string, kn
                             // 2. DISPARO PARA O ANALISADOR PYTHON
                             // Se o bot encontrou o link da demo (.dem.bz2), enviamos para o Python processar tudo!
                             if (botMatchData?.demo_url) {
-                                const pythonUrl = process.env.PYTHON_API_URL || 'http://localhost:8000';
+                                const pythonUrl = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
                                 console.log(`[Tracker] Solicitando análise da demo ao Python: ${nextCode}`);
                                 
                                 // Chamada assíncrona (não travamos o sync esperando o parser que é lento)
