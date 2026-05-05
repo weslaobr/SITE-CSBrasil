@@ -182,6 +182,15 @@ export async function syncUserMatches(steamId: string) {
         console.error("[SyncService] Leetify sync failed:", e);
     }
 
+    // TropaCS Go Demo Analyzer Sync
+    try {
+        const pythonApiUrl = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
+        await axios.post(`${pythonApiUrl}/api/sync/user`, { steamId }, { timeout: 10000 });
+        console.log(`[SyncService] Triggered Go Demo Analyzer sync for ${steamId}`);
+    } catch (e: any) {
+        console.warn(`[SyncService] Go Demo Analyzer sync failed for ${steamId}: ${e.message}`);
+    }
+
     return syncedCount;
 }
 

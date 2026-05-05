@@ -75,7 +75,7 @@ const STATUS_MAP: any = {
 };
 
 const GAME_MODES = [
-    { label: 'Competitivo', icon: '🏆', cmd: 'exec comp.cfg; map de_mirage',  desc: 'Config: comp.cfg', color: 'yellow' },
+    { label: 'Competitivo', icon: '🏆', cmd: 'exec comp.cfg; mp_friendlyfire 0; map de_mirage',  desc: 'Config: comp.cfg (Fogo Amigo OFF)', color: 'yellow' },
     { label: 'Arena',       icon: '🎯', cmd: 'exec arena.cfg; host_workshop_map 3232758809', desc: 'Config: arena.cfg', color: 'red' },
     { label: '1v1',         icon: '⚔️',  cmd: 'exec 1v1.cfg; host_workshop_map 3070549948',   desc: 'Config: 1v1.cfg', color: 'orange' },
     { label: 'Retake',      icon: '♻️',  cmd: 'exec retake.cfg; map de_mirage',desc: 'Config: retake.cfg', color: 'cyan' },
@@ -950,6 +950,12 @@ export function ServerDashboard() {
                                         { label: '♾️ Mun. Infinita',    cmd: 'sv_infinite_ammo 1',         cls: 'yellow', desc: 'Ativa munição infinita sem necessidade de recarregar.' },
                                         { label: '🎯 Apenas HS',        cmd: 'mp_damage_headshot_only 1',  cls: 'red',    desc: 'Configura para que apenas tiros na cabeça causem dano.' },
                                         { label: '🏁 Próximo Mapa',     cmd: 'mp_endmatch',                cls: 'orange', desc: 'Encerra a partida atual e avança para o próximo mapa.' },
+                                        { label: '📊 Status Partida',   cmd: 'css_status',                 cls: 'blue',   desc: 'Exibe o status detalhado da partida MatchZy.' },
+                                        { label: '⚖️ Balance OFF',     cmd: 'mp_autoteambalance 0; mp_limitteams 0', cls: 'zinc', desc: 'Desativa o balanceamento automático de times.' },
+                                        { label: '🏃 Bunnyhop ON',      cmd: 'sv_autobunnyhopping 1; sv_enablebunnyhopping 1; sv_staminamax 0; sv_staminajumpcost 0; sv_staminalandcost 0', cls: 'cyan', desc: 'Ativa o Bunnyhop automático no servidor.' },
+                                        { label: '📈 Ver Status Chat',  cmd: 'say .stats',                 cls: 'zinc',   desc: 'Mostra as estatísticas da partida no chat.' },
+                                        { label: '👨 Ser Coach',        cmd: 'say .coach',                 cls: 'zinc',   desc: 'Muda o seu cargo para treinador (Coach).' },
+                                        { label: '❓ Ajuda (!help)',    cmd: 'say Comandos Uteis: !ready, !pause, !unpause, !stop, !stats, !coach, !spec, !stay, !swap, .active, .listbackup', cls: 'yellow', desc: 'Mostra os comandos de chat mais comuns no servidor.' },
                                     ].map(ctrl => (
                                         <button key={ctrl.label}
                                             title={ctrl.desc}
