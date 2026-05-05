@@ -7,6 +7,9 @@ import { getAuthOptions } from "@/lib/auth";
 const LEETIFY_API_KEY = process.env.LEETIFY_API_KEY;
 const LEETIFY_BASE_URL = 'https://api-public.cs-prod.leetify.com';
 
+// Helper compartilhado entre GET e PATCH para identificar o time A
+const isTeamA = (t: string | null | undefined) => !t || ['A', 'CT', '3'].includes(String(t).toUpperCase());
+
 async function fetchAvatars(stats: any[]) {
     if (!stats || !Array.isArray(stats)) return stats;
     
@@ -59,7 +62,6 @@ export async function GET(
             // Team A (scoreA) → numeric team "3" → team_3_score  (Leetify convention)
             // Team B (scoreB) → numeric team "2" → team_2_score
             // The frontend's computeScore() looks for team_{initial_team_number}_score in metadata.
-            const isTeamA = (t: string | null) => !t || ['A', 'CT', '3'].includes(t.toUpperCase());
 
             // Find the profile owner's player record to compute result from their perspective
             const profilePlayer = profileSteamId
@@ -431,8 +433,9 @@ export async function PATCH(
                     scoreB: Number(scoreB),
                     metadata: {
                         ...currentMeta,
-                        team_2_score: Number(scoreA),
-                        team_3_score: Number(scoreB)
+                        // Convenção: Team A = team_3_score, Team B = team_2_score (igual ao GET)
+                        team_3_score: Number(scoreA),
+                        team_2_score: Number(scoreB)
                     }
                 }
             });
