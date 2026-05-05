@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     Download, Clock, HardDrive, RefreshCw, 
     FileWarning, Loader2, Search, ExternalLink,
-    ChevronRight, FileText
+    ChevronRight, FileText, Check
 } from 'lucide-react';
 
 interface DemoFile {
