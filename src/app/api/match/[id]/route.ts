@@ -73,73 +73,71 @@ export async function GET(
             const scoreB = localMatch.scoreB ?? 0;
             // Trust the matchResult stored in the database (populated during sync/upload)
             const profileResult = profilePlayer?.matchResult || null;
+            // Buscar estatísticas detalhadas da tabela de tracker se existirem
+            const trackerPlayers = await prisma.tracker_match_players.findMany({
+                where: { match_id: matchId }
+            }).catch(() => []);
+
+            const trackerMap = new Map();
+            trackerPlayers.forEach(tp => {
+                trackerMap.set(String(tp.steamid64), tp);
+            });
 
             let localStats = localMatch.players.map(p => {
                 const m = (p.metadata as any) || {};
-                // FK/FD: vem ou das colunas diretas (parser Python) ou do metadata (sync Leetify)
-                const fkVal = (p as any).fk ?? m.fk ?? m.fk_count ?? m.first_kill_count ?? m.firstKills ?? 0;
-                const fdVal = (p as any).fd ?? m.fd ?? m.fd_count ?? m.first_death_count ?? m.firstDeaths ?? 0;
-                // Map internal team labels to numeric team numbers used by computeScore()
-                // Team A → initial_team_number = 2 (Leetify convention)
-                // Team B → initial_team_number = 3
+                const tp = trackerMap.get(String(p.steamId));
+
+                // Priorizar dados do tracker_match_players se disponíveis
+                const kills = tp?.kills ?? p.kills;
+                const deaths = tp?.deaths ?? p.deaths;
+                const assists = tp?.assists ?? p.assists;
+                const adr = tp?.adr ?? p.adr;
+                
+                const fkVal = tp?.fk ?? (p as any).fk ?? m.fk ?? m.fk_count ?? m.first_kill_count ?? m.firstKills ?? 0;
+                const fdVal = tp?.fd ?? (p as any).fd ?? m.fd ?? m.fd_count ?? m.first_death_count ?? m.firstDeaths ?? 0;
+                
                 const numericTeam = isTeamA(p.team) ? '3' : '2';
+                
                 return {
                     team_id: p.team,
-                    // initial_team_number is CRITICAL — used by computeScore() and getTeams()
-                    // to identify which team the profile owner belongs to and look up the right score.
                     initial_team_number: numericTeam,
                     steam64_id: p.steamId,
                     name: m.name ?? m.nickname ?? m.playerNickname ?? p.steamId,
-                    total_kills: p.kills,
-                    total_deaths: p.deaths,
-                    total_assists: p.assists,
-                    dpr: p.adr, // alias adr
+                    total_kills: kills,
+                    total_deaths: deaths,
+                    total_assists: assists,
+                    dpr: adr, 
                     accuracy_head: p.hsPercentage ? (p.hsPercentage / 100) : 0, 
-                    rating: m.rating ?? m.leetify_rating ?? 0,
-                    kast: m.kast ?? m.kast_percent ?? 0,
-                    // FK/FD com nomes diretos que o normalizeP lê
+                    rating: tp?.rating ?? m.rating ?? m.leetify_rating ?? 0,
+                    kast: tp?.kast ?? m.kast ?? m.kast_percent ?? 0,
                     fk: fkVal,
                     fd: fdVal,
-                    fkd: fkVal,       // alias legado
-                    fk_deaths: fdVal, // alias legado
+                    fkd: fkVal,
+                    fk_deaths: fdVal,
                     // Multikills
-                    triple_kills: m.triples ?? m.multi3k ?? m.triple_kills ?? m.tripleKills ?? 0,
-                    quad_kills: m.quads ?? m.multi4k ?? m.quad_kills ?? m.quadKills ?? 0,
-                    penta_kills: m.aces ?? m.multi5k ?? m.penta_kills ?? m.pentaKills ?? m.ace_kills ?? 0,
-                    multi3k: m.triples ?? m.multi3k ?? m.triple_kills ?? m.tripleKills ?? 0,
-                    multi4k: m.quads ?? m.multi4k ?? m.quad_kills ?? m.quadKills ?? 0,
-                    multi5k: m.aces ?? m.multi5k ?? m.penta_kills ?? m.pentaKills ?? m.ace_kills ?? 0,
+                    triple_kills: tp?.triples ?? m.triples ?? m.multi3k ?? 0,
+                    quad_kills: tp?.quads ?? m.quads ?? m.multi4k ?? 0,
+                    penta_kills: tp?.aces ?? m.aces ?? m.multi5k ?? 0,
                     // Utility
-                    utility_damage: m.utilDmg ?? m.utility_damage ?? m.util_damage ?? (m.he_foes_damage_avg != null && m.rounds_count ? Math.round(m.he_foes_damage_avg * m.rounds_count) : 0),
-                    blind_time: m.blindTime ?? m.flashbang_hit_foe_avg_duration ?? m.blind_time ?? m.enemiesFlashedDuration ?? m.total_blind_duration ?? 0,
-                    he_thrown: m.heThrown ?? m.he_thrown ?? 0,
-                    flash_thrown: m.flashThrown ?? m.flashbang_thrown ?? m.flash_thrown ?? 0,
-                    smokes_thrown: m.smokesThrown ?? m.smoke_thrown ?? m.smokes_thrown ?? 0,
-                    molotovs_thrown: m.molotovThrown ?? m.molotov_thrown ?? m.molotovs_thrown ?? 0,
-                    enemies_flashed: m.enemiesFlashed ?? m.enemies_flashed ?? m.flashbang_hit_foe ?? 0,
+                    utility_damage: tp?.utility_damage ?? m.utilDmg ?? m.utility_damage ?? 0,
+                    blind_time: tp?.total_blind_duration ?? m.blindTime ?? m.flashbang_hit_foe_avg_duration ?? 0,
+                    he_thrown: tp?.he_thrown ?? m.heThrown ?? 0,
+                    flash_thrown: tp?.flash_thrown ?? m.flashThrown ?? 0,
+                    smokes_thrown: tp?.smokes_thrown ?? m.smokesThrown ?? 0,
+                    molotovs_thrown: tp?.molotovs_thrown ?? m.molotovThrown ?? 0,
+                    enemies_flashed: tp?.enemies_flashed ?? m.enemiesFlashed ?? 0,
                     // Advanced
-                    avg_ttd: m.avgTtd ?? m.avg_ttd ?? m.ttd ?? 0,
-                    avg_kill_distance: m.avgKillDist ?? m.avg_kill_distance ?? m.killDist ?? 0,
-                    // Confrontos
-                    trades: m.trades ?? m.trade_kills_succeed ?? m.trade_count ?? m.tradeKills ?? 0,
-                    trade_kill_count: m.trades ?? m.trade_kills_succeed ?? m.trade_count ?? m.tradeKills ?? 0,
-                    trade_kill_opportunities: m.trade_kill_opportunities ?? 0,
-                    traded_death_opportunities: m.traded_death_opportunities ?? 0,
-                    trade_kills_succeed: m.trade_kills_succeed ?? 0,
-                    traded_deaths_succeed: m.traded_deaths_succeed ?? 0,
-                    clutches: m.clutches ?? m.clutch_count ?? m.clutches_won ?? m.clutchesWon ?? 0,
-                    clutches_won: m.clutches ?? m.clutch_count ?? m.clutches_won ?? m.clutchesWon ?? 0,
-                    // Flash
-                    flash_assists: m.flashAssists ?? m.flash_assist ?? m.flash_assists ?? m.flashbang_assists ?? 0,
+                    avg_ttd: tp?.avg_ttd ?? m.avgTtd ?? 0,
+                    avg_kill_distance: tp?.avg_kill_distance ?? m.avgKillDist ?? 0,
+                    trades: tp?.trades ?? m.trades ?? 0,
+                    clutches: tp?.clutches ?? m.clutches ?? 0,
+                    flash_assists: tp?.flash_assists ?? m.flashAssists ?? 0,
                     is_user: !!(profileSteamId && p.steamId && String(p.steamId) === String(profileSteamId)),
-                    // MVP Stars — comes directly from GlobalMatchPlayer.mvps column
                     mvps: p.mvps ?? 0,
-                    total_damage: m.totalDamage ?? m.total_damage ?? m.rawDmg ?? m.raw_dmg ?? m.totalDamageDealt ?? (p.adr && (m.rounds_count || localMatch.scoreA + localMatch.scoreB) ? Math.round(p.adr * (m.rounds_count || localMatch.scoreA + localMatch.scoreB)) : 0),
-                    metadata: m
+                    total_damage: (adr && (localMatch.scoreA! + localMatch.scoreB!)) ? Math.round(adr * (localMatch.scoreA! + localMatch.scoreB!)) : p.score,
+                    metadata: { ...m, ...tp }
                 };
             });
-
-
 
             // Tentar puxar avatares
             localStats = await fetchAvatars(localStats);

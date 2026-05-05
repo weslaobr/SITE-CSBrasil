@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import MatchReportModal from './match-report-modal';
+import TropaPremiumMatchReportModal from './tropa-premium-match-report-modal';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 
@@ -1177,17 +1178,30 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 )}
             </main>
 
-            <MatchReportModal
-                match={null}
-                matchId={selectedMatch?.externalId?.replace('leetify-', '') || selectedMatch?.id || null}
-                isOpen={isModalOpen}
-                onClose={() => {
-                    setIsModalOpen(false);
-                    setSelectedMatch(null);
-                }}
-                userSteamId={currentUserSteamId}
-                userNickname={currentFaceit}
-            />
+            {selectedMatch && (selectedMatch.source === 'demo-analyzer' || selectedMatch.metadata?.source === 'demo-analyzer' || detectMode(selectedMatch) === 'Mix') ? (
+                <TropaPremiumMatchReportModal
+                    matchId={selectedMatch?.id || null}
+                    isOpen={isModalOpen}
+                    onClose={() => {
+                        setIsModalOpen(false);
+                        setSelectedMatch(null);
+                    }}
+                    userSteamId={currentUserSteamId}
+                    userNickname={currentFaceit}
+                />
+            ) : (
+                <MatchReportModal
+                    match={null}
+                    matchId={selectedMatch?.externalId?.replace('leetify-', '') || selectedMatch?.id || null}
+                    isOpen={isModalOpen}
+                    onClose={() => {
+                        setIsModalOpen(false);
+                        setSelectedMatch(null);
+                    }}
+                    userSteamId={currentUserSteamId}
+                    userNickname={currentFaceit}
+                />
+            )}
         </div>
     );
 };
