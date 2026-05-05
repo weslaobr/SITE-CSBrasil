@@ -177,7 +177,6 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({
                                     {match?.map_name?.replace('de_', '') || 'PARTIDA'}
                                 </h2>
                                 <div className="flex items-center gap-4 mt-2 text-zinc-500 font-bold text-xs uppercase tracking-widest">
-                                <div className="flex items-center gap-4 mt-2 text-zinc-500 font-bold text-xs uppercase tracking-widest">
                                     <span className="flex items-center gap-2">
                                         <Calendar size={14} /> 
                                         {match?.match_date ? new Date(match.match_date).toLocaleDateString() : '--/--/----'}
