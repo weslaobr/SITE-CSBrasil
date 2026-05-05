@@ -72,9 +72,15 @@ export default function DemosTab() {
         try {
             const downloadRes = await fetch(`/api/server/demos/download?file=${encodeURIComponent(file.path)}`);
             if (!downloadRes.ok) throw new Error('Erro ao obter link da demo');
-            const downloadData = await downloadRes.json();
             
-            if (!downloadData.downloadUrl) throw new Error('Link de download não gerado');
+            let downloadData;
+            try {
+                downloadData = await downloadRes.json();
+            } catch (e) {
+                throw new Error('Servidor retornou resposta inválida ao gerar link.');
+            }
+            
+            if (!downloadData?.downloadUrl) throw new Error('Link de download não gerado');
 
             const res = await fetch('/api/sync/manual-demo', {
                 method: 'POST',
@@ -83,15 +89,21 @@ export default function DemosTab() {
             });
 
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Erro no processamento');
+                let errorData;
+                try {
+                    errorData = await res.json();
+                } catch (e) {
+                    throw new Error(`Erro ${res.status}: Servidor de processamento indisponível.`);
+                }
+                throw new Error(errorData.error || errorData.details || 'Erro no processamento');
             }
 
             setProcessingStatus(prev => ({ ...prev, [file.name]: 'success' }));
             setTimeout(() => setProcessingStatus(prev => ({ ...prev, [file.name]: 'idle' })), 5000);
         } catch (err: any) {
-            console.error(err);
+            console.error('[AdminDemos]', err);
             setProcessingStatus(prev => ({ ...prev, [file.name]: 'error' }));
+            alert(err.message); // Mostrar o erro para o usuário em vez de crashar
             setTimeout(() => setProcessingStatus(prev => ({ ...prev, [file.name]: 'idle' })), 5000);
         } finally {
             setProcessingFile(null);
