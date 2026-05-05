@@ -114,7 +114,8 @@ export async function GET(req: NextRequest) {
             }
 
             return {
-                id: gmp.id,
+                id: gmp.globalMatchId,
+                playerId: gmp.id,
                 externalId: gmp.match.externalId || gmp.globalMatchId,
                 source: gmp.match.source || 'mix',
                 gameMode,

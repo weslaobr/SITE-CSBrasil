@@ -144,8 +144,15 @@ export async function GET(
                 };
             });
 
-            // Tentar puxar avatares
+            // Tentar puxar avatares e nomes do Steam
             localStats = await fetchAvatars(localStats);
+
+            // Após fetchAvatars, garantir que name usa o nickname do Steam (não o steamId)
+            localStats = localStats.map(p => ({
+                ...p,
+                name: p.nickname || p.name || p.steam64_id,
+                avatar_url: p.avatar_url || undefined
+            }));
 
             // Fetch detailed stats from tracker tables (using raw query since they are not in Prisma)
             const trackerWeaponStatsRaw = await prisma.$queryRaw`
@@ -196,15 +203,41 @@ export async function GET(
                 return p;
             });
 
+            // Inferir nome do mapa a partir da URL da demo se estiver como "Desconhecido"
+            let resolvedMapName = localMatch.mapName || 'Desconhecido';
+            if (resolvedMapName === 'Desconhecido' && localMeta.demoUrl) {
+                // Demo filename ex: "2026-05-05_02-46-43_94_de_ancient_team_X_vs_team_Y.dem"
+                const demoFileName = decodeURIComponent(localMeta.demoUrl).split('/').pop() || '';
+                const mapMatch = demoFileName.match(/_(de_[a-z0-9]+|cs_[a-z0-9]+)/i);
+                if (mapMatch) resolvedMapName = mapMatch[1];
+            }
+
+            // Inferir resultado a partir do placar se profileResult for null
+            let resolvedResult = profileResult;
+            if (!resolvedResult && profilePlayer) {
+                const scoreA = localMatch.scoreA ?? 0;
+                const scoreB = localMatch.scoreB ?? 0;
+                const profileIsA = !['B','T','2'].includes(String(profilePlayer.team || '').toUpperCase());
+                const myScore = profileIsA ? scoreA : scoreB;
+                const theirScore = profileIsA ? scoreB : scoreA;
+                resolvedResult = myScore > theirScore ? 'win' : myScore < theirScore ? 'loss' : 'tie';
+            }
+
+            // Estimar duração a partir do total de rounds (cada round ~1:45 em média)
+            const totalRounds = (localMatch.scoreA ?? 0) + (localMatch.scoreB ?? 0);
+            const estimatedDuration = localMeta.duration || 
+                (totalRounds > 0 ? `${Math.floor(totalRounds * 1.75)}:00` : null);
+
             const data = {
                 match_id: localMatch.id,
-                map_name: localMatch.mapName,
+                map_name: resolvedMapName,
                 game_mode: localMatch.source,
                 data_source: localMatch.source,
                 match_date: localMatch.matchDate.toISOString(),
+                duration: estimatedDuration,
                 team_2_score: localMatch.scoreB ?? 0,
                 team_3_score: localMatch.scoreA ?? 0,
-                result: profileResult,
+                result: resolvedResult,
                 demo_url: localMeta.demoUrl || null,
                 weapon_stats: trackerWeaponStats,
                 clutch_events: sanitizedClutches,

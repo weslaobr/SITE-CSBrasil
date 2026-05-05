@@ -20,15 +20,15 @@ interface Props {
 function normalizePlayer(p: any): any {
     return {
         ...p,
-        // Identidade
-        name:            p.name || p.nickname || p.personaname || p.steam64_id || 'Jogador',
+        // Identidade — prioriza nickname (Steam persona name) sobre name (pode ser steamId como fallback)
+        name:            p.nickname || p.name || p.personaname || 'Jogador',
         avatar:          p.avatar || p.avatar_url || p.avatarfull || '/img/default-avatar.png',
         steam64_id:      p.steam64_id || p.steamid64 || '',
-        // Time
-        team:            String(p.team ?? p.initial_team_number ?? ''),
-        initial_team_number: String(p.initial_team_number ?? p.team ?? ''),
+        // Time — API retorna team_id (ex: '2','3','A','CT') e initial_team_number ('2' ou '3')
+        team_id:         String(p.team_id ?? p.team ?? p.initial_team_number ?? ''),
+        initial_team_number: String(p.initial_team_number ?? p.team_id ?? p.team ?? ''),
         is_user:         !!p.is_user,
-        // Estatísticas base
+        // Estatísticas base — API local usa total_kills/dpr, Tracker usa kills/adr
         kills:           p.kills ?? p.total_kills ?? 0,
         deaths:          p.deaths ?? p.total_deaths ?? 0,
         assists:         p.assists ?? p.total_assists ?? 0,
@@ -88,8 +88,25 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
     const stats = rawStats.map(normalizePlayer);
 
     // Separar times
-    const t1 = stats.filter(p => p.initial_team_number === '3' || p.team === 'CT' || p.team === '3');
-    const t2 = stats.filter(p => p.initial_team_number === '2' || p.team === 'T'  || p.team === '2');
+    // API retorna initial_team_number ('2' ou '3') e team_id (valor raw do banco: '2','3','A','B','CT','T')
+    const isTeam3 = (p: any) => {
+        const itn = String(p.initial_team_number || '');
+        const tid = String(p.team_id || '');
+        return itn === '3' || tid === '3' || tid.toUpperCase() === 'CT' || tid.toUpperCase() === 'A';
+    };
+    const isTeam2 = (p: any) => {
+        const itn = String(p.initial_team_number || '');
+        const tid = String(p.team_id || '');
+        return itn === '2' || tid === '2' || tid.toUpperCase() === 'T' || tid.toUpperCase() === 'B';
+    };
+
+    const t1 = stats.filter(isTeam3);
+    const t2 = stats.filter(isTeam2);
+    // Jogadores sem time definido vão para o time com menos jogadores
+    const unassigned = stats.filter(p => !isTeam3(p) && !isTeam2(p));
+    if (unassigned.length > 0) {
+        console.warn('[Modal] Jogadores sem time definido:', unassigned.map(p => p.name));
+    }
 
     // Usuário sempre "MEU TIME" primeiro
     const userInT2 = t2.some(p => p.is_user);
@@ -288,86 +305,142 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
 
 // --- SUB-COMPONENTS ---
 
-const TeamTable = ({ title, players, isEnemy, variant = 'full' }: { title: string; players: any[]; isEnemy: boolean; variant?: 'full' | 'utility' }) => (
-    <div className="space-y-3">
-        <h3 className={`text-xs font-black uppercase tracking-[0.3em] flex items-center gap-3 ${isEnemy ? 'text-zinc-600' : 'text-emerald-500'}`}>
-            <span className={`w-1 h-4 rounded-full ${isEnemy ? 'bg-zinc-700' : 'bg-emerald-500'}`} /> {title}
-        </h3>
-        <div className="overflow-hidden rounded-3xl border border-white/5 bg-zinc-900/20">
-            <table className="w-full text-left">
-                <thead>
-                    <tr className="text-[9px] font-black uppercase text-zinc-600 tracking-widest bg-white/5 border-b border-white/5">
-                        <th className="px-5 py-3">Jogador</th>
-                        {variant === 'full' ? (
-                            <>
-                                <th className="px-3 py-3 text-center">Rating</th>
-                                <th className="px-3 py-3 text-center">K / D / A</th>
-                                <th className="px-3 py-3 text-center">ADR</th>
-                                <th className="px-3 py-3 text-center">HS%</th>
-                                <th className="px-3 py-3 text-center">KAST</th>
-                                <th className="px-3 py-3 text-center">Dano</th>
-                            </>
-                        ) : (
-                            <>
-                                <th className="px-3 py-3 text-center">Dano HE</th>
-                                <th className="px-3 py-3 text-center">Cegou</th>
-                                <th className="px-3 py-3 text-center">Blind</th>
-                                <th className="px-3 py-3 text-center">HEs</th>
-                                <th className="px-3 py-3 text-center">Fls</th>
-                                <th className="px-3 py-3 text-center">Smks</th>
-                            </>
-                        )}
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.03]">
-                    {[...players].sort((a,b) => (b.rating||0)-(a.rating||0)).map((p, i) => (
-                        <tr key={i} className={`hover:bg-white/[0.02] transition-colors ${p.is_user ? 'bg-yellow-500/5' : ''}`}>
-                            <td className="px-5 py-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="relative">
-                                        <img src={p.avatar} onError={(e: any) => e.target.src='/img/default-avatar.png'} className="w-9 h-9 rounded-xl border border-white/10 object-cover" alt="" />
-                                        {p.is_user && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-500 rounded-full border-2 border-zinc-950" />}
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-black text-white">{p.name}</div>
-                                        <div className="text-[9px] text-zinc-600 font-bold uppercase">{p.metadata?.role || 'Rifler'}</div>
-                                    </div>
-                                </div>
-                            </td>
+type SortKey = 'rating' | 'kills' | 'deaths' | 'assists' | 'adr' | 'accuracy_head' | 'kast' | 'total_damage';
+
+const TeamTable = ({ title, players, isEnemy, variant = 'full' }: { title: string; players: any[]; isEnemy: boolean; variant?: 'full' | 'utility' }) => {
+    const [sortKey, setSortKey] = React.useState<SortKey>('total_damage');
+    const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('desc');
+
+    const handleSort = (key: SortKey) => {
+        if (sortKey === key) {
+            setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+        } else {
+            setSortKey(key);
+            setSortDir('desc');
+        }
+    };
+
+    const sorted = [...players].sort((a, b) => {
+        const va = Number(a[sortKey] ?? 0);
+        const vb = Number(b[sortKey] ?? 0);
+        return sortDir === 'desc' ? vb - va : va - vb;
+    });
+
+    const SortIcon = ({ k }: { k: SortKey }) => {
+        if (sortKey !== k) return <span className="text-zinc-800 ml-1 text-[8px]">⇅</span>;
+        return <span className="text-yellow-500 ml-1 text-[8px]">{sortDir === 'desc' ? '▼' : '▲'}</span>;
+    };
+
+    const Th = ({ label, k, className = '' }: { label: string; k: SortKey; className?: string }) => (
+        <th
+            className={`px-3 py-3 text-center cursor-pointer select-none hover:text-zinc-300 transition-colors ${sortKey === k ? 'text-yellow-500' : ''} ${className}`}
+            onClick={() => handleSort(k)}
+        >
+            <span className="flex items-center justify-center gap-0.5">{label}<SortIcon k={k} /></span>
+        </th>
+    );
+
+    return (
+        <div className="space-y-3">
+            <h3 className={`text-xs font-black uppercase tracking-[0.3em] flex items-center gap-3 ${isEnemy ? 'text-zinc-600' : 'text-emerald-500'}`}>
+                <span className={`w-1 h-4 rounded-full ${isEnemy ? 'bg-zinc-700' : 'bg-emerald-500'}`} />
+                {title}
+                <span className="text-zinc-700 font-bold text-[9px]">{players.length} jogadores</span>
+            </h3>
+            <div className="overflow-hidden rounded-3xl border border-white/5 bg-zinc-900/20">
+                <table className="w-full text-left">
+                    <thead>
+                        <tr className="text-[9px] font-black uppercase text-zinc-600 tracking-widest bg-white/5 border-b border-white/5">
+                            <th className="px-5 py-3">Jogador</th>
                             {variant === 'full' ? (
                                 <>
-                                    <td className="px-3 py-3 text-center">
-                                        <span className={`text-sm font-black italic ${(p.rating||0) >= 1.2 ? 'text-emerald-400' : (p.rating||0) < 0.8 ? 'text-rose-400' : 'text-white'}`}>
-                                            {(p.rating||0).toFixed(2)}
-                                        </span>
-                                    </td>
-                                    <td className="px-3 py-3 text-center text-xs text-zinc-400 font-bold">
-                                        <span className="text-white">{p.kills}</span> / {p.deaths} / {p.assists}
-                                    </td>
-                                    <td className="px-3 py-3 text-center text-xs font-black text-zinc-300">{(p.adr||0).toFixed(1)}</td>
-                                    <td className="px-3 py-3 text-center text-xs text-zinc-500 font-bold">{((p.accuracy_head||0)*100).toFixed(0)}%</td>
-                                    <td className="px-3 py-3 text-center text-xs text-zinc-500 font-bold">
-                                        {p.kast > 1 ? p.kast.toFixed(0) : (p.kast * 100).toFixed(0)}%
-                                    </td>
-                                    <td className="px-3 py-3 text-center text-xs font-black text-yellow-500/70">{p.total_damage || 0}</td>
+                                    <Th label="Rating" k="rating" />
+                                    <Th label="K" k="kills" />
+                                    <Th label="D" k="deaths" />
+                                    <Th label="A" k="assists" />
+                                    <Th label="ADR" k="adr" />
+                                    <Th label="HS%" k="accuracy_head" />
+                                    <Th label="KAST" k="kast" />
+                                    <Th label="Dano" k="total_damage" />
                                 </>
                             ) : (
                                 <>
-                                    <td className="px-3 py-3 text-center text-orange-400 font-black text-xs">{p.he_damage||0}</td>
-                                    <td className="px-3 py-3 text-center text-yellow-400 font-black text-xs">{p.enemies_flashed||0}</td>
-                                    <td className="px-3 py-3 text-center text-blue-400 font-bold text-xs">{(p.blind_time||0).toFixed(1)}s</td>
-                                    <td className="px-3 py-3 text-center text-zinc-500 text-xs">{p.he_thrown||0}</td>
-                                    <td className="px-3 py-3 text-center text-zinc-500 text-xs">{p.flash_thrown||0}</td>
-                                    <td className="px-3 py-3 text-center text-zinc-500 text-xs">{p.smokes_thrown||0}</td>
+                                    <th className="px-3 py-3 text-center">Dano HE</th>
+                                    <th className="px-3 py-3 text-center">Cegou</th>
+                                    <th className="px-3 py-3 text-center">Blind</th>
+                                    <th className="px-3 py-3 text-center">HEs</th>
+                                    <th className="px-3 py-3 text-center">Fls</th>
+                                    <th className="px-3 py-3 text-center">Smks</th>
                                 </>
                             )}
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.03]">
+                        {sorted.map((p, i) => (
+                            <tr key={i} className={`hover:bg-white/[0.02] transition-colors ${p.is_user ? 'bg-yellow-500/5' : ''}`}>
+                                <td className="px-5 py-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative shrink-0">
+                                            <img
+                                                src={p.avatar}
+                                                onError={(e: any) => { e.target.src = '/img/default-avatar.png'; }}
+                                                className="w-9 h-9 rounded-xl border border-white/10 object-cover"
+                                                alt=""
+                                            />
+                                            {p.is_user && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-500 rounded-full border-2 border-zinc-950" />}
+                                        </div>
+                                        <div className="min-w-0">
+                                            {p.steam64_id ? (
+                                                <a
+                                                    href={`/player/${p.steam64_id}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={e => e.stopPropagation()}
+                                                    className="group flex items-center gap-1 hover:text-yellow-400 transition-colors"
+                                                >
+                                                    <span className="text-xs font-black text-white group-hover:text-yellow-400 truncate max-w-[110px] transition-colors">{p.name}</span>
+                                                    <svg className="w-2.5 h-2.5 text-zinc-700 group-hover:text-yellow-500 shrink-0 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                                </a>
+                                            ) : (
+                                                <div className="text-xs font-black text-white truncate max-w-[120px]">{p.name}</div>
+                                            )}
+                                            <div className="text-[9px] text-zinc-600 font-bold uppercase">{p.metadata?.role || 'Rifler'}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                {variant === 'full' ? (
+                                    <>
+                                        <td className={`px-3 py-3 text-center font-black text-sm italic ${(p.rating||0) >= 1.2 ? 'text-emerald-400' : (p.rating||0) < 0.8 ? 'text-rose-400' : 'text-white'} ${sortKey === 'rating' ? 'bg-yellow-500/5' : ''}`}>
+                                            {(p.rating||0).toFixed(2)}
+                                        </td>
+                                        <td className={`px-3 py-3 text-center text-xs text-white font-black ${sortKey === 'kills' ? 'bg-yellow-500/5' : ''}`}>{p.kills}</td>
+                                        <td className={`px-3 py-3 text-center text-xs text-zinc-400 font-bold ${sortKey === 'deaths' ? 'bg-yellow-500/5' : ''}`}>{p.deaths}</td>
+                                        <td className={`px-3 py-3 text-center text-xs text-zinc-400 font-bold ${sortKey === 'assists' ? 'bg-yellow-500/5' : ''}`}>{p.assists}</td>
+                                        <td className={`px-3 py-3 text-center text-xs font-black text-zinc-300 ${sortKey === 'adr' ? 'bg-yellow-500/5' : ''}`}>{(p.adr||0).toFixed(1)}</td>
+                                        <td className={`px-3 py-3 text-center text-xs text-zinc-500 font-bold ${sortKey === 'accuracy_head' ? 'bg-yellow-500/5' : ''}`}>{((p.accuracy_head||0)*100).toFixed(0)}%</td>
+                                        <td className={`px-3 py-3 text-center text-xs text-zinc-500 font-bold ${sortKey === 'kast' ? 'bg-yellow-500/5' : ''}`}>
+                                            {p.kast > 1 ? p.kast.toFixed(0) : (p.kast * 100).toFixed(0)}%
+                                        </td>
+                                        <td className={`px-3 py-3 text-center text-xs font-black text-yellow-500/80 ${sortKey === 'total_damage' ? 'bg-yellow-500/5' : ''}`}>{p.total_damage || 0}</td>
+                                    </>
+                                ) : (
+                                    <>
+                                        <td className="px-3 py-3 text-center text-orange-400 font-black text-xs">{p.he_damage || 0}</td>
+                                        <td className="px-3 py-3 text-center text-yellow-400 font-black text-xs">{p.enemies_flashed || 0}</td>
+                                        <td className="px-3 py-3 text-center text-blue-400 font-bold text-xs">{(p.blind_time||0).toFixed(1)}s</td>
+                                        <td className="px-3 py-3 text-center text-zinc-500 text-xs">{p.he_thrown||0}</td>
+                                        <td className="px-3 py-3 text-center text-zinc-500 text-xs">{p.flash_thrown||0}</td>
+                                        <td className="px-3 py-3 text-center text-zinc-500 text-xs">{p.smokes_thrown||0}</td>
+                                    </>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const StatCard = ({ title, value, icon }: { title: string; value: any; icon: any }) => (
     <div className="p-5 bg-zinc-900/40 rounded-2xl border border-white/5 flex flex-col gap-3">
