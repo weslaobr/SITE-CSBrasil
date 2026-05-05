@@ -306,8 +306,8 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({
                                 {tab === 'utilitarios' && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                         <StatCard title="Dano de HE" value={myTeam.reduce((acc: number, p: any) => acc + (p.he_damage || 0), 0)} icon={<Zap className="text-orange-500" />} />
-                                        <StatCard title="Inimigos Cegos" value={myTeam.reduce((acc: number, p: any) => acc + (p.enemies_flashed || 0), 0)} icon={<Eye className="text-yellow-400" />} />
-                                        <StatCard title="Tempo de Cegueira" value={`${myTeam.reduce((acc: number, p: any) => acc + (p.total_blind_duration || 0), 0).toFixed(1)}s`} icon={<Clock className="text-blue-400" />} />
+                                        <StatCard title="Inimigos Cegos" value={myTeam.reduce((acc: number, p: any) => acc + (p.enemies_flashed || p.flashbang_hit_foe || 0), 0)} icon={<Eye className="text-yellow-400" />} />
+                                        <StatCard title="Tempo de Cegueira" value={`${myTeam.reduce((acc: number, p: any) => acc + (p.total_blind_duration || p.blind_time || 0), 0).toFixed(1)}s`} icon={<Clock className="text-blue-400" />} />
                                         <StatCard title="Flash Assists" value={myTeam.reduce((acc: number, p: any) => acc + (p.flash_assists || 0), 0)} icon={<Star className="text-purple-400" />} />
                                         
                                         <div className="col-span-full mt-10">
@@ -414,9 +414,9 @@ const TeamTable = ({ title, players, isEnemy, variant = 'full' }: { title: strin
                                 </>
                             ) : (
                                 <>
-                                    <td className="px-4 py-4 text-center text-orange-400 font-black">{p.he_damage || 0}</td>
-                                    <td className="px-4 py-4 text-center text-yellow-500 font-black">{p.enemies_flashed || 0}</td>
-                                    <td className="px-4 py-4 text-center text-blue-400 font-bold">{p.total_blind_duration?.toFixed(1)}s</td>
+                                    <td className="px-4 py-4 text-center text-orange-400 font-black">{p.he_damage || p.utility_damage || 0}</td>
+                                    <td className="px-4 py-4 text-center text-yellow-500 font-black">{p.enemies_flashed || p.flashbang_hit_foe || 0}</td>
+                                    <td className="px-4 py-4 text-center text-blue-400 font-bold">{(p.total_blind_duration || p.blind_time || 0).toFixed(1)}s</td>
                                     <td className="px-4 py-4 text-center text-zinc-500 text-xs">{p.he_thrown || 0}</td>
                                     <td className="px-4 py-4 text-center text-zinc-500 text-xs">{p.flash_thrown || 0}</td>
                                     <td className="px-4 py-4 text-center text-zinc-500 text-xs">{p.smokes_thrown || 0}</td>

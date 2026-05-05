@@ -80,7 +80,12 @@ export async function GET(
 
             const trackerMap = new Map();
             trackerPlayers.forEach(tp => {
-                trackerMap.set(String(tp.steamid64), tp);
+                // Sanitize BigInt for JSON serialization
+                const sanitized = {
+                    ...tp,
+                    steamid64: String(tp.steamid64)
+                };
+                trackerMap.set(String(tp.steamid64), sanitized);
             });
 
             let localStats = localMatch.players.map(p => {
@@ -151,15 +156,23 @@ export async function GET(
                 SELECT * FROM public.tracker_clutch_events WHERE match_id = ${matchId}
             `.catch(() => []) as any[];
 
-            const trackerMatchPlayers = await prisma.$queryRaw`
-                SELECT * FROM public.tracker_match_players WHERE match_id = ${matchId}
-            `.catch(() => []) as any[];
+            // Use the already fetched trackerPlayers instead of querying again
+            const trackerMatchPlayers = trackerPlayers.map(tp => ({
+                ...tp,
+                steamid64: String(tp.steamid64)
+            }));
 
             // Normalize weapon stats to match frontend expectations (weapon_name, player_id)
             const trackerWeaponStats = trackerWeaponStatsRaw.map(ws => ({
                 ...ws,
                 weapon_name: ws.weapon,
-                player_id: String(ws.steamid64)
+                player_id: String(ws.steamid64),
+                steamid64: String(ws.steamid64) // Sanitize BigInt
+            }));
+
+            const sanitizedClutches = trackerClutchEvents.map(c => ({
+                ...c,
+                steamid64: String(c.steamid64) // Sanitize BigInt
             }));
 
             // Merge advanced stats from tracker into localStats
@@ -194,13 +207,13 @@ export async function GET(
                 result: profileResult,
                 demo_url: localMeta.demoUrl || null,
                 weapon_stats: trackerWeaponStats,
-                clutch_events: trackerClutchEvents,
+                clutch_events: sanitizedClutches,
                 metadata: {
                     ...localMeta,
                     team_2_score: localMatch.scoreB ?? 0,
                     team_3_score: localMatch.scoreA ?? 0,
                     weapon_stats: trackerWeaponStats,
-                    clutch_events: trackerClutchEvents,
+                    clutch_events: sanitizedClutches,
                 },
                 stats: localStats
             };
