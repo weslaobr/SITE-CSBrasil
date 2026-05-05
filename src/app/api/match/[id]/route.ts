@@ -313,6 +313,16 @@ export async function GET(
         }
 
         // 3. Fallback final: Leetify API (apenas para metadados e disparar processamento se necessário)
+        // Se for um ID manual (gerado pelo nosso sistema local), não tentamos o Leetify
+        if (matchId.startsWith('manual_')) {
+            return NextResponse.json({ 
+                status: 'processing', 
+                is_processing: true,
+                match_id: matchId,
+                message: "Aguardando conclusão do processamento manual..."
+            });
+        }
+
         if (!LEETIFY_API_KEY) {
             return NextResponse.json({ error: "Match not found locally and LEETIFY_API_KEY is missing." }, { status: 404 });
         }
