@@ -312,7 +312,7 @@ export async function GET(
             console.warn(`Match ${matchId} tracker fetch failed: ${trackerError.message}`);
         }
 
-        // 3. Fallback final: Leetify API
+        // 3. Fallback final: Leetify API (apenas para metadados e disparar processamento se necessário)
         if (!LEETIFY_API_KEY) {
             return NextResponse.json({ error: "Match not found locally and LEETIFY_API_KEY is missing." }, { status: 404 });
         }
@@ -325,6 +325,25 @@ export async function GET(
 
         let data = matchResponse.data;
         
+        // Se temos um demo_url no Leetify mas não temos a partida processada localmente,
+        // acionamos o nosso novo sistema de processamento (TROPACS-DEMOS)
+        const demoUrl = data.demo_url || data.demoUrl;
+        if (demoUrl) {
+            const pythonUrl = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
+            console.log(`[AutoProcess] Acionando TROPACS-DEMOS para a partida ${matchId}`);
+            
+            // Disparar o processamento em fila (assíncrono)
+            axios.post(`${pythonUrl}/api/importer/import-match`, {
+                steamid: profileSteamId || "0",
+                auth_code: "auto-sync",
+                share_code: demoUrl
+            }).catch(err => console.warn(`[AutoProcess] Falha ao acionar processador para ${matchId}:`, err.message));
+            
+            // Marcar como processando para o frontend
+            data.status = 'processing';
+            data.is_processing = true;
+        }
+
         // Normalizar dados do Leetify para o formato esperado pelo frontend
         if (data.stats && Array.isArray(data.stats)) {
             data.stats = data.stats.map((p: any) => {
@@ -390,7 +409,6 @@ export async function GET(
             data.sharing_code = data.sharingCode || data.matchSharingCode || null;
             data.stats = await fetchAvatars(data.stats);
         }
-
 
         return NextResponse.json(data);
     } catch (error: any) {

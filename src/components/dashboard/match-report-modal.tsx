@@ -104,26 +104,43 @@ const MatchReportModal: React.FC<Props> = ({
     const [isRecalculating, setIsRecalculating] = useState(false);
     const [tab, setTab] = useState<'placar' | 'desempenho' | 'utilitarios' | 'armas' | 'confrontos' | 'linha-tempo' | 'duelos'>('placar');
     const [fetchError, setFetchError] = useState(false);
+    const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
 
     const match = initialMatch || internalMatch;
 
     React.useEffect(() => {
+        let interval: NodeJS.Timeout;
+
         if (isOpen && matchId) {
+            const isProcessing = (match as any)?.status === 'processing' || (match as any)?.is_processing;
+
             // Fetch if no match, no metadata, or if metadata is missing rich data (roundSummaries)
-            if (!match || !match.metadata || !match.metadata.roundSummaries || match.id !== matchId) {
+            if (!match || !match.metadata || !match.metadata.roundSummaries || match.id !== matchId || isProcessing) {
                 // If it's a different match, clear the internal state first
                 if (match?.id !== matchId) {
                     setInternalMatch(null);
                 }
                 setFetchError(false);
                 fetchMatchData();
+
+                // If currently processing, poll every 8 seconds
+                if (isProcessing || (!match?.metadata?.roundSummaries && matchId)) {
+                    interval = setInterval(() => {
+                        setIsAutoRefreshing(true);
+                        fetchMatchData().finally(() => setIsAutoRefreshing(false));
+                    }, 8000);
+                }
             }
         } else if (!isOpen) {
             setInternalMatch(null);
             setFetchError(false);
             setTab('placar');
         }
-    }, [isOpen, matchId]);
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isOpen, matchId, (match as any)?.is_processing, (match as any)?.status]);
 
 
     const fetchMatchData = async () => {
@@ -655,6 +672,11 @@ const MatchReportModal: React.FC<Props> = ({
         );
     }
     if (!currentMatch) return null;
+
+    const isProcessing = (currentMatch as any)?.status === 'processing' || 
+                         (currentMatch as any)?.is_processing || 
+                         (!(currentMatch.metadata?.roundSummaries || currentMatch.metadata?.metadata?.roundSummaries || currentMatch.metadata?.round_summaries) && 
+                          (currentMatch.source === 'Steam' || currentMatch.demo_url || currentMatch.metadata?.demoUrl));
 
     const { t1, t2 } = getTeams();
 
@@ -1844,6 +1866,34 @@ const MatchReportModal: React.FC<Props> = ({
                         className="relative w-full max-w-[1350px] bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.85)] overflow-x-hidden overflow-y-auto flex flex-col"
                         style={{ maxHeight: 'calc(100vh - 12px)' }}
                     >
+                        {isProcessing && (
+                            <div className="absolute inset-0 z-[60] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center text-center p-8">
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="flex flex-col items-center"
+                                >
+                                    <div className="relative w-24 h-24 mb-8">
+                                        <div className="absolute inset-0 border-8 border-yellow-500/10 rounded-full" />
+                                        <div className="absolute inset-0 border-8 border-t-yellow-500 rounded-full animate-spin" />
+                                        <Activity className="absolute inset-0 m-auto text-yellow-500 animate-pulse" size={32} />
+                                    </div>
+                                    <h3 className="text-3xl font-black italic tracking-tighter text-white mb-4">
+                                        ANALISANDO DEMO...
+                                    </h3>
+                                    <p className="text-zinc-400 max-w-md text-sm uppercase font-black tracking-widest leading-relaxed">
+                                        O novo sistema <span className="text-yellow-500">TropaCS Demos</span> está processando esta partida em fila.
+                                        <br />
+                                        <span className="text-zinc-500 text-[10px] mt-2 block italic">Aguardando disponibilidade do analisador para extrair estatísticas avançadas.</span>
+                                    </p>
+                                    
+                                    <div className="mt-8 flex items-center gap-3 px-6 py-3 bg-white/5 rounded-2xl border border-white/10 shadow-2xl">
+                                        <RefreshCw size={16} className={`text-yellow-500 ${isAutoRefreshing ? 'animate-spin' : ''}`} />
+                                        <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Sincronização Ativa</span>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
                         {/* ── HEADER ────────────────────────────────────── */}
                         <div className="relative shrink-0">
                             <img src={mapImg(currentMatch.mapName)} className="absolute inset-0 w-full h-full object-cover scale-110 blur-sm opacity-25" alt="" />
