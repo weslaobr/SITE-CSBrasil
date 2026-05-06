@@ -114,7 +114,7 @@ export async function GET(
                     dpr: adr, 
                     accuracy_head: p.hsPercentage ? (p.hsPercentage / 100) : 0, 
                     rating: tp?.rating ?? m.rating ?? m.leetify_rating ?? 0,
-                    impact: tp?.impact ?? tp?.impact_rating ?? m.impact ?? m.impact_rating ?? m.impactRating ?? localMeta.leetify_ratings?.[p.steamId]?.impact_rating ?? localMeta.leetify_ratings?.[p.steamId]?.impact ?? 0,
+                    impact: tp?.impact ?? m.impact_rating ?? tp?.impact_rating ?? m.impact ?? m.impactRating ?? localMeta.leetify_ratings?.[p.steamId]?.impact_rating ?? 0,
                     kast: tp?.kast ?? m.kast ?? m.kast_percent ?? 0,
                     fk: fkVal,
                     fd: fdVal,

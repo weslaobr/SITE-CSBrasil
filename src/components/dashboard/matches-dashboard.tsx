@@ -904,7 +904,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                             <span className={`text-base font-black italic tracking-tighter ${color}`}>
                                                                 {val ? val.toFixed(2) : '—'}
                                                             </span>
-                                                            <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest italic">Impact</span>
+                                                            <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest italic">IMP</span>
                                                         </div>
                                                     );
                                                 })()}

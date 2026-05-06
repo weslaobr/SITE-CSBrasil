@@ -1808,7 +1808,7 @@ const MatchReportModal: React.FC<Props> = ({
                                     {tab === 'desempenho' && <>
                                         <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600" title="Nome do Jogador">Jogador</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Performance Rating (Rating 2.0)">Rating</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Impact Rating (Impacto no round)">Impacto</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Impact Rating (Impacto no round)">IMP</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Kill, Assist, Survived, or Traded (Impacto por round)">KAST</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Headshot Percentage (Porcentagem de tiros na cabeça)">HS%</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Tempo de Reação (Time to Damage)">TTD</th>

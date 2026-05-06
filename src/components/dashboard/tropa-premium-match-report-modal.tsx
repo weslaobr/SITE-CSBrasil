@@ -386,7 +386,7 @@ const TeamTable = ({ title, players, isEnemy, variant = 'full' }: { title: strin
                             {variant === 'full' ? (
                                 <>
                                     <Th label="Rating" k="rating" />
-                                    <Th label="Impacto" k="impact" />
+                                    <Th label="IMP" k="impact" />
                                     <Th label="K" k="kills" />
                                     <Th label="D" k="deaths" />
                                     <Th label="A" k="assists" />
