@@ -43,7 +43,11 @@ async def import_match(request: ImportMatchRequest, background_tasks: Background
     if request.share_code:
         import uuid
         is_url = "http" in request.share_code
-        match_id_mock = request.share_code.split("/")[-1].split(".")[0] if is_url else request.share_code
+        # For URLs, use a unique ID to avoid collisions. For Steam share codes, keep the code as ID.
+        if is_url:
+            match_id_mock = f"manual_{uuid.uuid4().hex[:12]}"
+        else:
+            match_id_mock = request.share_code
 
         background_tasks.add_task(
             process_match_task,
@@ -55,6 +59,7 @@ async def import_match(request: ImportMatchRequest, background_tasks: Background
         return {
             "status": "processing",
             "message": "Queued manual match import.",
+            "match_id": match_id_mock,
             "matches": [{"sharing_code": request.share_code}]
         }
 

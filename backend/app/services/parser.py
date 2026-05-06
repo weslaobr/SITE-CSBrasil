@@ -104,7 +104,11 @@ class ParserService:
                 file_hash = hashlib.md5(f.read(1024 * 1024)).hexdigest()
             extracted_id = f"demo_{file_hash}"
             
-        match_id = match_id_override or extracted_id
+        # Use extracted ID if it's reliable, otherwise use override
+        if match_id_override and not match_id_override.startswith("manual_"):
+            match_id = match_id_override
+        else:
+            match_id = extracted_id
         map_name = self.dem.header["map_name"]
         
         # 0. Cleanup
