@@ -792,9 +792,15 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                             {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' :
                                                              match.mapName.replace('de_', '').replace(/_/g, ' ').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                                                         </span>
-                                                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 group-hover:text-zinc-400">
-                                                            {matchMode}
-                                                        </span>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 group-hover:text-zinc-400">
+                                                                {matchMode}
+                                                            </span>
+                                                            <span className="w-0.5 h-0.5 rounded-full bg-zinc-700" />
+                                                            <span className="text-[7px] font-bold text-zinc-600 group-hover:text-zinc-500 select-all tracking-tighter">
+                                                                #{match.id?.slice(-8) || '---'}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>

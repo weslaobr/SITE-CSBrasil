@@ -1931,9 +1931,9 @@ const MatchReportModal: React.FC<Props> = ({
                                                 {isVerified ? 'Verificado' : 'Estimado'}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-2 mt-1 text-[8px] font-black text-zinc-700 uppercase tracking-[0.2em]">
-                                            <span className="w-4 h-px bg-white/5" />
-                                            ID: <span className="text-zinc-600 select-all font-bold">{currentMatch.id || matchId}</span>
+                                        <div className="flex items-center gap-2 mt-2 text-[9px] font-black text-zinc-500 uppercase tracking-widest bg-black/40 px-2 py-1 rounded-lg border border-white/5 w-fit">
+                                            <span className="text-yellow-500/60">MATCH ID:</span>
+                                            <span className="text-zinc-400 select-all font-bold">{currentMatch?.id || matchId || '—'}</span>
                                         </div>
                                     </div>
                                 </div>

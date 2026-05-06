@@ -87,7 +87,7 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                         {data?.match_id && (
                                             <>
                                                 <span className="text-zinc-800">·</span>
-                                                <span className="text-zinc-600">ID: {data.match_id}</span>
+                                                <span className="text-zinc-500 font-bold bg-white/5 px-2 py-0.5 rounded border border-white/5">ID: {data.match_id}</span>
                                             </>
                                         )}
                                     </p>
