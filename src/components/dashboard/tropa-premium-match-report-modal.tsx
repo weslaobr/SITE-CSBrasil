@@ -867,7 +867,8 @@ const weaponImg = (name: string) => {
     const MAPPING: Record<string, string> = {
         // Rifles
         'ak47': 'ak47', 'ak-47': 'ak47', 'ak_47': 'ak47', 'ak 47': 'ak47',
-        'm4a4': 'm4a1', 'm4a1': 'm4a1', 'm4-a4': 'm4a1', 'm4 a4': 'm4a1',
+        'm4a4': 'm4a1', 'm4-a4': 'm4a1', 'm4 a4': 'm4a1',
+        'm4a1': 'm4a1_silencer', 'm4-a1': 'm4a1_silencer', 'm4 a1': 'm4a1_silencer',
         'm4a1_s': 'm4a1_silencer', 'm4a1-s': 'm4a1_silencer', 'm4a1_silencer': 'm4a1_silencer', 'm4a1 s': 'm4a1_silencer',
         'famas': 'famas', 'galilar': 'galilar', 'galil': 'galilar', 'galil ar': 'galilar', 'galil-ar': 'galilar',
         'aug': 'aug', 'sg556': 'sg556', 'sg553': 'sg556', 'sg-553': 'sg556', 'sg 553': 'sg556',
@@ -898,10 +899,10 @@ const weaponImg = (name: string) => {
         'elite': 'elite', 'dualies': 'elite', 'duals': 'elite', 'dual-berettas': 'elite', 'dual berettas': 'elite',
         
         // Utility & Others
-        'hegrenade': 'hegrenade', 'he grenade': 'hegrenade', 'he-grenade': 'hegrenade',
+        'hegrenade': 'hegrenade', 'he grenade': 'hegrenade', 'he-grenade': 'hegrenade', 'he granede': 'hegrenade',
         'flashbang': 'flashbang', 'flash-bang': 'flashbang', 'flash': 'flashbang',
         'smokegrenade': 'smokegrenade', 'smoke': 'smokegrenade', 'smoke-grenade': 'smokegrenade',
-        'molotov': 'molotov', 'incgrenade': 'incgrenade', 'incendiary grenade': 'incgrenade', 'incendiary': 'incgrenade',
+        'molotov': 'molotov', 'incgrenade': 'incgrenade', 'incendiary grenade': 'incgrenade', 'incendiary': 'incgrenade', 'incendiary granede': 'incgrenade',
         'inferno': 'inferno', 'decoy': 'decoy', 'decoygrenade': 'decoy', 'decoy-grenade': 'decoy',
         'c4': 'planted_c4', 'planted_c4': 'planted_c4', 'taser': 'taser', 'zeus': 'taser', 'zeus27': 'taser',
         'flashbang_assist': 'flashbang_assist',
@@ -945,9 +946,32 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeli
 
     const topKillers = Object.entries(killerStats).sort((a, b) => b[1] - a[1]).slice(0, 4);
     const topVictims = Object.entries(victimStats).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    const scrollToRound = (r: number) => {
+        const el = document.getElementById(`confrontos-round-${r}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
 
     return (
-        <div className="space-y-12 pb-10">
+        <div className="relative flex gap-8 pb-10">
+            {/* Premium Round Quick Nav */}
+            <div className="hidden xl:flex flex-col gap-2 sticky top-24 self-start bg-zinc-900/60 p-3 rounded-[32px] border border-white/10 backdrop-blur-xl z-20 max-h-[70vh] overflow-y-auto scrollbar-none shadow-2xl">
+                <span className="text-[8px] font-black text-zinc-500 uppercase text-center mb-1 tracking-widest">Rounds</span>
+                {rounds.map(rNum => (
+                    <button
+                        key={rNum}
+                        onClick={() => scrollToRound(rNum)}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black border transition-all ${
+                            Number(rNum) === 0 
+                            ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500 hover:text-black' 
+                            : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:border-yellow-500/50 hover:bg-yellow-500/10'
+                        }`}
+                    >
+                        {Number(rNum) === 0 ? 'F' : rNum}
+                    </button>
+                ))}
+            </div>
+
+            <div className="flex-1 flex flex-col gap-12 min-w-0">
             {/* Premium Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-gradient-to-br from-emerald-500/10 via-zinc-900/40 to-transparent border border-emerald-500/20 rounded-[40px] p-8 relative overflow-hidden group">
@@ -1000,7 +1024,7 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeli
             {/* Premium Battle Log */}
             <div className="space-y-16">
                 {rounds.map(rNum => (
-                    <div key={rNum} className="space-y-8">
+                    <div key={rNum} id={`confrontos-round-${rNum}`} className="space-y-8 scroll-mt-32">
                         <div className="flex items-center gap-6">
                             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/5 to-white/10" />
                             <div className="flex flex-col items-center">
@@ -1119,12 +1143,38 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeli
                 ))}
             </div>
         </div>
-    );
+    </div>
+);
 };
 
 const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> = ({ weaponStats, players, match }) => {
+    const scrollToPlayer = (sid: string) => {
+        const el = document.getElementById(`arsenal-player-${sid}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
     return (
-        <div className="space-y-12 pb-10">
+        <div className="relative flex gap-8 pb-10">
+            {/* Floating Quick Nav */}
+            <div className="hidden xl:flex flex-col gap-3 sticky top-24 self-start bg-zinc-900/60 p-3 rounded-[32px] border border-white/10 backdrop-blur-xl z-20 shadow-2xl">
+                <div className="flex flex-col items-center gap-1 mb-2">
+                    <span className="text-[8px] font-black text-yellow-500 uppercase tracking-widest">Atalho</span>
+                    <div className="h-px w-6 bg-white/10" />
+                </div>
+                {players.map(p => (
+                    <button
+                        key={p.steam64_id || p.steamid64}
+                        onClick={() => scrollToPlayer(p.steam64_id || p.steamid64)}
+                        className="w-12 h-12 rounded-[18px] overflow-hidden border-2 border-transparent hover:border-yellow-500 hover:scale-110 transition-all group relative shadow-lg"
+                        title={p.name || p.nickname}
+                    >
+                        <img src={p.avatar} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" alt="" />
+                        <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-zinc-900 ${p.team_id === '3' ? 'bg-sky-500' : 'bg-orange-500'}`} />
+                    </button>
+                ))}
+            </div>
+
+            <div className="flex-1 flex flex-col gap-12 min-w-0">
             {/* Survival & Utility Premium Summary */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="bg-gradient-to-br from-yellow-500/10 via-zinc-900/40 to-transparent border border-yellow-500/20 rounded-[40px] p-8 relative overflow-hidden group">
@@ -1204,7 +1254,7 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
                     const adr = (totalDmg / totalRounds).toFixed(1);
 
                     return (
-                        <div key={p.steam64_id || p.steamid64} className="bg-zinc-900/40 border border-white/[0.04] rounded-[48px] p-8 hover:bg-zinc-900/60 transition-all duration-500 shadow-2xl relative group overflow-hidden">
+                        <div key={p.steam64_id || p.steamid64} id={`arsenal-player-${p.steam64_id || p.steamid64}`} className="bg-zinc-900/40 border border-white/[0.04] rounded-[48px] p-8 hover:bg-zinc-900/60 transition-all duration-500 shadow-2xl relative group overflow-hidden scroll-mt-32">
                             <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
                             
                             {/* Player Header & Total Summary */}
@@ -1303,10 +1353,10 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
                     );
                 })}
             </div>
-
+            </div>
         </div>
     );
-};
+}; // End ArsenalLog
 
 const UtilityBadge: React.FC<{ count: number, label: string, color: string }> = ({ count, label, color }) => {
     const colorClasses: any = {

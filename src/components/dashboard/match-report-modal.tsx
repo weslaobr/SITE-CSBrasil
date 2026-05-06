@@ -323,7 +323,8 @@ const MatchReportModal: React.FC<Props> = ({
         const MAPPING: Record<string, string> = {
             // Rifles
             'ak47': 'ak47', 'ak-47': 'ak47', 'ak_47': 'ak47', 'ak 47': 'ak47',
-            'm4a4': 'm4a1', 'm4a1': 'm4a1', 'm4-a4': 'm4a1', 'm4 a4': 'm4a1',
+            'm4a4': 'm4a1', 'm4-a4': 'm4a1', 'm4 a4': 'm4a1',
+            'm4a1': 'm4a1_silencer', 'm4-a1': 'm4a1_silencer', 'm4 a1': 'm4a1_silencer',
             'm4a1_s': 'm4a1_silencer', 'm4a1-s': 'm4a1_silencer', 'm4a1_silencer': 'm4a1_silencer', 'm4a1 s': 'm4a1_silencer',
             'famas': 'famas', 'galilar': 'galilar', 'galil': 'galilar', 'galil ar': 'galilar', 'galil-ar': 'galilar',
             'aug': 'aug', 'sg556': 'sg556', 'sg553': 'sg556', 'sg-553': 'sg556', 'sg 553': 'sg556',
@@ -354,10 +355,10 @@ const MatchReportModal: React.FC<Props> = ({
             'elite': 'elite', 'dualies': 'elite', 'duals': 'elite', 'dual-berettas': 'elite', 'dual berettas': 'elite',
             
             // Utility & Others
-            'hegrenade': 'hegrenade', 'he grenade': 'hegrenade', 'he-grenade': 'hegrenade',
+            'hegrenade': 'hegrenade', 'he grenade': 'hegrenade', 'he-grenade': 'hegrenade', 'he granede': 'hegrenade',
             'flashbang': 'flashbang', 'flash-bang': 'flashbang', 'flash': 'flashbang',
             'smokegrenade': 'smokegrenade', 'smoke': 'smokegrenade', 'smoke-grenade': 'smokegrenade',
-            'molotov': 'molotov', 'incgrenade': 'incgrenade', 'incendiary grenade': 'incgrenade', 'incendiary': 'incgrenade',
+            'molotov': 'molotov', 'incgrenade': 'incgrenade', 'incendiary grenade': 'incgrenade', 'incendiary': 'incgrenade', 'incendiary granede': 'incgrenade',
             'inferno': 'inferno', 'decoy': 'decoy', 'decoygrenade': 'decoy', 'decoy-grenade': 'decoy',
             'c4': 'planted_c4', 'planted_c4': 'planted_c4', 'taser': 'taser', 'zeus': 'taser', 'zeus27': 'taser',
             'flashbang_assist': 'flashbang_assist',
@@ -1503,8 +1504,32 @@ const MatchReportModal: React.FC<Props> = ({
         const topKillers = Object.entries(killerStats).sort((a, b) => b[1] - a[1]).slice(0, 4);
         const topVictims = Object.entries(victimStats).sort((a, b) => b[1] - a[1]).slice(0, 4);
 
+        const scrollToRound = (r: number) => {
+            const el = document.getElementById(`confrontos-round-${r}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+
         return (
-            <div className="flex flex-col gap-10 mt-6 pb-10">
+            <div className="relative flex gap-6 mt-6 pb-10">
+                {/* Round Quick Nav */}
+                <div className="hidden xl:flex flex-col gap-1.5 sticky top-24 self-start bg-black/40 p-2 rounded-2xl border border-white/5 backdrop-blur-md z-20 max-h-[70vh] overflow-y-auto scrollbar-none">
+                    <span className="text-[7px] font-black text-zinc-600 uppercase text-center mb-1">Rounds</span>
+                    {rounds.map(rNum => (
+                        <button
+                            key={rNum}
+                            onClick={() => scrollToRound(rNum)}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black border transition-all ${
+                                Number(rNum) === 0 
+                                ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' 
+                                : 'bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:border-white/20'
+                            }`}
+                        >
+                            {Number(rNum) === 0 ? 'F' : rNum}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex-1 flex flex-col gap-10 min-w-0">
                 {/* Simplified Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-gradient-to-br from-emerald-500/5 to-transparent border border-white/5 rounded-[32px] p-6 shadow-xl relative overflow-hidden">
@@ -1552,7 +1577,7 @@ const MatchReportModal: React.FC<Props> = ({
                 {/* Round by Round Battle Log */}
                 <div className="space-y-12">
                     {rounds.map(rNum => (
-                        <div key={rNum} className="space-y-6">
+                        <div key={rNum} id={`confrontos-round-${rNum}`} className="space-y-6 scroll-mt-32">
                             <div className="flex items-center gap-4">
                                 <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/5" />
                                 <div className="px-8 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 shadow-2xl flex items-center gap-3">
@@ -1664,15 +1689,37 @@ const MatchReportModal: React.FC<Props> = ({
                     ))}
                 </div>
             </div>
-        );
+        </div>
+    );
     };
 
     const ArsenalLog = () => {
-        const weaponStats = currentMatch?.metadata?.weapon_stats || [];
-        const allPlayers = [...t1, ...t2];
-        
+        const scrollToPlayer = (sid: string) => {
+            const el = document.getElementById(`arsenal-player-${sid}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+
+        const allPs = [...t1, ...t2];
+
         return (
-            <div className="flex flex-col gap-10 mt-6 pb-10">
+            <div className="relative flex gap-6 mt-6 pb-10">
+                {/* Floating Quick Nav */}
+                <div className="hidden xl:flex flex-col gap-2 sticky top-24 self-start bg-black/40 p-2 rounded-2xl border border-white/5 backdrop-blur-md z-20">
+                    <span className="text-[7px] font-black text-zinc-600 uppercase text-center mb-1">Pular</span>
+                    {allPs.map(p => (
+                        <button
+                            key={p.steamId}
+                            onClick={() => scrollToPlayer(p.steamId!)}
+                            className="w-10 h-10 rounded-xl overflow-hidden border-2 border-transparent hover:border-yellow-500/50 transition-all group relative"
+                            title={p.nickname}
+                        >
+                            <img src={p.avatar} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" alt="" />
+                            <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-black ${p.team === 'CT' ? 'bg-sky-500' : 'bg-orange-500'}`} />
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex-1 flex flex-col gap-10 min-w-0">
                 {/* Survival & Utility Summary */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="bg-zinc-950/40 border border-white/5 rounded-[32px] p-8 shadow-xl">
@@ -1752,7 +1799,6 @@ const MatchReportModal: React.FC<Props> = ({
                          </div>
                     </div>
                 </div>
-
                 {/* Weapons Detailed Stats Table */}
                 <div className="bg-[#0c0f15] border border-white/[0.04] rounded-[48px] overflow-hidden shadow-2xl">
                     <div className="overflow-x-auto">
@@ -1765,12 +1811,12 @@ const MatchReportModal: React.FC<Props> = ({
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/[0.01]">
-                                {allPlayers.map(p => {
+                                {allPs.map(p => {
                                     const pStats = weaponStats.filter((ws: any) => String(ws.player_id) === String(p.steamId));
                                     const totalRounds = (currentMatch?.metadata?.team_2_score || 15) + (currentMatch?.metadata?.team_3_score || 15) || 30;
 
                                     return (
-                                        <tr key={p.steamId} className="group hover:bg-white/[0.015] transition-all">
+                                        <tr key={p.steamId} id={`arsenal-player-${p.steamId}`} className="group hover:bg-white/[0.015] transition-all scroll-mt-32">
                                             <td className="py-8 px-10">
                                                 <div className="flex items-center gap-5">
                                                     <img src={p.avatar} className="w-12 h-12 rounded-[20px] border-2 border-white/5 group-hover:border-white/20 transition-all shadow-xl" alt="" />
@@ -1830,9 +1876,23 @@ const MatchReportModal: React.FC<Props> = ({
                                                 </div>
                                             </td>
                                             <td className="py-8 px-10 text-right">
-                                                <div className="flex flex-col items-end">
-                                                    <span className="text-3xl font-black italic text-yellow-500 group-hover:scale-110 transition-transform">{p.kills}</span>
-                                                    <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest">FRAGS</span>
+                                                <div className="flex flex-col items-end gap-3">
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-3xl font-black italic text-yellow-500 group-hover:scale-110 transition-transform">{p.kills}</span>
+                                                        <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest">FRAGS</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-end opacity-60">
+                                                        <span className="text-sm font-black text-zinc-300 italic">{p.total_damage || 0}</span>
+                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">DMG</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-end opacity-60">
+                                                        <span className="text-sm font-black text-zinc-300 italic">{p.adr || 0}</span>
+                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">ADR</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-end opacity-60">
+                                                        <span className="text-sm font-black text-zinc-300 italic">{Math.round((p.accuracy_head || 0) * 100)}%</span>
+                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">HS%</span>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1843,7 +1903,8 @@ const MatchReportModal: React.FC<Props> = ({
                     </div>
                 </div>
             </div>
-        );
+        </div>
+    );
     };
 
     // ── TABS CONFIG ───────────────────────────────────────────────────────────
