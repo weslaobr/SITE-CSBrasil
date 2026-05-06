@@ -831,7 +831,7 @@ const MatchReportModal: React.FC<Props> = ({
                                 'bg-zinc-900 border-white/10 text-zinc-500'
                             }`}>
                                 <span className="text-[7px] font-black uppercase leading-none mb-0.5 tracking-tighter opacity-50">RD</span>
-                                <span className="text-xl font-black italic leading-none">{rNum}</span>
+                                <span className="text-xl font-black italic leading-none">{Number(rNum) === 0 ? 'FACA' : rNum}</span>
                             </div>
 
                             <div className="bg-[#0c0f15] border border-white/[0.04] rounded-[32px] overflow-hidden shadow-xl transition-all group-hover:border-white/10">
@@ -1425,7 +1425,7 @@ const MatchReportModal: React.FC<Props> = ({
                                         <tr key={rNum} className="group hover:bg-white/[0.02] transition-all">
                                             <td className="py-5 px-6 text-center">
                                                 <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center group-hover:border-white/20 transition-all">
-                                                    <span className="text-xl font-black italic text-zinc-600 group-hover:text-zinc-300 transition-colors">{rNum}</span>
+                                                    <span className="text-xl font-black italic text-zinc-600 group-hover:text-zinc-300 transition-colors">{Number(rNum) === 0 ? 'FACA' : rNum}</span>
                                                 </div>
                                             </td>
                                             <td className="py-5 px-6">
@@ -1557,7 +1557,7 @@ const MatchReportModal: React.FC<Props> = ({
                                 <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/5" />
                                 <div className="px-8 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 shadow-2xl flex items-center gap-3">
                                     <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-                                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white">CONFRONTOS: ROUND {rNum}</span>
+                                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white">CONFRONTOS: {Number(rNum) === 0 ? 'ROUND FACA' : `ROUND ${rNum}`}</span>
                                 </div>
                                 <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/5" />
                             </div>

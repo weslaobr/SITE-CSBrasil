@@ -641,7 +641,7 @@ const UtilityTimeline = ({ timeline, players }: { timeline: any; players: any[] 
                 <div key={rNum} className="flex gap-4 group">
                     <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-white/5 flex flex-col items-center justify-center shrink-0 group-hover:border-yellow-500/50 transition-colors shadow-lg">
                         <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter leading-none mb-1">RD</span>
-                        <span className="text-lg font-black text-white italic leading-none">{rNum}</span>
+                        <span className="text-lg font-black text-white italic leading-none">{Number(rNum) === 0 ? 'FACA' : rNum}</span>
                     </div>
                     <div className="flex-1 min-w-0 bg-zinc-900/40 border border-white/5 rounded-2xl p-3 flex items-center gap-3 overflow-x-auto no-scrollbar">
                         {timeline[rNum].length === 0 ? (
@@ -798,7 +798,7 @@ const EconomyLog: React.FC<{ economy: any }> = ({ economy }) => {
                                         <td className="py-6 px-10">
                                             <div className="flex flex-col items-center">
                                                 <div className="w-14 h-14 rounded-[20px] bg-zinc-950 border border-white/5 flex items-center justify-center group-hover:border-yellow-500/30 group-hover:scale-105 transition-all shadow-inner">
-                                                    <span className="text-2xl font-black italic text-zinc-700 group-hover:text-yellow-500 transition-colors">{rNum}</span>
+                                                    <span className="text-2xl font-black italic text-zinc-700 group-hover:text-yellow-500 transition-colors">{Number(rNum) === 0 ? 'FACA' : rNum}</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -1008,7 +1008,7 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeli
                                 <div className="px-10 py-3 rounded-3xl bg-zinc-900 border border-white/10 shadow-2xl flex items-center gap-4 relative overflow-hidden group">
                                     <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     <div className="w-2.5 h-2.5 rounded-full bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]" />
-                                    <span className="text-sm font-black uppercase tracking-[0.3em] text-white italic">ROUND {rNum}</span>
+                                    <span className="text-sm font-black uppercase tracking-[0.3em] text-white italic">{Number(rNum) === 0 ? 'ROUND FACA' : `ROUND ${rNum}`}</span>
                                 </div>
                             </div>
                             <div className="h-px flex-1 bg-gradient-to-l from-transparent via-white/5 to-white/10" />
