@@ -302,13 +302,61 @@ export async function GET(
                 steamid64: String(c.steamid64) // Sanitize BigInt
             }));
 
+            // Calculate pseudo avg_ttd
+            const roundStartTicks: Record<number, number> = {};
+            const roundMaxTicks: Record<number, number> = {};
+            
+            [...trackerKillEvents, ...trackerDamageEvents, ...trackerGrenadeEvents].forEach(e => {
+                if (!roundStartTicks[e.round_number] || e.tick < roundStartTicks[e.round_number]) roundStartTicks[e.round_number] = e.tick;
+                if (!roundMaxTicks[e.round_number] || e.tick > roundMaxTicks[e.round_number]) roundMaxTicks[e.round_number] = e.tick;
+            });
+
+            const playerTTDs: Record<string, number[]> = {};
+            const allRoundNumbers = Object.keys(roundStartTicks).map(Number);
+            
+            trackerKillEvents.forEach(ke => {
+                const victim = String(ke.victim_steamid);
+                if (!playerTTDs[victim]) playerTTDs[victim] = [];
+                const startTick = roundStartTicks[ke.round_number] || ke.tick;
+                const ttdSeconds = (ke.tick - startTick) / 64;
+                playerTTDs[victim].push(ttdSeconds);
+            });
+
+            localStats.forEach(p => {
+                const sid = String(p.steam64_id);
+                if (!playerTTDs[sid]) playerTTDs[sid] = [];
+                
+                const deathRounds = new Set(trackerKillEvents.filter(ke => String(ke.victim_steamid) === sid).map(ke => ke.round_number));
+                
+                allRoundNumbers.forEach(r => {
+                    if (!deathRounds.has(r)) {
+                        const start = roundStartTicks[r];
+                        const end = roundMaxTicks[r];
+                        let survivedTime = (end - start) / 64;
+                        if (survivedTime < 30) survivedTime = 85; 
+                        playerTTDs[sid].push(survivedTime);
+                    }
+                });
+            });
+
+            const calculatedAvgTTD: Record<string, number> = {};
+            for (const [sid, ttds] of Object.entries(playerTTDs)) {
+                if (ttds.length > 0) {
+                    calculatedAvgTTD[sid] = ttds.reduce((a, b) => a + b, 0) / ttds.length;
+                } else {
+                    calculatedAvgTTD[sid] = 85;
+                }
+            }
+
             // Merge advanced stats from tracker into localStats
             localStats = localStats.map(p => {
                 const tp = trackerMatchPlayers.find(x => String(x.steamid64) === String(p.steam64_id));
+                const estimatedTtd = calculatedAvgTTD[String(p.steam64_id)] || 80;
+
                 if (tp) {
                     return {
                         ...p,
-                        avg_ttd: tp.avg_ttd,
+                        avg_ttd: tp.avg_ttd || estimatedTtd,
                         avg_kill_distance: tp.avg_kill_distance,
                         impact: tp.impact || tp.impact_rating || p.impact,
                         enemies_flashed: tp.enemies_flashed,
@@ -321,7 +369,7 @@ export async function GET(
                         eloAfter: tp.elo_after
                     };
                 }
-                return p;
+                return { ...p, avg_ttd: estimatedTtd };
             });
 
             // Inferir nome do mapa a partir da URL da demo se estiver como "Desconhecido"

@@ -971,31 +971,34 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[] }> = ({ timel
                                             </div>
                                         </div>
 
-                                        {/* Action Info */}
-                                        <div className="flex flex-col items-center gap-4 px-10 border-x border-white/[0.05] min-w-[240px]">
-                                            <div className="flex items-center gap-6">
-                                                <img 
-                                                    src={`/img/weapons/${k.weapon?.replace('weapon_', '')}.svg`} 
-                                                    className="h-6 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all group-hover:scale-125 group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]" 
-                                                    alt="" 
-                                                    onError={(e) => { e.currentTarget.src = '/img/weapons/knife.svg' }}
-                                                />
-                                                {k.isHeadshot && (
-                                                    <div className="w-9 h-9 rounded-[14px] bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-[inset_0_0_10px_rgba(244,63,94,0.1)] group-hover:scale-110 transition-transform">
-                                                        <Target size={18} strokeWidth={3} />
+                                            <div className="flex flex-col items-center gap-4 px-10 border-x border-white/[0.05] min-w-[240px]">
+                                                <div className="flex items-center gap-6">
+                                                    <img 
+                                                        src={`/img/weapons/${k.weapon?.replace('weapon_', '')}.svg`} 
+                                                        className="h-6 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all group-hover:scale-125 group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]" 
+                                                        alt={k.weapon} 
+                                                        title={k.weapon}
+                                                        onError={(e) => { e.currentTarget.src = '/img/weapons/knife.svg' }}
+                                                    />
+                                                    {k.isHeadshot && (
+                                                        <div className="w-9 h-9 rounded-[14px] bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-[inset_0_0_10px_rgba(244,63,94,0.1)] group-hover:scale-110 transition-transform">
+                                                            <Target size={18} strokeWidth={3} />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-col items-center gap-1.5">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-[14px] font-black text-emerald-400 tracking-tighter italic">{k.damage}</span>
+                                                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em]">HP DAMAGE</span>
                                                     </div>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-col items-center gap-1.5">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-[14px] font-black text-emerald-400 tracking-tighter italic">{k.damage}</span>
-                                                    <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em]">HP DAMAGE</span>
-                                                </div>
-                                                <div className="h-1.5 w-28 bg-black/40 rounded-full overflow-hidden p-0.5 shadow-inner">
-                                                    <motion.div initial={{ width: 0 }} whileInView={{ width: '100%' }} className="h-full bg-emerald-500/80 rounded-full" />
+                                                    <div className="h-1.5 w-28 bg-black/40 rounded-full overflow-hidden p-0.5 shadow-inner">
+                                                        <motion.div initial={{ width: 0 }} whileInView={{ width: '100%' }} className="h-full bg-emerald-500/80 rounded-full" />
+                                                    </div>
+                                                    <div className="text-[9px] text-zinc-500 font-bold italic mt-1 text-center max-w-[200px] truncate">
+                                                        {attacker?.name || attacker?.nickname || 'Desconhecido'} de <span className="text-zinc-300 uppercase">{k.weapon}</span> em {victim?.name || victim?.nickname || 'Desconhecido'}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
 
                                         {/* Victim */}
                                         <div className="flex items-center gap-6 flex-1 justify-end min-w-0">
@@ -1036,7 +1039,7 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
                     </h4>
                     <div className="space-y-4 max-h-[440px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-white/10">
                         {players.sort((a,b) => (b.avg_ttd || 0) - (a.avg_ttd || 0)).map(p => (
-                            <div key={p.steamid64} className="flex items-center justify-between group p-4 bg-zinc-950/60 rounded-[28px] border border-white/5 hover:border-yellow-500/30 transition-all duration-500">
+                            <div key={p.steam64_id || p.steamid64} className="flex items-center justify-between group p-4 bg-zinc-950/60 rounded-[28px] border border-white/5 hover:border-yellow-500/30 transition-all duration-500">
                                 <div className="flex items-center gap-4">
                                     <div className="relative group-hover:scale-105 transition-transform">
                                         <img src={p.avatar} className="w-12 h-12 rounded-[18px] border-2 border-white/10 shadow-2xl" alt="" />
@@ -1073,7 +1076,7 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
                     </h4>
                     <div className="grid grid-cols-1 gap-4 max-h-[440px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-white/10">
                         {players.sort((a,b) => ((a.he_thrown || 0) + (a.flash_thrown || 0) + (a.smokes_thrown || 0) + (a.molotovs_thrown || 0)) - ((b.he_thrown || 0) + (b.flash_thrown || 0) + (b.smokes_thrown || 0) + (b.molotovs_thrown || 0))).reverse().map(p => (
-                            <div key={p.steamid64} className="flex items-center justify-between p-5 bg-zinc-950/60 rounded-[32px] border border-white/5 hover:border-emerald-500/30 hover:bg-zinc-950/80 transition-all duration-500">
+                            <div key={p.steam64_id || p.steamid64} className="flex items-center justify-between p-5 bg-zinc-950/60 rounded-[32px] border border-white/5 hover:border-emerald-500/30 hover:bg-zinc-950/80 transition-all duration-500">
                                 <div className="flex items-center gap-4">
                                     <img src={p.avatar} className="w-10 h-10 rounded-2xl border border-white/10" alt="" />
                                     <span className="text-sm font-black italic text-zinc-300">{p.name || p.nickname}</span>
@@ -1104,11 +1107,11 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
                         </thead>
                         <tbody className="divide-y divide-white/[0.02]">
                             {players.map(p => {
-                                const pStats = weaponStats.filter((ws: any) => String(ws.player_id) === String(p.steamid64));
+                                const pStats = weaponStats.filter((ws: any) => String(ws.player_id) === String(p.steam64_id || p.steamid64));
                                 const totalRounds = (match?.metadata?.team_2_score || 0) + (match?.metadata?.team_3_score || 0) || 30;
 
                                 return (
-                                    <tr key={p.steamid64} className="group hover:bg-white/[0.02] transition-all duration-500">
+                                    <tr key={p.steam64_id || p.steamid64} className="group hover:bg-white/[0.02] transition-all duration-500">
                                         <td className="py-10 px-12">
                                             <div className="flex items-center gap-6">
                                                 <div className="relative group-hover:scale-110 transition-transform duration-500">

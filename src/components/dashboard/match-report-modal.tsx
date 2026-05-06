@@ -1584,7 +1584,7 @@ const MatchReportModal: React.FC<Props> = ({
                                             {/* Battle Info Block */}
                                             <div className="flex flex-col items-center gap-3 px-12 border-x border-white/[0.06] min-w-[200px]">
                                                 <div className="flex items-center gap-5">
-                                                    <img src={weaponImg(k.weapon)} className="h-5 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all group-hover:scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" alt="" title={k.weapon} />
+                                                    <img src={weaponImg(k.weapon)} className="h-5 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all group-hover:scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" alt={k.weapon} title={k.weapon} />
                                                     {k.isHeadshot && (
                                                         <div className="w-7 h-7 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-inner">
                                                             <Target size={14} strokeWidth={3} />
@@ -1598,6 +1598,9 @@ const MatchReportModal: React.FC<Props> = ({
                                                     </div>
                                                     <div className="h-1 w-20 bg-zinc-900 rounded-full overflow-hidden p-0.5">
                                                         <motion.div initial={{ width: 0 }} whileInView={{ width: '100%' }} className="h-full bg-emerald-500 rounded-full" />
+                                                    </div>
+                                                    <div className="text-[8px] text-zinc-500 font-bold italic mt-1 text-center max-w-[180px] truncate">
+                                                        {attacker?.nickname || attacker?.name || 'Desconhecido'} de <span className="text-zinc-300 uppercase">{k.weapon}</span> em {victim?.nickname || victim?.name || 'Desconhecido'}
                                                     </div>
                                                 </div>
                                             </div>
