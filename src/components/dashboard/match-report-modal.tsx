@@ -322,29 +322,43 @@ const MatchReportModal: React.FC<Props> = ({
         
         const MAPPING: Record<string, string> = {
             // Rifles
-            'ak47': 'ak47', 'ak-47': 'ak47', 'ak_47': 'ak47',
-            'm4a4': 'm4a1', 'm4a1': 'm4a1', 
-            'm4a1_s': 'm4a1_silencer', 'm4a1-s': 'm4a1_silencer', 'm4a1_silencer': 'm4a1_silencer', 
-            'famas': 'famas', 'galilar': 'galilar', 'aug': 'aug', 'sg556': 'sg556', 'sg553': 'sg556',
-            'awp': 'awp', 'ssg08': 'ssg08', 'scout': 'ssg08', 'g3sg1': 'g3sg1', 'scar20': 'scar20',
+            'ak47': 'ak47', 'ak-47': 'ak47', 'ak_47': 'ak47', 'ak 47': 'ak47',
+            'm4a4': 'm4a1', 'm4a1': 'm4a1', 'm4-a4': 'm4a1', 'm4 a4': 'm4a1',
+            'm4a1_s': 'm4a1_silencer', 'm4a1-s': 'm4a1_silencer', 'm4a1_silencer': 'm4a1_silencer', 'm4a1 s': 'm4a1_silencer',
+            'famas': 'famas', 'galilar': 'galilar', 'galil': 'galilar', 'galil ar': 'galilar', 'galil-ar': 'galilar',
+            'aug': 'aug', 'sg556': 'sg556', 'sg553': 'sg556', 'sg-553': 'sg556', 'sg 553': 'sg556',
+            'awp': 'awp', 'ssg08': 'ssg08', 'ssg-08': 'ssg08', 'ssg 08': 'ssg08', 'scout': 'ssg08', 
+            'g3sg1': 'g3sg1', 'g3-sg1': 'g3sg1', 'g3 sg1': 'g3sg1', 'scar20': 'scar20', 'scar-20': 'scar20', 'scar 20': 'scar20',
             
             // SMGs
-            'mac10': 'mac10', 'mp9': 'mp9', 'mp7': 'mp7', 'mp5sd': 'mp5sd', 'mp5': 'mp5sd',
-            'ump45': 'ump45', 'p90': 'p90', 'bizon': 'bizon',
+            'mac10': 'mac10', 'mac-10': 'mac10', 'mac 10': 'mac10', 
+            'mp9': 'mp9', 'mp7': 'mp7', 'mp5sd': 'mp5sd', 'mp5-sd': 'mp5sd', 'mp5 sd': 'mp5sd', 'mp5': 'mp5sd',
+            'ump45': 'ump45', 'ump-45': 'ump45', 'ump 45': 'ump45', 'p90': 'p90', 
+            'bizon': 'bizon', 'pp-bizon': 'bizon', 'pp bizon': 'bizon', 'pp_bizon': 'bizon',
             
             // Heavy
-            'nova': 'nova', 'xm1014': 'xm1014', 'mag7': 'mag7', 'sawedoff': 'sawedoff',
+            'nova': 'nova', 'xm1014': 'xm1014', 'xm-1014': 'xm1014', 'xm 1014': 'xm1014', 
+            'mag7': 'mag7', 'mag-7': 'mag7', 'mag 7': 'mag7', 
+            'sawedoff': 'sawedoff', 'sawed-off': 'sawedoff', 'sawed off': 'sawedoff',
             'm249': 'm249', 'negev': 'negev',
             
             // Pistols
-            'glock': 'glock', 'usp_s': 'usp_silencer', 'usp-s': 'usp_silencer', 'usp_silencer': 'usp_silencer',
-            'hkp2000': 'hkp2000', 'p2000': 'hkp2000', 'p250': 'p250', 'tec9': 'tec9', 
-            'fiveseven': 'fiveseven', 'cz75a': 'cz75a', 'deagle': 'deagle', 'desert_eagle': 'deagle', 
-            'revolver': 'revolver', 'r8': 'revolver', 'elite': 'elite', 'dualies': 'elite', 'duals': 'elite',
+            'glock': 'glock', 'glock18': 'glock', 'glock-18': 'glock', 'glock 18': 'glock',
+            'usp_s': 'usp_silencer', 'usp-s': 'usp_silencer', 'usp_silencer': 'usp_silencer', 'usp s': 'usp_silencer',
+            'hkp2000': 'hkp2000', 'p2000': 'hkp2000', 'p250': 'p250', 
+            'tec9': 'tec9', 'tec-9': 'tec9', 'tec 9': 'tec9',
+            'fiveseven': 'fiveseven', 'five-seven': 'fiveseven', 'five seven': 'fiveseven', 'five_seven': 'fiveseven',
+            'cz75a': 'cz75a', 'cz75-auto': 'cz75a', 'cz75 auto': 'cz75a', 'cz75_auto': 'cz75a',
+            'deagle': 'deagle', 'desert_eagle': 'deagle', 'desert-eagle': 'deagle', 'desert eagle': 'deagle', 
+            'revolver': 'revolver', 'r8': 'revolver', 'r8-revolver': 'revolver', 'r8 revolver': 'revolver',
+            'elite': 'elite', 'dualies': 'elite', 'duals': 'elite', 'dual-berettas': 'elite', 'dual berettas': 'elite',
             
             // Utility & Others
-            'hegrenade': 'hegrenade', 'flashbang': 'flashbang', 'smokegrenade': 'smokegrenade', 'smoke': 'smokegrenade',
-            'molotov': 'molotov', 'incgrenade': 'incgrenade', 'inferno': 'inferno', 'decoy': 'decoy',
+            'hegrenade': 'hegrenade', 'he grenade': 'hegrenade', 'he-grenade': 'hegrenade',
+            'flashbang': 'flashbang', 'flash-bang': 'flashbang', 'flash': 'flashbang',
+            'smokegrenade': 'smokegrenade', 'smoke': 'smokegrenade', 'smoke-grenade': 'smokegrenade',
+            'molotov': 'molotov', 'incgrenade': 'incgrenade', 'incendiary grenade': 'incgrenade', 'incendiary': 'incgrenade',
+            'inferno': 'inferno', 'decoy': 'decoy', 'decoygrenade': 'decoy', 'decoy-grenade': 'decoy',
             'c4': 'planted_c4', 'planted_c4': 'planted_c4', 'taser': 'taser', 'zeus': 'taser', 'zeus27': 'taser',
             'flashbang_assist': 'flashbang_assist',
             
