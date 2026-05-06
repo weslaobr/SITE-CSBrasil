@@ -96,11 +96,11 @@ export async function GET(req: NextRequest) {
         });
 
         // Format Global Matches to match the old Match schema for the frontend
-        const isTeamA = (t: string | null) => !t || ['A', 'CT', '2'].includes(t.toUpperCase());
+        const isTeamA = (t: string | null) => !t || ['A', 'CT', '3'].includes(String(t).toUpperCase());
 
         const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
-            const res = (gmp.matchResult || '').toLowerCase();
-            const mappedResult = res === 'win' ? 'Win' : (res === 'loss' ? 'Loss' : 'Tie');
+            let res = (gmp.matchResult || '').toLowerCase();
+            let mappedResult = res === 'win' ? 'Win' : (res === 'loss' ? 'Loss' : 'Tie');
             const sourceMode = (gmp.match as any).gameMode?.toLowerCase() || '';
             const meta = gmp.metadata as any;
             let gameMode = 'Competitive';
@@ -113,13 +113,46 @@ export async function GET(req: NextRequest) {
                 gameMode = 'Premier';
             }
 
+            // Fallback for result
+            if (mappedResult === 'Tie') {
+                const scoreA = gmp.match.scoreA ?? 0;
+                const scoreB = gmp.match.scoreB ?? 0;
+                if (scoreA !== scoreB) {
+                    const myIsA = isTeamA(gmp.team);
+                    const myScore = myIsA ? scoreA : scoreB;
+                    const theirScore = myIsA ? scoreB : scoreA;
+                    mappedResult = myScore > theirScore ? 'Win' : (myScore < theirScore ? 'Loss' : 'Tie');
+                }
+            }
+
+            // Fallback for mapName
+            let mapName = gmp.match.mapName;
+            if (mapName === 'Desconhecido') {
+                const demoUrl = (gmp.match.metadata as any)?.demoUrl || (gmp.match.metadata as any)?.demo_url;
+                if (demoUrl) {
+                    try {
+                        const tokenMatch = demoUrl.match(/token=([^&]+)/);
+                        if (tokenMatch) {
+                            const payloadBase64 = tokenMatch[1].split('.')[1];
+                            if (payloadBase64) {
+                                let b64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+                                while (b64.length % 4) b64 += '=';
+                                const payload = atob(b64);
+                                const mapMatch = payload.match(/_(de_[a-zA-Z0-9]+|cs_[a-zA-Z0-9]+)_/i);
+                                if (mapMatch) mapName = mapMatch[1];
+                            }
+                        }
+                    } catch(e) {}
+                }
+            }
+
             return {
                 id: gmp.globalMatchId,
                 playerId: gmp.id,
                 externalId: gmp.match.externalId || gmp.globalMatchId,
                 source: gmp.match.source || 'mix',
                 gameMode,
-                mapName: gmp.match.mapName,
+                mapName,
                 kills: gmp.kills,
                 deaths: gmp.deaths,
                 assists: gmp.assists,

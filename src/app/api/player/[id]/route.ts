@@ -266,12 +266,12 @@ export async function GET(
         };
 
         // 3. Format Global Matches and Merge with deduplication
-        const isTeamA = (t: string | null) => !t || ['A', 'CT', '2'].includes(t.toUpperCase());
+        const isTeamA = (t: string | null) => !t || ['A', 'CT', '3'].includes(String(t).toUpperCase());
         const processedMatchKeys = new Set<string>();
 
         const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
-            const resLower = (gmp.matchResult || '').toLowerCase();
-            const mappedResult = resLower === 'win' ? 'Win' : (resLower === 'loss' ? 'Loss' : 'Tie');
+            let resLower = (gmp.matchResult || '').toLowerCase();
+            let mappedResult = resLower === 'win' ? 'Win' : (resLower === 'loss' ? 'Loss' : 'Tie');
             const meta = gmp.metadata as any;
             const sourceMode = (gmp.match as any).gameMode?.toLowerCase() || '';
             let gameMode = 'Competitive';
@@ -284,6 +284,39 @@ export async function GET(
                 gameMode = 'Premier';
             }
 
+            // Fallback for result
+            if (mappedResult === 'Tie') {
+                const scoreA = gmp.match.scoreA ?? 0;
+                const scoreB = gmp.match.scoreB ?? 0;
+                if (scoreA !== scoreB) {
+                    const myIsA = isTeamA(gmp.team);
+                    const myScore = myIsA ? scoreA : scoreB;
+                    const theirScore = myIsA ? scoreB : scoreA;
+                    mappedResult = myScore > theirScore ? 'Win' : (myScore < theirScore ? 'Loss' : 'Tie');
+                }
+            }
+
+            // Fallback for mapName
+            let mapName = gmp.match.mapName;
+            if (mapName === 'Desconhecido') {
+                const demoUrl = (gmp.match.metadata as any)?.demoUrl || (gmp.match.metadata as any)?.demo_url;
+                if (demoUrl) {
+                    try {
+                        const tokenMatch = demoUrl.match(/token=([^&]+)/);
+                        if (tokenMatch) {
+                            const payloadBase64 = tokenMatch[1].split('.')[1];
+                            if (payloadBase64) {
+                                let b64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+                                while (b64.length % 4) b64 += '=';
+                                const payload = atob(b64);
+                                const mapMatch = payload.match(/_(de_[a-zA-Z0-9]+|cs_[a-zA-Z0-9]+)_/i);
+                                if (mapMatch) mapName = mapMatch[1];
+                            }
+                        }
+                    } catch(e) {}
+                }
+            }
+
             const scoreStr = gmp.match.scoreA != null 
                 ? (isTeamA(gmp.team) ? `${gmp.match.scoreA}-${gmp.match.scoreB}` : `${gmp.match.scoreB}-${gmp.match.scoreA}`)
                 : '0-0';
@@ -293,7 +326,7 @@ export async function GET(
                 externalId: gmp.match.externalId || gmp.globalMatchId,
                 source: gmp.match.source || 'mix',
                 gameMode,
-                mapName: gmp.match.mapName,
+                mapName,
                 kills: gmp.kills,
                 deaths: gmp.deaths,
                 assists: gmp.assists,

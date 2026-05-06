@@ -242,6 +242,10 @@ export async function GET(
             const estimatedDuration = localMeta.duration || 
                 (totalRounds > 0 ? `${Math.floor(totalRounds * 1.75)}:00` : null);
 
+            let winning_team = 'tie';
+            if ((localMatch.scoreA ?? 0) > (localMatch.scoreB ?? 0)) winning_team = 'team_3';
+            else if ((localMatch.scoreB ?? 0) > (localMatch.scoreA ?? 0)) winning_team = 'team_2';
+
             const data = {
                 match_id: localMatch.id,
                 map_name: resolvedMapName,
@@ -249,8 +253,11 @@ export async function GET(
                 data_source: localMatch.source,
                 match_date: localMatch.matchDate.toISOString(),
                 duration: estimatedDuration,
+                team_2_code: 'team_2',
+                team_3_code: 'team_3',
                 team_2_score: localMatch.scoreB ?? 0,
                 team_3_score: localMatch.scoreA ?? 0,
+                winning_team: winning_team,
                 result: resolvedResult,
                 demo_url: localMeta.demoUrl || null,
                 weapon_stats: trackerWeaponStats,
@@ -343,14 +350,21 @@ export async function GET(
                     };
                 });
 
+                let winning_team = 'tie';
+                if ((matchInfo.score_t ?? 0) > (matchInfo.score_ct ?? 0)) winning_team = 'team_3';
+                else if ((matchInfo.score_ct ?? 0) > (matchInfo.score_t ?? 0)) winning_team = 'team_2';
+
                 const data = {
                     match_id: matchInfo.match_id,
                     map_name: matchInfo.map_name,
                     game_mode: matchInfo.source,
                     data_source: matchInfo.source,
                     match_date: matchInfo.match_date,
+                    team_2_code: 'team_2',
+                    team_3_code: 'team_3',
                     team_2_score: matchInfo.score_ct,
                     team_3_score: matchInfo.score_t,
+                    winning_team: winning_team,
                     result: null, 
                     demo_url: matchInfo.demo_url,
                     stats: players,
@@ -476,6 +490,14 @@ export async function GET(
             data.demo_url = data.demo_url || data.demoUrl || null;
             data.sharing_code = data.sharingCode || data.matchSharingCode || null;
             data.stats = await fetchAvatars(data.stats);
+        }
+
+        if (data.team_3_score !== undefined && data.team_2_score !== undefined) {
+            data.team_3_code = 'team_3';
+            data.team_2_code = 'team_2';
+            if (data.team_3_score > data.team_2_score) data.winning_team = 'team_3';
+            else if (data.team_2_score > data.team_3_score) data.winning_team = 'team_2';
+            else data.winning_team = 'tie';
         }
 
         return NextResponse.json(data);
