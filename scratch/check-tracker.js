@@ -1,21 +1,20 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-async function checkTracker() {
-  const baseId = 'demo_8885ba7d89d63f48';
-  const fullId = 'demo_8885ba7d89d63f48_76561198024691636';
+async function checkTrackerPlayers() {
+  const matchId = 'demo_8885ba7d89d63f48';
+  console.log(`Checking tracker_match_players for match: ${matchId}`);
   
-  console.log('Checking tracker players for base ID...');
-  const basePlayers = await prisma.tracker_match_players.findMany({
-    where: { match_id: baseId }
+  const players = await prisma.tracker_match_players.findMany({
+    where: { match_id: matchId }
   });
-  console.log(`Base ID: ${basePlayers.length} players`);
-
-  console.log('Checking tracker players for full ID...');
-  const fullPlayers = await prisma.tracker_match_players.findMany({
-    where: { match_id: fullId }
-  });
-  console.log(`Full ID: ${fullPlayers.length} players`);
+  
+  console.log('Players found:', players.length);
+  if (players.length > 0) {
+    const p = players[0];
+    console.log('Fields:', Object.keys(p));
+    console.log('KAST value:', p.kast);
+  }
 }
 
-checkTracker().catch(console.error).finally(() => prisma.$disconnect());
+checkTrackerPlayers().catch(console.error).finally(() => prisma.$disconnect());
