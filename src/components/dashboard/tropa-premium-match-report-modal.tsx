@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Download, Calendar, Activity, Target, Zap, Clock, X, 
-    Crosshair, TrendingUp, Star, Eye, Trophy, BarChart2, Flame, DollarSign, Shield, Skull, Heart, Swords
+    Crosshair, TrendingUp, Star, Eye, Trophy, BarChart2, Flame, DollarSign, Shield, Skull, Heart, Swords, ChevronUp
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -160,7 +160,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
                     onClick={(e) => e.stopPropagation()}
-                    className="relative w-full max-w-6xl bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl flex flex-col overflow-hidden"
+                    className="relative w-full max-w-6xl bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl flex flex-col"
                 >
 
                 {/* HEADER */}
@@ -246,7 +246,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                         </div>
                     ) : (
                         <AnimatePresence mode="wait">
-                            <motion.div key={tab} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-10">
+                            <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-10">
 
                                 {tab === 'placar' && (
                                     <>
@@ -952,9 +952,17 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeli
     };
 
     return (
-        <div className="relative flex gap-8 pb-10">
+        <div className="relative flex items-start gap-8 pb-10">
             {/* Premium Round Quick Nav */}
-            <div className="hidden xl:flex flex-col gap-2 sticky top-24 self-start bg-zinc-900/60 p-3 rounded-[32px] border border-white/10 backdrop-blur-xl z-20 max-h-[70vh] overflow-y-auto scrollbar-none shadow-2xl">
+            <div className="hidden xl:flex flex-col gap-2 sticky top-4 self-start bg-zinc-900/60 p-3 rounded-[32px] border border-white/10 backdrop-blur-xl z-20 max-h-[70vh] overflow-y-auto scrollbar-none shadow-2xl">
+                <button 
+                    onClick={(e) => (e.currentTarget.closest('.overflow-y-auto') as any)?.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/10 border border-white/20 text-white hover:bg-yellow-500 hover:text-black transition-all mb-2"
+                    title="Voltar ao início"
+                >
+                    <ChevronUp size={18} strokeWidth={3} />
+                </button>
+                <div className="h-px w-6 bg-white/10 mx-auto mb-2" />
                 <span className="text-[8px] font-black text-zinc-500 uppercase text-center mb-1 tracking-widest">Rounds</span>
                 {rounds.map(rNum => (
                     <button
@@ -1154,11 +1162,18 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
     };
 
     return (
-        <div className="relative flex gap-8 pb-10">
+        <div className="relative flex items-start gap-8 pb-10">
             {/* Floating Quick Nav */}
-            <div className="hidden xl:flex flex-col gap-3 sticky top-24 self-start bg-zinc-900/60 p-3 rounded-[32px] border border-white/10 backdrop-blur-xl z-20 shadow-2xl">
+            <div className="hidden xl:flex flex-col gap-3 sticky top-4 self-start bg-zinc-900/60 p-3 rounded-[32px] border border-white/10 backdrop-blur-xl z-20 shadow-2xl">
+                <button 
+                    onClick={(e) => (e.currentTarget.closest('.overflow-y-auto') as any)?.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="w-12 h-12 rounded-[18px] flex items-center justify-center bg-white/10 border border-white/20 text-white hover:bg-yellow-500 hover:text-black transition-all mb-1"
+                    title="Voltar ao início"
+                >
+                    <ChevronUp size={20} strokeWidth={3} />
+                </button>
                 <div className="flex flex-col items-center gap-1 mb-2">
-                    <span className="text-[8px] font-black text-yellow-500 uppercase tracking-widest">Atalho</span>
+                    <span className="text-[8px] font-black text-yellow-500 uppercase tracking-widest">Início</span>
                     <div className="h-px w-6 bg-white/10" />
                 </div>
                 {players.map(p => (

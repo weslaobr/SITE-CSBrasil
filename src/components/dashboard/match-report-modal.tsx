@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Play, Download, Calendar, Activity, Target, Zap, Clock, Shield, Search, RefreshCw, X, 
     AlertCircle, Crosshair, TrendingUp, Star, Flame, Eye, MapPin, Trophy, Swords, Info, Edit2, Check,
-    Trash2, Heart, Calculator, LogOut, UserPlus, BarChart2, DollarSign, Skull
+    Trash2, Heart, Calculator, LogOut, UserPlus, BarChart2, DollarSign, Skull, ChevronUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -1510,9 +1510,17 @@ const MatchReportModal: React.FC<Props> = ({
         };
 
         return (
-            <div className="relative flex gap-6 mt-6 pb-10">
+            <div className="relative flex items-start gap-6 mt-6 pb-10">
                 {/* Round Quick Nav */}
-                <div className="hidden xl:flex flex-col gap-1.5 sticky top-24 self-start bg-black/40 p-2 rounded-2xl border border-white/5 backdrop-blur-md z-20 max-h-[70vh] overflow-y-auto scrollbar-none">
+                <div className="hidden xl:flex flex-col gap-1.5 sticky top-4 self-start bg-black/40 p-2 rounded-2xl border border-white/5 backdrop-blur-md z-20 max-h-[70vh] overflow-y-auto scrollbar-none">
+                    <button 
+                        onClick={(e) => (e.currentTarget.closest('.overflow-y-auto') as any)?.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 text-zinc-500 hover:text-white hover:bg-yellow-500/20 hover:border-yellow-500/40 transition-all mb-1"
+                        title="Voltar ao início"
+                    >
+                        <ChevronUp size={14} strokeWidth={3} />
+                    </button>
+                    <div className="h-px w-4 bg-white/10 mx-auto mb-1" />
                     <span className="text-[7px] font-black text-zinc-600 uppercase text-center mb-1">Rounds</span>
                     {rounds.map(rNum => (
                         <button
@@ -1702,10 +1710,18 @@ const MatchReportModal: React.FC<Props> = ({
         const allPs = [...t1, ...t2];
 
         return (
-            <div className="relative flex gap-6 mt-6 pb-10">
+            <div className="relative flex items-start gap-6 mt-6 pb-10">
                 {/* Floating Quick Nav */}
-                <div className="hidden xl:flex flex-col gap-2 sticky top-24 self-start bg-black/40 p-2 rounded-2xl border border-white/5 backdrop-blur-md z-20">
-                    <span className="text-[7px] font-black text-zinc-600 uppercase text-center mb-1">Pular</span>
+                <div className="hidden xl:flex flex-col gap-2 sticky top-4 self-start bg-black/40 p-2 rounded-2xl border border-white/5 backdrop-blur-md z-20">
+                    <button 
+                        onClick={(e) => (e.currentTarget.closest('.overflow-y-auto') as any)?.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/5 border border-white/10 text-zinc-500 hover:text-white hover:bg-yellow-500/20 hover:border-yellow-500/40 transition-all mb-1"
+                        title="Voltar ao início"
+                    >
+                        <ChevronUp size={16} strokeWidth={3} />
+                    </button>
+                    <div className="h-px w-6 bg-white/10 mx-auto mb-1" />
+                    <span className="text-[7px] font-black text-zinc-600 uppercase text-center mb-1 tracking-widest text-[6px]">Início</span>
                     {allPs.map(p => (
                         <button
                             key={p.steamId}
@@ -2501,7 +2517,7 @@ const MatchReportModal: React.FC<Props> = ({
                             exit={{ opacity: 0, scale: 0.96, y: 20 }}
                             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                             onClick={(e) => e.stopPropagation()}
-                            className="relative w-full max-w-[1350px] bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col"
+                            className="relative w-full max-w-[1350px] bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.85)] flex flex-col"
                         >
                         {isProcessing && (
                             <div className="absolute inset-0 z-[60] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center text-center p-8">
@@ -2795,8 +2811,8 @@ const MatchReportModal: React.FC<Props> = ({
                             ) : (
                                 <motion.div
                                     key={tab}
-                                    initial={{ opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
                                     transition={{ duration: 0.15 }}
                                     className="flex flex-col gap-3 items-stretch"
                                 >
