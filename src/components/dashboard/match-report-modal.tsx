@@ -4,13 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Play, Download, Calendar, Activity, Target, Zap, Clock, Shield, Search, RefreshCw, X, 
     AlertCircle, Crosshair, TrendingUp, Star, Flame, Eye, MapPin, Trophy, Swords, Info, Edit2, Check,
-    Trash2, Heart, Calculator, LogOut, UserPlus
+    Trash2, Heart, Calculator, LogOut, UserPlus, BarChart2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
 
-// ── TYPES ────────────────────────────────────────────────────────────────────
+// -- TYPES --------------------------------------------------------------------
 
 interface PlayerStats {
     nickname: string;
@@ -56,6 +56,7 @@ interface PlayerStats {
     isSub?: boolean;
     isLeaver?: boolean;
     metadata?: any;
+    mvps?: number;
 }
 
 
@@ -77,6 +78,12 @@ interface Match {
     metadata?: any;
     adr?: number;
     hsPercentage?: number;
+    sharing_code?: string;
+    utility_timeline?: any;
+    scoreA?: number;
+    scoreB?: number;
+    players?: any[];
+    demo_url?: string;
 }
 
 interface Props {
@@ -89,7 +96,7 @@ interface Props {
     onSync?: () => void;
 }
 
-// ── COMPONENT ────────────────────────────────────────────────────────────────
+// -- COMPONENT ----------------------------------------------------------------
 
 const MatchReportModal: React.FC<Props> = ({
     match: initialMatch, matchId, isOpen, onClose, userSteamId, userNickname, onSync
@@ -1870,7 +1877,7 @@ const MatchReportModal: React.FC<Props> = ({
         );
     };
 
-    // ── RENDER ────────────────────────────────────────────────────────────────
+    // -- RENDER ----------------------------------------------------------------
 
     return (
         <AnimatePresence>
@@ -2215,7 +2222,7 @@ const MatchReportModal: React.FC<Props> = ({
                                                 Linha do Tempo: Utilidade por Rodada
                                             </h3>
                                             <div className="px-4">
-                                                <UtilityTimeline timeline={currentMatch?.utility_timeline || currentMatch?.metadata?.utility_timeline} players={allPlayers} />
+                                                <UtilityTimeline timeline={currentMatch?.utility_timeline || currentMatch?.metadata?.utility_timeline} players={[...t1, ...t2]} />
                                             </div>
                                         </div>
                                     )}
@@ -2242,6 +2249,7 @@ const MatchReportModal: React.FC<Props> = ({
                         </div>
                     </motion.div>
                 </div>
+            </div>
             )}
         </AnimatePresence>
     );

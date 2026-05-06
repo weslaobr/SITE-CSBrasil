@@ -141,7 +141,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
     const enemyScore = userInT2 ? (match?.team_3_score ?? 0) : (match?.team_2_score ?? 0);
 
     const resultStr = (match?.result || '').toLowerCase();
-    const isWin  = resultStr === 'win'  || resultStr === 'vitória' || resultStr === 'vitoria';
+    const isWin  = resultStr === 'win'  || resultStr === 'vitoria';
     const isLoss = resultStr === 'loss' || resultStr === 'derrota';
 
     return (
@@ -248,7 +248,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                                 {tab === 'placar' && (
                                     <>
                                         <TeamTable title="MEU TIME"    players={myTeam}    isEnemy={false} />
-                                        <TeamTable title="ADVERSÁRIOS" players={enemyTeam} isEnemy={true} />
+                                        <TeamTable title="ADVERSARIOS" players={enemyTeam} isEnemy={true} />
                                     </>
                                 )}
 
@@ -331,7 +331,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                                         <div className="space-y-6 opacity-80">
                                             <h3 className="text-xs font-black uppercase tracking-[0.3em] text-zinc-500 flex items-center gap-3">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
-                                                Resumo de Utilidade: ADVERSÁRIOS
+                                                Resumo de Utilidade: ADVERSARIOS
                                             </h3>
                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                                 <StatCard title="Dano de HE"      value={enemyTeam.reduce((a,p)=>a+(p.he_damage||0),0)}      icon={<Zap className="text-orange-400/50" size={16}/>} />
@@ -339,7 +339,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                                                 <StatCard title="Tempo Cegueira"  value={`${enemyTeam.reduce((a,p)=>a+(p.blind_time||0),0).toFixed(1)}s`} icon={<Clock className="text-blue-400/50" size={16}/>} />
                                                 <StatCard title="Flash Assists"   value={enemyTeam.reduce((a,p)=>a+(p.flash_assists||0),0)}  icon={<Star className="text-purple-400/50" size={16}/>} />
                                             </div>
-                                            <TeamTable title="EFICIÊNCIA TÁTICA" players={enemyTeam} isEnemy={true} variant="utility" />
+                                            <TeamTable title="EFICIENCIA TATICA" players={enemyTeam} isEnemy={true} variant="utility" />
                                         </div>
 
                                         {/* Utility Timeline */}
@@ -378,12 +378,13 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                             <Download size={14} /> Demo
                         </button>
                         <button className="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 text-black rounded-xl hover:bg-yellow-400 transition-all text-[10px] font-black uppercase tracking-widest">
-                            <BarChart2 size={14} /> Relatório
+                            <BarChart2 size={14} /> Relatorio
                         </button>
                     </div>
                 </div>
             </motion.div>
         </div>
+    </div>
     );
 };
 
@@ -585,7 +586,7 @@ const UtilityTimeline = ({ timeline, players }: { timeline: any; players: any[] 
             <div className="bg-zinc-900/20 p-12 rounded-3xl border border-dashed border-white/5 flex flex-col items-center justify-center gap-3">
                 <BarChart2 size={32} className="text-zinc-800" />
                 <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest text-center">
-                    Linha do tempo não disponível para esta partida.<br />
+                    Linha do tempo nao disponivel para esta partida.<br />
                     <span className="text-zinc-700 font-bold normal-case">Requer processamento completo da demo.</span>
                 </p>
             </div>
