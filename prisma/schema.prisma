@@ -264,6 +264,7 @@ model GlobalMatchPlayer {
   mvps          Int
   adr           Float?
   hsPercentage  Float?
+  impact        Float?      @default(0)
   matchResult   String
   metadata      Json?       @default("{}")
   eloChange     Int?
