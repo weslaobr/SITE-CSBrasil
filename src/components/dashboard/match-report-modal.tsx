@@ -2074,6 +2074,12 @@ const MatchReportModal: React.FC<Props> = ({
                                     
                                     {userData && (
                                         <div className="hidden md:flex items-center gap-2.5 bg-black/30 border border-white/5 rounded-xl px-3 py-1.5">
+                                            <div className="flex flex-col items-start pr-2 border-r border-white/5 mr-1">
+                                                <span className="text-[7px] font-black text-yellow-500/50 uppercase tracking-widest">Match ID</span>
+                                                <span className="text-[10px] font-mono font-bold text-zinc-500 select-all uppercase tracking-tighter">
+                                                    {currentMatch.id.startsWith('manual_') ? (currentMatch.externalId || currentMatch.id) : currentMatch.id}
+                                                </span>
+                                            </div>
                                             {[
                                                 { label: 'K', value: userData.kills, color: 'text-white' },
                                                 { label: 'D', value: userData.deaths, color: 'text-zinc-500' },
