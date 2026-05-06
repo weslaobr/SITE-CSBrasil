@@ -97,12 +97,18 @@ class ParserService:
             self.dem.rounds = self.dem.rounds.sort_values("end_tick").reset_index(drop=True)
             self.dem.rounds["round"] = self.dem.rounds.index + 1
         
-        extracted_id = self.dem.header.get("match_id") or self.dem.header.get("client_name")
-        if not extracted_id or extracted_id in ["Counter-Strike 2", "mock_share_code"]:
+        header_id = (self.dem.header.get("match_id") or self.dem.header.get("client_name") or "").strip()
+        is_generic = not header_id or \
+                    header_id in ["Counter-Strike 2", "Source", "SourceTV Demo", "mock_share_code"] or \
+                    "VALVE" in header_id.upper()
+
+        if is_generic:
             import hashlib
             with open(self.demo_path, "rb") as f:
                 file_hash = hashlib.md5(f.read(1024 * 1024)).hexdigest()
-            extracted_id = f"demo_{file_hash}"
+            extracted_id = f"demo_{file_hash[:16]}"
+        else:
+            extracted_id = header_id
             
         # Use extracted ID if it's reliable, otherwise use override
         if match_id_override and not match_id_override.startswith("manual_"):

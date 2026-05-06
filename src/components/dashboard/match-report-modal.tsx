@@ -2077,7 +2077,14 @@ const MatchReportModal: React.FC<Props> = ({
                                             <div className="flex flex-col items-start pr-2 border-r border-white/5 mr-1">
                                                 <span className="text-[7px] font-black text-yellow-500/50 uppercase tracking-widest">Match ID</span>
                                                 <span className="text-[10px] font-mono font-bold text-zinc-500 select-all uppercase tracking-tighter">
-                                                    {currentMatch.id.startsWith('manual_') ? (currentMatch.externalId || currentMatch.id) : currentMatch.id}
+                                                    {(() => {
+                                                        const id = currentMatch.id;
+                                                        const isGeneric = ['SourceTV Demo', 'Counter-Strike 2', 'Source'].includes(id) || id.toUpperCase().includes('VALVE');
+                                                        if (id.startsWith('manual_') || isGeneric) {
+                                                            return currentMatch.externalId || currentMatch.metadata?.match_id || id;
+                                                        }
+                                                        return id;
+                                                    })()}
                                                 </span>
                                             </div>
                                             {[

@@ -79,7 +79,20 @@ export async function GET(
         }
 
         // Se encontramos o match, garantimos que usaremos o ID real dele para buscar estatísticas
-        const effectiveMatchId = localMatch?.id || matchId;
+        let effectiveMatchId = localMatch?.id || matchId;
+
+        // --- FILTRO DE SEGURANÇA PARA MATCH ID GENÉRICO ---
+        // Evita que nomes como "SourceTV Demo" ou "Counter-Strike 2" apareçam como ID no modal
+        const isGenericId = (id: string) => {
+            const clean = (id || '').trim();
+            return !clean || 
+                   ['SourceTV Demo', 'Counter-Strike 2', 'Source', 'mock_share_code'].includes(clean) ||
+                   clean.toUpperCase().includes('VALVE');
+        };
+
+        if (isGenericId(effectiveMatchId) && !isGenericId(matchId)) {
+            effectiveMatchId = matchId;
+        }
 
 
         if (localMatch && localMatch.players && localMatch.players.length > 0) {
