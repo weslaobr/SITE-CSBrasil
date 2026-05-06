@@ -114,6 +114,7 @@ export async function GET(
                     dpr: adr, 
                     accuracy_head: p.hsPercentage ? (p.hsPercentage / 100) : 0, 
                     rating: tp?.rating ?? m.rating ?? m.leetify_rating ?? 0,
+                    impact: tp?.impact ?? tp?.impact_rating ?? m.impact ?? m.impact_rating ?? m.impactRating ?? localMeta.leetify_ratings?.[p.steamId]?.impact_rating ?? localMeta.leetify_ratings?.[p.steamId]?.impact ?? 0,
                     kast: tp?.kast ?? m.kast ?? m.kast_percent ?? 0,
                     fk: fkVal,
                     fd: fdVal,
@@ -190,6 +191,7 @@ export async function GET(
                         ...p,
                         avg_ttd: tp.avg_ttd,
                         avg_kill_distance: tp.avg_kill_distance,
+                        impact: tp.impact || tp.impact_rating || p.impact,
                         enemies_flashed: tp.enemies_flashed,
                         blind_time: tp.total_blind_duration,
                         he_thrown: tp.he_thrown,
@@ -272,6 +274,21 @@ export async function GET(
                 stats: localStats
             };
 
+            // ── CÁLCULO AUTOMÁTICO DE TROPOINTS ─────────────────────────────
+            // Se for MIX e não tiver eloChange em algum jogador, calculamos agora
+            const needsTropoints = (localMatch.source || '').toLowerCase() === 'mix' && 
+                                  localMatch.players.some(p => p.eloChange === null || p.eloChange === 0);
+            
+            if (needsTropoints) {
+                try {
+                    const { calculateMatchTropoints } = await import('@/services/ranking-service');
+                    await calculateMatchTropoints(localMatch.id);
+                    console.log(`[AutoTropoints] Calculado automaticamente para ${localMatch.id}`);
+                } catch (err: any) {
+                    console.warn(`[AutoTropoints] Falha no cálculo automático: ${err.message}`);
+                }
+            }
+
             return NextResponse.json(data);
         }
 
@@ -293,6 +310,7 @@ export async function GET(
                     adr: p.adr,
                     accuracy_head: p.hs_count / (p.kills || 1), // HS% aproximado se não tivermos precisão real
                     rating: p.rating || 0,
+                    impact: p.impact || p.impact_rating || 0,
                     kast: p.kast || 0,
                     fk: p.fk || 0,
                     fd: p.fd || 0,
@@ -434,6 +452,7 @@ export async function GET(
                     // Campos de alias para normalizeP no frontend
                     // Rating: leetify v2 usa leetify_rating
                     rating: p.leetify_rating ?? p.rating ?? 0,
+                    impact: p.impact_rating ?? p.impact ?? 0,
                     // ADR: leetify v2 usa dpr
                     adr: p.dpr ?? p.adr ?? p.average_damage_per_round ?? 0,
                     // Kills/Deaths/Assists: leetify v2 usa total_kills etc

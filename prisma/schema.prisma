@@ -468,6 +468,8 @@ model tracker_match_players {
   trades               Int?
   enemies_flashed      Int?
   total_blind_duration Float?
+  impact               Float?          @default(0)
+  impact_rating        Float?          @default(0)
   avg_kill_distance    Float?
   avg_ttd              Float?
   utility_damage_roi   Float?

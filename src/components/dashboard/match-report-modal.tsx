@@ -22,6 +22,7 @@ interface PlayerStats {
     hs: number;          // raw number 0-100
     kast: number;        // raw number 0-100
     rating: number;
+    impact: number;
     // Extended
     fk: number;          // first kills
     fd: number;          // first deaths
@@ -458,7 +459,8 @@ const MatchReportModal: React.FC<Props> = ({
             deaths,
             assists,
             adr,
-            rating: Number(get('rating', 'leetify_rating', 'impact_rating') ?? 0),
+            rating: Number(get('rating2', 'rating', 'leetify_rating') ?? 0),
+            impact: Number(get('impact', 'impact_rating', 'impactRating') ?? 0),
             hs: Number(hsRaw !== undefined ? (Number(hsRaw) > 1 ? hsRaw : Number(hsRaw) * 100) : 0),
             kast: Number(kast !== undefined ? (Number(kast) < 1 ? Number(kast) * 100 : kast) : 0),
             mvps: Number(get('mvps', 'mvp_stars', 'mvp') ?? 0),
@@ -1432,6 +1434,11 @@ const MatchReportModal: React.FC<Props> = ({
                     <span className={`text-sm font-black italic px-1.5 py-0.5 rounded-lg ${ratingC}`}>{p.rating.toFixed(2)}</span>
                 </td>
                 <td className="py-2.5 px-2 text-center">
+                    <span className={`text-xs font-black italic px-1.5 py-0.5 rounded-lg ${p.impact >= 1.2 ? 'text-orange-400 bg-orange-500/10' : p.impact >= 1.0 ? 'text-yellow-400 bg-yellow-500/10' : 'text-zinc-400 bg-white/5'}`}>
+                        {p.impact > 0 ? p.impact.toFixed(2) : '—'}
+                    </span>
+                </td>
+                <td className="py-2.5 px-2 text-center">
                     {p.kast > 0
                         ? <div className="flex flex-col items-center gap-0.5">
                             <span className={`text-xs font-bold ${kastC}`}>{p.kast}%</span>
@@ -1800,7 +1807,8 @@ const MatchReportModal: React.FC<Props> = ({
                                     </>}
                                     {tab === 'desempenho' && <>
                                         <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600" title="Nome do Jogador">Jogador</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Performance Rating (Leetify Rating)">Rating</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Performance Rating (Rating 2.0)">Rating</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Impact Rating (Impacto no round)">Impacto</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Kill, Assist, Survived, or Traded (Impacto por round)">KAST</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Headshot Percentage (Porcentagem de tiros na cabeça)">HS%</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Tempo de Reação (Time to Damage)">TTD</th>

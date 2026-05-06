@@ -152,7 +152,10 @@ export async function POST(req: NextRequest) {
                                         adr: p.dpr ?? p.adr ?? p.average_damage_per_round ?? 0,
                                         hsPercentage: rawHs > 1 ? Math.round(rawHs) : Math.round(rawHs * 100),
                                         matchResult: p.match_result ?? p.outcome ?? result,
-                                        metadata: p 
+                                        metadata: {
+                                            ...p,
+                                            impact_rating: p.impact_rating ?? p.impact ?? p.ratings?.impact ?? 0
+                                        } 
                                     };
 
                                     await prisma.globalMatchPlayer.upsert({

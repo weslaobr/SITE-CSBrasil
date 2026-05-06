@@ -36,8 +36,8 @@ export default function MatchesPage() {
     }, [session]);
 
     return (
-        <div className="min-h-screen bg-black text-white pt-20">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-black text-white py-6">
+            <div className="w-full px-6 lg:px-10">
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h1 className="text-3xl font-bold flex items-center gap-3">

@@ -28,6 +28,8 @@ import {
     AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import MatchReportModal from './match-report-modal';
 import TropaPremiumMatchReportModal from './tropa-premium-match-report-modal';
 import Link from 'next/link';
@@ -648,28 +650,28 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.06, type: 'spring', stiffness: 120, damping: 14 }}
                         whileHover={{ y: -4, transition: { duration: 0.18 } }}
-                        className={`relative bg-zinc-950/70 border ${stat.border} p-5 rounded-2xl flex flex-col gap-3 group hover:border-white/15 transition-all overflow-hidden shadow-xl`}
+                        className={`relative bg-zinc-950/60 border ${stat.border} p-5 rounded-3xl flex flex-col gap-3 group hover:border-white/15 transition-all overflow-hidden shadow-2xl backdrop-blur-xl`}
                     >
-                        {/* top-right glow */}
-                        <div className={`absolute -top-6 -right-6 w-20 h-20 bg-gradient-to-br ${stat.glow} to-transparent rounded-full blur-2xl opacity-60 group-hover:opacity-100 transition-opacity`} />
-                        {/* label + icon */}
+                        {/* Glow effect */}
+                        <div className={`absolute -top-10 -right-10 w-24 h-24 bg-gradient-to-br ${stat.glow} to-transparent rounded-full blur-3xl opacity-40 group-hover:opacity-80 transition-opacity`} />
+                        
                         <div className="flex items-center justify-between relative z-10">
-                            <span className="text-[9px] font-black uppercase text-zinc-600 tracking-widest">{stat.label}</span>
-                            <div className={`w-7 h-7 rounded-xl ${stat.bg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                            <span className="text-[9px] font-black uppercase text-zinc-600 tracking-[0.2em]">{stat.label}</span>
+                            <div className={`w-8 h-8 rounded-xl ${stat.bg} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-inner`}>
                                 {stat.icon}
                             </div>
                         </div>
-                        {/* value */}
-                        <div className={`text-2xl font-black italic tracking-tighter ${stat.color} relative z-10`}>
+                        
+                        <div className={`text-2xl font-black italic tracking-tighter ${stat.color} relative z-10 drop-shadow-sm`}>
                             {stat.value}
                         </div>
-                        {/* progress bar */}
-                        <div className="h-[3px] w-full bg-white/[0.04] rounded-full overflow-hidden relative z-10">
+                        
+                        <div className="h-1 w-full bg-white/[0.03] rounded-full overflow-hidden relative z-10">
                             <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${Math.min(100, (stat.bar / stat.barMax) * 100)}%` }}
-                                transition={{ delay: 0.3 + i * 0.06, duration: 0.8, ease: 'easeOut' }}
-                                className={`h-full rounded-full ${stat.bg.replace('/10', '/60')}`}
+                                transition={{ delay: 0.3 + i * 0.06, duration: 1, ease: [0.23, 1, 0.32, 1] }}
+                                className={`h-full rounded-full bg-gradient-to-r ${stat.glow.replace('from-', 'from-').replace('/10', '/60')} to-white/20`}
                             />
                         </div>
                     </motion.div>
@@ -736,323 +738,219 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                         <p className="text-zinc-700 text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Sincronizando com Valve & Faceit...</p>
                     </div>
                 ) : filteredMatches.length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                    <div className="overflow-x-auto pb-10 px-1">
+                        <table className="w-full text-left border-separate border-spacing-y-3">
                             <thead>
-                                <tr className="text-[9px] uppercase font-black text-zinc-600 tracking-[0.15em] border-b border-white/[0.05] bg-black/50 sticky top-0 z-10 backdrop-blur-md">
-                                    <th className="w-1 p-0" />
-                                    <th className="px-5 py-3.5" title="Nome do mapa jogado">Mapa</th>
-                                    <th className="px-3 py-3.5 text-center" title={`Pontuação final da partida (${(session?.user as any)?.steamId === currentUserSteamId ? "Seu Time" : (currentFaceit || "Time do Jogador")} vs Adversários)`}>Placar</th>
-                                    <th className="px-3 py-3.5 text-center" title="Patente ou Rating da partida">Patente / Tropoints</th>
-                                    <th className="px-3 py-3.5 text-center" title="Modo de jogo (Competitivo, Premier, Faceit, etc)">Modo</th>
-                                    <th className="px-2 py-3.5 text-center" title="ID único da partida">ID</th>
-                                    <th className="px-3 py-3.5 text-center" title="Kills (Eliminações)">K</th>
-                                    <th className="px-3 py-3.5 text-center" title="Deaths (Mortes)">D</th>
-                                    <th className="px-3 py-3.5 text-center" title="Assists (Assistências)">A</th>
-                                    <th className="px-3 py-3.5 text-center" title="Average Damage per Round (Dano médio por rodada)">ADR</th>
-                                    <th className="px-3 py-3.5 text-center" title="Total Damage (Dano total causado)">Dano</th>
-                                    <th className="px-3 py-3.5 text-center" title="Headshot Percentage (Porcentagem de eliminações com tiro na cabeça)">HS%</th>
-                                    <th className="px-3 py-3.5 text-center" title="Kill, Assist, Survived, or Traded (Porcentagem de rounds com impacto direto)">KAST</th>
-                                    <th className="px-3 py-3.5 text-center" title="Performance Rating (Leetify Rating ou K/D)">Rating</th>
-                                    <th className="px-3 py-3.5 text-center" title="Assistir replay da partida (Demo)">Replay</th>
-                                    <th className="px-5 py-3.5 text-right" title="Data e hora da partida">Data</th>
+                                <tr className="text-[10px] uppercase font-black text-zinc-600 tracking-[0.2em]">
+                                    <th className="px-6 py-4">Mapa / Modo</th>
+                                    <th className="px-4 py-4 text-center">Placar</th>
+                                    <th className="px-4 py-4 text-center">Rank / TP</th>
+                                    <th className="px-6 py-4 text-center">Combate (K/D/A)</th>
+                                    <th className="px-3 py-4 text-center">Dano (ADR/Tot)</th>
+                                    <th className="px-3 py-4 text-center text-blue-400/80">KAST</th>
+                                    <th className="px-3 py-4 text-center text-rose-400/80">HS %</th>
+                                    <th className="px-3 py-4 text-center text-purple-400/80">Impacto</th>
+                                    <th className="px-3 py-4 text-center text-yellow-500">Rating 2.0</th>
+                                    <th className="px-4 py-4 text-center">Demo</th>
+                                    <th className="px-6 py-4 text-right">Data</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="before:block before:h-1">
                                 {filteredMatches.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((match, i) => {
                                     const matchMode = detectMode(match);
                                     const resultLower = (match.result || '').toLowerCase();
                                     const isWin = resultLower === 'win' || resultLower === 'vitoria' || resultLower === 'vitória';
                                     const isLoss = resultLower === 'loss' || resultLower === 'derrota';
-
-                                    const isGamersClub = matchMode === 'GamersClub';
-                                    const isPremier = matchMode === 'Premier';
-                                    const isFaceit = matchMode === 'Faceit';
                                     const isMix = matchMode === 'Mix';
                                     
                                     return (
                                         <motion.tr
-                                                                        key={match.id || match.externalId || Math.random().toString()}
-                                                                        initial={{ opacity: 0, y: 6 }}
-                                                                        animate={{ opacity: 1, y: 0 }}
-                                                                        transition={{ delay: i * 0.025, type: 'spring', stiffness: 200, damping: 24 }}
-                                                                        className="group relative border-b border-white/[0.04] transition-colors cursor-pointer hover:bg-white/[0.02]"
-                                                                        onClick={() => handleViewMatch(match)}
-                                                                    >
-                                                                {/* Result accent strip */}
-                                                                <td className="p-0 w-1">
-                                                                    <div className={`h-full w-[3px] rounded-r transition-all duration-300 ${
-                                                                        isWin ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' :
-                                                                        isLoss ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
-                                                                        'bg-zinc-700'
-                                                                    } opacity-0 group-hover:opacity-100`} />
-                                                                </td>
-                                                                {/* Mapa */}
-                                                                <td className="px-5 py-3.5">
-                                                                    <div className="flex items-center gap-3.5">
-                                                                        <div className="relative w-16 h-10 overflow-hidden rounded-xl border border-white/[0.08] shrink-0 group-hover:border-white/20 transition-all shadow-lg">
-                                                                            <img
-                                                                                src={getMapImage(match.mapName)}
-                                                                                className="w-full h-full object-cover brightness-50 group-hover:brightness-90 transition-all duration-500 group-hover:scale-110"
-                                                                                alt={match.mapName}
-                                                                            />
-                                                                            <div className={`absolute inset-0 ${
-                                                                                isWin ? 'bg-gradient-to-t from-emerald-900/60 to-transparent' :
-                                                                                isLoss ? 'bg-gradient-to-t from-red-900/60 to-transparent' :
-                                                                                'bg-gradient-to-t from-black/60 to-transparent'
-                                                                            }`} />
-                                                                        </div>
-                                                                        <div className="flex flex-col gap-1">
-                                                                            <span className="font-black text-[13px] text-zinc-200 uppercase italic tracking-tight group-hover:text-yellow-400 transition-colors leading-none">
-                                                                                {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' :
-                                                                                 match.mapName.replace('de_', '').replace(/_/g, ' ').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                                                                            </span>
-                                                                            <span className={`self-start px-2 py-0.5 text-[7px] font-black uppercase tracking-[0.15em] rounded-md ${
-                                                                                isWin ? 'bg-emerald-500/15 text-emerald-400' :
-                                                                                isLoss ? 'bg-red-500/15 text-red-400' :
-                                                                                'bg-zinc-800/60 text-zinc-500'
-                                                                            }`}>
-                                                                                {isWin ? '✓ Vitória' : isLoss ? '✗ Derrota' : '= Empate'}
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-3 py-4 text-center">
-                                                                    <div className={`inline-flex items-center gap-1 px-4 py-1.5 rounded-xl border font-black italic text-base tracking-tighter ${
-                                                                        isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 
-                                                                        isLoss ? 'bg-red-500/10 border-red-500/20 text-red-400' : 
-                                                                        'bg-zinc-800/30 border-white/5 text-zinc-500'
-                                                                    }`}>
-                                                                        {match.score || '—'}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-3 py-4 text-center">
-                                                                         {(() => {
-                                                                             const rankInfo = getRankInfo(match.rank, match.source, match.gameMode, match.metadata);
-                                                                             
-                                                                             // Se for MIX, mostramos os Tropoints (eloChange / eloAfter)
-                                                                             if (isMix) {
-                                                                                 return (
-                                                                                     <div className="flex flex-col items-center">
-                                                                                         {match.eloChange !== undefined && match.eloChange !== null ? (
-                                                                                             <>
-                                                                                                 <div className={`flex items-center gap-0.5 text-xs font-black tracking-tighter ${match.eloChange > 0 ? 'text-emerald-400' : match.eloChange < 0 ? 'text-red-400' : 'text-zinc-600'}`}>
-                                                                                                     {match.eloChange > 0 ? `+${match.eloChange}` : match.eloChange}
-                                                                                                 </div>
-                                                                                                 {match.eloAfter !== undefined && (
-                                                                                                     <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mt-0.5">{match.eloAfter} TP</span>
-                                                                                                 )}
-                                                                                             </>
-                                                                                         ) : (
-                                                                                             <div className="flex flex-col items-center opacity-40">
-                                                                                                 <span className="text-[10px] font-black text-cyan-400 italic">MIX</span>
-                                                                                                 <span className="text-[8px] font-bold text-zinc-700">—</span>
-                                                                                             </div>
-                                                                                         )}
-                                                                                     </div>
-                                                                                 );
-                                                                             }
-
-                                                                             return (
-                                                                                 <>
-                                                                                     {rankInfo.icon ? (
-                                                                                         <div className="flex flex-col items-center" title={rankInfo.label}>
-                                                                                             <img 
-                                                                                                 src={rankInfo.icon} 
-                                                                                                 className="w-14 h-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.15)] group-hover/rank:scale-110 transition-transform duration-300" 
-                                                                                                 alt={rankInfo.label}
-                                                                                             />
-                                                                                         </div>
-                                                                                     ) : rankInfo.isPremier ? (
-                                                                                         <div className={`text-base font-black italic tracking-tighter ${rankInfo.color}`}>
-                                                                                             {rankInfo.label}
-                                                                                         </div>
-                                                                                     ) : (
-                                                                                         <span className="text-zinc-700 font-black italic text-[9px]">—</span>
-                                                                                     )}
-                                                                                 </>
-                                                                             );
-                                                                         })()}
-                                                                 </td>
-                                                                <td className="px-3 py-4 text-center">
-                                                                    <div className="flex flex-col items-center gap-1">
-                                                                        <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wide ${
-                                                                            isGamersClub ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                                                            isFaceit ? 'bg-orange-600/10 text-orange-400 border-orange-600/20' :
-                                                                            isPremier ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                                                                            matchMode === 'Wingman' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                                                            isMix ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' :
-                                                                            'bg-yellow-500/5 text-yellow-500/70 border-yellow-500/15'
-                                                                        }`}>
-                                                                            <span>{isGamersClub ? '🛡' : isFaceit ? '🔴' : isPremier ? '⭐' : matchMode === 'Wingman' ? '👥' : isMix ? '⚔️' : '🎮'}</span>
-                                                                            <span>{isGamersClub ? 'GC' : isFaceit ? 'Faceit' : isPremier ? 'Premier' : matchMode === 'Wingman' ? 'Braço Direito' : isMix ? 'Mix' : 'Competitivo'}</span>
-                                                                        </div>
-                                                    {isPremier && match.metadata?.rank_delta && (
-                                                        <div className={`flex items-center gap-0.5 text-[8px] font-black ${match.metadata.rank_delta > 0 ? 'text-yellow-500' : 'text-red-400'}`}>
-                                                            {match.metadata.rank_delta > 0 ? <ChevronUp size={9} /> : <ChevronDown size={9} />}
-                                                            {Math.abs(match.metadata.rank_delta)}
+                                            key={match.id || match.externalId || Math.random().toString()}
+                                            initial={{ opacity: 0, y: 12 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: i * 0.03, type: 'spring', stiffness: 100, damping: 15 }}
+                                            className="group bg-zinc-900/30 hover:bg-zinc-800/50 transition-all cursor-pointer shadow-sm hover:shadow-yellow-500/5"
+                                            onClick={() => handleViewMatch(match)}
+                                        >
+                                            {/* Mapa */}
+                                            <td className="px-6 py-5 rounded-l-[24px] border-l border-y border-white/5">
+                                                <div className="flex items-center gap-5">
+                                                    <div className="relative w-24 h-14 overflow-hidden rounded-xl border border-white/10 shrink-0 group-hover:border-yellow-500/20 transition-all text-[0]">
+                                                        <img
+                                                            src={getMapImage(match.mapName)}
+                                                            className="w-full h-full object-cover brightness-[0.4] group-hover:brightness-100 transition-all duration-700 group-hover:scale-110"
+                                                            alt={match.mapName}
+                                                        />
+                                                        <div className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black shadow-lg backdrop-blur-md ${
+                                                            isWin ? 'bg-emerald-500 text-black' : isLoss ? 'bg-rose-500 text-white' : 'bg-zinc-700 text-white'
+                                                        }`}>
+                                                            {isWin ? 'W' : isLoss ? 'L' : 'T'}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-1 py-4 text-center">
-                                                 {match.externalId ? (
-                                                     <button
-                                                         onClick={(e) => {
-                                                              e.stopPropagation();
-                                                              const cleanId = match.externalId?.replace('leetify-', '') || '';
-                                                             navigator.clipboard.writeText(cleanId);
-                                                         }}
-                                                         className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.03] hover:bg-emerald-500 text-zinc-700 hover:text-black transition-all active:scale-90 border border-white/5"
-                                                         title={`Copiar ID (${match.source})`}
-                                                     >
-                                                         <Copy size={11} />
-                                                     </button>
-                                                 ) : (
-                                                     <div className="w-8 h-8 flex items-center justify-center text-zinc-800" title="Sem ID">
-                                                         <Lock size={10} />
-                                                     </div>
-                                                 )}
-                                             </td>
-                                            {/* K */}
-                                            <td className="px-3 py-4 text-center">
-                                                <div className="flex flex-col items-center">
-                                                    <span className={`font-black text-lg italic leading-none tracking-tighter ${match.kills > 0 ? 'text-white' : 'text-zinc-700'}`}>
-                                                        {match.kills > 0 ? match.kills : '—'}
-                                                    </span>
-                                                    {((match.metadata?.quadro_kills || match.metadata?.quadroKills || 0) > 0 || (match.metadata?.penta_kills || match.metadata?.pentaKills || 0) > 0) && (
-                                                        <div className="flex gap-0.5 mt-1">
-                                                            {(match.metadata?.quadro_kills || match.metadata?.quadroKills || 0) > 0 && <span className="text-[7px] font-black text-orange-400 bg-orange-500/10 px-1 rounded">4K</span>}
-                                                            {(match.metadata?.penta_kills || match.metadata?.pentaKills || 0) > 0 && <span className="text-[7px] font-black text-purple-400 bg-purple-500/10 px-1 rounded animate-pulse">ACE</span>}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            {/* D */}
-                                            <td className="px-3 py-4 text-center">
-                                                <span className={`font-black text-lg italic leading-none tracking-tighter ${match.deaths > 0 ? 'text-zinc-500' : 'text-zinc-700'}`}>
-                                                    {match.deaths > 0 ? match.deaths : '—'}
-                                                </span>
-                                            </td>
-                                            {/* A */}
-                                            <td className="px-3 py-4 text-center">
-                                                <span className={`font-black text-base italic leading-none tracking-tighter ${match.assists > 0 ? 'text-zinc-600' : 'text-zinc-700'}`}>
-                                                    {match.assists > 0 ? match.assists : '—'}
-                                                </span>
-                                            </td>
-                                            {/* ADR */}
-                                            <td className="px-3 py-4 text-center">
-                                                <span className={`font-black text-base italic tracking-tighter ${
-                                                    (match.adr || match.metadata?.adr) && Math.round(match.adr || match.metadata?.adr) >= 80 ? 'text-yellow-400' :
-                                                    (match.adr || match.metadata?.adr) ? 'text-yellow-500/60' : 'text-zinc-700'
-                                                }`}>
-                                                    {(match.adr || match.metadata?.adr) ? Math.round(match.adr || match.metadata?.adr) : '—'}
-                                                </span>
-                                            </td>
-                                            {/* Dano Total */}
-                                            <td className="px-3 py-4 text-center">
-                                                {(() => {
-                                                    const adr = match.adr || match.metadata?.adr || 0;
-                                                    const rounds = match.metadata?.rounds_count || 
-                                                                  (match.score ? match.score.split('-').map(Number).reduce((a:number,b:number)=>a+b, 0) : 0);
-                                                    const td = match.totalDamage || match.metadata?.total_damage || (adr * rounds);
-                                                    
-                                                    return td > 0 ? (
-                                                        <span className={`font-black text-sm italic tracking-tighter ${td >= 3000 ? 'text-orange-400' : td >= 2000 ? 'text-yellow-400' : 'text-zinc-500'}`}>
-                                                            {Math.round(td).toLocaleString()}
+                                                    </div>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="font-black text-base text-white uppercase italic tracking-tighter group-hover:text-yellow-400 transition-colors">
+                                                            {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' :
+                                                             match.mapName.replace('de_', '').replace(/_/g, ' ').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                                                         </span>
-                                                    ) : <span className="text-zinc-800">—</span>;
-                                                })()}
+                                                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 group-hover:text-zinc-400">
+                                                            {matchMode}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </td>
-                                            {/* HS% */}
-                                            <td className="px-3 py-4 text-center">
-                                                {(() => {
-                                                    const hs = match.hsPercentage !== null && match.hsPercentage !== undefined ? Math.round(match.hsPercentage)
-                                                             : match.metadata?.headshot_pct ? Math.round(Number(match.metadata.headshot_pct))
-                                                             : match.metadata?.hs_percentage ? Math.round(Number(match.metadata.hs_percentage)) : null;
-                                                    return hs !== null ? (
-                                                        <span className={`font-bold text-sm ${ hs >= 50 ? 'text-rose-400' : hs >= 30 ? 'text-zinc-400' : 'text-zinc-600'}`}>{hs}%</span>
-                                                    ) : <span className="text-zinc-700">—</span>;
-                                                })()}
-                                            </td>
-                                            {/* KAST */}
-                                            <td className="px-3 py-4 text-center">
-                                                {(() => {
-                                                    const kast = match.kast ?? match.metadata?.kast ?? match.metadata?.kast_percent ?? match.metadata?.kast_percentage;
-                                                    const val = kast != null ? (kast > 1 ? Math.round(kast) : Math.round(kast * 100)) : null;
-                                                    return val !== null ? (
-                                                        <span className={`font-bold text-sm ${ val >= 75 ? 'text-blue-400' : val >= 65 ? 'text-zinc-400' : 'text-zinc-600'}`}>{val}%</span>
-                                                    ) : <span className="text-zinc-700">—</span>;
-                                                })()}
-                                            </td>
-                                            {/* Rating */}
-                                            <td className="px-3 py-4 text-center">
-                                                {(() => {
-                                                    const leetifyR = match.metadata?.leetify_rating;
-                                                    const rating2 = match.rating2 || (match as any).metadata?.rating2;
-                                                    const impact = match.impact || (match as any).metadata?.impact;
-                                                    
-                                                    const kd = match.kills / (match.deaths || 1);
 
-                                                    if (rating2) {
-                                                        const r = Number(rating2);
-                                                        const color = r >= 1.2 ? 'text-emerald-400' : r >= 1.0 ? 'text-yellow-400' : 'text-rose-400';
+                                            {/* Placar */}
+                                            <td className="px-4 py-5 text-center border-y border-white/5">
+                                                <div className={`inline-flex items-center px-4 py-2 rounded-xl border font-black italic text-xl tracking-tighter shadow-inner ${
+                                                    isWin ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500' : 
+                                                    isLoss ? 'bg-rose-500/5 border-rose-500/20 text-rose-500' : 
+                                                    'bg-zinc-900 border-white/5 text-zinc-500'
+                                                }`}>
+                                                    {match.score || '—'}
+                                                </div>
+                                            </td>
+
+                                            {/* Rank / TP */}
+                                            <td className="px-4 py-5 text-center border-y border-white/5">
+                                                {(() => {
+                                                    const rankInfo = getRankInfo(match.rank, match.source, match.gameMode, match.metadata);
+                                                    if (isMix) {
                                                         return (
-                                                            <div className="flex flex-col items-center gap-0.5" title={`Impacto: ${impact?.toFixed(2) || '—'}`}>
-                                                                <span className={`font-black text-base italic tracking-tight ${color}`}>{r.toFixed(2)}</span>
-                                                                <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest">Rating 2.0</span>
-                                                            </div>
-                                                        );
-                                                    } else if (leetifyR !== undefined && leetifyR !== null) {
-                                                        const r = Number(leetifyR);
-                                                        const color = r >= 0.5 ? 'text-orange-400' : r >= 0 ? 'text-yellow-400' : r >= -0.3 ? 'text-zinc-400' : 'text-red-400';
-                                                        return (
-                                                            <div className="flex flex-col items-center gap-1">
-                                                                <span className={`font-black text-base italic tracking-tight ${color}`}>
-                                                                    {r > 0 ? '+' : ''}{r.toFixed(2)}
+                                                            <div className="flex flex-col items-center">
+                                                                <span className={`text-sm font-black italic tracking-tighter ${match.eloChange > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                    {match.eloChange > 0 ? `+${match.eloChange}` : match.eloChange || '0'}
                                                                 </span>
-                                                                <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest">Leetify</span>
-                                                            </div>
-                                                        );
-                                                    } else {
-                                                        const color = kd >= 1.2 ? 'text-emerald-400' : kd >= 1.0 ? 'text-zinc-400' : 'text-rose-400';
-                                                        return (
-                                                            <div className="flex flex-col items-center gap-0.5">
-                                                                <span className={`font-black text-base italic tracking-tight ${color}`}>{kd.toFixed(2)}</span>
-                                                                <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest">Ratio K/D</span>
+                                                                <span className="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">{match.eloAfter || '—'} TP</span>
                                                             </div>
                                                         );
                                                     }
+                                                    return rankInfo.icon ? <img src={rankInfo.icon} className="w-12 h-auto mx-auto filter drop-shadow-lg" alt="" /> : <span className="text-zinc-800 font-black italic text-xs">—</span>;
                                                 })()}
                                             </td>
-                                            {/* Replay 2D */}
-                                            <td className="px-3 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    
-                                                    {(() => {
-                                                        const meta = match.metadata || {};
-                                                        const shareCode = meta.sharingCode || meta.shareCode || (match.source === 'Steam' && !match.externalId?.includes('leetify') ? match.externalId : null);
-                                                        const canOpenInGame = !!shareCode;
-                                                        
-                                                        return (
-                                                            <button 
-                                                                onClick={(e) => handleDownloadDemo(e, match)}
-                                                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-sky-500/10 hover:bg-sky-500 text-sky-500 hover:text-white transition-all group/download shadow-lg shadow-sky-500/5 active:scale-90 border border-sky-500/10 hover:border-sky-500"
-                                                                title={canOpenInGame ? "Abrir no CS2" : "Baixar Demo"}
-                                                            >
-                                                                {canOpenInGame ? <Play size={16} /> : <Download size={16} />}
-                                                            </button>
-                                                        );
-                                                    })()}
+
+                                            {/* Combat Stats */}
+                                            <td className="px-6 py-5 text-center border-y border-white/5">
+                                                <div className="flex items-center justify-center gap-4 bg-black/40 py-2.5 px-4 rounded-xl border border-white/5 shadow-inner">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-lg font-black italic tracking-tighter text-white leading-none">{match.kills || 0}</span>
+                                                        <span className="text-[7px] font-bold text-zinc-600 uppercase mt-1">K</span>
+                                                    </div>
+                                                    <div className="w-px h-6 bg-white/10" />
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-lg font-black italic tracking-tighter text-zinc-500 leading-none">{match.deaths || 0}</span>
+                                                        <span className="text-[7px] font-bold text-zinc-600 uppercase mt-1">D</span>
+                                                    </div>
+                                                    <div className="w-px h-6 bg-white/10" />
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-base font-black italic tracking-tighter text-zinc-600 leading-none">{match.assists || 0}</span>
+                                                        <span className="text-[7px] font-bold text-zinc-600 uppercase mt-1">A</span>
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4 text-right">
-                                                <div className="flex flex-col items-end gap-0.5">
-                                                    <span className="text-[10px] font-black text-zinc-400 group-hover:text-yellow-400 transition-colors uppercase tracking-widest whitespace-nowrap">
-                                                        {formatTimeAgo(match.matchDate)}
+
+                                            {/* ADR / Dano Total */}
+                                            <td className="px-3 py-5 text-center border-y border-white/5">
+                                                <div className="flex flex-col items-center">
+                                                    <span className={`text-lg font-black italic tracking-tighter ${
+                                                        (match.adr || match.metadata?.adr) >= 80 ? 'text-yellow-400' : 'text-zinc-400'
+                                                    }`}>
+                                                        {Math.round(match.adr || match.metadata?.adr || 0)}
                                                     </span>
-                                                    <span className="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">
-                                                        {new Date(match.matchDate).toLocaleDateString('pt-BR', { day:'2-digit', month:'short' })}
+                                                    <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest">
+                                                        {match.totalDamage || (match.adr && match.score) ? Math.round(match.adr * 24) : '---'} DMG
+                                                    </span>
+                                                </div>
+                                            </td>
+
+                                            {/* KAST */}
+                                            <td className="px-3 py-5 text-center border-y border-white/5">
+                                                {(() => {
+                                                    const kast = match.kast ?? match.metadata?.kast ?? match.metadata?.kast_percent;
+                                                    const val = kast != null ? (kast > 1 ? Math.round(kast) : Math.round(kast * 100)) : null;
+                                                    return (
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="text-base font-black italic tracking-tighter text-blue-400">
+                                                                {val != null ? `${val}%` : '—'}
+                                                            </span>
+                                                            <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest italic">KAST</span>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </td>
+
+                                            {/* HS % */}
+                                            <td className="px-3 py-5 text-center border-y border-white/5">
+                                                {(() => {
+                                                    const hs = match.hsPercentage ?? match.metadata?.headshot_pct;
+                                                    return (
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="text-base font-black italic tracking-tighter text-rose-500">
+                                                                {hs != null ? `${Math.round(hs)}%` : '—'}
+                                                            </span>
+                                                            <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest italic">HS %</span>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </td>
+
+                                            {/* Impact Rating */}
+                                            <td className="px-3 py-5 text-center border-y border-white/5">
+                                                {(() => {
+                                                    const impact = match.impact || match.metadata?.impact || match.metadata?.impact_rating;
+                                                    const val = impact ? Number(impact) : null;
+                                                    const color = !val ? 'text-zinc-800' : val >= 1.2 ? 'text-purple-400' : val >= 1.0 ? 'text-zinc-400' : 'text-rose-400';
+                                                    return (
+                                                        <div className="flex flex-col items-center">
+                                                            <span className={`text-base font-black italic tracking-tighter ${color}`}>
+                                                                {val ? val.toFixed(2) : '—'}
+                                                            </span>
+                                                            <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest italic">Impact</span>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </td>
+
+                                            {/* Rating 2.0 */}
+                                            <td className="px-3 py-5 text-center border-y border-white/5">
+                                                {(() => {
+                                                    const rating2 = match.rating2 || (match as any).metadata?.rating2;
+                                                    const leetifyR = (match as any).metadata?.leetify_rating;
+                                                    const kd = match.kills / (match.deaths || 1);
+                                                    
+                                                    let val = rating2 ? Number(rating2) : (leetifyR ? Number(leetifyR) : kd);
+                                                    const color = val >= 1.2 ? 'text-emerald-400' : val >= 1.0 ? 'text-yellow-400' : 'text-rose-400';
+                                                    
+                                                    return (
+                                                        <div className="flex flex-col items-center">
+                                                            <span className={`text-xl font-black italic tracking-tighter ${color} drop-shadow-[0_0_8px_rgba(0,0,0,0.3)]`}>
+                                                                {val.toFixed(2)}
+                                                            </span>
+                                                            <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest">
+                                                                {rating2 ? 'Rating 2.0' : leetifyR ? 'Leetify' : 'K/D Ratio'}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </td>
+
+                                            {/* Replay / Demo */}
+                                            <td className="px-4 py-5 text-center border-y border-white/5">
+                                                <button 
+                                                    onClick={(e) => handleDownloadDemo(e, match)}
+                                                    className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-yellow-500 text-zinc-500 hover:text-black rounded-xl border border-white/5 transition-all shadow-xl active:scale-90"
+                                                >
+                                                    <Download size={16} />
+                                                </button>
+                                            </td>
+
+                                            {/* Data */}
+                                            <td className="px-6 py-5 rounded-r-[24px] border-r border-y border-white/5 text-right">
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-[10px] font-black text-white uppercase italic tracking-tighter">
+                                                        {format(new Date(match.matchDate), "dd MMM", { locale: ptBR })}
+                                                    </span>
+                                                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest mt-0.5">
+                                                        {format(new Date(match.matchDate), "HH:mm")}
                                                     </span>
                                                 </div>
                                             </td>

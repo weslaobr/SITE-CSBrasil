@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
 import { 
     Search, RefreshCw, Loader2, Trash2, 
     Edit2, Calendar, Map as MapIcon, Users,
@@ -35,6 +37,18 @@ interface GlobalMatch {
     metadata?: any;
     createdAt?: string;
 }
+
+const getMapImage = (name: string) => {
+    const CDN = 'https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images';
+    const raw = (name || 'de_mirage').toLowerCase().trim().replace('de_', '');
+    const MAPS: Record<string, string> = {
+        'mirage': 'de_mirage', 'inferno': 'de_inferno', 'ancient': 'de_ancient',
+        'nuke': 'de_nuke', 'dust2': 'de_dust2', 'dust 2': 'de_dust2',
+        'anubis': 'de_anubis', 'vertigo': 'de_vertigo', 'overpass': 'de_overpass'
+    };
+    const target = MAPS[raw] || `de_${raw}`;
+    return `${CDN}/${target}.png`;
+};
 
 export default function MatchesTab() {
     const [matches, setMatches] = useState<GlobalMatch[]>([]);
@@ -227,124 +241,158 @@ export default function MatchesTab() {
                                             <div className="h-px bg-white/10 flex-1" />
                                         </div>
                                     )}
-                                    <div className="bg-white/5 border border-white/5 rounded-2xl p-4 hover:bg-white/[0.07] transition-all group">
-                                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        className="relative bg-zinc-900/40 border border-white/5 rounded-[32px] overflow-hidden hover:border-white/10 transition-all group backdrop-blur-md"
+                                    >
+                                        {/* Map Background Overlay */}
+                                        <div className="absolute inset-0 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity duration-700 pointer-events-none">
+                                            <img 
+                                                src={getMapImage(match.mapName)} 
+                                                alt="" 
+                                                className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-1000"
+                                            />
+                                        </div>
+
+                                        <div className="relative z-10 p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                                             {/* Left Side: Basic Info */}
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-500 group-hover:text-yellow-500 transition-colors border border-white/5 shrink-0 overflow-hidden relative">
-                                                    <MapIcon size={20} className="relative z-10" />
-                                                    <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <div className="flex items-center gap-5">
+                                                <div className="relative w-16 h-16 rounded-2xl bg-zinc-800/50 flex items-center justify-center text-zinc-500 border border-white/5 shrink-0 overflow-hidden group/icon">
+                                                    <img 
+                                                        src={getMapImage(match.mapName)} 
+                                                        className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover/icon:scale-125 transition-transform duration-500"
+                                                        alt=""
+                                                    />
+                                                    <MapIcon size={24} className="relative z-10 text-white/20 group-hover/icon:text-yellow-500 transition-colors" />
                                                 </div>
                                                 
                                                 <div>
-                                                    <div className="flex items-center gap-2 mb-1">
+                                                    <div className="flex items-center gap-3 mb-1.5">
                                                         {editingMatch === match.id ? (
                                                             <input 
                                                                 type="text"
                                                                 value={editData.mapName}
                                                                 onChange={(e) => setEditData({...editData, mapName: e.target.value})}
-                                                                className="bg-zinc-900 border border-yellow-500/40 rounded px-2 py-0.5 text-xs text-white outline-none w-32"
+                                                                className="bg-black/60 border border-yellow-500/40 rounded-xl px-3 py-1 text-sm text-white outline-none w-32 font-bold"
                                                             />
                                                         ) : (
-                                                            <h3 className="text-sm font-black text-white uppercase tracking-tight">{match.mapName}</h3>
+                                                            <h3 className="text-lg font-black text-white uppercase tracking-tighter italic">{match.mapName}</h3>
                                                         )}
-                                                        <span className={`px-1.5 py-0.5 rounded border text-[8px] font-black uppercase tracking-widest ${
+                                                        <span className={`px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-[0.2em] shadow-sm ${
                                                             match.source === 'mix' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
                                                         }`}>
                                                             {match.source}
                                                         </span>
+                                                        
+                                                        {/* Result Badge */}
+                                                        <div className={`px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-[0.2em] ${
+                                                            match.scoreA > match.scoreB ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' :
+                                                            match.scoreB > match.scoreA ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
+                                                            'bg-zinc-500/10 border-zinc-500/20 text-zinc-500'
+                                                        }`}>
+                                                            {match.scoreA > match.scoreB ? 'VITÓRIA' : match.scoreB > match.scoreA ? 'DERROTA' : 'EMPATE'}
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center gap-3 text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
-                                                        <span className="flex items-center gap-1">
-                                                            <Calendar size={10} />
+
+                                                    <div className="flex items-center gap-4 text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
+                                                        <span className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-lg">
+                                                            <Calendar size={12} className="text-zinc-600" />
                                                             {format(new Date(match.matchDate), "dd MMM, yyyy 'às' HH:mm", { locale: ptBR })}
                                                         </span>
-                                                        <span className="flex items-center gap-1">
-                                                            <Users size={10} />
+                                                        <span className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-lg">
+                                                            <Users size={12} className="text-zinc-600" />
                                                             {match.players.length} JOGADORES
                                                         </span>
                                                         {match.createdAt && (
-                                                            <span className="flex items-center gap-1 text-yellow-500/60" title="Data de exportação da demo">
+                                                            <span className="flex items-center gap-1.5 text-yellow-500/60 bg-yellow-500/5 px-2 py-1 rounded-lg border border-yellow-500/10" title="Data de exportação da demo">
                                                                 <RefreshCw size={10} className="animate-pulse" />
-                                                                EXPORTADO: {format(new Date(match.createdAt), "dd/MM/yy HH:mm")}
+                                                                EXPORTADO: {format(new Date(match.createdAt), "dd/MM HH:mm")}
                                                             </span>
                                                         )}
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            {/* Center: Score */}
-                                            <div className="flex items-center justify-center gap-4 py-2 px-6 bg-black/20 rounded-xl border border-white/5 self-center lg:self-auto">
+                                            {/* Center: Scoreboard style */}
+                                            <div className="flex items-center justify-center gap-6 py-3 px-8 bg-black/40 rounded-3xl border border-white/5 self-center lg:self-auto shadow-2xl backdrop-blur-xl group-hover:border-white/10 transition-colors">
                                                 {editingMatch === match.id ? (
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-3">
                                                         <input 
                                                             type="number"
                                                             value={editData.scoreA}
                                                             onChange={(e) => setEditData({...editData, scoreA: parseInt(e.target.value)})}
-                                                            className="bg-zinc-900 border border-yellow-500/40 rounded w-12 text-center py-1 text-sm font-black text-white"
+                                                            className="bg-black/60 border border-yellow-500/40 rounded-xl w-14 text-center py-2 text-lg font-black text-white outline-none focus:ring-2 ring-yellow-500/20"
                                                         />
-                                                        <span className="text-zinc-700 font-black">:</span>
+                                                        <span className="text-zinc-700 font-black text-xl">:</span>
                                                         <input 
                                                             type="number"
                                                             value={editData.scoreB}
                                                             onChange={(e) => setEditData({...editData, scoreB: parseInt(e.target.value)})}
-                                                            className="bg-zinc-900 border border-yellow-500/40 rounded w-12 text-center py-1 text-sm font-black text-white"
+                                                            className="bg-black/60 border border-yellow-500/40 rounded-xl w-14 text-center py-2 text-lg font-black text-white outline-none focus:ring-2 ring-yellow-500/20"
                                                         />
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        <span className={`text-2xl font-black italic tracking-tighter ${match.scoreA > match.scoreB ? 'text-green-500' : 'text-white'}`}>
-                                                            {match.scoreA}
-                                                        </span>
-                                                        <div className="w-1 h-4 bg-zinc-800 rounded-full rotate-12" />
-                                                        <span className={`text-2xl font-black italic tracking-tighter ${match.scoreB > match.scoreA ? 'text-green-500' : 'text-white'}`}>
-                                                            {match.scoreB}
-                                                        </span>
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1">TEAM A</span>
+                                                            <span className={`text-3xl font-black italic tracking-tighter ${match.scoreA > match.scoreB ? 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'text-white'}`}>
+                                                                {match.scoreA}
+                                                            </span>
+                                                        </div>
+                                                        <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1">TEAM B</span>
+                                                            <span className={`text-3xl font-black italic tracking-tighter ${match.scoreB > match.scoreA ? 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'text-white'}`}>
+                                                                {match.scoreB}
+                                                            </span>
+                                                        </div>
                                                     </>
                                                 )}
                                             </div>
 
                                             {/* Right Side: Actions */}
-                                            <div className="flex items-center gap-2 shrink-0">
+                                            <div className="flex items-center gap-2.5 shrink-0">
                                                 {editingMatch === match.id ? (
                                                     <>
                                                         <button 
                                                             onClick={() => handleSave(match.id)}
                                                             disabled={isSaving}
-                                                            className="flex items-center gap-2 px-4 py-2.5 bg-green-500 text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-400 transition-all shadow-lg shadow-green-500/10"
+                                                            className="flex items-center gap-2 px-6 py-3 bg-emerald-500 text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                                                         >
                                                             {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                                                             Salvar
                                                         </button>
                                                         <button 
                                                             onClick={() => setEditingMatch(null)}
-                                                            className="p-2.5 bg-white/5 border border-white/5 rounded-xl text-zinc-500 hover:text-white transition-all"
+                                                            className="p-3 bg-white/5 border border-white/5 rounded-2xl text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
                                                         >
-                                                            <X size={16} />
+                                                            <X size={18} />
                                                         </button>
                                                     </>
                                                 ) : (
                                                     <>
                                                         <button 
                                                             onClick={() => handleViewDetails(match)}
-                                                            className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/5 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                                                            className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/5 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all hover:scale-105 active:scale-95"
                                                         >
-                                                            <Eye size={14} />
-                                                            Ver Detalhes
+                                                            <Eye size={14} className="text-yellow-500" />
+                                                            Detalhes
                                                         </button>
                                                         <button 
                                                             onClick={() => handleEditStart(match)}
-                                                            className="p-2.5 bg-white/5 border border-white/5 rounded-xl text-zinc-500 hover:text-yellow-500 hover:bg-yellow-500/5 transition-all"
+                                                            className="p-3 bg-white/5 border border-white/5 rounded-2xl text-zinc-500 hover:text-yellow-500 hover:bg-yellow-500/10 transition-all"
                                                             title="Editar"
                                                         >
-                                                            <Edit2 size={16} />
+                                                            <Edit2 size={18} />
                                                         </button>
                                                         <button 
                                                             onClick={() => handleDelete(match.id)}
-                                                            className="p-2.5 bg-white/5 border border-white/5 rounded-xl text-zinc-500 hover:text-red-500 hover:bg-red-500/5 transition-all"
+                                                            className="p-3 bg-white/5 border border-white/5 rounded-2xl text-zinc-500 hover:text-red-500 hover:bg-red-500/10 transition-all"
                                                             title="Excluir"
                                                         >
-                                                            <Trash2 size={16} />
+                                                            <Trash2 size={18} />
                                                         </button>
                                                     </>
                                                 )}
@@ -352,26 +400,26 @@ export default function MatchesTab() {
                                         </div>
                                         
                                         {/* Player list preview (collapsed/subtle) */}
-                                        <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap gap-2">
+                                        <div className="px-5 pb-5 flex flex-wrap gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                                             {match.players.slice(0, 10).map((p, idx) => (
-                                                <div key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-white/[0.02] border border-white/5 rounded-lg">
+                                                <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-black/30 border border-white/5 rounded-xl group/player hover:border-yellow-500/30 transition-colors">
                                                     <img 
                                                         src={p.user?.image || "https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg"} 
                                                         alt="" 
-                                                        className="w-4 h-4 rounded shadow-sm"
+                                                        className="w-4 h-4 rounded-md shadow-sm grayscale group-hover/player:grayscale-0 transition-all"
                                                     />
-                                                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-tight truncate max-w-[80px]">
+                                                    <span className="text-[9px] font-bold text-zinc-500 group-hover/player:text-zinc-300 uppercase tracking-tight truncate max-w-[80px] transition-colors">
                                                         {p.user?.name || (p.metadata as any)?.name || (p.metadata as any)?.nickname || "Jogador"}
                                                     </span>
                                                 </div>
                                             ))}
                                             {match.players.length > 10 && (
-                                                <span className="text-[9px] font-black text-zinc-600 flex items-center">
+                                                <span className="text-[9px] font-black text-zinc-700 flex items-center px-2">
                                                     +{match.players.length - 10}
                                                 </span>
                                             )}
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 </React.Fragment>
                             )
                         })

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useSession } from 'next-auth/react';
 
 interface Props {
     matchId: string | null;
@@ -34,7 +35,8 @@ function normalizePlayer(p: any): any {
         assists:         p.assists ?? p.total_assists ?? 0,
         adr:             p.adr ?? p.dpr ?? p.average_damage_per_round ?? 0,
         kast:            p.kast ?? p.kast_percent ?? 0,
-        rating:          p.rating ?? p.leetify_rating ?? 0,
+        rating:          p.rating2 ?? p.rating ?? p.leetify_rating ?? 0,
+        impact:          p.impact ?? p.impact_rating ?? p.impactRating ?? 0,
         accuracy_head:   p.accuracy_head ?? (p.hs_count && p.kills ? p.hs_count / p.kills : 0),
         total_damage:    p.total_damage ?? 0,
         // FK/FD
@@ -62,7 +64,10 @@ function normalizePlayer(p: any): any {
 const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClose, userSteamId }) => {
     const [match, setMatch] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [recalculating, setRecalculating] = useState(false);
     const [tab, setTab] = useState<'placar' | 'utilitarios' | 'combate'>('placar');
+    const { data: session } = useSession();
+    const isAdmin = (session?.user as any)?.isAdmin;
 
     React.useEffect(() => {
         if (isOpen && matchId) {
@@ -75,6 +80,22 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                 .finally(() => setLoading(false));
         }
     }, [isOpen, matchId]);
+
+    const handleRecalculateElo = async () => {
+        if (!matchId || recalculating) return;
+        setRecalculating(true);
+        try {
+            await axios.post('/api/admin/recalculate-match-elo', { matchId });
+            toast.success("Tropoints recalculados com sucesso!");
+            // Recarregar dados da partida
+            const r = await axios.get(`/api/match/${matchId}${userSteamId ? `?profileSteamId=${userSteamId}` : ''}`);
+            setMatch(r.data);
+        } catch (e: any) {
+            toast.error(e.response?.data?.error || "Erro ao recalcular elo");
+        } finally {
+            setRecalculating(false);
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -290,6 +311,16 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                         <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-yellow-500" /><span className="text-[9px] font-black uppercase text-zinc-600 tracking-widest">Análise de Demo Local</span></div>
                     </div>
                     <div className="flex gap-3">
+                        {isAdmin && (
+                            <button 
+                                onClick={handleRecalculateElo}
+                                disabled={recalculating}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-400 hover:text-white rounded-xl transition-all border border-indigo-500/20 text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                            >
+                                <TrendingUp size={14} className={recalculating ? 'animate-pulse' : ''} />
+                                {recalculating ? 'Recalculando...' : 'Atualizar Tropoints'}
+                            </button>
+                        )}
                         <button className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all border border-white/10 text-[10px] font-black uppercase tracking-widest">
                             <Download size={14} /> Demo
                         </button>
@@ -305,7 +336,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
 
 // --- SUB-COMPONENTS ---
 
-type SortKey = 'rating' | 'kills' | 'deaths' | 'assists' | 'adr' | 'accuracy_head' | 'kast' | 'total_damage';
+type SortKey = 'rating' | 'impact' | 'kills' | 'deaths' | 'assists' | 'adr' | 'accuracy_head' | 'kast' | 'total_damage';
 
 const TeamTable = ({ title, players, isEnemy, variant = 'full' }: { title: string; players: any[]; isEnemy: boolean; variant?: 'full' | 'utility' }) => {
     const [sortKey, setSortKey] = React.useState<SortKey>('total_damage');
@@ -355,6 +386,7 @@ const TeamTable = ({ title, players, isEnemy, variant = 'full' }: { title: strin
                             {variant === 'full' ? (
                                 <>
                                     <Th label="Rating" k="rating" />
+                                    <Th label="Impacto" k="impact" />
                                     <Th label="K" k="kills" />
                                     <Th label="D" k="deaths" />
                                     <Th label="A" k="assists" />
@@ -412,6 +444,9 @@ const TeamTable = ({ title, players, isEnemy, variant = 'full' }: { title: strin
                                     <>
                                         <td className={`px-3 py-3 text-center font-black text-sm italic ${(p.rating||0) >= 1.2 ? 'text-emerald-400' : (p.rating||0) < 0.8 ? 'text-rose-400' : 'text-white'} ${sortKey === 'rating' ? 'bg-yellow-500/5' : ''}`}>
                                             {(p.rating||0).toFixed(2)}
+                                        </td>
+                                        <td className={`px-3 py-3 text-center font-black text-[11px] italic ${(p.impact||0) >= 1.2 ? 'text-orange-400' : (p.impact||0) < 0.8 ? 'text-zinc-500' : 'text-yellow-400'} ${sortKey === 'impact' ? 'bg-yellow-500/5' : ''}`}>
+                                            {(p.impact||0) > 0 ? (p.impact||0).toFixed(2) : '—'}
                                         </td>
                                         <td className={`px-3 py-3 text-center text-xs text-white font-black ${sortKey === 'kills' ? 'bg-yellow-500/5' : ''}`}>{p.kills}</td>
                                         <td className={`px-3 py-3 text-center text-xs text-zinc-400 font-bold ${sortKey === 'deaths' ? 'bg-yellow-500/5' : ''}`}>{p.deaths}</td>
