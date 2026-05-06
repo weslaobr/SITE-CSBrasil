@@ -53,7 +53,7 @@ function normalizePlayer(p: any): any {
         // Utilidades
         enemies_flashed: p.enemies_flashed ?? p.flashbang_hit_foe ?? 0,
         blind_time:      p.blind_time ?? p.total_blind_duration ?? 0,
-        he_damage:       p.he_damage ?? p.utility_damage ?? 0,
+        he_damage:       p.he_damage ?? p.utility_damage_he ?? p.util_damage_he ?? p.heDamage ?? p.he_dmg ?? p.heDmg ?? 0,
         he_thrown:       p.he_thrown ?? 0,
         flash_thrown:    p.flash_thrown ?? 0,
         smokes_thrown:   p.smokes_thrown ?? 0,
@@ -160,7 +160,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
                     onClick={(e) => e.stopPropagation()}
-                    className="relative w-full max-w-6xl bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl flex flex-col"
+                    className="relative w-full max-w-6xl bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl overflow-hidden flex flex-col"
                 >
 
                 {/* HEADER */}
@@ -613,8 +613,15 @@ const UtilityTimeline = ({ timeline, players }: { timeline: any; players: any[] 
     }
 
     const rounds = Object.keys(timeline).map(Number).sort((a, b) => a - b);
-    const getPlayerAvatar = (sid: string) => players.find(p => String(p.steam64_id) === sid)?.avatar || '/img/default-avatar.png';
-    const getPlayerName = (sid: string) => players.find(p => String(p.steam64_id) === sid)?.name || 'Desconhecido';
+    
+    const getPlayerData = (sid: string) => {
+        const p = players.find(p => String(p.steam64_id || p.steamid64) === sid);
+        return {
+            avatar: p?.avatar || '/img/default-avatar.png',
+            name: p?.name || p?.nickname || 'Desconhecido',
+            team: p?.team_id || p?.initial_team_number || 'x'
+        };
+    };
 
     const getGrenadeIcon = (type: string) => {
         const t = (type || '').toLowerCase();
@@ -628,47 +635,102 @@ const UtilityTimeline = ({ timeline, players }: { timeline: any; players: any[] 
 
     const getGrenadeClass = (type: string) => {
         const t = (type || '').toLowerCase();
-        if (t.includes('flash')) return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/20';
-        if (t.includes('he') || t.includes('grenade')) return 'bg-red-500/20 text-red-500 border-red-500/20';
-        if (t.includes('smoke')) return 'bg-blue-500/20 text-blue-400 border-blue-500/20';
-        if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return 'bg-orange-500/20 text-orange-500 border-orange-500/20';
-        return 'bg-zinc-500/10 text-zinc-500 border-white/10';
+        if (t.includes('flash')) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.2)]';
+        if (t.includes('he') || t.includes('grenade')) return 'bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
+        if (t.includes('smoke')) return 'bg-sky-500/20 text-sky-300 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.2)]';
+        if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return 'bg-orange-500/20 text-orange-400 border-orange-500/30 shadow-[0_0_15px_rgba(251,146,60,0.2)]';
+        if (t.includes('decoy')) return 'bg-zinc-500/20 text-zinc-300 border-white/20';
+        return 'bg-zinc-500/10 text-zinc-400 border-white/10';
     };
 
     return (
-        <div className="space-y-4">
-            {rounds.map(rNum => (
-                <div key={rNum} className="flex gap-4 group">
-                    <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-white/5 flex flex-col items-center justify-center shrink-0 group-hover:border-yellow-500/50 transition-colors shadow-lg">
-                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter leading-none mb-1">RD</span>
-                        <span className="text-lg font-black text-white italic leading-none">{Number(rNum) === 0 ? 'FACA' : rNum}</span>
-                    </div>
-                    <div className="flex-1 min-w-0 bg-zinc-900/40 border border-white/5 rounded-2xl p-3 flex items-center gap-3 overflow-x-auto no-scrollbar">
-                        {timeline[rNum].length === 0 ? (
-                            <span className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest px-4 italic">Nenhuma utilidade usada neste round</span>
-                        ) : (
-                            timeline[rNum].map((ge: any, idx: number) => (
-                                <div key={idx} className={`flex items-center gap-2 p-1.5 pr-3 rounded-xl border ${getGrenadeClass(ge.type)} shrink-0 shadow-sm hover:scale-105 transition-transform`}>
-                                    <img src={getPlayerAvatar(ge.steamId)} className="w-5 h-5 rounded-md object-cover border border-black/20" alt="" />
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-[10px]">{getGrenadeIcon(ge.type)}</span>
-                                            <span className="text-[9px] font-black uppercase tracking-tighter whitespace-nowrap">{ge.type?.replace('Eq', '')}</span>
-                                        </div>
-                                        <div className="text-[7px] font-bold opacity-60 uppercase truncate max-w-[60px]">{getPlayerName(ge.steamId)}</div>
-                                    </div>
-                                    {ge.blind_duration > 0 && (
-                                        <div className="ml-1 pl-2 border-l border-white/10 flex flex-col items-center">
-                                            <span className="text-[7px] font-black text-yellow-500 leading-none">{ge.blind_duration.toFixed(1)}s</span>
-                                            <span className="text-[6px] font-bold opacity-40 uppercase leading-none mt-0.5">Blind</span>
-                                        </div>
-                                    )}
+        <div className="space-y-8">
+            {rounds.map(rNum => {
+                const events = timeline[rNum] || [];
+                const t1Events = events.filter((e: any) => {
+                    const t = getPlayerData(e.steamId).team;
+                    return t === '3' || t === 'CT' || t === 'A';
+                });
+                const t2Events = events.filter((e: any) => {
+                    const t = getPlayerData(e.steamId).team;
+                    return t === '2' || t === 'T' || t === 'B';
+                });
+
+                return (
+                    <div key={rNum} className="flex gap-6 group">
+                        <div className="w-16 h-16 rounded-[24px] bg-zinc-950 border border-white/5 flex flex-col items-center justify-center shrink-0 group-hover:border-yellow-500/40 transition-all shadow-2xl relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em] leading-none mb-1 z-10">ROUND</span>
+                            <span className="text-2xl font-black text-white italic leading-none z-10">{rNum === 0 ? 'FACA' : rNum}</span>
+                        </div>
+                        
+                        <div className="flex-1 min-w-0 flex flex-col gap-3">
+                            {/* Counter-Terrorists Row */}
+                            <div className="flex items-center gap-4 bg-zinc-900/20 border border-white/[0.03] rounded-[28px] p-2.5 pr-5 overflow-x-auto no-scrollbar min-h-[60px] hover:bg-zinc-900/30 transition-colors">
+                                <div className="px-3 py-1.5 bg-sky-500/10 border border-sky-500/20 rounded-xl shrink-0">
+                                    <span className="text-[9px] font-black text-sky-400 uppercase tracking-widest">TEAM CT</span>
                                 </div>
-                            ))
-                        )}
+                                {t1Events.length === 0 ? (
+                                    <span className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest ml-4 italic">Sem utilidade registrada</span>
+                                ) : (
+                                    t1Events.map((ge: any, idx: number) => (
+                                        <PremiumGrenadeItem key={idx} ge={ge} getPlayerData={getPlayerData} getGrenadeIcon={getGrenadeIcon} getGrenadeClass={getGrenadeClass} />
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Terrorists Row */}
+                            <div className="flex items-center gap-4 bg-zinc-900/20 border border-white/[0.03] rounded-[28px] p-2.5 pr-5 overflow-x-auto no-scrollbar min-h-[60px] hover:bg-zinc-900/30 transition-colors">
+                                <div className="px-3 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-xl shrink-0">
+                                    <span className="text-[9px] font-black text-orange-400 uppercase tracking-widest">TEAM TR</span>
+                                </div>
+                                {t2Events.length === 0 ? (
+                                    <span className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest ml-4 italic">Sem utilidade registrada</span>
+                                ) : (
+                                    t2Events.map((ge: any, idx: number) => (
+                                        <PremiumGrenadeItem key={idx} ge={ge} getPlayerData={getPlayerData} getGrenadeIcon={getGrenadeIcon} getGrenadeClass={getGrenadeClass} />
+                                    ))
+                                )}
+                            </div>
+                        </div>
                     </div>
+                );
+            })}
+        </div>
+    );
+};
+
+const PremiumGrenadeItem = ({ ge, getPlayerData, getGrenadeIcon, getGrenadeClass }: any) => {
+    const p = getPlayerData(ge.steamId);
+    const damage = ge.damage || ge.he_damage || 0;
+    
+    return (
+        <div className={`flex items-center gap-3 p-2 pr-4 rounded-[20px] border ${getGrenadeClass(ge.type)} shrink-0 shadow-lg hover:scale-105 transition-all duration-300 bg-zinc-950/60 backdrop-blur-md`}>
+            <img src={p.avatar} className="w-6 h-6 rounded-lg object-cover border border-black/40 shadow-xl" alt="" />
+            <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                    <span className="text-xs">{getGrenadeIcon(ge.type)}</span>
+                    <span className="text-[10px] font-black uppercase tracking-tighter whitespace-nowrap">{ge.type?.replace('Eq', '').replace(/GRENADE/gi, '').trim().toUpperCase()}</span>
                 </div>
-            ))}
+                <div className="text-[8px] font-black opacity-40 uppercase truncate max-w-[60px] tracking-widest">{p.name}</div>
+            </div>
+            
+            {(ge.blind_duration > 0 || damage > 0) && (
+                <div className="ml-2 pl-3 border-l border-white/10 flex flex-col justify-center">
+                    {ge.blind_duration > 0 && (
+                        <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-black text-yellow-500 italic leading-none">{ge.blind_duration.toFixed(1)}s</span>
+                            <span className="text-[7px] font-black opacity-30 uppercase">Cegou</span>
+                        </div>
+                    )}
+                    {damage > 0 && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[10px] font-black text-red-500 italic leading-none">{Math.round(damage)}</span>
+                            <span className="text-[7px] font-black opacity-30 uppercase">Dano</span>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

@@ -48,6 +48,7 @@ interface PlayerStats {
     ttd?: number;
     killDist?: number;
     totalDamage: number;
+    heDamage: number;
     isUser?: boolean;
     steamId?: string;
     team?: string;
@@ -485,6 +486,7 @@ const MatchReportModal: React.FC<Props> = ({
             smokesThrown: Number(get('smokes_thrown', 'smokesThrown', 'smoke_thrown') ?? 0),
             molotovThrown: Number(get('molotov_thrown', 'molotovThrown', 'molotovs_thrown') ?? 0),
             enemiesFlashed: Number(get('enemies_flashed', 'enemiesFlashed', 'flashbang_hit_foe') ?? 0),
+            heDamage: Number(get('he_damage', 'heDamage', 'utility_damage_he', 'util_damage_he', 'he_dmg', 'heDmg') ?? 0),
             ttd: Number(get('ttd', 'avg_ttd', 'avgTtd') ?? 0),
             killDist: Number(get('killDist', 'avg_kill_distance', 'avgKillDist') ?? 0),
             totalDamage: Number(get('total_damage', 'totalDamage', 'rawDmg', 'raw_dmg', 'totalDamageDealt') ?? (adr * (Number(get('rounds_count', 'total_rounds')) || (currentMatch?.metadata?.roundSummaries ? Object.keys(currentMatch.metadata.roundSummaries).length : (currentMatch.scoreA || 0) + (currentMatch.scoreB || 0)) || 0))),
@@ -2262,8 +2264,8 @@ const MatchReportModal: React.FC<Props> = ({
                 <PlayerCell p={p} />
                 <td className="py-3 px-2 text-center">
                     <div className="flex flex-col items-center gap-1">
-                        <span className={`text-sm font-black italic leading-none ${p.utilDmg>=100?'text-yellow-400':p.utilDmg>0?'text-zinc-300':'text-zinc-700'}`}>{p.utilDmg>0?Math.round(p.utilDmg):'—'}</span>
-                        {p.utilDmg>0&&<div className="h-0.5 w-14 bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-yellow-500/70 rounded-full" style={{width:`${utilPct}%`}} /></div>}
+                        <span className={`text-sm font-black italic leading-none ${p.heDamage>=100?'text-yellow-400':p.heDamage>0?'text-zinc-300':'text-zinc-700'}`}>{p.heDamage>0?Math.round(p.heDamage):'—'}</span>
+                        {p.heDamage>0&&<div className="h-0.5 w-14 bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-red-500/70 rounded-full" style={{width:`${maxUtil > 0 ? (p.heDamage / maxUtil) * 100 : 0}%`}} /></div>}
                     </div>
                 </td>
                 <td className="py-3 px-2 text-center">
@@ -2283,6 +2285,9 @@ const MatchReportModal: React.FC<Props> = ({
                         <span className={`text-xs font-black leading-none ${p.enemiesFlashed && p.enemiesFlashed > 0 ? 'text-blue-400' : 'text-zinc-700'}`}>{p.enemiesFlashed || '—'}</span>
                         {p.enemiesFlashed && p.enemiesFlashed > 0 && <span className="text-[7px] font-bold text-zinc-600 uppercase">inimigos</span>}
                     </div>
+                </td>
+                <td className="py-3 px-2 text-center">
+                    <div className="flex items-center justify-center gap-1"><span className="text-[9px]">💥</span><span className={`text-xs font-bold ${p.heThrown>0?'text-red-400':'text-zinc-700'}`}>{p.heThrown||'0'}</span></div>
                 </td>
                 <td className="py-3 px-2 text-center">
                     <div className="flex items-center justify-center gap-1"><span className="text-[9px]">⚡</span><span className={`text-xs font-bold ${p.flashThrown>0?'text-blue-400':'text-zinc-700'}`}>{p.flashThrown||'0'}</span></div>
@@ -2459,10 +2464,11 @@ const MatchReportModal: React.FC<Props> = ({
                                     </>}
                                     {tab === 'utilitarios' && <>
                                         <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600" title="Nome do Jogador">Jogador</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Dano total causado com granadas">Dano Util</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Dano causado especificamente com HE">Dano HE</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Eliminações de aliados facilitadas por suas flashbangs">Flash Ass.</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Tempo total que inimigos ficaram cegos por suas flashbangs">Cegueira</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Inimigos Cegados">Cegados</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Granadas HE lançadas">💥 HE</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Flashbangs lançadas">⚡ Flas.</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Smokes lançadas">💨 Smoke</th>
                                         <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center" title="Molotovs lançadas">🔥 Molotov</th>
@@ -2517,7 +2523,7 @@ const MatchReportModal: React.FC<Props> = ({
                             exit={{ opacity: 0, scale: 0.96, y: 20 }}
                             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                             onClick={(e) => e.stopPropagation()}
-                            className="relative w-full max-w-[1350px] bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.85)] flex flex-col"
+                            className="relative w-full max-w-[1350px] bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col"
                         >
                         {isProcessing && (
                             <div className="absolute inset-0 z-[60] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center text-center p-8">
@@ -2894,8 +2900,15 @@ const UtilityTimeline = ({ timeline, players }: { timeline: any; players: any[] 
     }
 
     const rounds = Object.keys(timeline).map(Number).sort((a, b) => a - b);
-    const getPlayerAvatar = (sid: string) => players.find(p => String(p.steamId || p.steam64_id) === sid)?.avatar_url || '/img/default-avatar.png';
-    const getPlayerName = (sid: string) => players.find(p => String(p.steamId || p.steam64_id) === sid)?.nickname || players.find(p => String(p.steamId || p.steam64_id) === sid)?.name || 'Desconhecido';
+    
+    const getPlayerData = (sid: string) => {
+        const p = players.find(p => String(p.steamId || p.steam64_id) === sid);
+        return {
+            avatar: p?.avatar_url || p?.avatar || '/img/default-avatar.png',
+            name: p?.nickname || p?.name || 'Desconhecido',
+            team: p?.team || p?.team_id || 'x'
+        };
+    };
 
     const getGrenadeIcon = (type: string) => {
         const t = (type || '').toLowerCase();
@@ -2909,47 +2922,96 @@ const UtilityTimeline = ({ timeline, players }: { timeline: any; players: any[] 
 
     const getGrenadeClass = (type: string) => {
         const t = (type || '').toLowerCase();
-        if (t.includes('flash')) return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/20';
-        if (t.includes('he') || t.includes('grenade')) return 'bg-red-500/20 text-red-500 border-red-500/20';
-        if (t.includes('smoke')) return 'bg-blue-500/20 text-blue-400 border-blue-500/20';
-        if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return 'bg-orange-500/20 text-orange-500 border-orange-500/20';
-        return 'bg-zinc-500/10 text-zinc-500 border-white/10';
+        if (t.includes('flash')) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.15)]';
+        if (t.includes('he') || t.includes('grenade')) return 'bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)]';
+        if (t.includes('smoke')) return 'bg-sky-500/20 text-sky-300 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.15)]';
+        if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return 'bg-orange-500/20 text-orange-400 border-orange-500/30 shadow-[0_0_15px_rgba(251,146,60,0.15)]';
+        if (t.includes('decoy')) return 'bg-zinc-500/20 text-zinc-300 border-white/20';
+        return 'bg-zinc-500/10 text-zinc-400 border-white/10';
     };
 
+    // Identificar times para separação visual
+    const teamAId = players[0]?.team || players[0]?.team_id || 'A';
+
     return (
-        <div className="space-y-4">
-            {rounds.map(rNum => (
-                <div key={rNum} className="flex gap-4 group">
-                    <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-white/5 flex flex-col items-center justify-center shrink-0 group-hover:border-yellow-500/50 transition-colors shadow-lg">
-                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter leading-none mb-1">RD</span>
-                        <span className="text-lg font-black text-white italic leading-none">{rNum}</span>
-                    </div>
-                    <div className="flex-1 min-w-0 bg-zinc-900/40 border border-white/5 rounded-2xl p-3 flex items-center gap-3 overflow-x-auto no-scrollbar">
-                        {timeline[rNum].length === 0 ? (
-                            <span className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest px-4 italic">Nenhuma utilidade usada neste round</span>
-                        ) : (
-                            timeline[rNum].map((ge: any, idx: number) => (
-                                <div key={idx} className={`flex items-center gap-2 p-1.5 pr-3 rounded-xl border ${getGrenadeClass(ge.type)} shrink-0 shadow-sm hover:scale-105 transition-transform`}>
-                                    <img src={getPlayerAvatar(ge.steamId)} className="w-5 h-5 rounded-md object-cover border border-black/20" alt="" />
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-[10px]">{getGrenadeIcon(ge.type)}</span>
-                                            <span className="text-[9px] font-black uppercase tracking-tighter whitespace-nowrap">{ge.type?.replace('Eq', '')}</span>
-                                        </div>
-                                        <div className="text-[7px] font-bold opacity-60 uppercase truncate max-w-[60px]">{getPlayerName(ge.steamId)}</div>
-                                    </div>
-                                    {ge.blind_duration > 0 && (
-                                        <div className="ml-1 pl-2 border-l border-white/10 flex flex-col items-center">
-                                            <span className="text-[7px] font-black text-yellow-500 leading-none">{ge.blind_duration.toFixed(1)}s</span>
-                                            <span className="text-[6px] font-bold opacity-40 uppercase leading-none mt-0.5">Blind</span>
-                                        </div>
-                                    )}
+        <div className="space-y-6">
+            {rounds.map(rNum => {
+                const events = timeline[rNum] || [];
+                const teamAEvents = events.filter((e: any) => getPlayerData(e.steamId).team === teamAId);
+                const teamBEvents = events.filter((e: any) => getPlayerData(e.steamId).team !== teamAId);
+
+                return (
+                    <div key={rNum} className="flex gap-4 group">
+                        <div className="w-14 h-14 rounded-2xl bg-zinc-950 border border-white/5 flex flex-col items-center justify-center shrink-0 group-hover:border-yellow-500/30 transition-all shadow-2xl relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter leading-none mb-1 z-10">ROUND</span>
+                            <span className="text-xl font-black text-white italic leading-none z-10">{rNum}</span>
+                        </div>
+                        
+                        <div className="flex-1 min-w-0 flex flex-col gap-2">
+                            {/* Team A Row */}
+                            <div className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.05] rounded-2xl p-2 pr-4 overflow-x-auto no-scrollbar min-h-[52px]">
+                                <div className="px-2 py-1 bg-sky-500/10 border border-sky-500/20 rounded-lg shrink-0">
+                                    <span className="text-[8px] font-black text-sky-400 uppercase tracking-widest">TEAM A</span>
                                 </div>
-                            ))
-                        )}
+                                {teamAEvents.length === 0 ? (
+                                    <span className="text-[8px] font-bold text-zinc-700 uppercase tracking-widest ml-2 italic">Sem utilidade</span>
+                                ) : (
+                                    teamAEvents.map((ge: any, idx: number) => (
+                                        <GrenadeItem key={idx} ge={ge} getPlayerData={getPlayerData} getGrenadeIcon={getGrenadeIcon} getGrenadeClass={getGrenadeClass} />
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Team B Row */}
+                            <div className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.05] rounded-2xl p-2 pr-4 overflow-x-auto no-scrollbar min-h-[52px]">
+                                <div className="px-2 py-1 bg-orange-500/10 border border-orange-500/20 rounded-lg shrink-0">
+                                    <span className="text-[8px] font-black text-orange-400 uppercase tracking-widest">TEAM B</span>
+                                </div>
+                                {teamBEvents.length === 0 ? (
+                                    <span className="text-[8px] font-bold text-zinc-700 uppercase tracking-widest ml-2 italic">Sem utilidade</span>
+                                ) : (
+                                    teamBEvents.map((ge: any, idx: number) => (
+                                        <GrenadeItem key={idx} ge={ge} getPlayerData={getPlayerData} getGrenadeIcon={getGrenadeIcon} getGrenadeClass={getGrenadeClass} />
+                                    ))
+                                )}
+                            </div>
+                        </div>
                     </div>
+                );
+            })}
+        </div>
+    );
+};
+
+const GrenadeItem = ({ ge, getPlayerData, getGrenadeIcon, getGrenadeClass }: any) => {
+    const p = getPlayerData(ge.steamId);
+    const damage = ge.damage || ge.he_damage || 0;
+    
+    return (
+        <div className={`flex items-center gap-2 p-1.5 pr-3 rounded-xl border ${getGrenadeClass(ge.type)} shrink-0 shadow-sm hover:scale-105 transition-transform bg-zinc-950/40 backdrop-blur-sm`}>
+            <img src={p.avatar} className="w-5 h-5 rounded-md object-cover border border-black/20" alt="" />
+            <div className="flex flex-col">
+                <div className="flex items-center gap-1.5">
+                    <span className="text-[10px]">{getGrenadeIcon(ge.type)}</span>
+                    <span className="text-[9px] font-black uppercase tracking-tighter whitespace-nowrap">{ge.type?.replace('Eq', '').replace(/GRENADE/gi, '').trim().toUpperCase()}</span>
                 </div>
-            ))}
+                <div className="text-[7px] font-black opacity-60 uppercase truncate max-w-[50px] tracking-tighter">{p.name}</div>
+            </div>
+            
+            {ge.blind_duration > 0 && (
+                <div className="ml-1 pl-2 border-l border-white/10 flex flex-col items-center">
+                    <span className="text-[8px] font-black text-yellow-500 leading-none">{ge.blind_duration.toFixed(1)}s</span>
+                    <span className="text-[6px] font-black opacity-40 uppercase leading-none mt-0.5">Cegou</span>
+                </div>
+            )}
+
+            {damage > 0 && (
+                <div className="ml-1 pl-2 border-l border-white/10 flex flex-col items-center">
+                    <span className="text-[8px] font-black text-red-500 leading-none">{Math.round(damage)}</span>
+                    <span className="text-[6px] font-black opacity-40 uppercase leading-none mt-0.5">Dano</span>
+                </div>
+            )}
         </div>
     );
 };
