@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, update, text
 from app.models.tracker import MatchPlayer, PublicUser, Match
 import logging
 import math
@@ -35,6 +35,14 @@ class RankingService:
             logger.error(f"Ranking: Match {match_id} not found")
             return
 
+        # 1.1 Source Check: Only process Tropoints for MIX/Internal matches
+        # Accepted sources: mix, MIX, demo, local, manual, demo-analyzer
+        source = (match.source or '').lower()
+        valid_sources = ['mix', 'demo', 'local', 'manual', 'demo-analyzer']
+        if source not in valid_sources:
+            logger.info(f"Ranking: Skipping match {match_id} because source '{source}' is not a Tropoints source.")
+            return
+
         stmt = select(MatchPlayer).where(MatchPlayer.match_id == match_id)
         result = await db.execute(stmt)
         players = result.scalars().all()
@@ -43,11 +51,6 @@ class RankingService:
             logger.warning(f"Ranking: No players found for match {match_id}")
             return
 
-        # Determine match outcome from internal scores
-        # match.score_ct vs match.score_t
-        # But players have 'team' A or B. 
-        # Parser sets team A = CT start, B = T start.
-        
         for p in players:
             # 2. Get User record
             user_stmt = select(PublicUser).where(PublicUser.steamId == str(p.steamid64))
@@ -55,7 +58,6 @@ class RankingService:
             user = user_result.scalar_one_or_none()
 
             # 2.5 Idempotency: Revert old points if they exist
-            from sqlalchemy import text
             old_gmp_res = await db.execute(text(
                 'SELECT "eloChange" FROM public."GlobalMatchPlayer" WHERE "globalMatchId" = :mid AND "steamId" = :sid'
             ), {"mid": match_id, "sid": str(p.steamid64)})
@@ -70,7 +72,6 @@ class RankingService:
             is_loss = False
             is_tie = False
 
-            # Logical Team A (CT start) vs Team B (T start)
             if match.score_ct > match.score_t:
                 if p.team in ['A', 'CT', 'CT_INITIAL', '3', 'Counter-Terrorists']: is_win = True
                 else: is_loss = True
@@ -83,13 +84,10 @@ class RankingService:
             base_points = 20 if is_win else (-20 if is_loss else 0)
             
             # 4. Performance adjustment
-            # Rating 2.0 is normalized around 1.0
             rating = p.rating or 1.0
             perf_delta = (rating - 1.0) * 20
             
             total_delta = round(base_points + perf_delta)
-            
-            # Minimum -50, Maximum +50 to prevent extreme jumps
             total_delta = min(max(total_delta, -50), 50)
             
             old_points = user.rankingPoints if user else 1000
@@ -101,16 +99,14 @@ class RankingService:
                 user.rankingPoints = new_points
                 user.mixLevel = new_level
             
-            # Update MatchPlayer stats (for history in matches dashboard)
+            # Update MatchPlayer stats
             p.elo_change = total_delta
             p.elo_after = new_points
             
             logger.info(f"Ranking: User {p.steamid64} | {old_points} -> {new_points} (Delta: {total_delta}, Level: {new_level})")
 
             # 6. Update GlobalMatchPlayer if it exists (for history)
-            # We use a raw SQL update because GlobalMatchPlayer might not be in our Python models yet
             try:
-                from sqlalchemy import text
                 await db.execute(text(
                     "UPDATE public.\"GlobalMatchPlayer\" SET \"eloChange\" = :change, \"eloAfter\" = :after "
                     "WHERE \"globalMatchId\" = :mid AND \"steamId\" = :sid"

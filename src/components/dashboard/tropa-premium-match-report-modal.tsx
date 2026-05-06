@@ -453,30 +453,30 @@ const TeamTable = ({ title, players, isEnemy, variant = 'full' }: { title: strin
                 <span className="text-zinc-700 font-bold text-[9px]">{players.length} jogadores</span>
             </h3>
             <div className="overflow-hidden rounded-3xl border border-white/5 bg-zinc-900/20">
-                <table className="w-full text-left">
+                <table className="w-full text-left table-fixed">
                     <thead>
                         <tr className="text-[9px] font-black uppercase text-zinc-600 tracking-widest bg-white/5 border-b border-white/5">
-                            <th className="px-5 py-3">Jogador</th>
+                            <th className="px-5 py-3 w-[220px]">Jogador</th>
                             {variant === 'full' ? (
                                 <>
-                                    <Th label="Rating" k="rating" />
-                                    <Th label="IMP" k="impact" />
-                                    <Th label="K" k="kills" />
-                                    <Th label="D" k="deaths" />
-                                    <Th label="A" k="assists" />
-                                    <Th label="ADR" k="adr" />
-                                    <Th label="HS%" k="accuracy_head" />
-                                    <Th label="KAST" k="kast" />
-                                    <Th label="Dano" k="total_damage" />
+                                    <Th label="Rating" k="rating" className="w-[80px]" />
+                                    <Th label="IMP" k="impact" className="w-[80px]" />
+                                    <Th label="K" k="kills" className="w-[60px]" />
+                                    <Th label="D" k="deaths" className="w-[60px]" />
+                                    <Th label="A" k="assists" className="w-[60px]" />
+                                    <Th label="ADR" k="adr" className="w-[90px]" />
+                                    <Th label="HS%" k="accuracy_head" className="w-[80px]" />
+                                    <Th label="KAST" k="kast" className="w-[80px]" />
+                                    <Th label="Dano" k="total_damage" className="w-[100px]" />
                                 </>
                             ) : (
                                 <>
-                                    <th className="px-3 py-3 text-center">Dano HE</th>
-                                    <th className="px-3 py-3 text-center">Cegou</th>
-                                    <th className="px-3 py-3 text-center">Blind</th>
-                                    <th className="px-3 py-3 text-center">HEs</th>
-                                    <th className="px-3 py-3 text-center">Fls</th>
-                                    <th className="px-3 py-3 text-center">Smks</th>
+                                    <th className="px-3 py-3 text-center w-[80px]">Dano HE</th>
+                                    <th className="px-3 py-3 text-center w-[80px]">Cegou</th>
+                                    <th className="px-3 py-3 text-center w-[80px]">Blind</th>
+                                    <th className="px-3 py-3 text-center w-[60px]">HEs</th>
+                                    <th className="px-3 py-3 text-center w-[60px]">Fls</th>
+                                    <th className="px-3 py-3 text-center w-[60px]">Smks</th>
                                 </>
                             )}
                         </tr>
