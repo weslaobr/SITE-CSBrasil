@@ -323,9 +323,30 @@ class ParserService:
             psmoke_thrown = int(p_grenades[p_grenades["grenade_type"] == "SmokeGrenade"].shape[0])
             pmolotov_thrown = int(p_grenades[p_grenades["grenade_type"].isin(["Molotov", "IncendiaryGrenade"])].shape[0])
 
+            pkast = float(row.get("kast", row.get("kast_percent", row.get("kastPercent", 0))))
+            
+            # Fallback manual calculation if kast is 0
+            if pkast <= 0:
+                try:
+                    # KAST: Kills, Assists, Survived, Traded
+                    # Simplified: Rounds where player got a kill, assist or survived
+                    k_rounds = set(self.dem.kills[self.dem.kills["attacker_steamid"] == steamid]["round"].tolist()) if not self.dem.kills.empty else set()
+                    a_rounds = set(self.dem.kills[self.dem.kills["assister_steamid"] == steamid]["round"].tolist()) if not self.dem.kills.empty else set()
+                    d_rounds = set(self.dem.kills[self.dem.kills["victim_steamid"] == steamid]["round"].tolist()) if not self.dem.kills.empty else set()
+                    all_rounds = set(self.dem.rounds["round"].tolist()) if not self.dem.rounds.empty else set()
+                    
+                    survived_rounds = all_rounds - d_rounds
+                    kast_rounds = k_rounds | a_rounds | survived_rounds
+                    if all_rounds:
+                        pkast = (len(kast_rounds) / len(all_rounds)) * 100
+                except:
+                    pass
+
+            prating = float(row.get("rating", row.get("rating2", row.get("rating_2", 0))))
+
             mp_stats = MatchPlayer(
                 match_id=match_id, steamid64=steamid, team=p_logical_team, kills=pkills, deaths=pdeaths,
-                assists=int(row["assists"]), adr=padr, kast=float(row["kast"]), rating=float(row["rating"]),
+                assists=int(row.get("assists", 0)), adr=padr, kast=pkast, rating=prating,
                 hs_count=phscount, utility_damage=int(row["utility_damage"]), flash_assists=int(row["flash_assists"]),
                 fk=0, fd=0, triples=int(row.get("triple_kills", row.get("3k", 0))),
                 quads=int(row.get("quad_kills", row.get("4k", 0))), aces=int(row.get("ace_kills", row.get("5k", 0))),

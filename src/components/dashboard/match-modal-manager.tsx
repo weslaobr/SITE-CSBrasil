@@ -27,32 +27,30 @@ export default function MatchModalManager({
     userNickname,
     onSync 
 }: MatchModalManagerProps) {
-    if (!isOpen) return null;
-
     // Logic to determine if it's a local/premium match
-    const getIsLocal = () => {
-        if (!match && !matchId) return false;
-        
+    const isLocal = (() => {
         const m = match || {};
-        const id = matchId || m.id || '';
-        const source = (m.source || m.gameMode || '').toLowerCase();
+        const id = String(matchId || m.id || m.externalId || '');
+        const source = String(m.source || m.gameMode || '').toLowerCase();
         
-        return (
-            source.includes('mix') ||
-            source.includes('demo') ||
-            source.includes('local') ||
-            id.startsWith('manual_') ||
-            // Local IDs are often short hashes, not UUIDs
-            (id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) && !id.includes('leetify'))
-        );
-    };
+        if (id.startsWith('manual_')) return true;
+        if (source.includes('mix') || source.includes('demo') || source.includes('local')) return true;
+        
+        // If it's a UUID and doesn't mention leetify, it's likely local
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        if (isUUID && !id.toLowerCase().includes('leetify') && !source.includes('faceit')) return true;
+        
+        return false;
+    })();
 
-    const isLocal = getIsLocal();
+    // Clean matchId for API calls (strip leetify- or faceit- prefixes if present)
+    const rawId = matchId || match?.id || match?.externalId || null;
+    const cleanMatchId = typeof rawId === 'string' ? rawId.replace(/^(leetify-|faceit-)/, '') : rawId;
 
     if (isLocal) {
         return (
             <TropaPremiumMatchReportModal
-                matchId={matchId || match?.id || null}
+                matchId={cleanMatchId}
                 isOpen={isOpen}
                 onClose={onClose}
                 userSteamId={userSteamId}
@@ -64,7 +62,7 @@ export default function MatchModalManager({
     return (
         <MatchReportModal
             match={match}
-            matchId={matchId || match?.id || null}
+            matchId={cleanMatchId}
             isOpen={isOpen}
             onClose={onClose}
             userSteamId={userSteamId}

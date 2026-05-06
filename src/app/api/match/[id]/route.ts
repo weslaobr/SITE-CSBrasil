@@ -4,6 +4,11 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/lib/auth";
 
+// Patch BigInt to be serializable to JSON
+(BigInt.prototype as any).toJSON = function () {
+    return this.toString();
+};
+
 const LEETIFY_API_KEY = process.env.LEETIFY_API_KEY;
 const LEETIFY_BASE_URL = 'https://api-public.cs-prod.leetify.com';
 
@@ -50,10 +55,32 @@ export async function GET(
 
     try {
         // 1. Verificar primeiro no nosso próprio Banco de Dados (Partidas geradas pelo nosso Bot)
-        const localMatch = await prisma.globalMatch.findUnique({
+        let localMatch = await prisma.globalMatch.findUnique({
             where: { id: matchId },
             include: { players: true }
         });
+
+        // Caso não encontre pelo ID completo (que pode conter sufixo de SteamID vindo do analisador)
+        // Tentamos buscar pelo ID base (o hash da demo)
+        if (!localMatch && matchId.startsWith('demo_')) {
+            const parts = matchId.split('_');
+            if (parts.length >= 3) {
+                // Formato: demo_HASH_STEAMID -> tentamos demo_HASH
+                const baseId = `${parts[0]}_${parts[1]}`;
+                localMatch = await prisma.globalMatch.findUnique({
+                    where: { id: baseId },
+                    include: { players: true }
+                });
+                // Se encontramos pelo baseId, usamos ele para as próximas queries (tracker_match_players etc)
+                if (localMatch) {
+                    (params as any).resolvedId = baseId; // Just for internal tracking if needed
+                }
+            }
+        }
+
+        // Se encontramos o match, garantimos que usaremos o ID real dele para buscar estatísticas
+        const effectiveMatchId = localMatch?.id || matchId;
+
 
         if (localMatch && localMatch.players && localMatch.players.length > 0) {
             const localMeta = (localMatch.metadata as any) || {};
@@ -75,7 +102,7 @@ export async function GET(
             const profileResult = profilePlayer?.matchResult || null;
             // Buscar estatísticas detalhadas da tabela de tracker se existirem
             const trackerPlayers = await prisma.tracker_match_players.findMany({
-                where: { match_id: matchId }
+                where: { match_id: effectiveMatchId }
             }).catch(() => []);
 
             const trackerMap = new Map();
@@ -115,7 +142,10 @@ export async function GET(
                     accuracy_head: p.hsPercentage ? (p.hsPercentage / 100) : 0, 
                     rating: tp?.rating ?? m.rating ?? m.leetify_rating ?? 0,
                     impact: tp?.impact ?? m.impact_rating ?? tp?.impact_rating ?? m.impact ?? m.impactRating ?? localMeta.leetify_ratings?.[p.steamId]?.impact_rating ?? 0,
-                    kast: tp?.kast ?? m.kast ?? m.kast_percent ?? 0,
+                    kast: (() => {
+                        const val = tp?.kast ?? m.kast ?? m.kast_percent ?? 0;
+                        return (val > 0 && val <= 1) ? (val * 100) : val;
+                    })(),
                     fk: fkVal,
                     fd: fdVal,
                     fkd: fkVal,
@@ -157,11 +187,11 @@ export async function GET(
 
             // Fetch detailed stats from tracker tables (using raw query since they are not in Prisma)
             const trackerWeaponStatsRaw = await prisma.$queryRaw`
-                SELECT * FROM public.tracker_weapon_stats WHERE match_id = ${matchId}
+                SELECT * FROM public.tracker_weapon_stats WHERE match_id = ${effectiveMatchId}
             `.catch(() => []) as any[];
 
             const trackerClutchEvents = await prisma.$queryRaw`
-                SELECT * FROM public.tracker_clutch_events WHERE match_id = ${matchId}
+                SELECT * FROM public.tracker_clutch_events WHERE match_id = ${effectiveMatchId}
             `.catch(() => []) as any[];
 
             // Use the already fetched trackerPlayers instead of querying again
@@ -210,17 +240,25 @@ export async function GET(
             if (resolvedMapName === 'Desconhecido' && localMeta.demoUrl) {
                 try {
                     // Demo URL é um JWT: .../file?token=HEADER.PAYLOAD.SIGNATURE
-                    const tokenMatch = localMeta.demoUrl.match(/token=([^&]+)/);
-                    if (tokenMatch) {
-                        const payloadBase64 = tokenMatch[1].split('.')[1];
-                        if (payloadBase64) {
-                            // Fix base64url encoding padding
-                            let b64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
-                            while (b64.length % 4) b64 += '=';
-                            // Use atob which is universally available in Node/Edge/Browser
-                            const payload = atob(b64);
-                            const mapMatch = payload.match(/_(de_[a-zA-Z0-9]+|cs_[a-zA-Z0-9]+)_/i);
-                            if (mapMatch) resolvedMapName = mapMatch[1];
+                    const tokenMatch = String(localMeta.demoUrl).match(/token=([^&]+)/);
+                    if (tokenMatch && tokenMatch[1]) {
+                        const parts = tokenMatch[1].split('.');
+                        if (parts.length >= 2) {
+                            const payloadBase64 = parts[1];
+                            if (payloadBase64) {
+                                // Fix base64url encoding padding
+                                let b64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+                                while (b64.length % 4) b64 += '=';
+                                
+                                try {
+                                    // Use Buffer in Node.js for safer base64 decoding
+                                    const payload = Buffer.from(b64, 'base64').toString('utf8');
+                                    const mapMatch = payload.match(/_(de_[a-zA-Z0-9]+|cs_[a-zA-Z0-9]+)_/i);
+                                    if (mapMatch) resolvedMapName = mapMatch[1];
+                                } catch (decodeErr) {
+                                    // Silent fail for decoding
+                                }
+                            }
                         }
                     }
                 } catch (e) {

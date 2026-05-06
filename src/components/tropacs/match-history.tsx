@@ -35,21 +35,27 @@ export default function MatchHistory({ matches, onSync, loading, steamId, steamN
         );
     }
 
-    const mappedMatches = matches.map((m: any) => ({
-        id: m.id || m.externalId,
-        externalId: m.externalId || m.id,
-        source: m.source || m.data_source || 'mix',
-        gameMode: m.gameMode || (['mix', 'demo', 'local'].some(s => (m.source || '').toLowerCase().includes(s)) ? 'Mix' : 'Competitive'),
-        mapName: m.mapName || m.map_name || 'Desconhecido',
-        kills: m.kills || 0,
-        deaths: m.deaths || 0,
-        assists: m.assists || 0,
-        hsPercentage: m.hsPercentage || m.hs_percentage || 0,
-        adr: m.adr || 0,
-        totalDamage: m.totalDamage || m.total_damage || 0,
-        kast: m.kast,
-        matchDate: m.matchDate || m.finished_at || new Date().toISOString(),
-        result: (() => {
+    const mappedMatches = matches.map((m: any) => {
+        const id = m.id || m.externalId || m.matchId;
+        const source = m.source || m.data_source || 'mix';
+        
+        return {
+            id: id,
+            externalId: m.externalId || m.matchId || m.id,
+            source: source,
+            gameMode: m.gameMode || (['mix', 'demo', 'local'].some(s => source.toLowerCase().includes(s)) ? 'Mix' : 'Competitive'),
+            mapName: m.mapName || m.map_name || m.map || 'Desconhecido',
+            kills: m.kills ?? m.totalKills ?? 0,
+            deaths: m.deaths ?? m.totalDeaths ?? 0,
+            assists: m.assists ?? m.totalAssists ?? 0,
+            hsPercentage: m.hsPercentage ?? m.headshot_pct ?? m.hs_percentage ?? 0,
+            adr: m.adr ?? m.metadata?.adr ?? 0,
+            totalDamage: m.totalDamage ?? m.total_damage ?? 0,
+            kast: m.kast,
+            scoreA: m.scoreA ?? m.team1Score ?? m.team_3_score ?? 0,
+            scoreB: m.scoreB ?? m.team2Score ?? m.team_2_score ?? 0,
+            matchDate: m.matchDate || m.finished_at || m.date || new Date().toISOString(),
+            result: (() => {
             const res = (m.result || '').toLowerCase();
             const out = (m.outcome || '').toLowerCase();
             
@@ -69,7 +75,8 @@ export default function MatchHistory({ matches, onSync, loading, steamId, steamN
         metadata: m.metadata || {
             leetify_rating: m.leetify_rating
         }
-    }));
+        }
+    });
 
     return (
         <MatchesDashboard 

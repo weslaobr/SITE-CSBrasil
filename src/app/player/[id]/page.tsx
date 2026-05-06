@@ -19,7 +19,6 @@ import TrustCriteria from "@/components/profile/trust-criteria";
 import AttributesRadarChart from "@/components/tropacs/radar-chart";
 import MatchHistory from "@/components/tropacs/match-history";
 import InventoryDashboard from "@/components/dashboard/inventory-dashboard";
-import MatchReportModal from '@/components/dashboard/match-report-modal';
 
 export default function PlayerProfilePage() {
     const params = useParams();
@@ -29,7 +28,6 @@ export default function PlayerProfilePage() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
-    const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
     const [currency, setCurrency] = useState<'BRL' | 'USD'>('BRL');
     const [exchangeRate, setExchangeRate] = useState<any>(null);
 
@@ -448,7 +446,6 @@ export default function PlayerProfilePage() {
                 <div className="pt-12 border-t border-white/5">
                     <MatchHistory
                         matches={matches && matches.length > 0 ? matches : (leetifyData?.recentMatches || [])}
-                        onReview={setSelectedMatchId}
                         onSync={handleSync}
                         loading={syncing}
                         steamId={steamId}
@@ -477,14 +474,6 @@ export default function PlayerProfilePage() {
                 <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.5em]">TropaCS 2026 • Powered by Leetify & Steam</p>
             </footer>
 
-            <MatchReportModal
-                match={null}
-                matchId={selectedMatchId}
-                isOpen={!!selectedMatchId}
-                onClose={() => setSelectedMatchId(null)}
-                userSteamId={steamId}
-                userNickname={profile?.personaname}
-            />
         </div>
     );
 }
