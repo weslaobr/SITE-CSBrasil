@@ -177,6 +177,10 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                                 <span className="w-1 h-1 rounded-full bg-zinc-700" />
                                 <span className="flex items-center gap-2"><Clock size={13} /> {match?.duration || '—'}</span>
                             </div>
+                            <div className="mt-1 text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <span className="w-4 h-px bg-white/5" />
+                                Demo ID: <span className="text-zinc-500 select-all font-bold">{match?.match_id || match?.id || matchId}</span>
+                            </div>
                         </div>
                         <div className="flex items-center gap-8">
                             <div className="flex flex-col items-center">

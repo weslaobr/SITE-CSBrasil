@@ -91,6 +91,10 @@ export async function GET(req: NextRequest) {
             // Impact Rating
             const impact = meta.impact ?? meta.impact_rating ?? meta.impactRating ?? null;
 
+            // ELO info (if available in metadata)
+            const eloChange = meta.eloChange ?? meta.elo_change ?? null;
+            const eloAfter = meta.eloAfter ?? meta.elo_after ?? null;
+
             return { ...m, kills, deaths, assists, adr, hsPercentage, kast, rank, eloChange, eloAfter, impact };
         });
 

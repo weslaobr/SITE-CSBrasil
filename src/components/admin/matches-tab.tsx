@@ -285,6 +285,10 @@ export default function MatchesTab() {
                                                         }`}>
                                                             {match.source}
                                                         </span>
+
+                                                        <span className="text-[10px] font-mono text-zinc-600 bg-white/5 px-2 py-0.5 rounded-lg border border-white/5 uppercase tracking-tighter">
+                                                            ID: {match.id}
+                                                        </span>
                                                         
                                                         {/* Result Badge */}
                                                         <div className={`px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-[0.2em] ${

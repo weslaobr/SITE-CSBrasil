@@ -1920,10 +1920,20 @@ const MatchReportModal: React.FC<Props> = ({
                                         </div>
                                         <div className="flex items-center gap-3 text-[9px] font-bold text-zinc-600 uppercase tracking-widest mt-0.5">
                                             <span className="flex items-center gap-1"><Calendar size={8}/>{dateStr}</span>
+                                            {currentMatch?.metadata?.duration && (
+                                                <>
+                                                    <span className="w-0.5 h-0.5 rounded-full bg-zinc-800" />
+                                                    <span className="flex items-center gap-1"><Clock size={8}/>{currentMatch.metadata.duration}</span>
+                                                </>
+                                            )}
                                             <span className="flex items-center gap-1">
                                                 <div className={`w-1.5 h-1.5 rounded-full ${isVerified ? 'bg-yellow-500 animate-pulse' : 'bg-zinc-700'}`} />
                                                 {isVerified ? 'Verificado' : 'Estimado'}
                                             </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1 text-[8px] font-black text-zinc-700 uppercase tracking-[0.2em]">
+                                            <span className="w-4 h-px bg-white/5" />
+                                            ID: <span className="text-zinc-600 select-all font-bold">{currentMatch.id || matchId}</span>
                                         </div>
                                     </div>
                                 </div>

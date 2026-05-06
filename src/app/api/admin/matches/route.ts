@@ -42,7 +42,33 @@ export async function GET(req: NextRequest) {
             orderBy: { matchDate: 'desc' }
         });
 
-        return NextResponse.json({ matches });
+        const formattedMatches = matches.map(m => {
+            let mapName = m.mapName;
+            const meta = (m.metadata as any) || {};
+
+            if (mapName === 'Desconhecido') {
+                const demoUrl = meta.demoUrl || meta.demo_url;
+                if (demoUrl) {
+                    try {
+                        const tokenMatch = demoUrl.match(/token=([^&]+)/);
+                        if (tokenMatch) {
+                            const payloadBase64 = tokenMatch[1].split('.')[1];
+                            if (payloadBase64) {
+                                let b64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+                                while (b64.length % 4) b64 += '=';
+                                const payload = atob(b64);
+                                const mapMatch = payload.match(/_(de_[a-zA-Z0-9]+|cs_[a-zA-Z0-9]+)_/i);
+                                if (mapMatch) mapName = mapMatch[1];
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            return { ...m, mapName };
+        });
+
+        return NextResponse.json({ matches: formattedMatches });
     } catch (error) {
         console.error("[Admin Matches GET] Error:", error);
         return NextResponse.json({ error: "Failed to fetch matches" }, { status: 500 });

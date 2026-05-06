@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trophy, Target, Zap, Shield, Sword, BarChart3, TrendingUp, ExternalLink, Calendar, Download, Activity, BarChart2 } from 'lucide-react';
+import { X, Trophy, Target, Zap, Shield, Sword, BarChart3, TrendingUp, ExternalLink, Calendar, Download, Activity, BarChart2, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Replay2D from './replay-2d';
@@ -68,14 +68,28 @@ export default function MatchReviewModal({ matchId, onClose }: MatchReviewModalP
                                     <h2 className={`text-3xl font-black italic uppercase tracking-tighter leading-none ${(data?.data_source?.includes('premier')) ? 'text-purple-400' : 'text-white'}`}>
                                         Relatório de Partida
                                     </h2>
-                                    <p className="text-[11px] text-zinc-500 font-black uppercase tracking-widest mt-1">
-                                        {data?.map_name?.replace('de_', '') || 'Carregando...'} &nbsp;·&nbsp; <span className={(data?.data_source?.includes('premier')) ? 'text-purple-500/80' : ''}>{
+                                    <p className="text-[11px] text-zinc-500 font-black uppercase tracking-widest mt-1 flex items-center gap-2">
+                                        {data?.map_name?.replace('de_', '') || 'Carregando...'} 
+                                        <span className="text-zinc-800">·</span>
+                                        <span className={(data?.data_source?.includes('premier')) ? 'text-purple-500/80' : ''}>{
                                             (data?.data_source?.includes('premier')) ? 'Premier' :
                                             (data?.data_source?.includes('matchmaking')) ? 'Competitive' :
                                             data?.data_source === 'faceit' ? 'Faceit' :
                                             data?.data_source === 'gamersclub' ? 'GamersClub' :
                                             (data?.data_source || 'Competitive')
                                         }</span>
+                                        {data?.duration && (
+                                            <>
+                                                <span className="text-zinc-800">·</span>
+                                                <span className="flex items-center gap-1"><Clock size={10} className="text-zinc-600"/>{data.duration}</span>
+                                            </>
+                                        )}
+                                        {data?.match_id && (
+                                            <>
+                                                <span className="text-zinc-800">·</span>
+                                                <span className="text-zinc-600">ID: {data.match_id}</span>
+                                            </>
+                                        )}
                                     </p>
                                 </div>
                             </div>
