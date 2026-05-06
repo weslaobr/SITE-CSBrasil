@@ -742,7 +742,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                         <table className="w-full text-left border-separate border-spacing-y-3">
                             <thead>
                                 <tr className="text-[10px] uppercase font-black text-zinc-600 tracking-[0.2em]">
-                                    <th className="px-6 py-4">Mapa / Modo</th>
+                                    <th className="px-6 py-4">Mapa</th>
+                                    <th className="px-4 py-4 text-center">Modo</th>
                                     <th className="px-4 py-4 text-center">Placar</th>
                                     <th className="px-4 py-4 text-center">Rank / TP</th>
                                     <th className="px-6 py-4 text-center">Combate (K/D/A)</th>
@@ -772,7 +773,6 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                             className="group bg-zinc-900/30 hover:bg-zinc-800/50 transition-all cursor-pointer shadow-sm hover:shadow-yellow-500/5"
                                             onClick={() => handleViewMatch(match)}
                                         >
-                                            {/* Mapa */}
                                             <td className="px-6 py-5 rounded-l-[24px] border-l border-y border-white/5">
                                                 <div className="flex items-center gap-5">
                                                     <div className="relative w-24 h-14 overflow-hidden rounded-xl border border-white/10 shrink-0 group-hover:border-yellow-500/20 transition-all text-[0]">
@@ -792,17 +792,15 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                             {match.mapName.toLowerCase().includes('dust') ? 'Dust 2' :
                                                              match.mapName.replace('de_', '').replace(/_/g, ' ').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                                                         </span>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 group-hover:text-zinc-400">
-                                                                {matchMode}
-                                                            </span>
-                                                            <span className="w-0.5 h-0.5 rounded-full bg-zinc-700" />
-                                                            <span className="text-[7px] font-bold text-zinc-600 group-hover:text-zinc-500 select-all tracking-tighter">
-                                                                #{match.id?.slice(-8) || '---'}
-                                                            </span>
-                                                        </div>
                                                     </div>
                                                 </div>
+                                            </td>
+
+                                            {/* Modo */}
+                                            <td className="px-4 py-5 text-center border-y border-white/5">
+                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 group-hover:text-zinc-400 bg-white/5 px-2 py-1 rounded-lg border border-white/5">
+                                                    {matchMode}
+                                                </span>
                                             </td>
 
                                             {/* Placar */}
