@@ -141,13 +141,13 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
     const isLoss = resultStr === 'loss' || resultStr === 'derrota';
 
     return (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 md:p-8">
+        <div className="fixed inset-0 z-[999] flex items-start justify-center p-4 md:p-8 overflow-y-auto">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={onClose} className="absolute inset-0 bg-black/90 backdrop-blur-xl" />
 
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-6xl max-h-[90vh] bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl overflow-hidden flex flex-col">
+                className="relative w-full max-w-6xl h-fit my-8 bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl flex flex-col">
 
                 {/* HEADER */}
                 <div className="relative h-56 shrink-0 overflow-hidden">
@@ -215,7 +215,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                 </div>
 
                 {/* CONTENT */}
-                <div className="flex-grow overflow-y-auto p-8">
+                <div className="flex-grow p-8">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-24">
                             <div className="w-14 h-14 border-4 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin mb-5" />

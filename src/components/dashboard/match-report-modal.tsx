@@ -1860,7 +1860,7 @@ const MatchReportModal: React.FC<Props> = ({
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-1 md:p-2">
+                <div className="fixed inset-0 z-[100] flex items-start justify-center p-1 md:p-2 overflow-y-auto">
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         onClick={onClose}
@@ -1871,8 +1871,7 @@ const MatchReportModal: React.FC<Props> = ({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.96, y: 20 }}
                         transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                        className="relative w-full max-w-[1350px] bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.85)] overflow-x-hidden overflow-y-auto flex flex-col"
-                        style={{ maxHeight: 'calc(100vh - 12px)' }}
+                        className="relative w-full max-w-[1350px] my-4 bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.85)] overflow-x-hidden flex flex-col"
                     >
                         {isProcessing && (
                             <div className="absolute inset-0 z-[60] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center text-center p-8">

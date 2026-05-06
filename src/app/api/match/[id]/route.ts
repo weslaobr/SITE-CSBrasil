@@ -290,9 +290,9 @@ export async function GET(
                 resolvedResult = myScore > theirScore ? 'win' : myScore < theirScore ? 'loss' : 'tie';
             }
 
-            // Estimar duração a partir do total de rounds (cada round ~1:45 em média)
+            // Priorizar duração real do banco, fallback para meta ou estimativa por rounds
             const totalRounds = (localMatch.scoreA ?? 0) + (localMatch.scoreB ?? 0);
-            const estimatedDuration = localMeta.duration || 
+            const estimatedDuration = localMatch.duration || localMeta.duration || 
                 (totalRounds > 0 ? `${Math.floor(totalRounds * 1.75)}:00` : null);
 
             let winning_team = 'tie';
