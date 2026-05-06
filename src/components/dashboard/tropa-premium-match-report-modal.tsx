@@ -865,20 +865,26 @@ const weaponImg = (name: string) => {
     }
     
     const MAPPING: Record<string, string> = {
-        'm4a1_s': 'm4a1_silencer', 'm4a1-s': 'm4a1_silencer', 'm4a1_silencer': 'm4a1_silencer', 'm4a1': 'm4a1',
-        'm4a1_silencer_off': 'm4a1_silencer_off', 'usp_s': 'usp_silencer', 'usp-s': 'usp_silencer',
-        'usp_silencer': 'usp_silencer', 'usp_silencer_off': 'usp_silencer_off', 'deagle': 'deagle',
-        'desert_eagle': 'deagle', 'p2000': 'hkp2000', 'hkp2000': 'hkp2000', 'revolver': 'revolver',
+        'm4a1_s': 'm4a1_silencer', 'm4a1-s': 'm4a1_silencer', 'm4a1_silencer': 'm4a1_silencer', 
+        'usp_s': 'usp_silencer', 'usp-s': 'usp_silencer', 'usp_silencer': 'usp_silencer',
+        'deagle': 'deagle', 'desert_eagle': 'deagle', 'p2000': 'hkp2000', 'revolver': 'revolver',
         'r8': 'revolver', 'scout': 'ssg08', 'ssg08': 'ssg08', 'hegrenade': 'hegrenade',
-        'smokegrenade': 'smokegrenade', 'smoke': 'smokegrenade', 'flashbang': 'flashbang',
-        'inferno': 'inferno', 'molotov': 'molotov', 'incgrenade': 'incgrenade', 'decoy': 'decoy',
+        'flashbang': 'flashbang', 'smokegrenade': 'smokegrenade', 'smoke': 'smokegrenade',
+        'molotov': 'molotov', 'incgrenade': 'incgrenade', 'inferno': 'inferno', 'decoy': 'decoy',
         'c4': 'planted_c4', 'planted_c4': 'planted_c4', 'zeus': 'taser', 'taser': 'taser',
-        'zeus27': 'taser', 'bayonet': 'bayonet', 'knife': 'knife', 'knifegg': 'knifegg',
+        'zeus27': 'taser', 'glock': 'glock', 'galilar': 'galilar', 'famas': 'famas',
+        'aug': 'aug', 'sg556': 'sg556', 'awp': 'awp', 'g3sg1': 'g3sg1', 'scar20': 'scar20',
+        'mac10': 'mac10', 'mp9': 'mp9', 'mp7': 'mp7', 'mp5sd': 'mp5sd', 'ump45': 'ump45',
+        'p90': 'p90', 'bizon': 'bizon', 'nova': 'nova', 'xm1014': 'xm1014', 'mag7': 'mag7',
+        'sawedoff': 'sawedoff', 'm249': 'm249', 'negev': 'negev', 'p250': 'p250',
+        'tec9': 'tec9', 'fiveseven': 'fiveseven', 'cz75a': 'cz75a',
+        'bayonet': 'bayonet', 'knife': 'knife', 'knifegg': 'knifegg',
         'knife_t': 'knife_t', 'knife_ct': 'knife', 'knife_butterfly': 'knife_butterfly',
-        'knife_karambit': 'knife_karambit', 'knife_m9_bayonet': 'knife_m9_bayonet', 'knife_flip': 'knife_flip',
-        'knife_gut': 'knife_gut', 'knife_falchion': 'knife_falchion', 'knife_tactical': 'knife_tactical',
-        'knife_survival_bowie': 'knife_survival_bowie', 'knife_stiletto': 'knife_stiletto',
-        'knife_ursus': 'knife_ursus', 'knife_widowmaker': 'knife_widowmaker', 'knife_canis': 'knife_canis',
+        'knife_karambit': 'knife_karambit', 'knife_m9_bayonet': 'knife_m9_bayonet',
+        'knife_flip': 'knife_flip', 'knife_gut': 'knife_gut', 'knife_falchion': 'knife_falchion',
+        'knife_tactical': 'knife_tactical', 'knife_survival_bowie': 'knife_survival_bowie',
+        'knife_stiletto': 'knife_stiletto', 'knife_ursus': 'knife_ursus', 
+        'knife_widowmaker': 'knife_widowmaker', 'knife_canis': 'knife_canis',
         'knife_cord': 'knife_cord', 'knife_outdoor': 'knife_outdoor', 'knife_skeleton': 'knife_skeleton',
         'knife_kukri': 'knife_kukri', 'knife_bowie': 'knife_bowie', 'knife_css': 'knife_css',
         'knife_gypsy_jackknife': 'knife_gypsy_jackknife', 'knife_push': 'knife_push',
@@ -1019,6 +1025,10 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeli
                                                         className="h-5 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all group-hover:scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" 
                                                         alt={k.weapon} 
                                                         title={k.weapon}
+                                                        onError={(e) => {
+                                                            e.currentTarget.src = 'https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/knife.svg';
+                                                            e.currentTarget.onerror = null;
+                                                        }}
                                                     />
                                                     {k.isHeadshot && (
                                                         <div className="w-9 h-9 rounded-[14px] bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-[inset_0_0_10px_rgba(244,63,94,0.1)] group-hover:scale-110 transition-transform">
@@ -1205,6 +1215,10 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
                                                                         className="h-5 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" 
                                                                         alt={ws.weapon_name}
                                                                         title={ws.weapon_name}
+                                                                        onError={(e) => {
+                                                                            e.currentTarget.src = 'https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/knife.svg';
+                                                                            e.currentTarget.onerror = null;
+                                                                        }}
                                                                     />
                                                                     <div className="flex items-center gap-1.5">
                                                                         <span className="text-[14px] font-black text-white italic">{ws.kills}</span>

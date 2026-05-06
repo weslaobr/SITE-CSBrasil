@@ -320,69 +320,32 @@ const MatchReportModal: React.FC<Props> = ({
             return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 17H7"/><path d="M17 21H9"/></svg>';
         }
         
-        
-        // Manual mapping for special cases to match the ChetdeJong/cs2-killfeed-generator naming
         const MAPPING: Record<string, string> = {
-            'm4a1_s': 'm4a1_silencer',
-            'm4a1-s': 'm4a1_silencer',
-            'm4a1_silencer': 'm4a1_silencer',
-            'm4a1': 'm4a1',
-            'm4a1_silencer_off': 'm4a1_silencer_off',
-            'usp_s': 'usp_silencer',
-            'usp-s': 'usp_silencer',
-            'usp_silencer': 'usp_silencer',
-            'usp_silencer_off': 'usp_silencer_off',
-            'deagle': 'deagle',
-            'desert_eagle': 'deagle',
-            'p2000': 'hkp2000',
-            'hkp2000': 'hkp2000',
-            'revolver': 'revolver',
-            'r8': 'revolver',
-            'scout': 'ssg08',
-            'ssg08': 'ssg08',
-            'hegrenade': 'hegrenade',
-            'smokegrenade': 'smokegrenade',
-            'smoke': 'smokegrenade',
-            'flashbang': 'flashbang',
-            'inferno': 'inferno',
-            'molotov': 'molotov',
-            'incgrenade': 'incgrenade',
-            'decoy': 'decoy',
-            'c4': 'planted_c4',
-            'planted_c4': 'planted_c4',
-            'zeus': 'taser',
-            'taser': 'taser',
-            'zeus27': 'taser',
-            'bayonet': 'bayonet',
-            'knife': 'knife',
-            'knifegg': 'knifegg',
-            'knife_t': 'knife_t',
-            'knife_ct': 'knife',
-            'knife_butterfly': 'knife_butterfly',
-            'knife_karambit': 'knife_karambit',
-            'knife_m9_bayonet': 'knife_m9_bayonet',
-            'knife_flip': 'knife_flip',
-            'knife_gut': 'knife_gut',
-            'knife_falchion': 'knife_falchion',
-            'knife_tactical': 'knife_tactical',
-            'knife_survival_bowie': 'knife_survival_bowie',
-            'knife_stiletto': 'knife_stiletto',
-            'knife_ursus': 'knife_ursus',
-            'knife_widowmaker': 'knife_widowmaker',
-            'knife_canis': 'knife_canis',
-            'knife_cord': 'knife_cord',
-            'knife_outdoor': 'knife_outdoor',
-            'knife_skeleton': 'knife_skeleton',
-            'knife_kukri': 'knife_kukri',
-            'knife_bowie': 'knife_bowie',
-            'knife_css': 'knife_css',
-            'knife_gypsy_jackknife': 'knife_gypsy_jackknife',
-            'knife_push': 'knife_push',
-            'knife_twinblade': 'knife_twinblade',
-            'flashbang_assist': 'flashbang_assist',
+            'm4a1_s': 'm4a1_silencer', 'm4a1-s': 'm4a1_silencer', 'm4a1_silencer': 'm4a1_silencer', 
+            'usp_s': 'usp_silencer', 'usp-s': 'usp_silencer', 'usp_silencer': 'usp_silencer',
+            'deagle': 'deagle', 'desert_eagle': 'deagle', 'p2000': 'hkp2000', 'revolver': 'revolver',
+            'r8': 'revolver', 'scout': 'ssg08', 'ssg08': 'ssg08', 'hegrenade': 'hegrenade',
+            'flashbang': 'flashbang', 'smokegrenade': 'smokegrenade', 'smoke': 'smokegrenade',
+            'molotov': 'molotov', 'incgrenade': 'incgrenade', 'inferno': 'inferno', 'decoy': 'decoy',
+            'c4': 'planted_c4', 'planted_c4': 'planted_c4', 'zeus': 'taser', 'taser': 'taser',
+            'zeus27': 'taser', 'glock': 'glock', 'galilar': 'galilar', 'famas': 'famas',
+            'aug': 'aug', 'sg556': 'sg556', 'awp': 'awp', 'g3sg1': 'g3sg1', 'scar20': 'scar20',
+            'mac10': 'mac10', 'mp9': 'mp9', 'mp7': 'mp7', 'mp5sd': 'mp5sd', 'ump45': 'ump45',
+            'p90': 'p90', 'bizon': 'bizon', 'nova': 'nova', 'xm1014': 'xm1014', 'mag7': 'mag7',
+            'sawedoff': 'sawedoff', 'm249': 'm249', 'negev': 'negev', 'p250': 'p250',
+            'tec9': 'tec9', 'fiveseven': 'fiveseven', 'cz75a': 'cz75a',
+            'bayonet': 'bayonet', 'knife': 'knife', 'knifegg': 'knifegg',
+            'knife_t': 'knife_t', 'knife_ct': 'knife', 'knife_butterfly': 'knife_butterfly',
+            'knife_karambit': 'knife_karambit', 'knife_m9_bayonet': 'knife_m9_bayonet',
+            'knife_flip': 'knife_flip', 'knife_gut': 'knife_gut', 'knife_falchion': 'knife_falchion',
+            'knife_tactical': 'knife_tactical', 'knife_survival_bowie': 'knife_survival_bowie',
+            'knife_stiletto': 'knife_stiletto', 'knife_ursus': 'knife_ursus', 
+            'knife_widowmaker': 'knife_widowmaker', 'knife_canis': 'knife_canis',
+            'knife_cord': 'knife_cord', 'knife_outdoor': 'knife_outdoor', 'knife_skeleton': 'knife_skeleton',
+            'knife_kukri': 'knife_kukri', 'knife_bowie': 'knife_bowie', 'knife_css': 'knife_css',
+            'knife_gypsy_jackknife': 'knife_gypsy_jackknife', 'knife_push': 'knife_push',
+            'knife_twinblade': 'knife_twinblade', 'flashbang_assist': 'flashbang_assist',
         };
-
-
 
         const finalName = MAPPING[cleanName] || cleanName;
         return `https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/${finalName}.svg`;
@@ -1233,13 +1196,31 @@ const MatchReportModal: React.FC<Props> = ({
                                                                                 return (
                                                                                     <>
                                                                                         {myWeaponStr && myWeaponStr !== 'unknown' ? (
-                                                                                            <img src={weaponImg(myWeaponStr)} className="h-4 brightness-0 invert opacity-60" alt="" title={isVictorious ? "Sua Arma (Abate)" : "Sua Arma (Pré-Duelo)"} />
+                                                                                            <img 
+                                                                                                src={weaponImg(myWeaponStr)} 
+                                                                                                className="h-4 brightness-0 invert opacity-60" 
+                                                                                                alt="" 
+                                                                                                title={isVictorious ? "Sua Arma (Abate)" : "Sua Arma (Pré-Duelo)"}
+                                                                                                onError={(e) => {
+                                                                                                    e.currentTarget.src = 'https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/knife.svg';
+                                                                                                    e.currentTarget.onerror = null;
+                                                                                                }}
+                                                                                            />
                                                                                         ) : (
                                                                                             <span className="text-[10px] font-bold text-zinc-600 italic">?</span>
                                                                                         )}
                                                                                         <span className="text-[10px] font-black text-zinc-500 italic">VS</span>
                                                                                         {oppWeaponStr && oppWeaponStr !== 'unknown' ? (
-                                                                                            <img src={weaponImg(oppWeaponStr)} className="h-4 brightness-0 invert opacity-60" alt="" title={!isVictorious ? "Arma do Inimigo (Abate)" : "Arma do Inimigo (Pré-Duelo)"} />
+                                                                                            <img 
+                                                                                                src={weaponImg(oppWeaponStr)} 
+                                                                                                className="h-4 brightness-0 invert opacity-60" 
+                                                                                                alt="" 
+                                                                                                title={!isVictorious ? "Arma do Inimigo (Abate)" : "Arma do Inimigo (Pré-Duelo)"}
+                                                                                                onError={(e) => {
+                                                                                                    e.currentTarget.src = 'https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/knife.svg';
+                                                                                                    e.currentTarget.onerror = null;
+                                                                                                }}
+                                                                                            />
                                                                                         ) : (
                                                                                             <span className="text-[10px] font-bold text-zinc-600 italic">?</span>
                                                                                         )}
@@ -1584,7 +1565,16 @@ const MatchReportModal: React.FC<Props> = ({
                                             {/* Battle Info Block */}
                                             <div className="flex flex-col items-center gap-2 px-8 border-x border-white/[0.06] min-w-[160px]">
                                                 <div className="flex items-center gap-4">
-                                                    <img src={weaponImg(k.weapon)} className="h-4 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all group-hover:scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" alt={k.weapon} title={k.weapon} />
+                                                    <img 
+                                                        src={weaponImg(k.weapon)} 
+                                                        className="h-4 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all group-hover:scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" 
+                                                        alt={k.weapon} 
+                                                        title={k.weapon}
+                                                        onError={(e) => {
+                                                            e.currentTarget.src = 'https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/knife.svg';
+                                                            e.currentTarget.onerror = null;
+                                                        }}
+                                                    />
                                                     {k.isHeadshot && (
                                                         <div className="w-5 h-5 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-inner">
                                                             <Target size={10} strokeWidth={3} />
@@ -1776,7 +1766,15 @@ const MatchReportModal: React.FC<Props> = ({
                                                             return (
                                                                 <div key={i} className="flex flex-col gap-2 p-4 bg-zinc-900 border border-white/5 rounded-[24px] group-hover:border-white/10 transition-all hover:bg-zinc-800 shadow-sm min-w-[140px]">
                                                                     <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-1">
-                                                                        <img src={weaponImg(ws.weapon_name)} className="h-4 brightness-0 invert opacity-60 group-hover:opacity-100 transition-all" alt="" />
+                                                                        <img 
+                                                                            src={weaponImg(ws.weapon_name)} 
+                                                                            className="h-4 brightness-0 invert opacity-60 group-hover:opacity-100 transition-all" 
+                                                                            alt=""
+                                                                            onError={(e) => {
+                                                                                e.currentTarget.src = 'https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/knife.svg';
+                                                                                e.currentTarget.onerror = null;
+                                                                            }}
+                                                                        />
                                                                         <span className="text-xs font-black italic text-white">{ws.kills}K</span>
                                                                     </div>
                                                                     <div className="grid grid-cols-2 gap-x-4 gap-y-1">
