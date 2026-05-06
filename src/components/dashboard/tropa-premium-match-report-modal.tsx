@@ -121,13 +121,17 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
         return itn === '2' || tid === '2' || tid.toUpperCase() === 'T' || tid.toUpperCase() === 'B';
     };
 
-    const t1 = stats.filter(isTeam3);
-    const t2 = stats.filter(isTeam2);
-    // Jogadores sem time definido vão para o time com menos jogadores
+    const t1Initial = stats.filter(isTeam3);
+    const t2Initial = stats.filter(isTeam2);
     const unassigned = stats.filter(p => !isTeam3(p) && !isTeam2(p));
-    if (unassigned.length > 0) {
-        console.warn('[Modal] Jogadores sem time definido:', unassigned.map(p => p.name));
-    }
+
+    const t1 = [...t1Initial];
+    const t2 = [...t2Initial];
+
+    unassigned.forEach(p => {
+        if (t1.length <= t2.length) t1.push(p);
+        else t2.push(p);
+    });
 
     // Usuário sempre "MEU TIME" primeiro
     const userInT2 = t2.some(p => p.is_user);
@@ -141,13 +145,23 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
     const isLoss = resultStr === 'loss' || resultStr === 'derrota';
 
     return (
-        <div className="fixed inset-0 z-[999] flex items-start justify-center p-4 md:p-8 overflow-y-auto">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={onClose} className="absolute inset-0 bg-black/90 backdrop-blur-xl" />
+        <div className="fixed inset-0 z-[999] overflow-y-auto" onClick={onClose}>
+            {/* Backdrop fixo e borrado */}
+            <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/95 backdrop-blur-2xl" 
+            />
 
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-6xl h-fit my-8 bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl flex flex-col">
+            <div className="relative min-h-screen flex items-start justify-center p-4 md:p-12">
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative w-full max-w-6xl bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl flex flex-col overflow-hidden"
+                >
 
                 {/* HEADER */}
                 <div className="relative h-56 shrink-0 overflow-hidden">
@@ -239,68 +253,103 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                                 )}
 
                                 {tab === 'combate' && (
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                        {/* Entry Kills & Clutches */}
-                                        <div className="bg-zinc-900/40 p-6 rounded-3xl border border-white/5">
-                                            <h3 className="text-xs font-black uppercase tracking-widest text-yellow-500 mb-5 flex items-center gap-2"><Zap size={16} /> Impacto e Abertura</h3>
-                                            <div className="space-y-3">
-                                                {[...myTeam].sort((a,b) => (b.fk||0)-(a.fk||0)).map((p, i) => (
-                                                    <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl">
-                                                        <div className="flex items-center gap-3">
-                                                            <img src={p.avatar} onError={(e: any) => e.target.src='/img/default-avatar.png'} className="w-9 h-9 rounded-xl object-cover" alt="" />
-                                                            <div>
-                                                                <div className="text-xs font-black text-white">{p.name}</div>
-                                                                <div className="text-[10px] text-zinc-600 font-bold">{p.rating?.toFixed(2)} RT</div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-6">
-                                                            {[['ENTRY',   p.fk||0,       'text-emerald-400'],
-                                                              ['CLUTCH',  p.clutches||0, 'text-yellow-400'],
-                                                              ['TRADES',  p.trades||0,   'text-blue-400']].map(([lbl, val, cls]) => (
-                                                                <div key={lbl as string} className="flex flex-col items-center">
-                                                                    <span className="text-[9px] text-zinc-600 font-bold mb-0.5">{lbl}</span>
-                                                                    <span className={`text-sm font-black ${cls}`}>{val}</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                    <div className="space-y-12">
+                                        {/* Impacto e Abertura - Agora para os dois times */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            {/* MEU TIME */}
+                                            <div className="bg-zinc-900/40 p-6 rounded-3xl border border-emerald-500/10 relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 p-4 opacity-5"><Zap size={80} /></div>
+                                                <h3 className="text-xs font-black uppercase tracking-widest text-emerald-400 mb-6 flex items-center gap-2">
+                                                    <Zap size={16} /> Impacto e Abertura: Meu Time
+                                                </h3>
+                                                <div className="space-y-3">
+                                                    {[...myTeam].sort((a,b) => (b.fk||0)-(a.fk||0)).map((p, i) => (
+                                                        <ImpactRow key={i} p={p} />
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* INIMIGOS */}
+                                            <div className="bg-zinc-900/40 p-6 rounded-3xl border border-red-500/10 relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 p-4 opacity-5"><Zap size={80} /></div>
+                                                <h3 className="text-xs font-black uppercase tracking-widest text-red-400 mb-6 flex items-center gap-2">
+                                                    <Zap size={16} /> Impacto e Abertura: Inimigos
+                                                </h3>
+                                                <div className="space-y-3">
+                                                    {[...enemyTeam].sort((a,b) => (b.fk||0)-(a.fk||0)).map((p, i) => (
+                                                        <ImpactRow key={i} p={p} />
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
-                                        {/* Precisão */}
-                                        <div className="bg-zinc-900/40 p-6 rounded-3xl border border-white/5">
-                                            <h3 className="text-xs font-black uppercase tracking-widest text-purple-400 mb-5 flex items-center gap-2"><Target size={16} /> Precisão de Elite</h3>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                {myTeam.slice(0,4).map((p, i) => (
-                                                    <div key={i} className="p-4 bg-white/5 rounded-2xl flex flex-col items-center">
-                                                        <img src={p.avatar} onError={(e: any) => e.target.src='/img/default-avatar.png'} className="w-11 h-11 rounded-xl object-cover mb-2" alt="" />
-                                                        <div className="text-[10px] font-black text-white mb-2 truncate w-full text-center">{p.name}</div>
-                                                        <div className="grid grid-cols-2 gap-1.5 w-full">
-                                                            <div className="bg-black/40 p-2 rounded-xl text-center">
-                                                                <div className="text-[8px] text-zinc-600 font-bold">HS%</div>
-                                                                <div className="text-xs font-black text-rose-400">{((p.accuracy_head||0)*100).toFixed(0)}%</div>
-                                                            </div>
-                                                            <div className="bg-black/40 p-2 rounded-xl text-center">
-                                                                <div className="text-[8px] text-zinc-600 font-bold">ADR</div>
-                                                                <div className="text-xs font-black text-amber-400">{(p.adr||0).toFixed(0)}</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
+
+                                        {/* Precisão de Elite - Agora para os dois times */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            {/* MEU TIME */}
+                                            <div className="bg-zinc-900/40 p-6 rounded-3xl border border-emerald-500/10">
+                                                <h3 className="text-xs font-black uppercase tracking-widest text-emerald-400 mb-6 flex items-center gap-2">
+                                                    <Target size={16} /> Precisão de Elite: Meu Time
+                                                </h3>
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                                                    {myTeam.map((p, i) => (
+                                                        <PrecisionCard key={i} p={p} />
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* INIMIGOS */}
+                                            <div className="bg-zinc-900/40 p-6 rounded-3xl border border-red-500/10">
+                                                <h3 className="text-xs font-black uppercase tracking-widest text-red-400 mb-6 flex items-center gap-2">
+                                                    <Target size={16} /> Precisão de Elite: Inimigos
+                                                </h3>
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                                                    {enemyTeam.map((p, i) => (
+                                                        <PrecisionCard key={i} p={p} />
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
                                 {tab === 'utilitarios' && (
-                                    <div className="space-y-8">
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            <StatCard title="Dano de HE"      value={myTeam.reduce((a,p)=>a+(p.he_damage||0),0)}      icon={<Zap className="text-orange-400" size={16}/>} />
-                                            <StatCard title="Inimigos Cegos"  value={myTeam.reduce((a,p)=>a+(p.enemies_flashed||0),0)} icon={<Eye className="text-yellow-400" size={16}/>} />
-                                            <StatCard title="Tempo Cegueira"  value={`${myTeam.reduce((a,p)=>a+(p.blind_time||0),0).toFixed(1)}s`} icon={<Clock className="text-blue-400" size={16}/>} />
-                                            <StatCard title="Flash Assists"   value={myTeam.reduce((a,p)=>a+(p.flash_assists||0),0)}  icon={<Star className="text-purple-400" size={16}/>} />
+                                    <div className="space-y-12">
+                                        <div className="space-y-6">
+                                            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-emerald-500 flex items-center gap-3">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                Resumo de Utilidade: MEU TIME
+                                            </h3>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                <StatCard title="Dano de HE"      value={myTeam.reduce((a,p)=>a+(p.he_damage||0),0)}      icon={<Zap className="text-orange-400" size={16}/>} />
+                                                <StatCard title="Inimigos Cegos"  value={myTeam.reduce((a,p)=>a+(p.enemies_flashed||0),0)} icon={<Eye className="text-yellow-400" size={16}/>} />
+                                                <StatCard title="Tempo Cegueira"  value={`${myTeam.reduce((a,p)=>a+(p.blind_time||0),0).toFixed(1)}s`} icon={<Clock className="text-blue-400" size={16}/>} />
+                                                <StatCard title="Flash Assists"   value={myTeam.reduce((a,p)=>a+(p.flash_assists||0),0)}  icon={<Star className="text-purple-400" size={16}/>} />
+                                            </div>
+                                            <TeamTable title="EFICIÊNCIA TÁTICA" players={myTeam} isEnemy={false} variant="utility" />
                                         </div>
-                                        <TeamTable title="EFICIÊNCIA TÁTICA" players={myTeam} isEnemy={false} variant="utility" />
+
+                                        <div className="space-y-6 opacity-80">
+                                            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-zinc-500 flex items-center gap-3">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
+                                                Resumo de Utilidade: ADVERSÁRIOS
+                                            </h3>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                <StatCard title="Dano de HE"      value={enemyTeam.reduce((a,p)=>a+(p.he_damage||0),0)}      icon={<Zap className="text-orange-400/50" size={16}/>} />
+                                                <StatCard title="Inimigos Cegos"  value={enemyTeam.reduce((a,p)=>a+(p.enemies_flashed||0),0)} icon={<Eye className="text-yellow-400/50" size={16}/>} />
+                                                <StatCard title="Tempo Cegueira"  value={`${enemyTeam.reduce((a,p)=>a+(p.blind_time||0),0).toFixed(1)}s`} icon={<Clock className="text-blue-400/50" size={16}/>} />
+                                                <StatCard title="Flash Assists"   value={enemyTeam.reduce((a,p)=>a+(p.flash_assists||0),0)}  icon={<Star className="text-purple-400/50" size={16}/>} />
+                                            </div>
+                                            <TeamTable title="EFICIÊNCIA TÁTICA" players={enemyTeam} isEnemy={true} variant="utility" />
+                                        </div>
+
+                                        {/* Utility Timeline */}
+                                        <div className="pt-8 border-t border-white/5">
+                                            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-yellow-500 flex items-center gap-3 mb-8">
+                                                <BarChart2 size={16} />
+                                                Linha do Tempo: Utilidade por Rodada
+                                            </h3>
+                                            <UtilityTimeline timeline={match?.utility_timeline} players={stats} />
+                                        </div>
                                     </div>
                                 )}
                             </motion.div>
@@ -490,5 +539,118 @@ const StatCard = ({ title, value, icon }: { title: string; value: any; icon: any
         <div className="text-3xl font-black italic tracking-tighter text-white">{value}</div>
     </div>
 );
+
+const ImpactRow = ({ p }: { p: any }) => (
+    <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
+        <div className="flex items-center gap-3">
+            <img src={p.avatar} onError={(e: any) => e.target.src='/img/default-avatar.png'} className="w-9 h-9 rounded-xl object-cover" alt="" />
+            <div>
+                <div className="text-xs font-black text-white">{p.name}</div>
+                <div className="text-[10px] text-zinc-600 font-bold">{p.rating?.toFixed(2)} RT</div>
+            </div>
+        </div>
+        <div className="flex gap-6">
+            {[['ENTRY',   p.fk||0,       'text-emerald-400'],
+              ['CLUTCH',  p.clutches||0, 'text-yellow-400'],
+              ['TRADES',  p.trades||0,   'text-blue-400']].map(([lbl, val, cls]) => (
+                <div key={lbl as string} className="flex flex-col items-center">
+                    <span className="text-[9px] text-zinc-600 font-bold mb-0.5">{lbl}</span>
+                    <span className={`text-sm font-black ${cls}`}>{val}</span>
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+const PrecisionCard = ({ p }: { p: any }) => (
+    <div className="p-3 bg-white/5 rounded-2xl flex flex-col items-center border border-white/5 hover:border-white/10 transition-all">
+        <img src={p.avatar} onError={(e: any) => e.target.src='/img/default-avatar.png'} className="w-10 h-10 rounded-xl object-cover mb-2" alt="" />
+        <div className="text-[9px] font-black text-white mb-2 truncate w-full text-center">{p.name}</div>
+        <div className="flex flex-col gap-1 w-full">
+            <div className="bg-black/40 p-1.5 rounded-lg text-center">
+                <div className="text-[7px] text-zinc-600 font-bold uppercase leading-none">HS%</div>
+                <div className="text-[10px] font-black text-rose-400 mt-1">{((p.accuracy_head||0)*100).toFixed(0)}%</div>
+            </div>
+            <div className="bg-black/40 p-1.5 rounded-lg text-center">
+                <div className="text-[7px] text-zinc-600 font-bold uppercase leading-none">ADR</div>
+                <div className="text-[10px] font-black text-amber-400 mt-1">{(p.adr||0).toFixed(0)}</div>
+            </div>
+        </div>
+    </div>
+);
+
+const UtilityTimeline = ({ timeline, players }: { timeline: any; players: any[] }) => {
+    if (!timeline || Object.keys(timeline).length === 0) {
+        return (
+            <div className="bg-zinc-900/20 p-12 rounded-3xl border border-dashed border-white/5 flex flex-col items-center justify-center gap-3">
+                <BarChart2 size={32} className="text-zinc-800" />
+                <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest text-center">
+                    Linha do tempo não disponível para esta partida.<br />
+                    <span className="text-zinc-700 font-bold normal-case">Requer processamento completo da demo.</span>
+                </p>
+            </div>
+        );
+    }
+
+    const rounds = Object.keys(timeline).map(Number).sort((a, b) => a - b);
+    const getPlayerAvatar = (sid: string) => players.find(p => String(p.steam64_id) === sid)?.avatar || '/img/default-avatar.png';
+    const getPlayerName = (sid: string) => players.find(p => String(p.steam64_id) === sid)?.name || 'Desconhecido';
+
+    const getGrenadeIcon = (type: string) => {
+        const t = (type || '').toLowerCase();
+        if (t.includes('flash')) return '⚡';
+        if (t.includes('he') || t.includes('grenade')) return '💥';
+        if (t.includes('smoke')) return '💨';
+        if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return '🔥';
+        if (t.includes('decoy')) return '🎯';
+        return '❓';
+    };
+
+    const getGrenadeClass = (type: string) => {
+        const t = (type || '').toLowerCase();
+        if (t.includes('flash')) return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/20';
+        if (t.includes('he') || t.includes('grenade')) return 'bg-red-500/20 text-red-500 border-red-500/20';
+        if (t.includes('smoke')) return 'bg-blue-500/20 text-blue-400 border-blue-500/20';
+        if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return 'bg-orange-500/20 text-orange-500 border-orange-500/20';
+        return 'bg-zinc-500/10 text-zinc-500 border-white/10';
+    };
+
+    return (
+        <div className="space-y-4">
+            {rounds.map(rNum => (
+                <div key={rNum} className="flex gap-4 group">
+                    <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-white/5 flex flex-col items-center justify-center shrink-0 group-hover:border-yellow-500/50 transition-colors shadow-lg">
+                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter leading-none mb-1">RD</span>
+                        <span className="text-lg font-black text-white italic leading-none">{rNum}</span>
+                    </div>
+                    <div className="flex-1 min-w-0 bg-zinc-900/40 border border-white/5 rounded-2xl p-3 flex items-center gap-3 overflow-x-auto no-scrollbar">
+                        {timeline[rNum].length === 0 ? (
+                            <span className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest px-4 italic">Nenhuma utilidade usada neste round</span>
+                        ) : (
+                            timeline[rNum].map((ge: any, idx: number) => (
+                                <div key={idx} className={`flex items-center gap-2 p-1.5 pr-3 rounded-xl border ${getGrenadeClass(ge.type)} shrink-0 shadow-sm hover:scale-105 transition-transform`}>
+                                    <img src={getPlayerAvatar(ge.steamId)} className="w-5 h-5 rounded-md object-cover border border-black/20" alt="" />
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px]">{getGrenadeIcon(ge.type)}</span>
+                                            <span className="text-[9px] font-black uppercase tracking-tighter whitespace-nowrap">{ge.type?.replace('Eq', '')}</span>
+                                        </div>
+                                        <div className="text-[7px] font-bold opacity-60 uppercase truncate max-w-[60px]">{getPlayerName(ge.steamId)}</div>
+                                    </div>
+                                    {ge.blind_duration > 0 && (
+                                        <div className="ml-1 pl-2 border-l border-white/10 flex flex-col items-center">
+                                            <span className="text-[7px] font-black text-yellow-500 leading-none">{ge.blind_duration.toFixed(1)}s</span>
+                                            <span className="text-[6px] font-bold opacity-40 uppercase leading-none mt-0.5">Blind</span>
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
 
 export default TropaPremiumMatchReportModal;

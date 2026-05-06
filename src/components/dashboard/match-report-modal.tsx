@@ -542,8 +542,23 @@ const MatchReportModal: React.FC<Props> = ({
             });
             const ids = Object.keys(map).filter(k => k !== 'x');
             let t1: any[] = [], t2: any[] = [];
-            if (ids.length >= 2) { ids.sort(); t1 = map[ids[0]]; t2 = map[ids[1]]; }
-            else { t1 = meta.stats.slice(0,5); t2 = meta.stats.slice(5,10); }
+            if (ids.length >= 2) { 
+                ids.sort(); 
+                t1 = map[ids[0]]; 
+                t2 = map[ids[1]]; 
+                // Add unassigned players to the smaller team
+                if (map['x']) {
+                    map['x'].forEach(p => {
+                        if (t1.length <= t2.length) t1.push(p);
+                        else t2.push(p);
+                    });
+                }
+            }
+            else { 
+                const allStats = meta.stats || [];
+                t1 = allStats.slice(0, Math.ceil(allStats.length / 2)); 
+                t2 = allStats.slice(Math.ceil(allStats.length / 2)); 
+            }
             if (t2.some(isUserP)) { [t1, t2] = [t2, t1]; }
             return {
                 t1: t1.map((p:any)=>normalizeP(p,isUserP(p), 'CT')).sort(byKills),
@@ -1860,19 +1875,24 @@ const MatchReportModal: React.FC<Props> = ({
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-start justify-center p-1 md:p-2 overflow-y-auto">
+                <div className="fixed inset-0 z-[100] overflow-y-auto" onClick={onClose}>
+                    {/* Backdrop fixo e borrado */}
                     <motion.div
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="absolute inset-0 bg-black/90 backdrop-blur-md"
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/95 backdrop-blur-xl"
                     />
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.96, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.96, y: 20 }}
-                        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                        className="relative w-full max-w-[1350px] my-4 bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.85)] overflow-x-hidden flex flex-col"
-                    >
+
+                    <div className="relative min-h-screen flex items-start justify-center p-1 md:p-12">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.96, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, y: 20 }}
+                            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative w-full max-w-[1350px] bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col"
+                        >
                         {isProcessing && (
                             <div className="absolute inset-0 z-[60] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center text-center p-8">
                                 <motion.div 
@@ -2188,6 +2208,17 @@ const MatchReportModal: React.FC<Props> = ({
                                             })()}
                                         </div>
                                     )}
+                                    {tab === 'utilitarios' && (
+                                        <div className="mt-8 pt-8 border-t border-white/5">
+                                            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-yellow-500 flex items-center gap-3 mb-8 px-4">
+                                                <BarChart2 size={16} />
+                                                Linha do Tempo: Utilidade por Rodada
+                                            </h3>
+                                            <div className="px-4">
+                                                <UtilityTimeline timeline={currentMatch?.utility_timeline || currentMatch?.metadata?.utility_timeline} players={allPlayers} />
+                                            </div>
+                                        </div>
+                                    )}
                                 </motion.div>
                             )}
 
@@ -2213,6 +2244,80 @@ const MatchReportModal: React.FC<Props> = ({
                 </div>
             )}
         </AnimatePresence>
+    );
+};
+
+const UtilityTimeline = ({ timeline, players }: { timeline: any; players: any[] }) => {
+    if (!timeline || Object.keys(timeline).length === 0) {
+        return (
+            <div className="bg-zinc-900/20 p-12 rounded-3xl border border-dashed border-white/5 flex flex-col items-center justify-center gap-3">
+                <BarChart2 size={32} className="text-zinc-800" />
+                <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest text-center">
+                    Linha do tempo não disponível para esta partida.<br />
+                    <span className="text-zinc-700 font-bold normal-case">Requer processamento completo da demo.</span>
+                </p>
+            </div>
+        );
+    }
+
+    const rounds = Object.keys(timeline).map(Number).sort((a, b) => a - b);
+    const getPlayerAvatar = (sid: string) => players.find(p => String(p.steamId || p.steam64_id) === sid)?.avatar_url || '/img/default-avatar.png';
+    const getPlayerName = (sid: string) => players.find(p => String(p.steamId || p.steam64_id) === sid)?.nickname || players.find(p => String(p.steamId || p.steam64_id) === sid)?.name || 'Desconhecido';
+
+    const getGrenadeIcon = (type: string) => {
+        const t = (type || '').toLowerCase();
+        if (t.includes('flash')) return '⚡';
+        if (t.includes('he') || t.includes('grenade')) return '💥';
+        if (t.includes('smoke')) return '💨';
+        if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return '🔥';
+        if (t.includes('decoy')) return '🎯';
+        return '❓';
+    };
+
+    const getGrenadeClass = (type: string) => {
+        const t = (type || '').toLowerCase();
+        if (t.includes('flash')) return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/20';
+        if (t.includes('he') || t.includes('grenade')) return 'bg-red-500/20 text-red-500 border-red-500/20';
+        if (t.includes('smoke')) return 'bg-blue-500/20 text-blue-400 border-blue-500/20';
+        if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return 'bg-orange-500/20 text-orange-500 border-orange-500/20';
+        return 'bg-zinc-500/10 text-zinc-500 border-white/10';
+    };
+
+    return (
+        <div className="space-y-4">
+            {rounds.map(rNum => (
+                <div key={rNum} className="flex gap-4 group">
+                    <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-white/5 flex flex-col items-center justify-center shrink-0 group-hover:border-yellow-500/50 transition-colors shadow-lg">
+                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter leading-none mb-1">RD</span>
+                        <span className="text-lg font-black text-white italic leading-none">{rNum}</span>
+                    </div>
+                    <div className="flex-1 min-w-0 bg-zinc-900/40 border border-white/5 rounded-2xl p-3 flex items-center gap-3 overflow-x-auto no-scrollbar">
+                        {timeline[rNum].length === 0 ? (
+                            <span className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest px-4 italic">Nenhuma utilidade usada neste round</span>
+                        ) : (
+                            timeline[rNum].map((ge: any, idx: number) => (
+                                <div key={idx} className={`flex items-center gap-2 p-1.5 pr-3 rounded-xl border ${getGrenadeClass(ge.type)} shrink-0 shadow-sm hover:scale-105 transition-transform`}>
+                                    <img src={getPlayerAvatar(ge.steamId)} className="w-5 h-5 rounded-md object-cover border border-black/20" alt="" />
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px]">{getGrenadeIcon(ge.type)}</span>
+                                            <span className="text-[9px] font-black uppercase tracking-tighter whitespace-nowrap">{ge.type?.replace('Eq', '')}</span>
+                                        </div>
+                                        <div className="text-[7px] font-bold opacity-60 uppercase truncate max-w-[60px]">{getPlayerName(ge.steamId)}</div>
+                                    </div>
+                                    {ge.blind_duration > 0 && (
+                                        <div className="ml-1 pl-2 border-l border-white/10 flex flex-col items-center">
+                                            <span className="text-[7px] font-black text-yellow-500 leading-none">{ge.blind_duration.toFixed(1)}s</span>
+                                            <span className="text-[6px] font-bold opacity-40 uppercase leading-none mt-0.5">Blind</span>
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            ))}
+        </div>
     );
 };
 

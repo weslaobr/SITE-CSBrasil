@@ -207,6 +207,27 @@ export async function GET(
                 SELECT * FROM public.tracker_clutch_events WHERE match_id = ${effectiveMatchId}
             `.catch(() => []) as any[];
 
+            const trackerGrenadeEvents = await prisma.$queryRaw`
+                SELECT ge.*, r.round_number 
+                FROM public.tracker_grenade_events ge
+                JOIN public.tracker_rounds r ON ge.round_id = r.round_id
+                WHERE ge.match_id = ${effectiveMatchId}
+                ORDER BY r.round_number, ge.tick
+            `.catch(() => []) as any[];
+
+            // Group utility by round for timeline
+            const utilityTimeline: Record<number, any[]> = {};
+            trackerGrenadeEvents.forEach(ge => {
+                const rNum = ge.round_number;
+                if (!utilityTimeline[rNum]) utilityTimeline[rNum] = [];
+                utilityTimeline[rNum].push({
+                    type: ge.grenade_type,
+                    steamId: String(ge.steamid64),
+                    tick: ge.tick,
+                    blind_duration: ge.blind_duration
+                });
+            });
+
             // Use the already fetched trackerPlayers instead of querying again
             const trackerMatchPlayers = trackerPlayers.map(tp => ({
                 ...tp,
@@ -315,12 +336,14 @@ export async function GET(
                 demo_url: localMeta.demoUrl || null,
                 weapon_stats: trackerWeaponStats,
                 clutch_events: sanitizedClutches,
+                utility_timeline: utilityTimeline,
                 metadata: {
                     ...localMeta,
                     team_2_score: localMatch.scoreB ?? 0,
                     team_3_score: localMatch.scoreA ?? 0,
                     weapon_stats: trackerWeaponStats,
                     clutch_events: sanitizedClutches,
+                    utility_timeline: utilityTimeline,
                 },
                 stats: localStats
             };
