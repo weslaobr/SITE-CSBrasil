@@ -379,10 +379,22 @@ export async function GET(
                 }
             }
 
+            // Calculate HE Damage from events
+            const heDamageMap: Record<string, number> = {};
+            trackerDamageEvents.forEach(de => {
+                const weapon = (de.weapon || '').toLowerCase();
+                if (weapon.includes('hegrenade') || weapon.includes('grenade')) {
+                    const sid = String(de.attacker_steamid);
+                    heDamageMap[sid] = (heDamageMap[sid] || 0) + (de.hp_damage || 0);
+                }
+            });
+
             // Merge advanced stats from tracker into localStats
             localStats = localStats.map(p => {
-                const tp = trackerMatchPlayers.find(x => String(x.steamid64) === String(p.steam64_id));
-                const estimatedTtd = calculatedAvgTTD[String(p.steam64_id)] || 80;
+                const sid = String(p.steam64_id);
+                const tp = trackerMatchPlayers.find(x => String(x.steamid64) === sid);
+                const estimatedTtd = calculatedAvgTTD[sid] || 80;
+                const calculatedHeDmg = heDamageMap[sid] || 0;
 
                 if (tp) {
                     return {
@@ -396,11 +408,12 @@ export async function GET(
                         flash_thrown: tp.flash_thrown,
                         smokes_thrown: tp.smokes_thrown,
                         molotovs_thrown: tp.molotovs_thrown,
+                        he_damage: calculatedHeDmg || tp.he_damage || 0,
                         eloChange: tp.elo_change,
                         eloAfter: tp.elo_after
                     };
                 }
-                return { ...p, avg_ttd: estimatedTtd };
+                return { ...p, avg_ttd: estimatedTtd, he_damage: calculatedHeDmg };
             });
 
             // Inferir nome do mapa a partir da URL da demo se estiver como "Desconhecido"

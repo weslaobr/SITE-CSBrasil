@@ -2523,7 +2523,7 @@ const MatchReportModal: React.FC<Props> = ({
                             exit={{ opacity: 0, scale: 0.96, y: 20 }}
                             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                             onClick={(e) => e.stopPropagation()}
-                            className="relative w-full max-w-[1350px] bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col"
+                            className="relative w-full max-w-[1350px] bg-[#0c0f15] border border-white/10 rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.85)] flex flex-col"
                         >
                         {isProcessing && (
                             <div className="absolute inset-0 z-[60] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center text-center p-8">

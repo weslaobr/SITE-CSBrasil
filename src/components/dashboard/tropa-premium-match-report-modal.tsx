@@ -160,7 +160,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
                     onClick={(e) => e.stopPropagation()}
-                    className="relative w-full max-w-6xl bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl overflow-hidden flex flex-col"
+                    className="relative w-full max-w-6xl bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl flex flex-col"
                 >
 
                 {/* HEADER */}
