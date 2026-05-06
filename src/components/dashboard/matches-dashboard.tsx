@@ -30,8 +30,7 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import MatchReportModal from './match-report-modal';
-import TropaPremiumMatchReportModal from './tropa-premium-match-report-modal';
+import MatchModalManager from './match-modal-manager';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 
@@ -1080,60 +1079,18 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                 )}
             </main>
 
-            {(() => {
-                if (!selectedMatch) return null;
-
-                // A partida é "local/analyzer" se:
-                // 1. O source indica processamento local (mix, manual, matchmaking do analisador)
-                // 2. O ID não é um UUID do Leetify (que contém hífens no formato uuid v4)
-                // 3. Não tem externalId com prefixo "leetify-" ou "faceit-"
-                const src = (selectedMatch.source || '').toLowerCase();
-                const extId = (selectedMatch.externalId || '').toLowerCase();
-                const isLeetify = extId.includes('leetify') || (selectedMatch.metadata?.data_source || '').toLowerCase().includes('leetify');
-                const isFaceitMatch = src === 'faceit' || extId.includes('faceit');
-                const isLocalAnalyzer = !isLeetify && !isFaceitMatch && (
-                    src === 'mix' ||
-                    src === 'manual' ||
-                    src === 'matchmaking' ||
-                    src === 'demo-analyzer' ||
-                    src === 'demo' ||
-                    src === 'local' ||
-                    selectedMatch.id?.startsWith('manual_') ||
-                    // IDs locais são hash curtos sem o formato UUID do Leetify
-                    (selectedMatch.id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedMatch.id) && !selectedMatch.id.includes('leetify'))
-                );
-
-                const resolvedSteamId = currentUserSteamId || (session as any)?.user?.steamId;
-
-                if (isLocalAnalyzer) {
-                    return (
-                        <TropaPremiumMatchReportModal
-                            matchId={selectedMatch.id || null}
-                            isOpen={isModalOpen}
-                            onClose={() => {
-                                setIsModalOpen(false);
-                                setSelectedMatch(null);
-                            }}
-                            userSteamId={resolvedSteamId}
-                            userNickname={currentFaceit}
-                        />
-                    );
-                }
-
-                return (
-                    <MatchReportModal
-                        match={null}
-                        matchId={selectedMatch?.externalId?.replace('leetify-', '') || selectedMatch?.id || null}
-                        isOpen={isModalOpen}
-                        onClose={() => {
-                            setIsModalOpen(false);
-                            setSelectedMatch(null);
-                        }}
-                        userSteamId={currentUserSteamId}
-                        userNickname={currentFaceit}
-                    />
-                );
-            })()}
+            <MatchModalManager
+                match={selectedMatch}
+                matchId={selectedMatch?.id || null}
+                isOpen={isModalOpen}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setSelectedMatch(null);
+                }}
+                userSteamId={currentUserSteamId || (session as any)?.user?.steamId}
+                userNickname={currentFaceit}
+                onSync={onSync}
+            />
         </div>
     );
 };
