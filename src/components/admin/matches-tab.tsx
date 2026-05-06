@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import MatchReportModal from '../dashboard/match-report-modal';
+import MatchModalManager from '../dashboard/match-modal-manager';
 
 interface MatchPlayer {
     id: string;
@@ -430,7 +430,7 @@ export default function MatchesTab() {
                 )}
             </div>
 
-            <MatchReportModal 
+            <MatchModalManager 
                 match={selectedMatch}
                 matchId={selectedMatch?.id}
                 isOpen={isModalOpen}
