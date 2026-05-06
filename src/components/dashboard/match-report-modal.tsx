@@ -321,31 +321,44 @@ const MatchReportModal: React.FC<Props> = ({
         }
         
         const MAPPING: Record<string, string> = {
-            'ak47': 'ak47', 'ak-47': 'ak47',
-            'm4a4': 'm4a1', 'm4a1_s': 'm4a1_silencer', 'm4a1-s': 'm4a1_silencer', 'm4a1_silencer': 'm4a1_silencer', 
-            'usp_s': 'usp_silencer', 'usp-s': 'usp_silencer', 'usp_silencer': 'usp_silencer',
-            'deagle': 'deagle', 'desert_eagle': 'deagle', 'p2000': 'hkp2000', 'revolver': 'revolver',
-            'r8': 'revolver', 'scout': 'ssg08', 'ssg08': 'ssg08', 'hegrenade': 'hegrenade',
-            'flashbang': 'flashbang', 'smokegrenade': 'smokegrenade', 'smoke': 'smokegrenade',
+            // Rifles
+            'ak47': 'ak47', 'ak-47': 'ak47', 'ak_47': 'ak47',
+            'm4a4': 'm4a1', 'm4a1': 'm4a1', 
+            'm4a1_s': 'm4a1_silencer', 'm4a1-s': 'm4a1_silencer', 'm4a1_silencer': 'm4a1_silencer', 
+            'famas': 'famas', 'galilar': 'galilar', 'aug': 'aug', 'sg556': 'sg556', 'sg553': 'sg556',
+            'awp': 'awp', 'ssg08': 'ssg08', 'scout': 'ssg08', 'g3sg1': 'g3sg1', 'scar20': 'scar20',
+            
+            // SMGs
+            'mac10': 'mac10', 'mp9': 'mp9', 'mp7': 'mp7', 'mp5sd': 'mp5sd', 'mp5': 'mp5sd',
+            'ump45': 'ump45', 'p90': 'p90', 'bizon': 'bizon',
+            
+            // Heavy
+            'nova': 'nova', 'xm1014': 'xm1014', 'mag7': 'mag7', 'sawedoff': 'sawedoff',
+            'm249': 'm249', 'negev': 'negev',
+            
+            // Pistols
+            'glock': 'glock', 'usp_s': 'usp_silencer', 'usp-s': 'usp_silencer', 'usp_silencer': 'usp_silencer',
+            'hkp2000': 'hkp2000', 'p2000': 'hkp2000', 'p250': 'p250', 'tec9': 'tec9', 
+            'fiveseven': 'fiveseven', 'cz75a': 'cz75a', 'deagle': 'deagle', 'desert_eagle': 'deagle', 
+            'revolver': 'revolver', 'r8': 'revolver', 'elite': 'elite', 'dualies': 'elite', 'duals': 'elite',
+            
+            // Utility & Others
+            'hegrenade': 'hegrenade', 'flashbang': 'flashbang', 'smokegrenade': 'smokegrenade', 'smoke': 'smokegrenade',
             'molotov': 'molotov', 'incgrenade': 'incgrenade', 'inferno': 'inferno', 'decoy': 'decoy',
-            'c4': 'planted_c4', 'planted_c4': 'planted_c4', 'zeus': 'taser', 'taser': 'taser',
-            'zeus27': 'taser', 'glock': 'glock', 'galilar': 'galilar', 'famas': 'famas',
-            'aug': 'aug', 'sg556': 'sg556', 'awp': 'awp', 'g3sg1': 'g3sg1', 'scar20': 'scar20',
-            'mac10': 'mac10', 'mp9': 'mp9', 'mp7': 'mp7', 'mp5sd': 'mp5sd', 'ump45': 'ump45',
-            'p90': 'p90', 'bizon': 'bizon', 'nova': 'nova', 'xm1014': 'xm1014', 'mag7': 'mag7',
-            'sawedoff': 'sawedoff', 'm249': 'm249', 'negev': 'negev', 'p250': 'p250',
-            'tec9': 'tec9', 'fiveseven': 'fiveseven', 'cz75a': 'cz75a', 'elite': 'elite', 'dualies': 'elite', 'duals': 'elite',
-            'bayonet': 'bayonet', 'knife': 'knife', 'knifegg': 'knifegg',
-            'knife_t': 'knife_t', 'knife_ct': 'knife', 'knife_butterfly': 'knife_butterfly',
-            'knife_karambit': 'knife_karambit', 'knife_m9_bayonet': 'knife_m9_bayonet',
-            'knife_flip': 'knife_flip', 'knife_gut': 'knife_gut', 'knife_falchion': 'knife_falchion',
-            'knife_tactical': 'knife_tactical', 'knife_survival_bowie': 'knife_survival_bowie',
-            'knife_stiletto': 'knife_stiletto', 'knife_ursus': 'knife_ursus', 
-            'knife_widowmaker': 'knife_widowmaker', 'knife_canis': 'knife_canis',
+            'c4': 'planted_c4', 'planted_c4': 'planted_c4', 'taser': 'taser', 'zeus': 'taser', 'zeus27': 'taser',
+            'flashbang_assist': 'flashbang_assist',
+            
+            // Knives
+            'bayonet': 'bayonet', 'knife': 'knife', 'knifegg': 'knifegg', 'knife_t': 'knife_t',
+            'knife_butterfly': 'knife_butterfly', 'knife_karambit': 'knife_karambit', 
+            'knife_m9_bayonet': 'knife_m9_bayonet', 'knife_flip': 'knife_flip', 'knife_gut': 'knife_gut', 
+            'knife_falchion': 'knife_falchion', 'knife_tactical': 'knife_tactical', 
+            'knife_survival_bowie': 'knife_survival_bowie', 'knife_stiletto': 'knife_stiletto', 
+            'knife_ursus': 'knife_ursus', 'knife_widowmaker': 'knife_widowmaker', 'knife_canis': 'knife_canis',
             'knife_cord': 'knife_cord', 'knife_outdoor': 'knife_outdoor', 'knife_skeleton': 'knife_skeleton',
             'knife_kukri': 'knife_kukri', 'knife_bowie': 'knife_bowie', 'knife_css': 'knife_css',
             'knife_gypsy_jackknife': 'knife_gypsy_jackknife', 'knife_push': 'knife_push',
-            'knife_twinblade': 'knife_twinblade', 'flashbang_assist': 'flashbang_assist',
+            'knife_twinblade': 'knife_twinblade',
         };
 
         const finalName = MAPPING[cleanName] || cleanName;
