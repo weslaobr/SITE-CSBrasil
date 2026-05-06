@@ -219,35 +219,26 @@ export async function GET(
                 SELECT * FROM public.tracker_rounds WHERE match_id = ${effectiveMatchId} ORDER BY round_id
             `.catch(() => []) as any[];
 
-            // Detect Knife Round (duplicate round_number = 1 usually)
-            let seenRounds = new Set();
-            trackerRounds.forEach(r => {
-                if (r.round_number === 1 && seenRounds.has(1)) {
-                    // We found another round 1! The first one was probably the knife round.
-                    // But we already added the first one to seenRounds.
-                }
-                seenRounds.add(r.round_number);
-            });
-            // Better approach: just re-assign round_number sequentially if there's a reset.
-            // A knife round usually appears as round 1, followed by a restart, then another round 1.
-            let nextValidRoundNumber = 1;
-            let hasKnifeRound = false;
-            if (trackerRounds.length > 0 && trackerRounds.filter(r => r.round_number === 1).length > 1) {
-                hasKnifeRound = true;
-            }
+            // Detect Knife Round (round_number = 0 OR duplicate round_number = 1)
+            let hasKnifeRound = trackerRounds.some(r => r.round_number === 0) || trackerRounds.filter(r => r.round_number === 1).length > 1;
 
             if (hasKnifeRound) {
-                let actualRound = 0; // Start at 0 for knife round
+                let foundKnife = false;
+                let actualRound = 1;
                 trackerRounds.forEach((r, idx) => {
-                    // If it's the very first round and we have duplicates of 1, it's knife round (0).
-                    if (idx === 0) {
+                    if (r.round_number === 0) {
                         r.actual_round_number = 0;
-                    } else if (r.round_number === 1 && trackerRounds[idx-1].round_number !== 1) {
-                        // The restart happened! Now it's actual round 1.
+                        foundKnife = true;
+                    } else if (r.round_number === 1 && !foundKnife) {
+                        // First round 1 in a match with duplicates is likely the knife round
+                        r.actual_round_number = 0;
+                        foundKnife = true;
+                    } else if (r.round_number === 1 && foundKnife) {
+                        // Subsequent round 1 is the pistol round
                         r.actual_round_number = 1;
+                        actualRound = 2;
                     } else {
-                        // For subsequent rounds, just use the previous + 1, or the DB round_number if it's correct
-                        r.actual_round_number = trackerRounds[idx-1].actual_round_number + 1;
+                        r.actual_round_number = actualRound++;
                     }
                 });
             } else {

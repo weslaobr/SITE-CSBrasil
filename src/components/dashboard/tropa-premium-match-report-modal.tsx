@@ -1191,109 +1191,119 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
             </div>
 
             {/* Premium Weapons Table */}
-            <div className="bg-zinc-900/40 border border-white/[0.04] rounded-[48px] overflow-hidden shadow-2xl relative">
-                <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[1100px]">
-                        <thead>
-                            <tr className="bg-white/[0.03] border-b border-white/[0.05]">
-                                <th className="py-8 px-12 text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Especialista</th>
-                                <th className="py-8 px-12 text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Arsenal & Eficácia de Combate (K / DMG / ADR / HS%)</th>
-                                <th className="py-8 px-12 text-[10px] font-black uppercase tracking-[0.4em] text-yellow-500 text-right">Total Combat</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/[0.02]">
-                            {players.map(p => {
-                                const pStats = weaponStats.filter((ws: any) => String(ws.player_id) === String(p.steam64_id || p.steamid64));
-                                const totalRounds = (match?.metadata?.team_2_score || 0) + (match?.metadata?.team_3_score || 0) || 30;
+            <div className="flex flex-col gap-10">
+                {players.map(p => {
+                    const pStats = weaponStats.filter((ws: any) => String(ws.player_id) === String(p.steam64_id || p.steamid64));
+                    const totalRounds = (match?.metadata?.team_2_score || 0) + (match?.metadata?.team_3_score || 0) || 24;
+                    
+                    // Totals calculation
+                    const totalKills = p.kills || pStats.reduce((acc: number, curr: any) => acc + (curr.kills || 0), 0);
+                    const totalDmg = pStats.reduce((acc: number, curr: any) => acc + (curr.damage || 0), 0);
+                    const totalHs = pStats.reduce((acc: number, curr: any) => acc + (curr.headshots || 0), 0);
+                    const hsPercent = totalKills > 0 ? Math.round((totalHs / totalKills) * 100) : 0;
+                    const adr = (totalDmg / totalRounds).toFixed(1);
 
-                                return (
-                                    <tr key={p.steam64_id || p.steamid64} className="group hover:bg-white/[0.02] transition-all duration-500">
-                                        <td className="py-6 px-8">
-                                            <div className="flex items-center gap-6">
-                                                <div className="relative group-hover:scale-105 transition-transform duration-500">
-                                                    <img src={p.avatar} className="w-12 h-12 rounded-[20px] border-2 border-white/10 group-hover:border-white/30 shadow-2xl" alt="" />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-base font-black italic text-white tracking-tight">{p.name || p.nickname}</span>
-                                                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] mt-1 ${p.team_id === '3' ? 'text-sky-500' : 'text-orange-500'}`}>
-                                                        {p.team_id === '3' ? 'CT SPECIALIST' : 'T OPERATIVE'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="py-6 px-8">
-                                            <div className="flex flex-wrap gap-4">
-                                                {pStats.length === 0 ? (
-                                                    <div className="flex items-center gap-3 text-zinc-600 italic text-[11px] font-black uppercase tracking-widest bg-black/40 px-6 py-3 rounded-[24px] border border-dashed border-white/5 opacity-50">
-                                                        SEM REGISTROS DE ABATE
+                    return (
+                        <div key={p.steam64_id || p.steamid64} className="bg-zinc-900/40 border border-white/[0.04] rounded-[48px] p-8 hover:bg-zinc-900/60 transition-all duration-500 shadow-2xl relative group overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
+                            
+                            {/* Player Header & Total Summary */}
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10 border-b border-white/[0.05] pb-10">
+                                <div className="flex items-center gap-6">
+                                    <div className="relative">
+                                        <img src={p.avatar} className="w-16 h-16 rounded-[24px] border-2 border-white/10 group-hover:border-yellow-500/30 transition-all duration-500 shadow-2xl" alt="" />
+                                        <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-zinc-950 ${p.team_id === '3' ? 'bg-sky-500' : 'bg-orange-500'}`} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-2xl font-black italic text-white tracking-tighter uppercase">{p.name || p.nickname}</span>
+                                        <span className={`text-[10px] font-black uppercase tracking-[0.3em] mt-1 ${p.team_id === '3' ? 'text-sky-400' : 'text-orange-400'}`}>
+                                            {p.team_id === '3' ? 'Counter-Terrorist Specialist' : 'Terrorist Operative'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-12 gap-y-6">
+                                    <div className="flex flex-col">
+                                        <span className="text-3xl font-black italic text-yellow-500 tracking-tighter drop-shadow-[0_0_10px_rgba(234,179,8,0.2)]">{totalKills}</span>
+                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Total Kills</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-3xl font-black italic text-emerald-400 tracking-tighter drop-shadow-[0_0_10px_rgba(52,211,153,0.2)]">{totalDmg}</span>
+                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Total Damage</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-3xl font-black italic text-sky-400 tracking-tighter drop-shadow-[0_0_10px_rgba(56,189,248,0.2)]">{adr}</span>
+                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">ADR</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-3xl font-black italic text-rose-400 tracking-tighter drop-shadow-[0_0_10px_rgba(251,113,133,0.2)]">{hsPercent}%</span>
+                                            <span className="text-xs font-black italic text-rose-400/40">({totalHs})</span>
+                                        </div>
+                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Headshot Efficiency</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Weapons Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                {pStats.length === 0 ? (
+                                    <div className="col-span-full py-10 flex flex-col items-center justify-center bg-black/20 rounded-[32px] border border-dashed border-white/5 opacity-40">
+                                        <Target className="text-zinc-700 mb-2" size={32} />
+                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 italic">Nenhum abate registrado com armamento</span>
+                                    </div>
+                                ) : (
+                                    pStats.sort((a:any, b:any) => b.kills - a.kills).map((ws: any, i: number) => {
+                                        const hsPercentW = ws.kills > 0 ? Math.round((ws.headshots / ws.kills) * 100) : 0;
+                                        const weaponAdr = (ws.damage / totalRounds).toFixed(1);
+
+                                        return (
+                                            <div key={i} className="flex flex-col gap-4 p-6 bg-zinc-950/60 border border-white/5 rounded-[32px] hover:border-white/10 hover:bg-zinc-950 transition-all duration-300 relative group/weapon">
+                                                <div className="flex items-center justify-between border-b border-white/[0.05] pb-4 mb-2">
+                                                    <img 
+                                                        src={weaponImg(ws.weapon_name)} 
+                                                        className="h-6 brightness-0 invert opacity-40 group-hover/weapon:opacity-100 transition-all drop-shadow-[0_0_8px_rgba(255,255,255,0.2)] group-hover/weapon:scale-110" 
+                                                        alt={ws.weapon_name}
+                                                        title={ws.weapon_name}
+                                                        onError={(e) => {
+                                                            e.currentTarget.src = 'https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/knife.svg';
+                                                            e.currentTarget.onerror = null;
+                                                        }}
+                                                    />
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[18px] font-black text-white italic tracking-tighter leading-none">{ws.kills}</span>
+                                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">K</span>
                                                     </div>
-                                                ) : (
-                                                    pStats.sort((a:any, b:any) => b.kills - a.kills).map((ws: any, i: number) => {
-                                                        const hsPercent = ws.kills > 0 ? Math.round((ws.headshots / ws.kills) * 100) : 0;
-                                                        const weaponAdr = (ws.damage / totalRounds).toFixed(1);
-
-                                                        return (
-                                                            <div key={i} className="flex flex-col gap-3 p-5 bg-zinc-950 border border-white/5 rounded-[32px] group-hover:border-yellow-500/20 transition-all hover:bg-zinc-900 hover:scale-105 shadow-2xl min-w-[180px] relative overflow-hidden">
-                                                                <div className="absolute top-0 right-0 p-2 opacity-5"><Target size={40} /></div>
-                                                                
-                                                                <div className="flex items-center justify-between border-b border-white/[0.05] pb-3 mb-1">
-                                                                    <img 
-                                                                        src={weaponImg(ws.weapon_name)} 
-                                                                        className="h-5 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" 
-                                                                        alt={ws.weapon_name}
-                                                                        title={ws.weapon_name}
-                                                                        onError={(e) => {
-                                                                            e.currentTarget.src = 'https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/knife.svg';
-                                                                            e.currentTarget.onerror = null;
-                                                                        }}
-                                                                    />
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <span className="text-[14px] font-black text-white italic">{ws.kills}</span>
-                                                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">KILLS</span>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-[12px] font-black text-emerald-400 tracking-tighter italic">{ws.damage}</span>
-                                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">DMG</span>
-                                                                    </div>
-                                                                    <div className="flex flex-col items-end">
-                                                                        <span className="text-[12px] font-black text-sky-400 tracking-tighter italic">{weaponAdr}</span>
-                                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">ADR</span>
-                                                                    </div>
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-[12px] font-black text-rose-400 tracking-tighter italic">{hsPercent}%</span>
-                                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">HS%</span>
-                                                                    </div>
-                                                                    <div className="flex flex-col items-end">
-                                                                        <span className="text-[12px] font-black text-zinc-400 tracking-tighter italic">{ws.headshots}</span>
-                                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">HS</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="py-6 px-8 text-right">
-                                            <div className="flex flex-col items-end">
-                                                <div className="relative">
-                                                    <span className="text-4xl font-black italic text-yellow-500 group-hover:text-white transition-colors duration-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">{p.kills}</span>
-                                                    <div className="absolute -inset-2 bg-yellow-500/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 </div>
-                                                <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mt-1">TOTAL FRAGS</span>
+
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[13px] font-black text-emerald-400 italic leading-none">{ws.damage}</span>
+                                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter mt-1">DMG</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-[13px] font-black text-sky-400 italic leading-none">{weaponAdr}</span>
+                                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter mt-1">ADR</span>
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[13px] font-black text-rose-400 italic leading-none">{hsPercentW}%</span>
+                                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter mt-1">HS%</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-[13px] font-black text-zinc-400 italic leading-none">{ws.headshots}</span>
+                                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter mt-1">HS</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
+
         </div>
     );
 };
