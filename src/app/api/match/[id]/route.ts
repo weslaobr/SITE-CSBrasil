@@ -468,12 +468,23 @@ export async function GET(
             else if ((localMatch.scoreB ?? 0) > (localMatch.scoreA ?? 0)) winning_team = 'team_2';
 
             const damageTimeline: Record<number, Record<string, number>> = {};
+            const detailedDamageTimeline: Record<number, Record<string, Record<string, number>>> = {};
+            
             trackerDamageEvents.forEach(de => {
                 const rNum = actualRoundMap.get(de.round_id) ?? de.round_number;
                 if (!damageTimeline[rNum]) damageTimeline[rNum] = {};
+                if (!detailedDamageTimeline[rNum]) detailedDamageTimeline[rNum] = {};
+                
                 const attacker = String(de.attacker_steamid);
-                // Sum actual hp damage dealt
-                damageTimeline[rNum][attacker] = (damageTimeline[rNum][attacker] || 0) + (de.hp_damage || 0);
+                const victim = String(de.victim_steamid);
+                const hpDmg = de.hp_damage || 0;
+
+                // Simple sum per attacker
+                damageTimeline[rNum][attacker] = (damageTimeline[rNum][attacker] || 0) + hpDmg;
+                
+                // Detailed victim -> attacker sum
+                if (!detailedDamageTimeline[rNum][victim]) detailedDamageTimeline[rNum][victim] = {};
+                detailedDamageTimeline[rNum][victim][attacker] = (detailedDamageTimeline[rNum][victim][attacker] || 0) + hpDmg;
             });
 
             const data = {
@@ -496,6 +507,7 @@ export async function GET(
                 economy_timeline: economyTimeline,
                 kill_timeline: killTimeline,
                 damage_timeline: damageTimeline,
+                detailed_damage_timeline: detailedDamageTimeline,
                 metadata: {
                     ...localMeta,
                     team_2_score: localMatch.scoreB ?? 0,
@@ -506,6 +518,7 @@ export async function GET(
                     economy_timeline: economyTimeline,
                     kill_timeline: killTimeline,
                     damage_timeline: damageTimeline,
+                    detailed_damage_timeline: detailedDamageTimeline,
                 },
                 stats: localStats
             };

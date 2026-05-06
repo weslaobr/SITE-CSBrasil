@@ -160,7 +160,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
                     onClick={(e) => e.stopPropagation()}
-                    className="relative w-full max-w-6xl bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl flex flex-col"
+                    className="relative w-full max-w-[1450px] bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl flex flex-col"
                 >
 
                 {/* HEADER */}
@@ -365,6 +365,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                                         timeline={match?.kill_timeline || match?.metadata?.kill_timeline} 
                                         players={stats} 
                                         damageTimeline={match?.damage_timeline || match?.metadata?.damage_timeline} 
+                                        detailedDamageTimeline={match?.detailed_damage_timeline || match?.metadata?.detailed_damage_timeline}
                                     />
                                 )}
 
@@ -986,7 +987,7 @@ const weaponImg = (name: string) => {
     return `https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/${finalName}.svg`;
 };
 
-const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeline?: any }> = ({ timeline, players, damageTimeline }) => {
+const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeline?: any, detailedDamageTimeline?: any }> = ({ timeline, players, damageTimeline, detailedDamageTimeline }) => {
     if (!timeline) return (
         <div className="flex flex-col items-center justify-center py-24 text-zinc-600 bg-black/20 rounded-[40px] border border-dashed border-white/[0.03]">
             <Crosshair size={48} strokeWidth={1} className="mb-4 text-rose-500/20" />
@@ -1131,12 +1132,14 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeli
                                             </div>
                                             <div className="flex flex-col min-w-0">
                                                 <span className={`text-sm font-black italic truncate tracking-tight ${attacker?.team_id === '2' ? 'text-orange-400' : 'text-sky-400'}`}>{attacker?.name || attacker?.nickname || 'Desconhecido'}</span>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-500/10">
-                                                        <Heart size={8} className="text-emerald-500" fill="currentColor" />
-                                                        <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">{k.attackerHp} HP</span>
+                                                {k.attackerHp > 0 && (
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-500/10">
+                                                            <Heart size={8} className="text-emerald-500" fill="currentColor" />
+                                                            <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">{k.attackerHp} HP</span>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -1177,6 +1180,25 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeli
                                             <div className="flex flex-col items-end text-right min-w-0">
                                                 <span className={`text-sm font-black italic truncate tracking-tight opacity-50 group-hover:opacity-70 transition-all ${victim?.team_id === '2' ? 'text-orange-400' : 'text-sky-400'}`}>{victim?.name || victim?.nickname || 'Desconhecido'}</span>
                                                 <div className="flex items-center gap-2 mt-1">
+                                                    <div className="flex -space-x-1.5 mr-2">
+                                                        {detailedDamageTimeline && detailedDamageTimeline[rNum] && detailedDamageTimeline[rNum][victim?.steam64_id || victim?.steamid64] && 
+                                                            Object.entries(detailedDamageTimeline[rNum][victim?.steam64_id || victim?.steamid64])
+                                                                .filter(([sid]) => sid !== String(attacker?.steam64_id || attacker?.steamid64))
+                                                                .map(([sid, dmg]: [string, any]) => {
+                                                                    const contributor = getPlayer(sid);
+                                                                    if (!contributor) return null;
+                                                                    return (
+                                                                        <img 
+                                                                            key={sid}
+                                                                            src={contributor.avatar} 
+                                                                            className="w-5 h-5 rounded-full border border-zinc-900 shadow-lg object-cover" 
+                                                                            title={`${contributor.name}: ${dmg} DMG`}
+                                                                            alt=""
+                                                                        />
+                                                                    );
+                                                                })
+                                                        }
+                                                    </div>
                                                     <span className="text-[8px] font-black text-rose-500/60 uppercase tracking-widest italic">NEUTRALIZADO</span>
                                                     <Skull size={10} className="text-rose-500/60" />
                                                 </div>
@@ -1265,13 +1287,13 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
                         {players.sort((a,b) => (b.avg_ttd || 0) - (a.avg_ttd || 0)).map(p => (
                             <div key={p.steam64_id || p.steamid64} className="flex items-center justify-between group p-4 bg-zinc-950/60 rounded-[28px] border border-white/5 hover:border-yellow-500/30 transition-all duration-500">
                                 <div className="flex items-center gap-4">
-                                    <div className="relative group-hover:scale-105 transition-transform">
-                                        <img src={p.avatar} className="w-12 h-12 rounded-[18px] border-2 border-white/10 shadow-2xl" alt="" />
+                                    <div className="relative group-hover:scale-105 transition-transform shrink-0">
+                                        <img src={p.avatar} className="w-12 h-12 rounded-[18px] border-2 border-white/10 shadow-2xl object-cover shrink-0" alt="" />
                                         <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-4 border-[#0c0f15] ${p.team_id === '2' ? 'bg-orange-500' : 'bg-sky-500'} shadow-lg`} />
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-base font-black italic text-zinc-200 group-hover:text-white transition-colors">{p.name || p.nickname}</span>
-                                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em]">{p.team_id === '2' ? 'TERRORIST' : 'COUNTER-TERRORIST'}</span>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-base font-black italic text-zinc-200 group-hover:text-white transition-colors truncate max-w-[140px]">{p.name || p.nickname}</span>
+                                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] truncate">{p.team_id === '2' ? 'TERRORIST' : 'COUNTER-TERRORIST'}</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-8">
@@ -1301,9 +1323,9 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
                     <div className="grid grid-cols-1 gap-4 max-h-[440px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-white/10">
                         {players.sort((a,b) => ((a.he_thrown || 0) + (a.flash_thrown || 0) + (a.smokes_thrown || 0) + (a.molotovs_thrown || 0)) - ((b.he_thrown || 0) + (b.flash_thrown || 0) + (b.smokes_thrown || 0) + (b.molotovs_thrown || 0))).reverse().map(p => (
                             <div key={p.steam64_id || p.steamid64} className="flex items-center justify-between p-5 bg-zinc-950/60 rounded-[32px] border border-white/5 hover:border-emerald-500/30 hover:bg-zinc-950/80 transition-all duration-500">
-                                <div className="flex items-center gap-4">
-                                    <img src={p.avatar} className="w-10 h-10 rounded-2xl border border-white/10" alt="" />
-                                    <span className="text-sm font-black italic text-zinc-300">{p.name || p.nickname}</span>
+                                <div className="flex items-center gap-4 min-w-0 flex-1">
+                                    <img src={p.avatar} className="w-10 h-10 rounded-2xl border border-white/10 object-cover shrink-0" alt="" />
+                                    <span className="text-sm font-black italic text-zinc-300 truncate max-w-[120px]">{p.name || p.nickname}</span>
                                 </div>
                                 <div className="flex items-center gap-6">
                                     <UtilityBadge count={p.he_thrown} label="HE" color="orange" />
