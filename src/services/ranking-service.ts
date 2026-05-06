@@ -76,23 +76,22 @@ export async function calculateMatchTropoints(matchId: string): Promise<Calculat
 
         // ── Atualizar o registro do jogador na partida ───────────────────────
         const oldEloChange = p.eloChange ?? 0;
-        await prisma.globalMatchPlayer.update({
-            where: { id: p.id },
-            data: { eloChange: newEloChange }
-        });
-
+        
         // ── Se o jogador é um usuário cadastrado, atualizar perfil ──────────
-        if (p.userId) {
-            const diff = newEloChange - oldEloChange;
+        let newPoints = 0;
+        let newLevel = 1;
 
+        if (p.userId) {
             // Buscar saldo atual do usuário
             const user = await prisma.user.findUnique({ where: { id: p.userId } });
             if (user) {
+                const diff = newEloChange - oldEloChange;
                 const currentPoints = user.rankingPoints ?? 500;
-                const newPoints = Math.max(0, currentPoints + diff);
+                newPoints = Math.max(0, currentPoints + diff);
 
                 // Calcular nível correto usando o utilitário padrão
-                const { level: newLevel } = getMixLevelFromPoints(newPoints);
+                const { level: nLevel } = getMixLevelFromPoints(newPoints);
+                newLevel = nLevel;
 
                 await prisma.user.update({
                     where: { id: p.userId },
@@ -112,6 +111,15 @@ export async function calculateMatchTropoints(matchId: string): Promise<Calculat
                 updatedUsers++;
             }
         }
+
+        // Atualizar histórico do jogador na partida (eloChange e eloAfter)
+        await prisma.globalMatchPlayer.update({
+            where: { id: p.id },
+            data: { 
+                eloChange: newEloChange,
+                eloAfter: newPoints > 0 ? newPoints : undefined // Só salva se for usuário
+            }
+        });
     }
 
     return {

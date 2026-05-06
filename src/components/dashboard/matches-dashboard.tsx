@@ -746,7 +746,8 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     <th className="px-4 py-4 text-center">Placar</th>
                                     <th className="px-4 py-4 text-center">Rank / TP</th>
                                     <th className="px-6 py-4 text-center">Combate (K/D/A)</th>
-                                    <th className="px-3 py-4 text-center">Dano (ADR/Tot)</th>
+                                    <th className="px-3 py-4 text-center">ADR</th>
+                                    <th className="px-3 py-4 text-center">Dano</th>
                                     <th className="px-3 py-4 text-center text-blue-400/80">KAST</th>
                                     <th className="px-3 py-4 text-center text-rose-400/80">HS %</th>
                                     <th className="px-3 py-4 text-center text-purple-400/80">Impacto</th>
@@ -851,7 +852,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                 </div>
                                             </td>
 
-                                            {/* ADR / Dano Total */}
+                                            {/* ADR */}
                                             <td className="px-3 py-5 text-center border-y border-white/5">
                                                 <div className="flex flex-col items-center">
                                                     <span className={`text-lg font-black italic tracking-tighter ${
@@ -859,9 +860,18 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                                     }`}>
                                                         {Math.round(match.adr || match.metadata?.adr || 0)}
                                                     </span>
-                                                    <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest">
-                                                        {match.totalDamage || (match.adr && match.score) ? Math.round(match.adr * 24) : '---'} DMG
+                                                    <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest italic">ADR</span>
+                                                </div>
+                                            </td>
+
+                                            {/* Dano Total */}
+                                            <td className="px-3 py-5 text-center border-y border-white/5">
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-base font-black italic tracking-tighter text-zinc-400">
+                                                        {match.totalDamage ? Math.round(match.totalDamage).toLocaleString() : 
+                                                         (match.adr && match.score) ? Math.round(match.adr * 24).toLocaleString() : '---'}
                                                     </span>
+                                                    <span className="text-[7px] font-black text-zinc-700 uppercase tracking-widest italic">DMG</span>
                                                 </div>
                                             </td>
 

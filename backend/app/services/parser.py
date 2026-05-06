@@ -613,11 +613,18 @@ class ParserService:
         except Exception as sync_err:
             logger.error(f"Parser: Error syncing GlobalMatch tables for {match_id}: {sync_err}")
 
-        # Trigger Ranking update
+        # Trigger Ranking update via Site Callback (Unified Logic)
         try:
-            from app.services.ranking_service import RankingService
-            await RankingService.process_match_rankings(db, match_id)
+            import httpx
+            import os
+            site_url = os.getenv("SITE_URL") or "https://www.tropacs.com.br"
+            callback_url = f"{site_url.rstrip('/')}/api/callback/match-processed"
+            
+            logger.info(f"Parser: Triggering site ranking callback for {match_id}")
+            async with httpx.AsyncClient() as client:
+                await client.post(callback_url, json={"matchId": match_id}, timeout=10.0)
+                
         except Exception as rank_err:
-            logger.error(f"Parser: Error updating rankings for {match_id}: {rank_err}")
+            logger.warning(f"Parser: Could not trigger ranking callback for {match_id}: {rank_err}")
 
         return match_id
