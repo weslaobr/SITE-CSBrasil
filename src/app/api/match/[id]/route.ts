@@ -212,33 +212,73 @@ export async function GET(
                 FROM public.tracker_grenade_events ge
                 JOIN public.tracker_rounds r ON ge.round_id = r.round_id
                 WHERE ge.match_id = ${effectiveMatchId}
-                ORDER BY r.round_number, ge.tick
+                ORDER BY r.round_id, ge.tick
             `.catch(() => []) as any[];
 
             const trackerRounds = await prisma.$queryRaw`
-                SELECT * FROM public.tracker_rounds WHERE match_id = ${effectiveMatchId} ORDER BY round_number
+                SELECT * FROM public.tracker_rounds WHERE match_id = ${effectiveMatchId} ORDER BY round_id
             `.catch(() => []) as any[];
 
+            // Detect Knife Round (duplicate round_number = 1 usually)
+            let seenRounds = new Set();
+            trackerRounds.forEach(r => {
+                if (r.round_number === 1 && seenRounds.has(1)) {
+                    // We found another round 1! The first one was probably the knife round.
+                    // But we already added the first one to seenRounds.
+                }
+                seenRounds.add(r.round_number);
+            });
+            // Better approach: just re-assign round_number sequentially if there's a reset.
+            // A knife round usually appears as round 1, followed by a restart, then another round 1.
+            let nextValidRoundNumber = 1;
+            let hasKnifeRound = false;
+            if (trackerRounds.length > 0 && trackerRounds.filter(r => r.round_number === 1).length > 1) {
+                hasKnifeRound = true;
+            }
+
+            if (hasKnifeRound) {
+                let actualRound = 0; // Start at 0 for knife round
+                trackerRounds.forEach((r, idx) => {
+                    // If it's the very first round and we have duplicates of 1, it's knife round (0).
+                    if (idx === 0) {
+                        r.actual_round_number = 0;
+                    } else if (r.round_number === 1 && trackerRounds[idx-1].round_number !== 1) {
+                        // The restart happened! Now it's actual round 1.
+                        r.actual_round_number = 1;
+                    } else {
+                        // For subsequent rounds, just use the previous + 1, or the DB round_number if it's correct
+                        r.actual_round_number = trackerRounds[idx-1].actual_round_number + 1;
+                    }
+                });
+            } else {
+                trackerRounds.forEach(r => { r.actual_round_number = r.round_number; });
+            }
+
+            const actualRoundMap = new Map();
+            trackerRounds.forEach(r => {
+                actualRoundMap.set(r.round_id, r.actual_round_number);
+            });
+
             const trackerKillEvents = await prisma.$queryRaw`
-                SELECT ke.*, r.round_number 
+                SELECT ke.*, r.round_number, r.round_id 
                 FROM public.tracker_kill_events ke
                 JOIN public.tracker_rounds r ON ke.round_id = r.round_id
                 WHERE ke.match_id = ${effectiveMatchId}
-                ORDER BY r.round_number, ke.tick
+                ORDER BY r.round_id, ke.tick
             `.catch(() => []) as any[];
 
             const trackerDamageEvents = await prisma.$queryRaw`
-                SELECT de.*, r.round_number 
+                SELECT de.*, r.round_number, r.round_id 
                 FROM public.tracker_damage_events de
                 JOIN public.tracker_rounds r ON de.round_id = r.round_id
                 WHERE de.match_id = ${effectiveMatchId}
-                ORDER BY r.round_number, de.tick
+                ORDER BY r.round_id, de.tick
             `.catch(() => []) as any[];
 
             // Group utility by round for timeline
             const utilityTimeline: Record<number, any[]> = {};
             trackerGrenadeEvents.forEach(ge => {
-                const rNum = ge.round_number;
+                const rNum = actualRoundMap.get(ge.round_id) ?? ge.round_number;
                 if (!utilityTimeline[rNum]) utilityTimeline[rNum] = [];
                 utilityTimeline[rNum].push({
                     type: ge.grenade_type,
@@ -251,7 +291,7 @@ export async function GET(
             // Group economy by round
             const economyTimeline: Record<number, any> = {};
             trackerRounds.forEach(r => {
-                economyTimeline[r.round_number] = {
+                economyTimeline[r.actual_round_number] = {
                     ct_equipment_value: r.ct_equipment_value,
                     t_equipment_value: r.t_equipment_value,
                     ct_buy_type: r.ct_buy_type,
@@ -263,12 +303,12 @@ export async function GET(
             // Group kills by round
             const killTimeline: Record<number, any[]> = {};
             trackerKillEvents.forEach(ke => {
-                const rNum = ke.round_number;
+                const rNum = actualRoundMap.get(ke.round_id) ?? ke.round_number;
                 if (!killTimeline[rNum]) killTimeline[rNum] = [];
                 
                 // Try to find damage for this kill (simplification: damage to victim in same round)
                 const victimDmg = trackerDamageEvents
-                    .filter(de => de.round_number === rNum && de.victim_steamid === ke.victim_steamid && de.attacker_steamid === ke.attacker_steamid)
+                    .filter(de => de.round_id === ke.round_id && de.victim_steamid === ke.victim_steamid && de.attacker_steamid === ke.attacker_steamid)
                     .reduce((sum, de) => sum + (de.hp_damage || 0), 0);
 
                 killTimeline[rNum].push({
@@ -279,7 +319,7 @@ export async function GET(
                     tick: ke.tick,
                     attackerHp: ke.attacker_hp,
                     victimHp: ke.victim_hp,
-                    damage: victimDmg || 100 // Fallback if no damage record found
+                    damage: victimDmg > 100 ? 100 : (victimDmg || 100) // Cap at 100
                 });
             });
 
@@ -423,6 +463,15 @@ export async function GET(
             if ((localMatch.scoreA ?? 0) > (localMatch.scoreB ?? 0)) winning_team = 'team_3';
             else if ((localMatch.scoreB ?? 0) > (localMatch.scoreA ?? 0)) winning_team = 'team_2';
 
+            const damageTimeline: Record<number, Record<string, number>> = {};
+            trackerDamageEvents.forEach(de => {
+                const rNum = actualRoundMap.get(de.round_id) ?? de.round_number;
+                if (!damageTimeline[rNum]) damageTimeline[rNum] = {};
+                const attacker = String(de.attacker_steamid);
+                // Sum actual hp damage dealt
+                damageTimeline[rNum][attacker] = (damageTimeline[rNum][attacker] || 0) + (de.hp_damage || 0);
+            });
+
             const data = {
                 match_id: localMatch.id,
                 map_name: resolvedMapName,
@@ -442,6 +491,7 @@ export async function GET(
                 utility_timeline: utilityTimeline,
                 economy_timeline: economyTimeline,
                 kill_timeline: killTimeline,
+                damage_timeline: damageTimeline,
                 metadata: {
                     ...localMeta,
                     team_2_score: localMatch.scoreB ?? 0,
@@ -451,6 +501,7 @@ export async function GET(
                     utility_timeline: utilityTimeline,
                     economy_timeline: economyTimeline,
                     kill_timeline: killTimeline,
+                    damage_timeline: damageTimeline,
                 },
                 stats: localStats
             };

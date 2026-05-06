@@ -1561,67 +1561,86 @@ const MatchReportModal: React.FC<Props> = ({
                                     return (
                                         <motion.div 
                                             key={idx} 
-                                            initial={{ opacity: 0, y: 10 }}
+                                            initial={{ opacity: 0, y: 5 }}
                                             whileInView={{ opacity: 1, y: 0 }}
                                             viewport={{ once: true }}
-                                            className="bg-zinc-950/60 border border-white/[0.04] rounded-[28px] p-5 flex items-center justify-between hover:bg-white/[0.02] hover:border-white/10 transition-all group shadow-lg"
+                                            className="bg-zinc-950/60 border border-white/[0.04] rounded-[20px] p-3 flex items-center justify-between hover:bg-white/[0.02] hover:border-white/10 transition-all group shadow-lg"
                                         >
                                             {/* Attacker Block */}
-                                            <div className="flex items-center gap-5 flex-1 min-w-0">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
                                                 <div className="relative group-hover:scale-105 transition-transform">
-                                                    <img src={attacker?.avatar} className="w-12 h-12 rounded-2xl border-2 border-white/10 group-hover:border-white/20 shadow-xl" alt="" />
-                                                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0c0f15] ${attacker?.team === 'CT' ? 'bg-sky-500' : 'bg-orange-500'} shadow-lg`} />
+                                                    <img src={attacker?.avatar} className="w-8 h-8 rounded-xl border border-white/10 group-hover:border-white/20 shadow-xl" alt="" />
+                                                    <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0c0f15] ${attacker?.team === 'CT' ? 'bg-sky-500' : 'bg-orange-500'} shadow-lg`} />
                                                 </div>
                                                 <div className="flex flex-col min-w-0">
-                                                    <span className={`text-base font-black italic truncate tracking-tight ${attacker?.team === 'CT' ? 'text-sky-300' : 'text-orange-300'}`}>{attacker?.nickname || 'Desconhecido'}</span>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <Heart size={10} className="text-emerald-500" fill="currentColor" />
-                                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{k.attackerHp} HP RESTANTE</span>
+                                                    <span className={`text-sm font-black italic truncate tracking-tight ${attacker?.team === 'CT' ? 'text-sky-300' : 'text-orange-300'}`}>{attacker?.nickname || 'Desconhecido'}</span>
+                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                        <Heart size={8} className="text-emerald-500" fill="currentColor" />
+                                                        <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">{k.attackerHp} HP</span>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Battle Info Block */}
-                                            <div className="flex flex-col items-center gap-3 px-12 border-x border-white/[0.06] min-w-[200px]">
-                                                <div className="flex items-center gap-5">
-                                                    <img src={weaponImg(k.weapon)} className="h-5 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all group-hover:scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" alt={k.weapon} title={k.weapon} />
+                                            <div className="flex flex-col items-center gap-2 px-8 border-x border-white/[0.06] min-w-[160px]">
+                                                <div className="flex items-center gap-4">
+                                                    <img src={weaponImg(k.weapon)} className="h-4 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all group-hover:scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" alt={k.weapon} title={k.weapon} />
                                                     {k.isHeadshot && (
-                                                        <div className="w-7 h-7 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-inner">
-                                                            <Target size={14} strokeWidth={3} />
+                                                        <div className="w-5 h-5 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-inner">
+                                                            <Target size={10} strokeWidth={3} />
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div className="flex flex-col items-center gap-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[11px] font-black text-emerald-400 tracking-tighter">{k.damage}</span>
-                                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">DAMAGE</span>
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[10px] font-black text-emerald-400 tracking-tighter">{k.damage}</span>
+                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">DMG</span>
                                                     </div>
-                                                    <div className="h-1 w-20 bg-zinc-900 rounded-full overflow-hidden p-0.5">
+                                                    <div className="h-1 w-16 bg-zinc-900 rounded-full overflow-hidden">
                                                         <motion.div initial={{ width: 0 }} whileInView={{ width: '100%' }} className="h-full bg-emerald-500 rounded-full" />
                                                     </div>
-                                                    <div className="text-[8px] text-zinc-500 font-bold italic mt-1 text-center max-w-[180px] truncate">
+                                                    <div className="text-[7px] text-zinc-500 font-bold italic mt-0.5 text-center max-w-[140px] truncate">
                                                         {attacker?.nickname || attacker?.name || 'Desconhecido'} de <span className="text-zinc-300 uppercase">{k.weapon}</span> em {victim?.nickname || victim?.name || 'Desconhecido'}
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Victim Block */}
-                                            <div className="flex items-center gap-5 flex-1 justify-end min-w-0">
+                                            <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
                                                 <div className="flex flex-col items-end text-right min-w-0">
-                                                    <span className={`text-base font-black italic truncate tracking-tight opacity-40 group-hover:opacity-60 transition-opacity ${victim?.team === 'CT' ? 'text-sky-300' : 'text-orange-300'}`}>{victim?.nickname || 'Desconhecido'}</span>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-[10px] font-black text-rose-500/60 uppercase tracking-widest">ELIMINADO</span>
-                                                        <Skull size={10} className="text-rose-500/60" />
+                                                    <span className={`text-sm font-black italic truncate tracking-tight opacity-50 group-hover:opacity-70 transition-opacity ${victim?.team === 'CT' ? 'text-sky-300' : 'text-orange-300'}`}>{victim?.nickname || 'Desconhecido'}</span>
+                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                        <span className="text-[8px] font-black text-rose-500/60 uppercase tracking-widest">ELIMINADO</span>
+                                                        <Skull size={8} className="text-rose-500/60" />
                                                     </div>
                                                 </div>
-                                                <div className="relative grayscale group-hover:grayscale-0 transition-all opacity-40 group-hover:opacity-80">
-                                                    <img src={victim?.avatar} className="w-12 h-12 rounded-2xl border-2 border-white/10 shadow-xl" alt="" />
-                                                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0c0f15] ${victim?.team === 'CT' ? 'bg-sky-500' : 'bg-orange-500'} shadow-lg`} />
+                                                <div className="relative grayscale group-hover:grayscale-0 transition-all opacity-50 group-hover:opacity-90">
+                                                    <img src={victim?.avatar} className="w-8 h-8 rounded-xl border border-white/10 shadow-xl" alt="" />
+                                                    <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0c0f15] ${victim?.team === 'CT' ? 'bg-sky-500' : 'bg-orange-500'} shadow-lg`} />
                                                 </div>
                                             </div>
                                         </motion.div>
                                     );
                                 })}
+                                
+                                {currentMatch?.metadata?.damage_timeline && currentMatch.metadata.damage_timeline[rNum] && (
+                                    <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap gap-3 justify-center items-center">
+                                        <span className="w-full text-center text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-1">Dano Infligido na Rodada</span>
+                                        {Object.entries(currentMatch.metadata.damage_timeline[rNum])
+                                            .sort((a: any, b: any) => b[1] - a[1])
+                                            .map(([sid, dmg]: [string, any]) => {
+                                                const p = getPlayer(sid);
+                                                if (!p || dmg === 0) return null;
+                                                return (
+                                                    <div key={sid} className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1 rounded-lg border border-white/5">
+                                                        <img src={p.avatar} className="w-4 h-4 rounded-md opacity-80" alt="" />
+                                                        <span className="text-[9px] font-bold text-zinc-400 italic">{p.nickname || p.name}</span>
+                                                        <span className="text-[9px] font-black text-emerald-500">{dmg}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}

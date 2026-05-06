@@ -361,7 +361,11 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                                 )}
 
                                 {tab === 'confrontos' && (
-                                    <ConfrontosTimeline timeline={match?.kill_timeline || match?.metadata?.kill_timeline} players={stats} />
+                                    <ConfrontosTimeline 
+                                        timeline={match?.kill_timeline || match?.metadata?.kill_timeline} 
+                                        players={stats} 
+                                        damageTimeline={match?.damage_timeline || match?.metadata?.damage_timeline} 
+                                    />
                                 )}
 
                                 {tab === 'arsenal' && (
@@ -848,7 +852,44 @@ const EconomyLog: React.FC<{ economy: any }> = ({ economy }) => {
     );
 };
 
-const ConfrontosTimeline: React.FC<{ timeline: any, players: any[] }> = ({ timeline, players }) => {
+const weaponImg = (name: string) => {
+    if (!name) return '';
+    let cleanName = name.toLowerCase().replace('weapon_', '').trim();
+    
+    if (cleanName === 'world' || cleanName === 'worldspawn') {
+        return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></svg>';
+    }
+
+    if (cleanName === 'smokegrenade' || cleanName === 'smoke') {
+        return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 17H7"/><path d="M17 21H9"/></svg>';
+    }
+    
+    const MAPPING: Record<string, string> = {
+        'm4a1_s': 'm4a1_silencer', 'm4a1-s': 'm4a1_silencer', 'm4a1_silencer': 'm4a1_silencer', 'm4a1': 'm4a1',
+        'm4a1_silencer_off': 'm4a1_silencer_off', 'usp_s': 'usp_silencer', 'usp-s': 'usp_silencer',
+        'usp_silencer': 'usp_silencer', 'usp_silencer_off': 'usp_silencer_off', 'deagle': 'deagle',
+        'desert_eagle': 'deagle', 'p2000': 'hkp2000', 'hkp2000': 'hkp2000', 'revolver': 'revolver',
+        'r8': 'revolver', 'scout': 'ssg08', 'ssg08': 'ssg08', 'hegrenade': 'hegrenade',
+        'smokegrenade': 'smokegrenade', 'smoke': 'smokegrenade', 'flashbang': 'flashbang',
+        'inferno': 'inferno', 'molotov': 'molotov', 'incgrenade': 'incgrenade', 'decoy': 'decoy',
+        'c4': 'planted_c4', 'planted_c4': 'planted_c4', 'zeus': 'taser', 'taser': 'taser',
+        'zeus27': 'taser', 'bayonet': 'bayonet', 'knife': 'knife', 'knifegg': 'knifegg',
+        'knife_t': 'knife_t', 'knife_ct': 'knife', 'knife_butterfly': 'knife_butterfly',
+        'knife_karambit': 'knife_karambit', 'knife_m9_bayonet': 'knife_m9_bayonet', 'knife_flip': 'knife_flip',
+        'knife_gut': 'knife_gut', 'knife_falchion': 'knife_falchion', 'knife_tactical': 'knife_tactical',
+        'knife_survival_bowie': 'knife_survival_bowie', 'knife_stiletto': 'knife_stiletto',
+        'knife_ursus': 'knife_ursus', 'knife_widowmaker': 'knife_widowmaker', 'knife_canis': 'knife_canis',
+        'knife_cord': 'knife_cord', 'knife_outdoor': 'knife_outdoor', 'knife_skeleton': 'knife_skeleton',
+        'knife_kukri': 'knife_kukri', 'knife_bowie': 'knife_bowie', 'knife_css': 'knife_css',
+        'knife_gypsy_jackknife': 'knife_gypsy_jackknife', 'knife_push': 'knife_push',
+        'knife_twinblade': 'knife_twinblade', 'flashbang_assist': 'flashbang_assist',
+    };
+
+    const finalName = MAPPING[cleanName] || cleanName;
+    return `https://raw.githubusercontent.com/ChetdeJong/cs2-killfeed-generator/master/public/weapons/${finalName}.svg`;
+};
+
+const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeline?: any }> = ({ timeline, players, damageTimeline }) => {
     if (!timeline) return (
         <div className="flex flex-col items-center justify-center py-24 text-zinc-600 bg-black/20 rounded-[40px] border border-dashed border-white/[0.03]">
             <Crosshair size={48} strokeWidth={1} className="mb-4 text-rose-500/20" />
@@ -947,38 +988,37 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[] }> = ({ timel
                                 return (
                                     <motion.div 
                                         key={idx} 
-                                        initial={{ opacity: 0, x: -20 }}
+                                        initial={{ opacity: 0, x: -10 }}
                                         whileInView={{ opacity: 1, x: 0 }}
                                         viewport={{ once: true }}
-                                        className="bg-zinc-900/40 border border-white/[0.04] rounded-[40px] p-6 flex items-center justify-between hover:bg-zinc-900/60 hover:border-white/10 hover:shadow-2xl transition-all duration-500 group relative overflow-hidden"
+                                        className="bg-zinc-900/40 border border-white/[0.04] rounded-[24px] p-4 flex items-center justify-between hover:bg-zinc-900/60 hover:border-white/10 hover:shadow-xl transition-all duration-500 group relative overflow-hidden"
                                     >
                                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-yellow-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                         
                                         {/* Attacker */}
-                                        <div className="flex items-center gap-6 flex-1 min-w-0">
-                                            <div className="relative group-hover:scale-110 transition-transform duration-500">
-                                                <img src={attacker?.avatar} className="w-14 h-14 rounded-[24px] border-2 border-white/10 group-hover:border-yellow-500/40 shadow-2xl" alt="" />
-                                                <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-[#0c0f15] ${attacker?.team_id === '2' ? 'bg-orange-500' : 'bg-sky-500'} shadow-lg`} />
+                                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                                            <div className="relative group-hover:scale-105 transition-transform duration-500">
+                                                <img src={attacker?.avatar} className="w-10 h-10 rounded-[16px] border border-white/10 group-hover:border-yellow-500/40 shadow-lg" alt="" />
+                                                <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-[#0c0f15] ${attacker?.team_id === '2' ? 'bg-orange-500' : 'bg-sky-500'}`} />
                                             </div>
                                             <div className="flex flex-col min-w-0">
-                                                <span className={`text-lg font-black italic truncate tracking-tight ${attacker?.team_id === '2' ? 'text-orange-400' : 'text-sky-400'}`}>{attacker?.name || attacker?.nickname || 'Desconhecido'}</span>
-                                                <div className="flex items-center gap-2.5 mt-1.5">
-                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                                                        <Heart size={10} className="text-emerald-500" fill="currentColor" />
-                                                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{k.attackerHp} HP</span>
+                                                <span className={`text-sm font-black italic truncate tracking-tight ${attacker?.team_id === '2' ? 'text-orange-400' : 'text-sky-400'}`}>{attacker?.name || attacker?.nickname || 'Desconhecido'}</span>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-500/10">
+                                                        <Heart size={8} className="text-emerald-500" fill="currentColor" />
+                                                        <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">{k.attackerHp} HP</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                            <div className="flex flex-col items-center gap-4 px-10 border-x border-white/[0.05] min-w-[240px]">
-                                                <div className="flex items-center gap-6">
+                                            <div className="flex flex-col items-center gap-3 px-6 border-x border-white/[0.05] min-w-[200px]">
+                                                <div className="flex items-center gap-4">
                                                     <img 
-                                                        src={`/img/weapons/${k.weapon?.replace('weapon_', '')}.svg`} 
-                                                        className="h-6 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all group-hover:scale-125 group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]" 
+                                                        src={weaponImg(k.weapon)} 
+                                                        className="h-5 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all group-hover:scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" 
                                                         alt={k.weapon} 
                                                         title={k.weapon}
-                                                        onError={(e) => { e.currentTarget.src = '/img/weapons/knife.svg' }}
                                                     />
                                                     {k.isHeadshot && (
                                                         <div className="w-9 h-9 rounded-[14px] bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-[inset_0_0_10px_rgba(244,63,94,0.1)] group-hover:scale-110 transition-transform">
@@ -987,36 +1027,55 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[] }> = ({ timel
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col items-center gap-1.5">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-[14px] font-black text-emerald-400 tracking-tighter italic">{k.damage}</span>
-                                                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em]">HP DAMAGE</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[12px] font-black text-emerald-400 tracking-tighter italic">{k.damage}</span>
+                                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em]">HP DMG</span>
                                                     </div>
-                                                    <div className="h-1.5 w-28 bg-black/40 rounded-full overflow-hidden p-0.5 shadow-inner">
+                                                    <div className="h-1 w-20 bg-black/40 rounded-full overflow-hidden shadow-inner">
                                                         <motion.div initial={{ width: 0 }} whileInView={{ width: '100%' }} className="h-full bg-emerald-500/80 rounded-full" />
                                                     </div>
-                                                    <div className="text-[9px] text-zinc-500 font-bold italic mt-1 text-center max-w-[200px] truncate">
+                                                    <div className="text-[8px] text-zinc-500 font-bold italic text-center max-w-[160px] truncate leading-tight">
                                                         {attacker?.name || attacker?.nickname || 'Desconhecido'} de <span className="text-zinc-300 uppercase">{k.weapon}</span> em {victim?.name || victim?.nickname || 'Desconhecido'}
                                                     </div>
                                                 </div>
                                             </div>
 
                                         {/* Victim */}
-                                        <div className="flex items-center gap-6 flex-1 justify-end min-w-0">
+                                        <div className="flex items-center gap-4 flex-1 justify-end min-w-0">
                                             <div className="flex flex-col items-end text-right min-w-0">
-                                                <span className={`text-lg font-black italic truncate tracking-tight opacity-40 group-hover:opacity-60 transition-all ${victim?.team_id === '2' ? 'text-orange-400' : 'text-sky-400'}`}>{victim?.name || victim?.nickname || 'Desconhecido'}</span>
-                                                <div className="flex items-center gap-2.5 mt-1.5">
-                                                    <span className="text-[10px] font-black text-rose-500/60 uppercase tracking-widest italic">NEUTRALIZADO</span>
-                                                    <Skull size={12} className="text-rose-500/60" />
+                                                <span className={`text-sm font-black italic truncate tracking-tight opacity-50 group-hover:opacity-70 transition-all ${victim?.team_id === '2' ? 'text-orange-400' : 'text-sky-400'}`}>{victim?.name || victim?.nickname || 'Desconhecido'}</span>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-[8px] font-black text-rose-500/60 uppercase tracking-widest italic">NEUTRALIZADO</span>
+                                                    <Skull size={10} className="text-rose-500/60" />
                                                 </div>
                                             </div>
-                                            <div className="relative grayscale group-hover:grayscale-0 transition-all duration-700 opacity-40 group-hover:opacity-80">
-                                                <img src={victim?.avatar} className="w-14 h-14 rounded-[24px] border-2 border-white/10 group-hover:border-rose-500/40 shadow-2xl" alt="" />
-                                                <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-[#0c0f15] ${victim?.team_id === '2' ? 'bg-orange-500' : 'bg-sky-500'} shadow-lg`} />
+                                            <div className="relative grayscale group-hover:grayscale-0 transition-all duration-500 opacity-50 group-hover:opacity-90">
+                                                <img src={victim?.avatar} className="w-10 h-10 rounded-[16px] border border-white/10 group-hover:border-rose-500/40 shadow-lg" alt="" />
+                                                <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-[#0c0f15] ${victim?.team_id === '2' ? 'bg-orange-500' : 'bg-sky-500'}`} />
                                             </div>
                                         </div>
                                     </motion.div>
                                 );
                             })}
+                            
+                            {damageTimeline && damageTimeline[rNum] && (
+                                <div className="mt-6 pt-5 border-t border-white/[0.03] flex flex-wrap gap-3 justify-center items-center">
+                                    <span className="w-full text-center text-[9px] font-black uppercase tracking-[0.4em] text-zinc-600 mb-1">Dano Infligido na Rodada</span>
+                                    {Object.entries(damageTimeline[rNum])
+                                        .sort((a: any, b: any) => b[1] - a[1])
+                                        .map(([sid, dmg]: [string, any]) => {
+                                            const p = getPlayer(sid);
+                                            if (!p || dmg === 0) return null;
+                                            return (
+                                                <div key={sid} className="flex items-center gap-2 bg-zinc-900/60 px-3 py-1.5 rounded-xl border border-white/5 shadow-sm hover:scale-105 transition-transform">
+                                                    <img src={p.avatar} className="w-5 h-5 rounded-md border border-white/10" alt="" />
+                                                    <span className="text-[10px] font-black text-zinc-400 italic">{p.nickname || p.name}</span>
+                                                    <span className="text-[10px] font-black text-emerald-500">{dmg}</span>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}
@@ -1112,20 +1171,20 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
 
                                 return (
                                     <tr key={p.steam64_id || p.steamid64} className="group hover:bg-white/[0.02] transition-all duration-500">
-                                        <td className="py-10 px-12">
+                                        <td className="py-6 px-8">
                                             <div className="flex items-center gap-6">
-                                                <div className="relative group-hover:scale-110 transition-transform duration-500">
-                                                    <img src={p.avatar} className="w-14 h-14 rounded-[22px] border-2 border-white/10 group-hover:border-white/30 shadow-2xl" alt="" />
+                                                <div className="relative group-hover:scale-105 transition-transform duration-500">
+                                                    <img src={p.avatar} className="w-12 h-12 rounded-[20px] border-2 border-white/10 group-hover:border-white/30 shadow-2xl" alt="" />
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-lg font-black italic text-white tracking-tight">{p.name || p.nickname}</span>
-                                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] mt-1.5 ${p.team_id === '3' ? 'text-sky-500' : 'text-orange-500'}`}>
+                                                    <span className="text-base font-black italic text-white tracking-tight">{p.name || p.nickname}</span>
+                                                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] mt-1 ${p.team_id === '3' ? 'text-sky-500' : 'text-orange-500'}`}>
                                                         {p.team_id === '3' ? 'CT SPECIALIST' : 'T OPERATIVE'}
                                                     </span>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="py-10 px-12">
+                                        <td className="py-6 px-8">
                                             <div className="flex flex-wrap gap-4">
                                                 {pStats.length === 0 ? (
                                                     <div className="flex items-center gap-3 text-zinc-600 italic text-[11px] font-black uppercase tracking-widest bg-black/40 px-6 py-3 rounded-[24px] border border-dashed border-white/5 opacity-50">
@@ -1142,10 +1201,10 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
                                                                 
                                                                 <div className="flex items-center justify-between border-b border-white/[0.05] pb-3 mb-1">
                                                                     <img 
-                                                                        src={`/img/weapons/${ws.weapon_name?.replace('weapon_', '')}.svg`} 
+                                                                        src={weaponImg(ws.weapon_name)} 
                                                                         className="h-5 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" 
-                                                                        alt="" 
-                                                                        onError={(e) => { e.currentTarget.src = '/img/weapons/knife.svg' }}
+                                                                        alt={ws.weapon_name}
+                                                                        title={ws.weapon_name}
                                                                     />
                                                                     <div className="flex items-center gap-1.5">
                                                                         <span className="text-[14px] font-black text-white italic">{ws.kills}</span>
@@ -1177,7 +1236,7 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="py-10 px-12 text-right">
+                                        <td className="py-6 px-8 text-right">
                                             <div className="flex flex-col items-end">
                                                 <div className="relative">
                                                     <span className="text-4xl font-black italic text-yellow-500 group-hover:text-white transition-colors duration-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">{p.kills}</span>
