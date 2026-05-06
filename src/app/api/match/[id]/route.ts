@@ -215,6 +215,26 @@ export async function GET(
                 ORDER BY r.round_number, ge.tick
             `.catch(() => []) as any[];
 
+            const trackerRounds = await prisma.$queryRaw`
+                SELECT * FROM public.tracker_rounds WHERE match_id = ${effectiveMatchId} ORDER BY round_number
+            `.catch(() => []) as any[];
+
+            const trackerKillEvents = await prisma.$queryRaw`
+                SELECT ke.*, r.round_number 
+                FROM public.tracker_kill_events ke
+                JOIN public.tracker_rounds r ON ke.round_id = r.round_id
+                WHERE ke.match_id = ${effectiveMatchId}
+                ORDER BY r.round_number, ke.tick
+            `.catch(() => []) as any[];
+
+            const trackerDamageEvents = await prisma.$queryRaw`
+                SELECT de.*, r.round_number 
+                FROM public.tracker_damage_events de
+                JOIN public.tracker_rounds r ON de.round_id = r.round_id
+                WHERE de.match_id = ${effectiveMatchId}
+                ORDER BY r.round_number, de.tick
+            `.catch(() => []) as any[];
+
             // Group utility by round for timeline
             const utilityTimeline: Record<number, any[]> = {};
             trackerGrenadeEvents.forEach(ge => {
@@ -225,6 +245,41 @@ export async function GET(
                     steamId: String(ge.steamid64),
                     tick: ge.tick,
                     blind_duration: ge.blind_duration
+                });
+            });
+
+            // Group economy by round
+            const economyTimeline: Record<number, any> = {};
+            trackerRounds.forEach(r => {
+                economyTimeline[r.round_number] = {
+                    ct_equipment_value: r.ct_equipment_value,
+                    t_equipment_value: r.t_equipment_value,
+                    ct_buy_type: r.ct_buy_type,
+                    t_buy_type: r.t_buy_type,
+                    winner: r.winner_side,
+                };
+            });
+
+            // Group kills by round
+            const killTimeline: Record<number, any[]> = {};
+            trackerKillEvents.forEach(ke => {
+                const rNum = ke.round_number;
+                if (!killTimeline[rNum]) killTimeline[rNum] = [];
+                
+                // Try to find damage for this kill (simplification: damage to victim in same round)
+                const victimDmg = trackerDamageEvents
+                    .filter(de => de.round_number === rNum && de.victim_steamid === ke.victim_steamid && de.attacker_steamid === ke.attacker_steamid)
+                    .reduce((sum, de) => sum + (de.hp_damage || 0), 0);
+
+                killTimeline[rNum].push({
+                    attackerSteamId: String(ke.attacker_steamid),
+                    victimSteamId: String(ke.victim_steamid),
+                    weapon: ke.weapon,
+                    isHeadshot: ke.is_headshot,
+                    tick: ke.tick,
+                    attackerHp: ke.attacker_hp,
+                    victimHp: ke.victim_hp,
+                    damage: victimDmg || 100 // Fallback if no damage record found
                 });
             });
 
@@ -337,6 +392,8 @@ export async function GET(
                 weapon_stats: trackerWeaponStats,
                 clutch_events: sanitizedClutches,
                 utility_timeline: utilityTimeline,
+                economy_timeline: economyTimeline,
+                kill_timeline: killTimeline,
                 metadata: {
                     ...localMeta,
                     team_2_score: localMatch.scoreB ?? 0,
@@ -344,6 +401,8 @@ export async function GET(
                     weapon_stats: trackerWeaponStats,
                     clutch_events: sanitizedClutches,
                     utility_timeline: utilityTimeline,
+                    economy_timeline: economyTimeline,
+                    kill_timeline: killTimeline,
                 },
                 stats: localStats
             };
@@ -425,6 +484,10 @@ export async function GET(
                     roundSummaries[r.round_number] = {
                         winner: r.winner_side,
                         reason: r.reason,
+                        ct_equipment_value: r.ct_equipment_value,
+                        t_equipment_value: r.t_equipment_value,
+                        ct_buy_type: r.ct_buy_type,
+                        t_buy_type: r.t_buy_type,
                         kills: kills
                             .filter((k: any) => k.round_id === r.round_id)
                             .map((k: any) => ({

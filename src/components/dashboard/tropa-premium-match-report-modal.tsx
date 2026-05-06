@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Download, Calendar, Activity, Target, Zap, Clock, X, 
-    Crosshair, TrendingUp, Star, Eye, Trophy, BarChart2, Flame
+    Crosshair, TrendingUp, Star, Eye, Trophy, BarChart2, Flame, DollarSign, Shield, Skull, Heart, Swords
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -65,7 +65,7 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
     const [match, setMatch] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [recalculating, setRecalculating] = useState(false);
-    const [tab, setTab] = useState<'placar' | 'utilitarios' | 'combate'>('placar');
+    const [tab, setTab] = useState<'placar' | 'utilitarios' | 'combate' | 'economia' | 'confrontos' | 'arsenal'>('placar');
     const { data: session } = useSession();
     const isAdmin = (session?.user as any)?.isAdmin;
 
@@ -218,7 +218,10 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                     {[
                         { id: 'placar',      label: 'Dashboard',       icon: <Activity size={15} /> },
                         { id: 'combate',     label: 'Combate Elite',   icon: <Crosshair size={15} /> },
+                        { id: 'confrontos',  label: 'Confrontos',      icon: <Swords size={15} /> },
+                        { id: 'arsenal',     label: 'Arsenal',         icon: <Shield size={15} /> },
                         { id: 'utilitarios', label: 'Utilidade',       icon: <Flame size={15} /> },
+                        { id: 'economia',    label: 'Economia',        icon: <DollarSign size={15} /> },
                     ].map(t => (
                         <button key={t.id} onClick={() => setTab(t.id as any)}
                             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
@@ -351,6 +354,18 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                                             <UtilityTimeline timeline={match?.utility_timeline} players={stats} />
                                         </div>
                                     </div>
+                                )}
+
+                                {tab === 'economia' && (
+                                    <EconomyLog economy={match?.economy_timeline || match?.metadata?.economy_timeline} />
+                                )}
+
+                                {tab === 'confrontos' && (
+                                    <ConfrontosTimeline timeline={match?.kill_timeline || match?.metadata?.kill_timeline} players={stats} />
+                                )}
+
+                                {tab === 'arsenal' && (
+                                    <ArsenalLog weaponStats={match?.metadata?.weapon_stats || []} players={stats} match={match} />
                                 )}
                             </motion.div>
                         </AnimatePresence>
@@ -650,6 +665,549 @@ const UtilityTimeline = ({ timeline, players }: { timeline: any; players: any[] 
                     </div>
                 </div>
             ))}
+        </div>
+    );
+};
+
+const EconomyLog: React.FC<{ economy: any }> = ({ economy }) => {
+    if (!economy) return (
+        <div className="flex flex-col items-center justify-center py-24 text-zinc-600 bg-black/20 rounded-[40px] border border-dashed border-white/[0.03]">
+            <DollarSign size={48} strokeWidth={1} className="mb-4 text-emerald-500/20" />
+            <h4 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-500">Dados de economia indisponíveis</h4>
+            <p className="text-[10px] uppercase text-zinc-700 mt-2 font-bold tracking-widest">Aguardando análise completa da demo</p>
+        </div>
+    );
+
+    const rounds = Object.keys(economy).map(Number).sort((a, b) => a - b);
+    
+    let totalSpendCT = 0;
+    let totalSpendT = 0;
+    let ctRounds = 0;
+    let tRounds = 0;
+
+    rounds.forEach(rNum => {
+        const data = economy[rNum];
+        if (data.ct_equipment_value) { totalSpendCT += data.ct_equipment_value; ctRounds++; }
+        if (data.t_equipment_value) { totalSpendT += data.t_equipment_value; tRounds++; }
+    });
+
+    const avgCT = ctRounds > 0 ? Math.round(totalSpendCT / ctRounds) : 0;
+    const avgT = tRounds > 0 ? Math.round(totalSpendT / tRounds) : 0;
+
+    const formatMoney = (val: number) => {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val).replace('$', '$ ');
+    };
+
+    const getBuyTypeColor = (type: string) => {
+        const t = String(type).toLowerCase();
+        if (t.includes('full')) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+        if (t.includes('semi') || t.includes('force')) return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
+        if (t.includes('eco')) return 'text-red-400 bg-red-500/10 border-red-500/20';
+        if (t.includes('pistol')) return 'text-sky-400 bg-sky-500/10 border-sky-500/20';
+        return 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20';
+    };
+
+    return (
+        <div className="space-y-12 pb-10">
+            {/* Summary Cards Premium */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-gradient-to-br from-sky-500/10 via-zinc-900/40 to-transparent border border-sky-500/20 rounded-[40px] p-8 relative overflow-hidden group">
+                    <div className="absolute -top-10 -right-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                        <Shield size={200} />
+                    </div>
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-sky-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                                <Shield className="text-white" size={24} />
+                            </div>
+                            <div>
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-400 mb-1">Time CT</h4>
+                                <span className="text-xs font-black text-zinc-500 uppercase tracking-widest">Investimento Médio</span>
+                            </div>
+                        </div>
+                        <div className="flex items-end justify-between gap-4">
+                            <span className="text-5xl font-black italic text-white tracking-tighter leading-none">{formatMoney(avgCT)}</span>
+                            <div className="flex-1 max-w-[150px] mb-2">
+                                <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden shadow-inner p-0.5">
+                                    <motion.div 
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${Math.min(100, (avgCT / 30000) * 100)}%` }}
+                                        className="h-full bg-sky-500 rounded-full" 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-orange-500/10 via-zinc-900/40 to-transparent border border-orange-500/20 rounded-[40px] p-8 relative overflow-hidden group">
+                    <div className="absolute -top-10 -right-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                        <Target size={200} />
+                    </div>
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+                                <Target className="text-white" size={24} />
+                            </div>
+                            <div>
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-400 mb-1">Time T</h4>
+                                <span className="text-xs font-black text-zinc-500 uppercase tracking-widest">Investimento Médio</span>
+                            </div>
+                        </div>
+                        <div className="flex items-end justify-between gap-4">
+                            <span className="text-5xl font-black italic text-white tracking-tighter leading-none">{formatMoney(avgT)}</span>
+                            <div className="flex-1 max-w-[150px] mb-2">
+                                <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden shadow-inner p-0.5">
+                                    <motion.div 
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${Math.min(100, (avgT / 30000) * 100)}%` }}
+                                        className="h-full bg-orange-500 rounded-full" 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Premium Table Content */}
+            <div className="bg-zinc-900/40 border border-white/5 rounded-[48px] overflow-hidden shadow-2xl">
+                <div className="overflow-x-auto no-scrollbar">
+                    <table className="w-full text-left border-collapse min-w-[700px]">
+                        <thead>
+                            <tr className="bg-white/[0.03] border-b border-white/[0.05]">
+                                <th className="py-6 px-10 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 text-center">Round</th>
+                                <th className="py-6 px-10 text-[10px] font-black uppercase tracking-[0.3em] text-sky-400">Time CT</th>
+                                <th className="py-6 px-10 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 text-center">Spread</th>
+                                <th className="py-6 px-10 text-[10px] font-black uppercase tracking-[0.3em] text-orange-400 text-right">Time T</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/[0.02]">
+                            {rounds.map(rNum => {
+                                const r = economy[rNum];
+                                const maxVal = Math.max(r.ct_equipment_value || 0, r.t_equipment_value || 0, 30000);
+                                const ctWidth = ((r.ct_equipment_value || 0) / maxVal) * 100;
+                                const tWidth = ((r.t_equipment_value || 0) / maxVal) * 100;
+                                
+                                return (
+                                    <tr key={rNum} className="group hover:bg-white/[0.01] transition-all duration-300">
+                                        <td className="py-6 px-10">
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-14 h-14 rounded-[20px] bg-zinc-950 border border-white/5 flex items-center justify-center group-hover:border-yellow-500/30 group-hover:scale-105 transition-all shadow-inner">
+                                                    <span className="text-2xl font-black italic text-zinc-700 group-hover:text-yellow-500 transition-colors">{rNum}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="py-6 px-10">
+                                            <div className="flex flex-col">
+                                                <div className="flex items-center gap-3">
+                                                    <Shield size={14} className="text-sky-500/50" />
+                                                    <span className="text-xl font-black italic text-sky-300 tracking-tight">{formatMoney(r.ct_equipment_value || 0)}</span>
+                                                </div>
+                                                <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border w-fit mt-3 shadow-lg ${getBuyTypeColor(r.ct_buy_type)}`}>
+                                                    {r.ct_buy_type || 'Desconhecido'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="py-6 px-4">
+                                            <div className="flex items-center gap-3 h-3 w-full bg-black/60 rounded-full overflow-hidden p-1 shadow-inner border border-white/5">
+                                                <motion.div 
+                                                    initial={{ width: 0 }}
+                                                    whileInView={{ width: `${ctWidth/2}%` }}
+                                                    viewport={{ once: true }}
+                                                    className="h-full bg-sky-500 rounded-l-full shadow-[0_0_20px_rgba(56,189,248,0.5)]" 
+                                                />
+                                                <div className="w-0.5 h-full bg-white/20" />
+                                                <motion.div 
+                                                    initial={{ width: 0 }}
+                                                    whileInView={{ width: `${tWidth/2}%` }}
+                                                    viewport={{ once: true }}
+                                                    className="h-full bg-orange-500 rounded-r-full shadow-[0_0_20px_rgba(249,115,22,0.5)]" 
+                                                />
+                                            </div>
+                                        </td>
+                                        <td className="py-6 px-10 text-right">
+                                            <div className="flex flex-col items-end">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xl font-black italic text-orange-300 tracking-tight">{formatMoney(r.t_equipment_value || 0)}</span>
+                                                    <Target size={14} className="text-orange-500/50" />
+                                                </div>
+                                                <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border w-fit mt-3 shadow-lg ${getBuyTypeColor(r.t_buy_type)}`}>
+                                                    {r.t_buy_type || 'Desconhecido'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ConfrontosTimeline: React.FC<{ timeline: any, players: any[] }> = ({ timeline, players }) => {
+    if (!timeline) return (
+        <div className="flex flex-col items-center justify-center py-24 text-zinc-600 bg-black/20 rounded-[40px] border border-dashed border-white/[0.03]">
+            <Crosshair size={48} strokeWidth={1} className="mb-4 text-rose-500/20" />
+            <h4 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-500">Dados de confrontos indisponíveis</h4>
+            <p className="text-[10px] uppercase text-zinc-700 mt-2 font-bold tracking-widest">Requer análise profunda da demo</p>
+        </div>
+    );
+
+    const rounds = Object.keys(timeline).map(Number).sort((a, b) => a - b);
+    const getPlayer = (sid: string) => players.find(p => String(p.steam64_id) === String(sid) || String(p.steamid64) === String(sid));
+
+    // Summary Calculations
+    const killerStats: Record<string, number> = {};
+    const victimStats: Record<string, number> = {};
+    Object.values(timeline).flat().forEach((k: any) => {
+        killerStats[k.attackerSteamId] = (killerStats[k.attackerSteamId] || 0) + 1;
+        victimStats[k.victimSteamId] = (victimStats[k.victimSteamId] || 0) + 1;
+    });
+
+    const topKillers = Object.entries(killerStats).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    const topVictims = Object.entries(victimStats).sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+    return (
+        <div className="space-y-12 pb-10">
+            {/* Premium Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-gradient-to-br from-emerald-500/10 via-zinc-900/40 to-transparent border border-emerald-500/20 rounded-[40px] p-8 relative overflow-hidden group">
+                    <div className="absolute -top-10 -right-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                        <Trophy size={200} />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400 mb-6 flex items-center gap-2">
+                        <Trophy size={16} /> Elite de Combate: Carrascos
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                        {topKillers.map(([sid, count]) => {
+                            const p = getPlayer(sid);
+                            return (
+                                <div key={sid} className="flex items-center gap-4 bg-zinc-950/60 p-3 rounded-[24px] border border-white/5 hover:border-emerald-500/30 transition-all">
+                                    <img src={p?.avatar} className="w-10 h-10 rounded-xl border border-white/10" alt="" />
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-xs font-black italic text-zinc-300 truncate">{p?.name || p?.nickname}</span>
+                                        <span className="text-[10px] font-black text-emerald-500 tracking-widest">{count} KILLS</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-rose-500/10 via-zinc-900/40 to-transparent border border-rose-500/20 rounded-[40px] p-8 relative overflow-hidden group">
+                    <div className="absolute -top-10 -right-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                        <Skull size={200} />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-400 mb-6 flex items-center gap-2">
+                        <Skull size={16} /> Alvos Frequentes: Maiores Vítimas
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                        {topVictims.map(([sid, count]) => {
+                            const p = getPlayer(sid);
+                            return (
+                                <div key={sid} className="flex items-center gap-4 bg-zinc-950/60 p-3 rounded-[24px] border border-white/5 hover:border-rose-500/30 transition-all">
+                                    <img src={p?.avatar} className="w-10 h-10 rounded-xl border border-white/10 grayscale opacity-60" alt="" />
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-xs font-black italic text-zinc-300 truncate">{p?.name || p?.nickname}</span>
+                                        <span className="text-[10px] font-black text-rose-500 tracking-widest">{count} MORTES</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {/* Premium Battle Log */}
+            <div className="space-y-16">
+                {rounds.map(rNum => (
+                    <div key={rNum} className="space-y-8">
+                        <div className="flex items-center gap-6">
+                            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/5 to-white/10" />
+                            <div className="flex flex-col items-center">
+                                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mb-2">SEQUENCE LOG</span>
+                                <div className="px-10 py-3 rounded-3xl bg-zinc-900 border border-white/10 shadow-2xl flex items-center gap-4 relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]" />
+                                    <span className="text-sm font-black uppercase tracking-[0.3em] text-white italic">ROUND {rNum}</span>
+                                </div>
+                            </div>
+                            <div className="h-px flex-1 bg-gradient-to-l from-transparent via-white/5 to-white/10" />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 gap-5 px-4 lg:px-20">
+                            {timeline[rNum].map((k: any, idx: number) => {
+                                const attacker = getPlayer(k.attackerSteamId);
+                                const victim = getPlayer(k.victimSteamId);
+                                
+                                return (
+                                    <motion.div 
+                                        key={idx} 
+                                        initial={{ opacity: 0, x: -20 }}
+                                        whileInView={{ opacity: 1, x: 0 }}
+                                        viewport={{ once: true }}
+                                        className="bg-zinc-900/40 border border-white/[0.04] rounded-[40px] p-6 flex items-center justify-between hover:bg-zinc-900/60 hover:border-white/10 hover:shadow-2xl transition-all duration-500 group relative overflow-hidden"
+                                    >
+                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-yellow-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        
+                                        {/* Attacker */}
+                                        <div className="flex items-center gap-6 flex-1 min-w-0">
+                                            <div className="relative group-hover:scale-110 transition-transform duration-500">
+                                                <img src={attacker?.avatar} className="w-14 h-14 rounded-[24px] border-2 border-white/10 group-hover:border-yellow-500/40 shadow-2xl" alt="" />
+                                                <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-[#0c0f15] ${attacker?.team_id === '2' ? 'bg-orange-500' : 'bg-sky-500'} shadow-lg`} />
+                                            </div>
+                                            <div className="flex flex-col min-w-0">
+                                                <span className={`text-lg font-black italic truncate tracking-tight ${attacker?.team_id === '2' ? 'text-orange-400' : 'text-sky-400'}`}>{attacker?.name || attacker?.nickname || 'Desconhecido'}</span>
+                                                <div className="flex items-center gap-2.5 mt-1.5">
+                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                                        <Heart size={10} className="text-emerald-500" fill="currentColor" />
+                                                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{k.attackerHp} HP</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Action Info */}
+                                        <div className="flex flex-col items-center gap-4 px-10 border-x border-white/[0.05] min-w-[240px]">
+                                            <div className="flex items-center gap-6">
+                                                <img 
+                                                    src={`/img/weapons/${k.weapon?.replace('weapon_', '')}.svg`} 
+                                                    className="h-6 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all group-hover:scale-125 group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]" 
+                                                    alt="" 
+                                                    onError={(e) => { e.currentTarget.src = '/img/weapons/knife.svg' }}
+                                                />
+                                                {k.isHeadshot && (
+                                                    <div className="w-9 h-9 rounded-[14px] bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-[inset_0_0_10px_rgba(244,63,94,0.1)] group-hover:scale-110 transition-transform">
+                                                        <Target size={18} strokeWidth={3} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col items-center gap-1.5">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-[14px] font-black text-emerald-400 tracking-tighter italic">{k.damage}</span>
+                                                    <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em]">HP DAMAGE</span>
+                                                </div>
+                                                <div className="h-1.5 w-28 bg-black/40 rounded-full overflow-hidden p-0.5 shadow-inner">
+                                                    <motion.div initial={{ width: 0 }} whileInView={{ width: '100%' }} className="h-full bg-emerald-500/80 rounded-full" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Victim */}
+                                        <div className="flex items-center gap-6 flex-1 justify-end min-w-0">
+                                            <div className="flex flex-col items-end text-right min-w-0">
+                                                <span className={`text-lg font-black italic truncate tracking-tight opacity-40 group-hover:opacity-60 transition-all ${victim?.team_id === '2' ? 'text-orange-400' : 'text-sky-400'}`}>{victim?.name || victim?.nickname || 'Desconhecido'}</span>
+                                                <div className="flex items-center gap-2.5 mt-1.5">
+                                                    <span className="text-[10px] font-black text-rose-500/60 uppercase tracking-widest italic">NEUTRALIZADO</span>
+                                                    <Skull size={12} className="text-rose-500/60" />
+                                                </div>
+                                            </div>
+                                            <div className="relative grayscale group-hover:grayscale-0 transition-all duration-700 opacity-40 group-hover:opacity-80">
+                                                <img src={victim?.avatar} className="w-14 h-14 rounded-[24px] border-2 border-white/10 group-hover:border-rose-500/40 shadow-2xl" alt="" />
+                                                <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-[#0c0f15] ${victim?.team_id === '2' ? 'bg-orange-500' : 'bg-sky-500'} shadow-lg`} />
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> = ({ weaponStats, players, match }) => {
+    return (
+        <div className="space-y-12 pb-10">
+            {/* Survival & Utility Premium Summary */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="bg-gradient-to-br from-yellow-500/10 via-zinc-900/40 to-transparent border border-yellow-500/20 rounded-[40px] p-8 relative overflow-hidden group">
+                    <div className="absolute -top-10 -right-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                        <Clock size={200} />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-400 mb-8 flex items-center gap-2">
+                        <Clock size={16} /> Biometria: Ciclo de Vida e Sobrevivência
+                    </h4>
+                    <div className="space-y-4 max-h-[440px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-white/10">
+                        {players.sort((a,b) => (b.avg_ttd || 0) - (a.avg_ttd || 0)).map(p => (
+                            <div key={p.steamid64} className="flex items-center justify-between group p-4 bg-zinc-950/60 rounded-[28px] border border-white/5 hover:border-yellow-500/30 transition-all duration-500">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative group-hover:scale-105 transition-transform">
+                                        <img src={p.avatar} className="w-12 h-12 rounded-[18px] border-2 border-white/10 shadow-2xl" alt="" />
+                                        <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-4 border-[#0c0f15] ${p.team_id === '2' ? 'bg-orange-500' : 'bg-sky-500'} shadow-lg`} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-base font-black italic text-zinc-200 group-hover:text-white transition-colors">{p.name || p.nickname}</span>
+                                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em]">{p.team_id === '2' ? 'TERRORIST' : 'COUNTER-TERRORIST'}</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-8">
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-2xl font-black text-white italic tracking-tighter">{p.avg_ttd ? `${Math.round(p.avg_ttd)}s` : '—'}</span>
+                                        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Média/Round</span>
+                                    </div>
+                                    <div className="flex flex-col items-end min-w-[100px]">
+                                        <span className="text-2xl font-black text-yellow-500 italic tracking-tighter">
+                                            {p.avg_ttd ? `${Math.round(p.avg_ttd * ((match?.metadata?.team_2_score || 0) + (match?.metadata?.team_3_score || 0)))}s` : '—'}
+                                        </span>
+                                        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Vida Total</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-emerald-500/10 via-zinc-900/40 to-transparent border border-emerald-500/20 rounded-[40px] p-8 relative overflow-hidden group">
+                    <div className="absolute -top-10 -right-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                        <Zap size={200} />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400 mb-8 flex items-center gap-2">
+                        <Zap size={16} /> Logística: Consumo de Utilitários
+                    </h4>
+                    <div className="grid grid-cols-1 gap-4 max-h-[440px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-white/10">
+                        {players.sort((a,b) => ((a.he_thrown || 0) + (a.flash_thrown || 0) + (a.smokes_thrown || 0) + (a.molotovs_thrown || 0)) - ((b.he_thrown || 0) + (b.flash_thrown || 0) + (b.smokes_thrown || 0) + (b.molotovs_thrown || 0))).reverse().map(p => (
+                            <div key={p.steamid64} className="flex items-center justify-between p-5 bg-zinc-950/60 rounded-[32px] border border-white/5 hover:border-emerald-500/30 hover:bg-zinc-950/80 transition-all duration-500">
+                                <div className="flex items-center gap-4">
+                                    <img src={p.avatar} className="w-10 h-10 rounded-2xl border border-white/10" alt="" />
+                                    <span className="text-sm font-black italic text-zinc-300">{p.name || p.nickname}</span>
+                                </div>
+                                <div className="flex items-center gap-6">
+                                    <UtilityBadge count={p.he_thrown} label="HE" color="orange" />
+                                    <UtilityBadge count={p.flash_thrown} label="FB" color="yellow" />
+                                    <UtilityBadge count={p.smokes_thrown} label="SM" color="sky" />
+                                    <UtilityBadge count={p.molotovs_thrown} label="MO" color="red" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Premium Weapons Table */}
+            <div className="bg-zinc-900/40 border border-white/[0.04] rounded-[48px] overflow-hidden shadow-2xl relative">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[1100px]">
+                        <thead>
+                            <tr className="bg-white/[0.03] border-b border-white/[0.05]">
+                                <th className="py-8 px-12 text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Especialista</th>
+                                <th className="py-8 px-12 text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Arsenal & Eficácia de Combate (K / DMG / ADR / HS%)</th>
+                                <th className="py-8 px-12 text-[10px] font-black uppercase tracking-[0.4em] text-yellow-500 text-right">Total Combat</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/[0.02]">
+                            {players.map(p => {
+                                const pStats = weaponStats.filter((ws: any) => String(ws.player_id) === String(p.steamid64));
+                                const totalRounds = (match?.metadata?.team_2_score || 0) + (match?.metadata?.team_3_score || 0) || 30;
+
+                                return (
+                                    <tr key={p.steamid64} className="group hover:bg-white/[0.02] transition-all duration-500">
+                                        <td className="py-10 px-12">
+                                            <div className="flex items-center gap-6">
+                                                <div className="relative group-hover:scale-110 transition-transform duration-500">
+                                                    <img src={p.avatar} className="w-14 h-14 rounded-[22px] border-2 border-white/10 group-hover:border-white/30 shadow-2xl" alt="" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-lg font-black italic text-white tracking-tight">{p.name || p.nickname}</span>
+                                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] mt-1.5 ${p.team_id === '3' ? 'text-sky-500' : 'text-orange-500'}`}>
+                                                        {p.team_id === '3' ? 'CT SPECIALIST' : 'T OPERATIVE'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="py-10 px-12">
+                                            <div className="flex flex-wrap gap-4">
+                                                {pStats.length === 0 ? (
+                                                    <div className="flex items-center gap-3 text-zinc-600 italic text-[11px] font-black uppercase tracking-widest bg-black/40 px-6 py-3 rounded-[24px] border border-dashed border-white/5 opacity-50">
+                                                        SEM REGISTROS DE ABATE
+                                                    </div>
+                                                ) : (
+                                                    pStats.sort((a:any, b:any) => b.kills - a.kills).map((ws: any, i: number) => {
+                                                        const hsPercent = ws.kills > 0 ? Math.round((ws.headshots / ws.kills) * 100) : 0;
+                                                        const weaponAdr = (ws.damage / totalRounds).toFixed(1);
+
+                                                        return (
+                                                            <div key={i} className="flex flex-col gap-3 p-5 bg-zinc-950 border border-white/5 rounded-[32px] group-hover:border-yellow-500/20 transition-all hover:bg-zinc-900 hover:scale-105 shadow-2xl min-w-[180px] relative overflow-hidden">
+                                                                <div className="absolute top-0 right-0 p-2 opacity-5"><Target size={40} /></div>
+                                                                
+                                                                <div className="flex items-center justify-between border-b border-white/[0.05] pb-3 mb-1">
+                                                                    <img 
+                                                                        src={`/img/weapons/${ws.weapon_name?.replace('weapon_', '')}.svg`} 
+                                                                        className="h-5 brightness-0 invert opacity-40 group-hover:opacity-100 transition-all drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" 
+                                                                        alt="" 
+                                                                        onError={(e) => { e.currentTarget.src = '/img/weapons/knife.svg' }}
+                                                                    />
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-[14px] font-black text-white italic">{ws.kills}</span>
+                                                                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">KILLS</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[12px] font-black text-emerald-400 tracking-tighter italic">{ws.damage}</span>
+                                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">DMG</span>
+                                                                    </div>
+                                                                    <div className="flex flex-col items-end">
+                                                                        <span className="text-[12px] font-black text-sky-400 tracking-tighter italic">{weaponAdr}</span>
+                                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">ADR</span>
+                                                                    </div>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[12px] font-black text-rose-400 tracking-tighter italic">{hsPercent}%</span>
+                                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">HS%</span>
+                                                                    </div>
+                                                                    <div className="flex flex-col items-end">
+                                                                        <span className="text-[12px] font-black text-zinc-400 tracking-tighter italic">{ws.headshots}</span>
+                                                                        <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">HS</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="py-10 px-12 text-right">
+                                            <div className="flex flex-col items-end">
+                                                <div className="relative">
+                                                    <span className="text-4xl font-black italic text-yellow-500 group-hover:text-white transition-colors duration-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">{p.kills}</span>
+                                                    <div className="absolute -inset-2 bg-yellow-500/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                </div>
+                                                <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mt-1">TOTAL FRAGS</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const UtilityBadge: React.FC<{ count: number, label: string, color: string }> = ({ count, label, color }) => {
+    const colorClasses: any = {
+        orange: 'bg-orange-500/10 border-orange-500/20 text-orange-500',
+        yellow: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500',
+        sky:    'bg-sky-500/10 border-sky-500/20 text-sky-500',
+        red:    'bg-red-500/10 border-red-500/20 text-red-500'
+    };
+
+    return (
+        <div className="flex flex-col items-center gap-1.5">
+            <div className={`w-10 h-10 rounded-[14px] flex items-center justify-center border ${colorClasses[color]} shadow-inner`}>
+                <span className="text-sm font-black italic">{count || 0}</span>
+            </div>
+            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">{label}</span>
         </div>
     );
 };
