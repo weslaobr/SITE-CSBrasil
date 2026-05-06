@@ -321,7 +321,8 @@ const MatchReportModal: React.FC<Props> = ({
         }
         
         const MAPPING: Record<string, string> = {
-            'm4a1_s': 'm4a1_silencer', 'm4a1-s': 'm4a1_silencer', 'm4a1_silencer': 'm4a1_silencer', 
+            'ak47': 'ak47', 'ak-47': 'ak47',
+            'm4a4': 'm4a1', 'm4a1_s': 'm4a1_silencer', 'm4a1-s': 'm4a1_silencer', 'm4a1_silencer': 'm4a1_silencer', 
             'usp_s': 'usp_silencer', 'usp-s': 'usp_silencer', 'usp_silencer': 'usp_silencer',
             'deagle': 'deagle', 'desert_eagle': 'deagle', 'p2000': 'hkp2000', 'revolver': 'revolver',
             'r8': 'revolver', 'scout': 'ssg08', 'ssg08': 'ssg08', 'hegrenade': 'hegrenade',
@@ -333,7 +334,7 @@ const MatchReportModal: React.FC<Props> = ({
             'mac10': 'mac10', 'mp9': 'mp9', 'mp7': 'mp7', 'mp5sd': 'mp5sd', 'ump45': 'ump45',
             'p90': 'p90', 'bizon': 'bizon', 'nova': 'nova', 'xm1014': 'xm1014', 'mag7': 'mag7',
             'sawedoff': 'sawedoff', 'm249': 'm249', 'negev': 'negev', 'p250': 'p250',
-            'tec9': 'tec9', 'fiveseven': 'fiveseven', 'cz75a': 'cz75a',
+            'tec9': 'tec9', 'fiveseven': 'fiveseven', 'cz75a': 'cz75a', 'elite': 'elite', 'dualies': 'elite', 'duals': 'elite',
             'bayonet': 'bayonet', 'knife': 'knife', 'knifegg': 'knifegg',
             'knife_t': 'knife_t', 'knife_ct': 'knife', 'knife_butterfly': 'knife_butterfly',
             'knife_karambit': 'knife_karambit', 'knife_m9_bayonet': 'knife_m9_bayonet',
