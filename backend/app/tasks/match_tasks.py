@@ -1,5 +1,6 @@
 from app.core.celery_app import celery_app
 from app.services.downloader import DownloaderService
+from app.services.parser_v2 import ParserV2Service
 from app.services.parser import ParserService
 from app.db.session import AsyncSessionLocal
 import asyncio
@@ -16,8 +17,16 @@ def process_match_task(match_id: str, steamid: str, demo_url: str, match_date: s
     filename = f"{match_id}{ext}"
     local_path = DownloaderService.download_demo(demo_url, filename)
     
-    # Parser
-    parser = ParserService(local_path)
+    # Parser Selection (Prefer V2/demoparser2 for speed)
+    try:
+        parser = ParserV2Service(local_path)
+        task_logger_init = logging.getLogger("app.tasks")
+        task_logger_init.info(f"Using ParserV2 (demoparser2) for {match_id}")
+    except Exception as e:
+        import logging
+        task_logger_init = logging.getLogger("app.tasks")
+        task_logger_init.warning(f"ParserV2 failed to init, falling back to awpy: {e}")
+        parser = ParserService(local_path)
     
     # Running async session in celery (which is synchronous)
     async def run_parser():
