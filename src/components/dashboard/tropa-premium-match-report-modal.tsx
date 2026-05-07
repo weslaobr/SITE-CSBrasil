@@ -1009,6 +1009,30 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeli
 
     const topKillers = Object.entries(killerStats).sort((a, b) => b[1] - a[1]).slice(0, 4);
     const topVictims = Object.entries(victimStats).sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+    // --- Cálculo da Matriz de Duelos (Head-to-Head) ---
+    const duelMatrix: Record<string, Record<string, number>> = {};
+    Object.values(timeline).flat().forEach((k: any) => {
+        const attacker = String(k.attackerSteamId);
+        const victim = String(k.victimSteamId);
+        if (!duelMatrix[attacker]) duelMatrix[attacker] = {};
+        duelMatrix[attacker][victim] = (duelMatrix[attacker][victim] || 0) + 1;
+    });
+
+    const team1 = players.filter(p => String(p.team_id) === '3' || String(p.team_id).toUpperCase() === 'CT' || String(p.team_id).toUpperCase() === 'A');
+    const team2 = players.filter(p => String(p.team_id) === '2' || String(p.team_id).toUpperCase() === 'T' || String(p.team_id).toUpperCase() === 'B');
+    
+    // Identificar qual time é o do usuário (para colocar nas linhas)
+    const userInTeam2 = team2.some(p => p.is_user);
+    const rowsTeam = userInTeam2 ? team2 : team1;
+    const colsTeam = userInTeam2 ? team1 : team2;
+
+    const getDuelScore = (attackerSid: string, victimSid: string) => {
+        const kills = duelMatrix[attackerSid]?.[victimSid] || 0;
+        const deaths = duelMatrix[victimSid]?.[attackerSid] || 0;
+        return { kills, deaths };
+    };
+    // ------------------------------------------------
     const scrollToRound = (r: number) => {
         const el = document.getElementById(`confrontos-round-${r}`);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1043,7 +1067,81 @@ const ConfrontosTimeline: React.FC<{ timeline: any, players: any[], damageTimeli
             </div>
 
             <div className="flex-1 flex flex-col gap-12 min-w-0">
-            {/* Premium Summary Cards */}
+                
+                {/* MATRIZ DE DUELOS (HEAD-TO-HEAD) */}
+                <div className="bg-zinc-900/40 border border-white/5 rounded-[40px] p-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-6 opacity-5"><Swords size={120} /></div>
+                    <h3 className="text-xs font-black uppercase tracking-[0.3em] text-yellow-500 mb-8 flex items-center gap-3">
+                        <Swords size={18} /> Matriz de Confrontos Diretos (K/D Individual)
+                    </h3>
+                    
+                    <div className="overflow-x-auto no-scrollbar">
+                        <table className="w-full border-separate border-spacing-2">
+                            <thead>
+                                <tr>
+                                    <th className="w-32"></th>
+                                    {colsTeam.map(p => (
+                                        <th key={p.steam64_id || p.steamid64} className="p-2">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <img src={p.avatar} className="w-8 h-8 rounded-lg border border-white/10" alt="" />
+                                                <span className="text-[8px] font-black uppercase text-zinc-500 truncate max-w-[60px]">{p.name || p.nickname}</span>
+                                            </div>
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rowsTeam.map(rp => (
+                                    <tr key={rp.steam64_id || rp.steamid64}>
+                                        <td className="p-2">
+                                            <div className="flex items-center gap-3 bg-white/5 p-2 rounded-xl border border-white/5">
+                                                <img src={rp.avatar} className="w-8 h-8 rounded-lg border border-white/10" alt="" />
+                                                <span className="text-[10px] font-black text-white truncate max-w-[80px]">{rp.name || rp.nickname}</span>
+                                            </div>
+                                        </td>
+                                        {colsTeam.map(cp => {
+                                            const { kills, deaths } = getDuelScore(rp.steam64_id || rp.steamid64, cp.steam64_id || cp.steamid64);
+                                            const isAdvantage = kills > deaths;
+                                            const isDisadvantage = deaths > kills;
+                                            const hasFought = kills > 0 || deaths > 0;
+
+                                            return (
+                                                <td key={cp.steam64_id || cp.steamid64} className="p-1">
+                                                    <div className={`h-12 rounded-xl flex flex-col items-center justify-center border transition-all ${
+                                                        !hasFought ? 'bg-zinc-950/20 border-white/[0.02] opacity-30' :
+                                                        isAdvantage ? 'bg-emerald-500/10 border-emerald-500/20 shadow-[inset_0_0_15px_rgba(16,185,129,0.05)]' :
+                                                        isDisadvantage ? 'bg-red-500/10 border-red-500/20 shadow-[inset_0_0_15px_rgba(239,68,68,0.05)]' :
+                                                        'bg-zinc-800/40 border-white/10'
+                                                    }`}>
+                                                        <div className="flex items-baseline gap-1">
+                                                            <span className={`text-sm font-black italic ${!hasFought ? 'text-zinc-700' : isAdvantage ? 'text-emerald-400' : isDisadvantage ? 'text-red-400' : 'text-white'}`}>
+                                                                {kills}
+                                                            </span>
+                                                            <span className="text-[8px] font-bold text-zinc-600">-</span>
+                                                            <span className={`text-[11px] font-bold ${!hasFought ? 'text-zinc-800' : 'text-zinc-500'}`}>
+                                                                {deaths}
+                                                            </span>
+                                                        </div>
+                                                        {hasFought && (
+                                                            <div className="w-8 h-0.5 bg-black/40 rounded-full mt-1 overflow-hidden">
+                                                                <div 
+                                                                    className={`h-full ${isAdvantage ? 'bg-emerald-500' : isDisadvantage ? 'bg-red-500' : 'bg-zinc-500'}`} 
+                                                                    style={{ width: `${(kills / (kills + deaths)) * 100}%` }}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Premium Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-gradient-to-br from-emerald-500/10 via-zinc-900/40 to-transparent border border-emerald-500/20 rounded-[40px] p-8 relative overflow-hidden group">
                     <div className="absolute -top-10 -right-10 opacity-5 group-hover:scale-110 transition-transform duration-700">
