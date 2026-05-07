@@ -76,8 +76,8 @@ model EvaluationList {
   isPublic         Boolean            @default(true)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @default(now())
-  User             User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  PlayerEvaluation PlayerEvaluation[]
+  creator          User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  evaluations      PlayerEvaluation[]
 }
 
 model GlobalMatch {
@@ -247,7 +247,7 @@ model PlayerEvaluation {
   notes               String?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @default(now())
-  EvaluationList      EvaluationList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  list                EvaluationList @relation(fields: [listId], references: [id], onDelete: Cascade)
 
   @@unique([listId, evaluatedPlayerName])
 }
@@ -350,7 +350,7 @@ model User {
   mixLevel                                   Int?                @default(5)
   accounts                                   Account[]
   Crosshair                                  Crosshair[]
-  EvaluationList                             EvaluationList[]
+  evaluationLists                            EvaluationList[]
   GlobalMatchPlayer                          GlobalMatchPlayer[]
   Lobby                                      Lobby[]
   LobbyPlayer                                LobbyPlayer[]
