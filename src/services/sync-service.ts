@@ -149,6 +149,43 @@ export async function syncUserMatches(steamId: string) {
                 console.warn(`[SyncService] Detail sync failed for ${m.id}`);
             }
 
+            // Platform Detection Logic
+            const dataSource = String(m.data_source || '').toLowerCase();
+            const rankType = m.rank_type;
+            let detectedGameMode = m.data_source || 'Matchmaking';
+            let detectedSource = 'Leetify';
+
+            if (dataSource.includes('faceit')) {
+                detectedGameMode = 'faceit';
+                detectedSource = 'Faceit';
+            } else if (dataSource.includes('gamersclub')) {
+                detectedGameMode = 'gamersclub';
+                detectedSource = 'GamersClub';
+            } else if (dataSource.includes('matchmaking')) {
+                if (rankType === 11) {
+                    detectedGameMode = 'premier';
+                    detectedSource = 'Valve';
+                } else {
+                    detectedGameMode = 'competitive';
+                    detectedSource = 'Valve';
+                }
+            }
+
+            // Trigger auto-import for NEW matches with demos
+            const existingMatch = await prisma.match.findUnique({
+                where: { externalId }
+            });
+
+            if (!existingMatch && demoUrl) {
+                const pythonUrl = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
+                console.log(`[AutoSync] Triggering import for new match ${m.id} (${detectedGameMode})`);
+                axios.post(`${pythonUrl}/api/importer/import-match`, {
+                    steamid: user.steamId,
+                    auth_code: "auto-sync",
+                    share_code: demoUrl
+                }).catch(err => console.warn(`[AutoSync] Failed for ${m.id}:`, err.message));
+            }
+
             const sharedData = {
                 kills,
                 deaths,
@@ -158,7 +195,7 @@ export async function syncUserMatches(steamId: string) {
                 hsPercentage,
                 result,
                 matchDate,
-                metadata: { ...m, ...matchMetaExtra, kast, source_detail: 'leetify' }
+                metadata: { ...m, ...matchMetaExtra, kast, source_detail: 'leetify', detected_mode: detectedGameMode }
             };
 
             await prisma.match.upsert({
@@ -166,9 +203,9 @@ export async function syncUserMatches(steamId: string) {
                 update: sharedData,
                 create: {
                     userId: user.id,
-                    source: 'Leetify',
+                    source: detectedSource,
                     externalId,
-                    gameMode: m.data_source || 'Matchmaking',
+                    gameMode: detectedGameMode,
                     mapName: mapName.charAt(0).toUpperCase() + mapName.slice(1),
                     mvps: m.mvps ?? 0,
                     duration: m.match_duration ? `${Math.round(m.match_duration / 60)} min` : '45 min',
