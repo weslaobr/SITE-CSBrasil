@@ -5,10 +5,10 @@ export async function GET() {
     try {
         // Buscar as 30 partidas mais recentes de GlobalMatchPlayer
         const recentPlays = await (prisma as any).globalMatchPlayer.findMany({
-            orderBy: { match: { matchDate: 'desc' } },
+            orderBy: { GlobalMatch: { matchDate: 'desc' } },
             take: 30,
             include: {
-                match: { select: { mapName: true, matchDate: true } },
+                GlobalMatch: { select: { mapName: true, matchDate: true } },
             }
         });
 
@@ -52,11 +52,11 @@ export async function GET() {
                 steamId: play.steamId,
                 playerName: player?.name || `Player`,
                 playerAvatar: player?.avatar || '',
-                mapName: play.match?.mapName || 'Unknown',
+                mapName: play.GlobalMatch?.mapName || 'Unknown',
                 result: play.matchResult,
                 kda,
                 adr: play.adr ? Math.round(play.adr) : null,
-                date: play.match?.matchDate?.toISOString() || new Date().toISOString(),
+                date: play.GlobalMatch?.matchDate?.toISOString() || new Date().toISOString(),
                 isWin,
             };
         });

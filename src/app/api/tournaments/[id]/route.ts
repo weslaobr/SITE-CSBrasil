@@ -11,15 +11,32 @@ export async function GET(_req: NextRequest, { params }: Context) {
         const tournament = await (prisma as any).tournament.findUnique({
             where: { id: params.id },
             include: {
-                teams: true,
-                matches: {
-                    include: { teamA: true, teamB: true, winner: true },
+                TournamentTeam: true,
+                TournamentMatch: {
+                    include: { 
+                        TournamentTeam_TournamentMatch_teamAIdToTournamentTeam: true, 
+                        TournamentTeam_TournamentMatch_teamBIdToTournamentTeam: true, 
+                        TournamentTeam_TournamentMatch_winnerIdToTournamentTeam: true 
+                    },
                     orderBy: [{ round: 'asc' }, { createdAt: 'asc' }],
                 },
             },
         });
         if (!tournament) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-        return NextResponse.json(tournament);
+        
+        // Map back to expected names for frontend
+        const formattedTournament = {
+            ...tournament,
+            teams: (tournament as any).TournamentTeam,
+            matches: (tournament as any).TournamentMatch?.map((m: any) => ({
+                ...m,
+                teamA: m.TournamentTeam_TournamentMatch_teamAIdToTournamentTeam,
+                teamB: m.TournamentTeam_TournamentMatch_teamBIdToTournamentTeam,
+                winner: m.TournamentTeam_TournamentMatch_winnerIdToTournamentTeam
+            }))
+        };
+        
+        return NextResponse.json(formattedTournament);
     } catch (error) {
         return NextResponse.json({ error: 'Erro ao buscar torneio' }, { status: 500 });
     }
@@ -44,8 +61,19 @@ export async function PATCH(req: NextRequest, { params }: Context) {
                 winnerId: winnerId ?? undefined,
                 status: status ?? 'DONE',
             },
-            include: { teamA: true, teamB: true, winner: true },
+            include: { 
+                TournamentTeam_TournamentMatch_teamAIdToTournamentTeam: true, 
+                TournamentTeam_TournamentMatch_teamBIdToTournamentTeam: true, 
+                TournamentTeam_TournamentMatch_winnerIdToTournamentTeam: true 
+            },
         });
+
+        const formattedMatch = {
+            ...updated,
+            teamA: (updated as any).TournamentTeam_TournamentMatch_teamAIdToTournamentTeam,
+            teamB: (updated as any).TournamentTeam_TournamentMatch_teamBIdToTournamentTeam,
+            winner: (updated as any).TournamentTeam_TournamentMatch_winnerIdToTournamentTeam
+        };
 
         // Verificar se o torneio terminou (todas as partidas done)
         const allMatches = await (prisma as any).tournamentMatch.findMany({
@@ -59,7 +87,7 @@ export async function PATCH(req: NextRequest, { params }: Context) {
             });
         }
 
-        return NextResponse.json(updated);
+        return NextResponse.json(formattedMatch);
     } catch (error) {
         console.error('[TournamentsAPI] PATCH error:', error);
         return NextResponse.json({ error: 'Erro ao atualizar partida' }, { status: 500 });

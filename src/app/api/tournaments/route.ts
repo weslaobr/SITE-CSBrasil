@@ -9,18 +9,28 @@ export async function GET() {
         const tournaments = await (prisma as any).tournament.findMany({
             orderBy: { createdAt: 'desc' },
             include: {
-                teams: true,
-                matches: {
+                TournamentTeam: true,
+                TournamentMatch: {
                     include: {
-                        teamA: true,
-                        teamB: true,
-                        winner: true,
+                        TournamentTeam_TournamentMatch_teamAIdToTournamentTeam: true,
+                        TournamentTeam_TournamentMatch_teamBIdToTournamentTeam: true,
+                        TournamentTeam_TournamentMatch_winnerIdToTournamentTeam: true,
                     },
                     orderBy: { round: 'asc' },
                 },
             },
         });
-        return NextResponse.json(tournaments);
+        const formatted = (tournaments as any[]).map(t => ({
+            ...t,
+            teams: t.TournamentTeam,
+            matches: t.TournamentMatch?.map((m: any) => ({
+                ...m,
+                teamA: m.TournamentTeam_TournamentMatch_teamAIdToTournamentTeam,
+                teamB: m.TournamentTeam_TournamentMatch_teamBIdToTournamentTeam,
+                winner: m.TournamentTeam_TournamentMatch_winnerIdToTournamentTeam
+            }))
+        }));
+        return NextResponse.json(formatted);
     } catch (error) {
         console.error('[TournamentsAPI] GET error:', error);
         return NextResponse.json({ error: 'Erro ao buscar torneios' }, { status: 500 });
@@ -86,8 +96,8 @@ export async function POST(req: NextRequest) {
             return tx.tournament.findUnique({
                 where: { id: t.id },
                 include: {
-                    teams: true,
-                    matches: { include: { teamA: true, teamB: true } },
+                    TournamentTeam: true,
+                    TournamentMatch: { include: { TournamentTeam_TournamentMatch_teamAIdToTournamentTeam: true, TournamentTeam_TournamentMatch_teamBIdToTournamentTeam: true } },
                 },
             });
         });

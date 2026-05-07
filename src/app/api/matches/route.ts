@@ -34,8 +34,8 @@ export async function GET(req: NextRequest) {
         // Fetch matches imported via Local CS2 Demo Processor
         const globalMatchPlayers = await prisma.globalMatchPlayer.findMany({
             where: { steamId: (session.user as any)?.steamId || '' },
-            include: { match: true },
-            orderBy: { match: { matchDate: 'desc' } }
+            include: { GlobalMatch: true },
+            orderBy: { GlobalMatch: { matchDate: 'desc' } }
         });
 
         console.log(`[Matches GET] userId=${userId} — Found ${rawMatches.length} legacy matches, ${globalMatchPlayers.length} local demos in DB`);
@@ -104,11 +104,11 @@ export async function GET(req: NextRequest) {
         const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
             let res = (gmp.matchResult || '').toLowerCase();
             let mappedResult = res === 'win' ? 'Win' : (res === 'loss' ? 'Loss' : 'Tie');
-            const sourceMode = (gmp.match as any).gameMode?.toLowerCase() || '';
+            const sourceMode = (gmp.GlobalMatch as any).gameMode?.toLowerCase() || '';
             const meta = gmp.metadata as any;
             let gameMode = 'Competitive';
             
-            if (['mix', 'demo', 'local'].some(s => (gmp.match.source || 'mix').toLowerCase().includes(s))) {
+            if (['mix', 'demo', 'local'].some(s => (gmp.GlobalMatch.source || 'mix').toLowerCase().includes(s))) {
                 gameMode = 'Mix';
             } else if (sourceMode.includes('wingman') || sourceMode.includes('2v2')) {
                 gameMode = 'Wingman';
@@ -118,8 +118,8 @@ export async function GET(req: NextRequest) {
 
             // Fallback for result
             if (mappedResult === 'Tie') {
-                const scoreA = gmp.match.scoreA ?? 0;
-                const scoreB = gmp.match.scoreB ?? 0;
+                const scoreA = gmp.GlobalMatch.scoreA ?? 0;
+                const scoreB = gmp.GlobalMatch.scoreB ?? 0;
                 if (scoreA !== scoreB) {
                     const myIsA = isTeamA(gmp.team);
                     const myScore = myIsA ? scoreA : scoreB;
@@ -129,9 +129,9 @@ export async function GET(req: NextRequest) {
             }
 
             // Fallback for mapName
-            let mapName = gmp.match.mapName;
+            let mapName = gmp.GlobalMatch.mapName;
             if (mapName === 'Desconhecido') {
-                const demoUrl = (gmp.match.metadata as any)?.demoUrl || (gmp.match.metadata as any)?.demo_url;
+                const demoUrl = (gmp.GlobalMatch.metadata as any)?.demoUrl || (gmp.GlobalMatch.metadata as any)?.demo_url;
                 if (demoUrl) {
                     try {
                         const tokenMatch = demoUrl.match(/token=([^&]+)/);
@@ -152,18 +152,18 @@ export async function GET(req: NextRequest) {
             return {
                 id: gmp.globalMatchId,
                 playerId: gmp.id,
-                externalId: gmp.match.externalId || gmp.globalMatchId,
-                source: gmp.match.source || 'mix',
+                externalId: gmp.GlobalMatch.externalId || gmp.globalMatchId,
+                source: gmp.GlobalMatch.source || 'mix',
                 gameMode,
                 mapName,
                 kills: gmp.kills,
                 deaths: gmp.deaths,
                 assists: gmp.assists,
-                score: gmp.match.scoreA != null 
-                    ? (isTeamA(gmp.team) ? `${gmp.match.scoreA}-${gmp.match.scoreB}` : `${gmp.match.scoreB}-${gmp.match.scoreA}`)
+                score: gmp.GlobalMatch.scoreA != null 
+                    ? (isTeamA(gmp.team) ? `${gmp.GlobalMatch.scoreA}-${gmp.GlobalMatch.scoreB}` : `${gmp.GlobalMatch.scoreB}-${gmp.GlobalMatch.scoreA}`)
                     : '0-0',
                 result: mappedResult,
-                matchDate: gmp.match.matchDate,
+                matchDate: gmp.GlobalMatch.matchDate,
                 hsPercentage: gmp.hsPercentage,
                 adr: gmp.adr,
                 kast: meta?.kast !== undefined ? (meta.kast > 1 ? Math.round(meta.kast) : Math.round(meta.kast * 100)) : (meta?.kast_percent || meta?.kast_percentage || null),
@@ -171,8 +171,8 @@ export async function GET(req: NextRequest) {
                 eloChange: gmp.eloChange,
                 eloAfter: gmp.eloAfter,
                 impact: gmp.impact ?? meta?.impact ?? meta?.impact_rating ?? meta?.impactRating ?? null,
-                url: (gmp.match.metadata as any)?.demoUrl || (gmp.match.metadata as any)?.demo_url || null,
-                metadata: { ...(gmp.match.metadata as any || {}), ...meta }
+                url: (gmp.GlobalMatch.metadata as any)?.demoUrl || (gmp.GlobalMatch.metadata as any)?.demo_url || null,
+                metadata: { ...(gmp.GlobalMatch.metadata as any || {}), ...meta }
             };
         });
 

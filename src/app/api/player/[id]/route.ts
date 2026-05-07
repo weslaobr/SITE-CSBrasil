@@ -18,7 +18,7 @@ export async function GET(
         const results = await Promise.all([
             prisma.user.findUnique({
                 where: { steamId: steamId },
-                include: { matches: { orderBy: { matchDate: 'desc' }, take: 100 } }
+                include: { Match: { orderBy: { matchDate: 'desc' }, take: 100 } }
             }),
             prisma.player.findUnique({
                 where: { steamId: steamId },
@@ -33,8 +33,8 @@ export async function GET(
             getCS2SpacePlayerInfo(steamId).catch(() => null),
             prisma.globalMatchPlayer.findMany({
                 where: { steamId: steamId },
-                include: { match: true },
-                orderBy: { match: { matchDate: 'desc' } },
+                include: { GlobalMatch: true },
+                orderBy: { GlobalMatch: { matchDate: 'desc' } },
                 take: 200
             }).catch(() => [])
         ]);
@@ -273,10 +273,10 @@ export async function GET(
             let resLower = (gmp.matchResult || '').toLowerCase();
             let mappedResult = resLower === 'win' ? 'Win' : (resLower === 'loss' ? 'Loss' : 'Tie');
             const meta = gmp.metadata as any;
-            const sourceMode = (gmp.match as any).gameMode?.toLowerCase() || '';
+            const sourceMode = (gmp.GlobalMatch as any).gameMode?.toLowerCase() || '';
             let gameMode = 'Competitive';
             
-            if (['mix', 'demo', 'local'].some(s => (gmp.match.source || 'mix').toLowerCase().includes(s))) {
+            if (['mix', 'demo', 'local'].some(s => (gmp.GlobalMatch.source || 'mix').toLowerCase().includes(s))) {
                 gameMode = 'Mix';
             } else if (sourceMode.includes('wingman') || sourceMode.includes('2v2')) {
                 gameMode = 'Wingman';
@@ -286,8 +286,8 @@ export async function GET(
 
             // Fallback for result
             if (mappedResult === 'Tie') {
-                const scoreA = gmp.match.scoreA ?? 0;
-                const scoreB = gmp.match.scoreB ?? 0;
+                const scoreA = gmp.GlobalMatch.scoreA ?? 0;
+                const scoreB = gmp.GlobalMatch.scoreB ?? 0;
                 if (scoreA !== scoreB) {
                     const myIsA = isTeamA(gmp.team);
                     const myScore = myIsA ? scoreA : scoreB;
@@ -297,9 +297,9 @@ export async function GET(
             }
 
             // Fallback for mapName
-            let mapName = gmp.match.mapName;
+            let mapName = gmp.GlobalMatch.mapName;
             if (mapName === 'Desconhecido') {
-                const demoUrl = (gmp.match.metadata as any)?.demoUrl || (gmp.match.metadata as any)?.demo_url;
+                const demoUrl = (gmp.GlobalMatch.metadata as any)?.demoUrl || (gmp.GlobalMatch.metadata as any)?.demo_url;
                 if (demoUrl) {
                     try {
                         const tokenMatch = demoUrl.match(/token=([^&]+)/);
@@ -317,14 +317,14 @@ export async function GET(
                 }
             }
 
-            const scoreStr = gmp.match.scoreA != null 
-                ? (isTeamA(gmp.team) ? `${gmp.match.scoreA}-${gmp.match.scoreB}` : `${gmp.match.scoreB}-${gmp.match.scoreA}`)
+            const scoreStr = gmp.GlobalMatch.scoreA != null 
+                ? (isTeamA(gmp.team) ? `${gmp.GlobalMatch.scoreA}-${gmp.GlobalMatch.scoreB}` : `${gmp.GlobalMatch.scoreB}-${gmp.GlobalMatch.scoreA}`)
                 : '0-0';
 
             const m = {
                 id: gmp.id,
-                externalId: gmp.match.externalId || gmp.globalMatchId,
-                source: gmp.match.source || 'mix',
+                externalId: gmp.GlobalMatch.externalId || gmp.globalMatchId,
+                source: gmp.GlobalMatch.source || 'mix',
                 gameMode,
                 mapName,
                 kills: gmp.kills,
@@ -332,15 +332,15 @@ export async function GET(
                 assists: gmp.assists,
                 score: scoreStr,
                 result: mappedResult,
-                matchDate: gmp.match.matchDate,
+                matchDate: gmp.GlobalMatch.matchDate,
                 hsPercentage: gmp.hsPercentage,
                 adr: gmp.adr,
                 kast: meta?.kast !== undefined ? (meta.kast > 1 ? Math.round(meta.kast) : Math.round(meta.kast * 100)) : (meta?.kast_percent || meta?.kast_percentage || null),
                 rank: meta?.rank || meta?.skill_level || null,
                 eloChange: gmp.eloChange,
                 eloAfter: gmp.eloAfter,
-                url: (gmp.match.metadata as any)?.demoUrl || (gmp.match.metadata as any)?.demo_url || null,
-                metadata: { ...(gmp.match.metadata as any || {}), ...meta }
+                url: (gmp.GlobalMatch.metadata as any)?.demoUrl || (gmp.GlobalMatch.metadata as any)?.demo_url || null,
+                metadata: { ...(gmp.GlobalMatch.metadata as any || {}), ...meta }
             };
 
             // Add to dedupe set
@@ -355,7 +355,7 @@ export async function GET(
         // Merge and deduplicate User matches
         const allMatches = [
             ...formattedGlobalMatches,
-            ...(dbUser?.matches || [])
+            ...(dbUser?.Match || [])
                 .filter((m: any) => m.source === 'Leetify')
                 .map((m: any) => {
                     const meta = m.metadata || {};

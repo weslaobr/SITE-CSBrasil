@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
 
         // Partidas da semana
         const weeklyPlays = await (prisma as any).globalMatchPlayer.findMany({
-            where: { match: { matchDate: { gte: weekAgo } } },
-            include: { match: true },
+            where: { GlobalMatch: { matchDate: { gte: weekAgo } } },
+            include: { GlobalMatch: true },
         });
 
         if (weeklyPlays.length === 0) {

@@ -1,13 +1,17 @@
 
 async function testRanking() {
     try {
-        const res = await fetch('http://localhost:3000/api/ranking');
-        console.log('Status:', res.status);
-        const data = await res.json();
-        console.log('Player count in response:', data.players?.length || data.length || 0);
-        if (data.error) console.log('Error:', data.error);
-    } catch (e) {
-        console.error('Fetch error:', e.message);
+        const response = await fetch('http://localhost:3000/api/ranking');
+        const data = await response.json();
+        console.log('Total players in API response:', data.players?.length);
+        if (data.players && data.players.length > 0) {
+            console.log('First player:', data.players[0].nickname, 'Rating:', data.players[0].rating);
+        } else {
+            console.log('Response data:', JSON.stringify(data, null, 2));
+        }
+    } catch (error) {
+        console.error('Error fetching ranking:', error);
     }
 }
+
 testRanking();

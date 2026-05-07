@@ -192,7 +192,7 @@ export async function GET() {
                 mixLevel: true,
                 steamMatchAuthCode: true,
                 steamLatestMatchCode: true,
-                matches: {
+                Match: {
                     select: {
                         source: true,
                         gameMode: true,
@@ -216,7 +216,7 @@ export async function GET() {
         const allMatchPlayers = await (prisma as any).globalMatchPlayer.findMany({
             where: { steamId: { in: allSteamIds } },
             include: { 
-                match: { 
+                GlobalMatch: { 
                     select: { 
                         source: true, 
                         metadata: true,
@@ -298,14 +298,14 @@ export async function GET() {
 
         // Processar GlobalMatchPlayer
         allMatchPlayers.forEach((p: any) => {
-            if (!p.match) return;
-            processMatchData(p.steamId, { ...p, ...p.match }, null);
+            if (!p.GlobalMatch) return;
+            processMatchData(p.steamId, { ...p, ...p.GlobalMatch }, null);
         });
 
         // Processar Match (Tabela de usuários)
         users.forEach((u: any) => {
-            if (!u.matches) return;
-            u.matches.forEach((m: any) => {
+            if (!u.Match) return;
+            u.Match.forEach((m: any) => {
                 processMatchData(u.steamId, m, null);
             });
         });
