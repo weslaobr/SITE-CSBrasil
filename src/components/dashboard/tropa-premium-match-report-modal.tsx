@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Download, Calendar, Activity, Target, Zap, Clock, X, 
-    Crosshair, TrendingUp, Star, Eye, Trophy, BarChart2, Flame, DollarSign, Shield, Skull, Heart, Swords, ChevronUp
+    Crosshair, TrendingUp, Star, Eye, Trophy, BarChart2, Flame, DollarSign, Shield, Skull, Heart, Swords, ChevronUp,
+    Cloud, Bomb
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -668,20 +669,20 @@ const UtilityTimeline = ({ timeline, players }: { timeline: any; players: any[] 
 
     const getGrenadeIcon = (type: string) => {
         const t = (type || '').toLowerCase();
-        if (t.includes('flash')) return '⚡';
-        if (t.includes('he') || t.includes('grenade')) return '💥';
-        if (t.includes('smoke')) return '💨';
-        if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return '🔥';
-        if (t.includes('decoy')) return '🎯';
-        return '❓';
+        if (t.includes('flash')) return <Zap size={12} className="text-yellow-400" />;
+        if (t.includes('smoke')) return <Cloud size={12} className="text-sky-300" />;
+        if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return <Flame size={12} className="text-orange-400" />;
+        if (t.includes('he') || t.includes('grenade')) return <Bomb size={12} className="text-red-400" />;
+        if (t.includes('decoy')) return <Target size={12} className="text-zinc-400" />;
+        return <Activity size={12} className="text-zinc-500" />;
     };
 
     const getGrenadeClass = (type: string) => {
         const t = (type || '').toLowerCase();
         if (t.includes('flash')) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.2)]';
-        if (t.includes('he') || t.includes('grenade')) return 'bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
         if (t.includes('smoke')) return 'bg-sky-500/20 text-sky-300 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.2)]';
         if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return 'bg-orange-500/20 text-orange-400 border-orange-500/30 shadow-[0_0_15px_rgba(251,146,60,0.2)]';
+        if (t.includes('he') || t.includes('grenade')) return 'bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
         if (t.includes('decoy')) return 'bg-zinc-500/20 text-zinc-300 border-white/20';
         return 'bg-zinc-500/10 text-zinc-400 border-white/10';
     };
@@ -752,7 +753,7 @@ const PremiumGrenadeItem = ({ ge, getPlayerData, getGrenadeIcon, getGrenadeClass
             <img src={p.avatar} className="w-6 h-6 rounded-lg object-cover border border-black/40 shadow-xl" alt="" />
             <div className="flex flex-col">
                 <div className="flex items-center gap-2">
-                    <span className="text-xs">{getGrenadeIcon(ge.type)}</span>
+                    {getGrenadeIcon(ge.type)}
                     <span className="text-[10px] font-black uppercase tracking-tighter whitespace-nowrap">{ge.type?.replace('Eq', '').replace(/GRENADE/gi, '').trim().toUpperCase()}</span>
                 </div>
                 <div className="text-[8px] font-black opacity-40 uppercase truncate max-w-[60px] tracking-widest">{p.name}</div>
@@ -1468,10 +1469,10 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
                                     <span className="text-sm font-black italic text-zinc-300 truncate max-w-[120px]">{p.name || p.nickname}</span>
                                 </div>
                                 <div className="flex items-center gap-6">
-                                    <UtilityBadge count={p.he_thrown} label="HE" color="orange" />
-                                    <UtilityBadge count={p.flash_thrown} label="FB" color="yellow" />
-                                    <UtilityBadge count={p.smokes_thrown} label="SM" color="sky" />
-                                    <UtilityBadge count={p.molotovs_thrown} label="MO" color="red" />
+                                    <UtilityBadge count={p.he_thrown} label="HE" color="red" icon={<Bomb size={12} />} />
+                                    <UtilityBadge count={p.flash_thrown} label="FB" color="yellow" icon={<Zap size={12} />} />
+                                    <UtilityBadge count={p.smokes_thrown} label="SM" color="sky" icon={<Cloud size={12} />} />
+                                    <UtilityBadge count={p.molotovs_thrown} label="MO" color="orange" icon={<Flame size={12} />} />
                                 </div>
                             </div>
                         ))}
@@ -1597,18 +1598,19 @@ const ArsenalLog: React.FC<{ weaponStats: any[], players: any[], match: any }> =
     );
 }; // End ArsenalLog
 
-const UtilityBadge: React.FC<{ count: number, label: string, color: string }> = ({ count, label, color }) => {
+const UtilityBadge: React.FC<{ count: number, label: string, color: string, icon?: React.ReactNode }> = ({ count, label, color, icon }) => {
     const colorClasses: any = {
         orange: 'bg-orange-500/10 border-orange-500/20 text-orange-500',
         yellow: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500',
-        sky:    'bg-sky-500/10 border-sky-500/20 text-sky-500',
-        red:    'bg-red-500/10 border-red-500/20 text-red-500'
+        sky:    'bg-sky-500/10 border-sky-500/20 text-sky-300',
+        red:    'bg-red-500/10 border-red-500/20 text-red-400'
     };
 
     return (
         <div className="flex flex-col items-center gap-1.5">
-            <div className={`w-10 h-10 rounded-[14px] flex items-center justify-center border ${colorClasses[color]} shadow-inner`}>
-                <span className="text-sm font-black italic">{count || 0}</span>
+            <div className={`w-10 h-10 rounded-[14px] flex flex-col items-center justify-center border ${colorClasses[color]} shadow-inner group-hover:scale-110 transition-transform`}>
+                {icon && <div className="opacity-40">{icon}</div>}
+                <span className="text-xs font-black italic leading-none mt-0.5">{count || 0}</span>
             </div>
             <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">{label}</span>
         </div>

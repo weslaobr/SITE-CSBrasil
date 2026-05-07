@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Play, Download, Calendar, Activity, Target, Zap, Clock, Shield, Search, RefreshCw, X, 
     AlertCircle, Crosshair, TrendingUp, Star, Flame, Eye, MapPin, Trophy, Swords, Info, Edit2, Check,
-    Trash2, Heart, Calculator, LogOut, UserPlus, BarChart2, DollarSign, Skull, ChevronUp
+    Trash2, Heart, Calculator, LogOut, UserPlus, BarChart2, DollarSign, Skull, ChevronUp,
+    Bomb, Cloud
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -2290,16 +2291,28 @@ const MatchReportModal: React.FC<Props> = ({
                     </div>
                 </td>
                 <td className="py-3 px-2 text-center">
-                    <div className="flex items-center justify-center gap-1"><span className="text-[9px]">💥</span><span className={`text-xs font-bold ${p.heThrown>0?'text-red-400':'text-zinc-700'}`}>{p.heThrown||'0'}</span></div>
+                    <div className="flex items-center justify-center gap-1">
+                        <Bomb size={10} className={p.heThrown > 0 ? 'text-red-400' : 'text-zinc-700'} />
+                        <span className={`text-xs font-bold ${p.heThrown > 0 ? 'text-red-400' : 'text-zinc-700'}`}>{p.heThrown || '0'}</span>
+                    </div>
                 </td>
                 <td className="py-3 px-2 text-center">
-                    <div className="flex items-center justify-center gap-1"><span className="text-[9px]">⚡</span><span className={`text-xs font-bold ${p.flashThrown>0?'text-blue-400':'text-zinc-700'}`}>{p.flashThrown||'0'}</span></div>
+                    <div className="flex items-center justify-center gap-1">
+                        <Zap size={10} className={p.flashThrown > 0 ? 'text-yellow-400' : 'text-zinc-700'} />
+                        <span className={`text-xs font-bold ${p.flashThrown > 0 ? 'text-yellow-400' : 'text-zinc-700'}`}>{p.flashThrown || '0'}</span>
+                    </div>
                 </td>
                 <td className="py-3 px-2 text-center">
-                    <div className="flex items-center justify-center gap-1"><span className="text-[9px]">💨</span><span className={`text-xs font-bold ${p.smokesThrown>0?'text-zinc-300':'text-zinc-700'}`}>{p.smokesThrown||'0'}</span></div>
+                    <div className="flex items-center justify-center gap-1">
+                        <Cloud size={10} className={p.smokesThrown > 0 ? 'text-sky-300' : 'text-zinc-700'} />
+                        <span className={`text-xs font-bold ${p.smokesThrown > 0 ? 'text-sky-300' : 'text-zinc-700'}`}>{p.smokesThrown || '0'}</span>
+                    </div>
                 </td>
-                <td className="py-3 px-3 text-center">
-                    <div className="flex items-center justify-center gap-1"><span className="text-[9px]">🔥</span><span className={`text-xs font-bold ${p.molotovThrown>0?'text-orange-400':'text-zinc-700'}`}>{p.molotovThrown||'0'}</span></div>
+                <td className="py-3 px-2 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                        <Flame size={10} className={p.molotovThrown > 0 ? 'text-orange-400' : 'text-zinc-700'} />
+                        <span className={`text-xs font-bold ${p.molotovThrown > 0 ? 'text-orange-400' : 'text-zinc-700'}`}>{p.molotovThrown || '0'}</span>
+                    </div>
                 </td>
             </tr>
         );
@@ -2471,10 +2484,10 @@ const MatchReportModal: React.FC<Props> = ({
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Eliminações de aliados facilitadas por suas flashbangs">Flash Ass.</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Tempo total que inimigos ficaram cegos por suas flashbangs">Cegueira</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Inimigos Cegados">Cegados</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Granadas HE lançadas">💥 HE</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Flashbangs lançadas">⚡ Flas.</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Smokes lançadas">💨 Smoke</th>
-                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center" title="Molotovs lançadas">🔥 Molotov</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Granadas HE lançadas">HE</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Flashbangs lançadas">Flas.</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase text-zinc-600 text-center" title="Smokes lançadas">Smoke</th>
+                                        <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600 text-center" title="Molotovs lançadas">Molo/Inc</th>
                                     </>}
                                     {tab === 'armas' && <>
                                         <th className="py-2 px-3 text-[9px] font-black uppercase text-zinc-600" title="Nome do Jogador">Jogador</th>
@@ -2915,20 +2928,20 @@ const UtilityTimeline = ({ timeline, players }: { timeline: any; players: any[] 
 
     const getGrenadeIcon = (type: string) => {
         const t = (type || '').toLowerCase();
-        if (t.includes('flash')) return '⚡';
-        if (t.includes('he') || t.includes('grenade')) return '💥';
-        if (t.includes('smoke')) return '💨';
-        if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return '🔥';
-        if (t.includes('decoy')) return '🎯';
-        return '❓';
+        if (t.includes('flash')) return <Zap size={10} className="text-yellow-400" />;
+        if (t.includes('smoke')) return <Cloud size={10} className="text-sky-300" />;
+        if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return <Flame size={10} className="text-orange-400" />;
+        if (t.includes('he') || t.includes('grenade')) return <Bomb size={10} className="text-red-400" />;
+        if (t.includes('decoy')) return <Target size={10} className="text-zinc-400" />;
+        return <Info size={10} className="text-zinc-500" />;
     };
 
     const getGrenadeClass = (type: string) => {
         const t = (type || '').toLowerCase();
         if (t.includes('flash')) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.15)]';
-        if (t.includes('he') || t.includes('grenade')) return 'bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)]';
         if (t.includes('smoke')) return 'bg-sky-500/20 text-sky-300 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.15)]';
         if (t.includes('molotov') || t.includes('incendiary') || t.includes('fire')) return 'bg-orange-500/20 text-orange-400 border-orange-500/30 shadow-[0_0_15px_rgba(251,146,60,0.15)]';
+        if (t.includes('he') || t.includes('grenade')) return 'bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)]';
         if (t.includes('decoy')) return 'bg-zinc-500/20 text-zinc-300 border-white/20';
         return 'bg-zinc-500/10 text-zinc-400 border-white/10';
     };
@@ -2996,7 +3009,7 @@ const GrenadeItem = ({ ge, getPlayerData, getGrenadeIcon, getGrenadeClass }: any
             <img src={p.avatar} className="w-5 h-5 rounded-md object-cover border border-black/20" alt="" />
             <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
-                    <span className="text-[10px]">{getGrenadeIcon(ge.type)}</span>
+                    {getGrenadeIcon(ge.type)}
                     <span className="text-[9px] font-black uppercase tracking-tighter whitespace-nowrap">{ge.type?.replace('Eq', '').replace(/GRENADE/gi, '').trim().toUpperCase()}</span>
                 </div>
                 <div className="text-[7px] font-black opacity-60 uppercase truncate max-w-[50px] tracking-tighter">{p.name}</div>
