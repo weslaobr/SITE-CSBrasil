@@ -15,9 +15,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         const lobby = await prisma.lobby.findUnique({
             where: { id },
             include: {
-                creator: { select: PLAYER_SELECT },
-                players: {
-                    include: { user: { select: PLAYER_SELECT } },
+                User: { select: PLAYER_SELECT },
+                LobbyPlayer: {
+                    include: { User: { select: PLAYER_SELECT } },
                     orderBy: { joinedAt: "asc" }
                 }
             }
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
         const lobby = await prisma.lobby.findUnique({
             where: { id },
-            include: { players: true }
+            include: { LobbyPlayer: true }
         });
         if (!lobby) return NextResponse.json({ error: "Lobby not found" }, { status: 404 });
 
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             // ── JOIN ────────────────────────────────────────────────────────
             case "join":
                 if (lobby.status === "finished") return NextResponse.json({ error: "Lobby already finished" }, { status: 400 });
-                if (lobby.players.length >= 10) return NextResponse.json({ error: "Lobby is full" }, { status: 400 });
+                if (lobby.LobbyPlayer.length >= 10) return NextResponse.json({ error: "Lobby is full" }, { status: 400 });
                 if (lobby.password && lobby.password !== password)
                     return NextResponse.json({ error: "Invalid password" }, { status: 403 });
                 await prisma.lobbyPlayer.upsert({
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
                 if (lobby.status !== "picking") return NextResponse.json({ error: "Not in picking phase" }, { status: 400 });
                 const side = choice === "A" || choice === "B" ? choice : null;
                 if (!side) return NextResponse.json({ error: "Invalid team" }, { status: 400 });
-                const teamCount = lobby.players.filter((p: any) => p.team === side).length;
+                const teamCount = lobby.LobbyPlayer.filter((p: any) => p.team === side).length;
                 if (teamCount >= 5) return NextResponse.json({ error: "Team is full" }, { status: 400 });
                 await prisma.lobbyPlayer.update({
                     where: { lobbyId_userId: { lobbyId: id, userId } },

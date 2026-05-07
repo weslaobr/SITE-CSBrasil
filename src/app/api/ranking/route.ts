@@ -296,7 +296,6 @@ export async function GET() {
             if (platform && pStatsBucket[platform]) update(pStatsBucket[platform]);
         };
 
-        // Processar GlobalMatchPlayer
         allMatchPlayers.forEach((p: any) => {
             if (!p.GlobalMatch) return;
             processMatchData(p.steamId, { ...p, ...p.GlobalMatch }, null);

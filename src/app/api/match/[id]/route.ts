@@ -57,7 +57,7 @@ export async function GET(
         // 1. Verificar primeiro no nosso próprio Banco de Dados (Partidas geradas pelo nosso Bot)
         let localMatch = await prisma.globalMatch.findUnique({
             where: { id: matchId },
-            include: { players: true }
+            include: { GlobalMatchPlayer: true }
         });
 
         // Caso não encontre pelo ID completo (que pode conter sufixo de SteamID vindo do analisador)
@@ -69,7 +69,7 @@ export async function GET(
                 const baseId = `${parts[0]}_${parts[1]}`;
                 localMatch = await prisma.globalMatch.findUnique({
                     where: { id: baseId },
-                    include: { players: true }
+                    include: { GlobalMatchPlayer: true }
                 });
                 // Se encontramos pelo baseId, usamos ele para as próximas queries (tracker_match_players etc)
                 if (localMatch) {
@@ -95,7 +95,7 @@ export async function GET(
         }
 
 
-        if (localMatch && localMatch.players && localMatch.players.length > 0) {
+        if (localMatch && localMatch.GlobalMatchPlayer && localMatch.GlobalMatchPlayer.length > 0) {
             const localMeta = (localMatch.metadata as any) || {};
 
             // Team number convention:
@@ -105,7 +105,7 @@ export async function GET(
 
             // Find the profile owner's player record to compute result from their perspective
             const profilePlayer = profileSteamId
-                ? localMatch.players.find(p => String(p.steamId) === String(profileSteamId))
+                ? localMatch.GlobalMatchPlayer.find(p => String(p.steamId) === String(profileSteamId))
                 : null;
             const profileTeam = profilePlayer?.team ?? null;
             const profileIsTeamA = isTeamA(profileTeam);
@@ -128,7 +128,7 @@ export async function GET(
                 trackerMap.set(String(tp.steamid64), sanitized);
             });
 
-            let localStats = localMatch.players.map(p => {
+            let localStats = localMatch.GlobalMatchPlayer.map(p => {
                 const m = (p.metadata as any) || {};
                 const tp = trackerMap.get(String(p.steamId));
 
@@ -526,7 +526,7 @@ export async function GET(
             // ── CÁLCULO AUTOMÁTICO DE TROPOINTS ─────────────────────────────
             // Se for MIX e não tiver eloChange em algum jogador, calculamos agora
             const needsTropoints = (localMatch.source || '').toLowerCase() === 'mix' && 
-                                  localMatch.players.some(p => p.eloChange === null || p.eloChange === 0);
+                                  localMatch.GlobalMatchPlayer.some(p => p.eloChange === null || p.eloChange === 0);
             
             if (needsTropoints) {
                 try {

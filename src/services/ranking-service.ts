@@ -11,7 +11,7 @@ export async function calculateMatchTropoints(matchId: string): Promise<Calculat
     // 1. Verificar se é partida MIX
     const match = await prisma.globalMatch.findUnique({
         where: { id: matchId },
-        include: { players: true }
+        include: { GlobalMatchPlayer: true }
     });
 
     if (!match) {
@@ -26,7 +26,7 @@ export async function calculateMatchTropoints(matchId: string): Promise<Calculat
         throw new Error(`Tropoints só são calculados para partidas MIX/Locais. Fonte atual: ${source}`);
     }
 
-    const players = match.players;
+    const players = match.GlobalMatchPlayer;
     let updatedUsers = 0;
     const details: any[] = [];
 
