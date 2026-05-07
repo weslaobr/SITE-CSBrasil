@@ -106,15 +106,18 @@ export async function GET(req: NextRequest) {
             let mappedResult = res === 'win' ? 'Win' : (res === 'loss' ? 'Loss' : 'Tie');
             const meta = (gmp.metadata as any) || {};
             const matchMeta = (gmp.GlobalMatch.metadata as any) || {};
+            const rawSource = (gmp.GlobalMatch.source || 'mix').toLowerCase();
             const sourceMode = (matchMeta.gameMode || '').toLowerCase();
             let gameMode = 'Mix';
             
-            if (['mix', 'demo', 'local'].some(s => (gmp.GlobalMatch.source || 'mix').toLowerCase().includes(s))) {
-                gameMode = 'Mix';
-            } else if (sourceMode.includes('wingman') || sourceMode.includes('2v2')) {
-                gameMode = 'Wingman';
-            } else if (sourceMode.includes('premier')) {
+            if (rawSource.includes('premier')) {
                 gameMode = 'Premier';
+            } else if (rawSource.includes('competitivo') || rawSource.includes('competitive')) {
+                gameMode = 'Competitive';
+            } else if (rawSource.includes('braço direito') || rawSource.includes('wingman') || sourceMode.includes('wingman') || sourceMode.includes('2v2')) {
+                gameMode = 'Wingman';
+            } else if (rawSource.includes('mix') || rawSource.includes('demo') || rawSource.includes('local')) {
+                gameMode = 'Mix';
             }
 
             // Fallback for result

@@ -133,26 +133,39 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     const detectMode = (m: Match): 'GamersClub' | 'Faceit' | 'Premier' | 'Mix' | 'Competitive' | 'Wingman' => {
         const src = (m.source || '').toLowerCase();
         const mode = (m.gameMode || '').toLowerCase();
-        const meta = (m.metadata?.source || m.metadata?.data_source || '').toLowerCase();
+        const metaSource = (m.metadata?.source || m.metadata?.data_source || '').toLowerCase();
 
-        if (src.includes('gamersclub') || src.includes('gamers_club') || src.includes('gamers-club') || src === 'gc' ||
-            mode.includes('gamersclub') || mode.includes('gamers_club') || mode.includes('gamers-club') || mode === 'gc') {
+        // 1. Specific Platforms (Highest Priority)
+        if (src.includes('gamersclub') || src.includes('gc') || mode.includes('gamersclub') || mode === 'gc') {
             return 'GamersClub';
         }
-        if (src === 'faceit' || mode.includes('faceit') || meta.includes('faceit')) {
+        if (src === 'faceit' || mode.includes('faceit') || metaSource.includes('faceit')) {
             return 'Faceit';
         }
-        if (src.includes('wingman') || mode.includes('wingman') || meta.includes('wingman') || mode.includes('2v2')) {
-            return 'Wingman';
-        }
-        if (src.includes('mix') || src.includes('demo') || src.includes('local') || mode.includes('mix') || meta.includes('mix')) {
-            return 'Mix';
-        }
-        if (src.includes('premier') || mode.includes('premier') || meta.includes('premier') ||
-            m.metadata?.rank_type === 11 ||
+        if (src.includes('premier') || mode.includes('premier') || metaSource.includes('premier') || 
+            m.metadata?.rank_type === 11 || 
             (!isNaN(parseInt(m.rank || '')) && parseInt(m.rank || '') > 1000 && !src.includes('gamersclub'))) {
             return 'Premier';
         }
+
+        // 2. Specific Game Modes
+        if (src.includes('wingman') || mode.includes('wingman') || metaSource.includes('wingman') || mode.includes('2v2')) {
+            return 'Wingman';
+        }
+
+        // 3. Mix/Demo (Only if not a specific platform above)
+        if (src.includes('mix') || src.includes('local') || mode.includes('mix') || metaSource.includes('mix')) {
+            return 'Mix';
+        }
+
+        // If it's from the demo analyzer, but we didn't identify it as Premier/GC above, 
+        // we check if it's explicitly a Mix match or just a generic competitive demo
+        if (src.includes('demo')) {
+            if (mode.includes('premier')) return 'Premier';
+            if (mode.includes('mix')) return 'Mix';
+            return 'Competitive';
+        }
+
         return 'Competitive';
     };
 
