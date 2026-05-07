@@ -33,12 +33,15 @@ export default function MatchModalManager({
         const id = String(matchId || m.id || m.externalId || '');
         const source = String(m.source || m.gameMode || '').toLowerCase();
         
+        // Use the new Premium Modal for almost everything now, as it's the user's preference.
+        // We only exclude Faceit if it's specifically not working there, but the user asked for Competitive/Premier.
         if (id.startsWith('manual_')) return true;
         if (source.includes('mix') || source.includes('demo') || source.includes('local')) return true;
+        if (source.includes('competitive') || source.includes('premier') || source.includes('valve') || source.includes('matchmaking')) return true;
         
-        // If it's a UUID and doesn't mention leetify, it's likely local
+        // If it's a UUID, it's likely a Leetify match which we now want in the premium modal
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-        if (isUUID && !id.toLowerCase().includes('leetify') && !source.includes('faceit')) return true;
+        if (isUUID) return true;
         
         return false;
     })();

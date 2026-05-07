@@ -71,15 +71,37 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
     const isAdmin = (session?.user as any)?.isAdmin;
 
     React.useEffect(() => {
+        let interval: NodeJS.Timeout;
+
+        const fetchData = async () => {
+            try {
+                const res = await axios.get(`/api/match/${matchId}${userSteamId ? `?profileSteamId=${userSteamId}` : ''}`);
+                const data = res.data;
+                setMatch(data);
+
+                // Se ainda estiver processando, agendamos o próximo poll
+                if (data.status === 'processing' || data.is_processing) {
+                    interval = setTimeout(fetchData, 8000);
+                }
+            } catch (err) {
+                console.error("Erro ao carregar dados da partida", err);
+                // No caso de erro, não limpamos o loading se já tivermos dados, 
+                // mas mostramos erro se for a primeira carga
+                if (!match) toast.error("Erro ao carregar dados da partida");
+            } finally {
+                setLoading(false);
+            }
+        };
+
         if (isOpen && matchId) {
             setLoading(true);
-            setMatch(null);
             setTab('placar');
-            axios.get(`/api/match/${matchId}${userSteamId ? `?profileSteamId=${userSteamId}` : ''}`)
-                .then(r => setMatch(r.data))
-                .catch(() => toast.error("Erro ao carregar dados da partida"))
-                .finally(() => setLoading(false));
+            fetchData();
         }
+
+        return () => {
+            if (interval) clearTimeout(interval);
+        };
     }, [isOpen, matchId]);
 
     const handleRecalculateElo = async () => {

@@ -54,7 +54,8 @@ export async function GET(
     const profileSteamId = request.nextUrl.searchParams.get('profileSteamId') || '';
 
     try {
-        // 1. Verificar primeiro no nosso próprio Banco de Dados (Partidas geradas pelo nosso Bot)
+        // 1. Verificar no nosso próprio Banco de Dados
+        // Tentamos GlobalMatch (Partidas locais)
         let localMatch = await prisma.globalMatch.findUnique({
             where: { id: matchId },
             include: { GlobalMatchPlayer: true }
@@ -71,15 +72,27 @@ export async function GET(
                     where: { id: baseId },
                     include: { GlobalMatchPlayer: true }
                 });
-                // Se encontramos pelo baseId, usamos ele para as próximas queries (tracker_match_players etc)
-                if (localMatch) {
-                    (params as any).resolvedId = baseId; // Just for internal tracking if needed
-                }
             }
         }
 
+        // Se não encontramos no GlobalMatch, tentamos na tabela Match (Legado/Leetify Sync)
+        let legacyMatch = null;
+        if (!localMatch) {
+            // Buscamos por ID (Cuid) ou por externalId (leetify-UUID)
+            legacyMatch = await prisma.match.findFirst({
+                where: {
+                    OR: [
+                        { id: matchId },
+                        { externalId: matchId },
+                        { externalId: `leetify-${matchId}` },
+                        { externalId: `faceit-${matchId}` }
+                    ]
+                }
+            });
+        }
+
         // Se encontramos o match, garantimos que usaremos o ID real dele para buscar estatísticas
-        let effectiveMatchId = localMatch?.id || matchId;
+        let effectiveMatchId = localMatch?.id || legacyMatch?.id || matchId;
 
         // --- FILTRO DE SEGURANÇA PARA MATCH ID GENÉRICO ---
         // Evita que nomes como "SourceTV Demo" ou "Counter-Strike 2" apareçam como ID no modal
@@ -655,8 +668,7 @@ export async function GET(
             console.warn(`Match ${matchId} tracker fetch failed: ${trackerError.message}`);
         }
 
-        // 3. Fallback final: Leetify API (apenas para metadados e disparar processamento se necessário)
-        // Se for um ID manual (gerado pelo nosso sistema local), não tentamos o Leetify
+        // 3. Fallback final: Leetify API
         if (matchId.startsWith('manual_')) {
             return NextResponse.json({ 
                 status: 'processing', 
@@ -670,14 +682,26 @@ export async function GET(
             return NextResponse.json({ error: "Match not found locally and LEETIFY_API_KEY is missing." }, { status: 404 });
         }
 
-        const matchResponse = await axios.get(`${LEETIFY_BASE_URL}/v2/matches/${matchId}`, {
-            headers: {
-                '_leetify_key': LEETIFY_API_KEY
-            }
-        });
+        // Determinar o ID correto para o Leetify (UUID)
+        let leetifyMatchId = matchId;
+        const extId = (localMatch as any)?.externalId || legacyMatch?.externalId;
+        if (extId?.startsWith('leetify-')) {
+            leetifyMatchId = extId.replace('leetify-', '');
+        } else if (matchId.startsWith('leetify-')) {
+            leetifyMatchId = matchId.replace('leetify-', '');
+        }
 
-        let data = matchResponse.data;
-        
+        try {
+            console.log(`[LeetifyFetch] Buscando partida ${leetifyMatchId} no Leetify...`);
+            const matchResponse = await axios.get(`${LEETIFY_BASE_URL}/v2/matches/${leetifyMatchId}`, {
+                headers: {
+                    '_leetify_key': LEETIFY_API_KEY
+                },
+                timeout: 5000 // 5 seconds timeout
+            });
+
+            let data = matchResponse.data;
+                
         // Se temos um demo_url no Leetify mas não temos a partida processada localmente,
         // acionamos o nosso novo sistema de processamento (TROPACS-DEMOS)
         const demoUrl = data.demo_url || data.demoUrl;
@@ -772,7 +796,19 @@ export async function GET(
             else data.winning_team = 'tie';
         }
 
-        return NextResponse.json(data);
+            return NextResponse.json(data);
+        } catch (leetifyError: any) {
+            console.warn(`[LeetifyFetch] Partida ${leetifyMatchId} falhou no Leetify: ${leetifyError.message}`);
+            if (leetifyError.response?.status === 404) {
+                 return NextResponse.json({ error: "Partida não encontrada no Leetify." }, { status: 404 });
+            }
+            // Se for outro erro (como 500), retornamos um erro amigável em vez de crashar
+            return NextResponse.json({ 
+                error: "Erro ao buscar dados no Leetify", 
+                message: leetifyError.message,
+                status: leetifyError.response?.status 
+            }, { status: leetifyError.response?.status || 500 });
+        }
     } catch (error: any) {
         if (error.response?.status === 404) {
             return NextResponse.json({ error: "Partida não encontrada no Banco nem no Leetify." }, { status: 404 });
