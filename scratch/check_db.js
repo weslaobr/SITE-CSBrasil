@@ -1,34 +1,18 @@
+
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-async function check() {
-    try {
-        const matchId = 'manual_1';
-        console.log(`--- Checking Match: ${matchId} ---`);
-        
-        const globalMatch = await prisma.globalMatch.findUnique({
-            where: { id: matchId },
-            include: { players: true }
-        });
-        
-        if (globalMatch) {
-            console.log("GlobalMatch found!");
-            console.log(`Players count: ${globalMatch.players.length}`);
-            console.table(globalMatch.players.map(p => ({ steamId: p.steamId, kills: p.kills })));
-        } else {
-            console.log("GlobalMatch NOT found!");
-        }
-
-        const trackerPlayers = await prisma.tracker_match_players.findMany({
-            where: { match_id: matchId }
-        });
-        console.log(`TrackerPlayers count: ${trackerPlayers.length}`);
-
-    } catch (e) {
-        console.error(e);
-    } finally {
-        await prisma.$disconnect();
-    }
+async function main() {
+  const playerCount = await prisma.player.count();
+  const userCount = await prisma.user.count();
+  console.log('Player count:', playerCount);
+  console.log('User count:', userCount);
+  const players = await prisma.player.findMany({ take: 5 });
+  console.log('First 5 players:', JSON.stringify(players, null, 2));
 }
 
-check();
+main()
+  .catch((e) => console.error(e))
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

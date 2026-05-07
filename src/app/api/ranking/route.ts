@@ -84,6 +84,7 @@ export async function GET() {
         }
 
         // NOVO: Consultar "na hora" dados de players que não têm stats (Faceit/Premier) para eles não sumirem do site
+        /* 
         const playersNeedingStats = players.filter(p => !p.Stats || (!p.Stats.faceitLevel && !p.Stats.premierRating));
         
         if (playersNeedingStats.length > 0) {
@@ -171,6 +172,7 @@ export async function GET() {
                 }
             }));
         }
+        */
 
         // 3. Buscar Users correspondentes
         const allSteamIds = players.map(p => p.steamId);
