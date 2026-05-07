@@ -34,10 +34,21 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
     return {
         adapter: adapter,
         providers: [
-            SteamProvider(req as any, {
-                clientSecret: process.env.STEAM_API_KEY!,
-                callbackUrl: `${origin}/api/auth/callback/steam`,
-            })
+            {
+                ...SteamProvider(req as any, {
+                    clientSecret: process.env.STEAM_API_KEY!,
+                    callbackUrl: `${origin}/api/auth/callback/steam`,
+                    profile(profile: any) {
+                        return {
+                            id: profile.steamid,
+                            name: profile.personaname,
+                            email: `${profile.steamid}@steam.local`,
+                            image: profile.avatarfull,
+                        }
+                    }
+                } as any),
+                allowDangerousEmailAccountLinking: true,
+            }
         ],
         callbacks: {
             async session({ session, user }) {
@@ -58,7 +69,9 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
                 if (account?.provider === "steam") {
                     // Garante que o steamId do perfil da Steam seja salvo no model User
                     const steamId = account.providerAccountId;
-                    (user as any).steamId = steamId;
+                    if (user) {
+                        (user as any).steamId = steamId;
+                    }
                     
                     // Se o usuário já existe no banco (login recorrente), garantimos que o steamId está lá
                     // Se for novo, o PrismaAdapter criará, mas o steamId pode não ser salvo automaticamente 

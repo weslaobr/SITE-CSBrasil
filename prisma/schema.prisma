@@ -21,7 +21,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -268,7 +268,7 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Stats {
@@ -348,7 +348,7 @@ model User {
   isAdmin                                    Boolean?            @default(false)
   rankingPoints                              Int?                @default(500)
   mixLevel                                   Int?                @default(5)
-  Account                                    Account[]
+  accounts                                   Account[]
   Crosshair                                  Crosshair[]
   EvaluationList                             EvaluationList[]
   GlobalMatchPlayer                          GlobalMatchPlayer[]
@@ -357,7 +357,7 @@ model User {
   MapVetoLobby_MapVetoLobby_creatorIdToUser  MapVetoLobby[]      @relation("MapVetoLobby_creatorIdToUser")
   MapVetoLobby_MapVetoLobby_opponentIdToUser MapVetoLobby[]      @relation("MapVetoLobby_opponentIdToUser")
   Match                                      Match[]
-  Session                                    Session[]
+  sessions                                   Session[]
   UserInventoryItem                          UserInventoryItem[]
 }
 
