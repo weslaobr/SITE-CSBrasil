@@ -1,4 +1,4 @@
-import NextAuth, { getServerSession } from "next-auth";
+import NextAuth from "next-auth/next";
 import SteamProvider from "next-auth-steam";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
@@ -18,34 +18,20 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
         };
     }
 
-    // Determinar a URL base (origin)
-    let origin = process.env.SITE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
-    if (req) {
-        const host = req.headers.get("host");
-        const protocol = req.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
-        if (host) origin = `${protocol}://${host}`;
+    // Determinar a URL base (origin) de forma consistente com o ambiente
+    const origin = "https://www.tropacs.com.br";
+    
+    if (!process.env.STEAM_API_KEY) {
+        console.error("[Auth] ERRO: STEAM_API_KEY não encontrada no .env");
     }
-    origin = origin.replace(/\/$/, "");
 
     return {
         adapter: adapter,
         providers: [
-            {
-                ...SteamProvider(req as any, {
-                    clientSecret: process.env.STEAM_API_KEY!,
-                    callbackUrl: `${origin}/api/auth/callback/steam`,
-                    profile(profile: any) {
-                        return {
-                            id: profile.steamid,
-                            name: profile.personaname,
-                            email: `${profile.steamid}@steam.local`,
-                            image: profile.avatarfull,
-                            steamId: profile.steamid,
-                        }
-                    }
-                } as any),
-                allowDangerousEmailAccountLinking: true,
-            },
+            SteamProvider(req as any, {
+                clientSecret: process.env.STEAM_API_KEY!,
+                callbackUrl: `${origin}/api/auth/callback/steam`,
+            })
         ],
         callbacks: {
             async session({ session, user }) {
@@ -100,10 +86,6 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
             },
         },
         secret: process.env.NEXTAUTH_SECRET,
-        debug: process.env.NODE_ENV === 'development' || true, // Ativado temporariamente para debug em prod
-        pages: {
-            signIn: '/auth/signin',
-            error: '/auth/error', // Se você tiver uma página de erro
-        }
+        debug: true,
     };
 }
