@@ -163,53 +163,95 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
                     className="relative w-full max-w-[1450px] bg-zinc-950 border border-white/10 rounded-[40px] shadow-2xl flex flex-col"
                 >
 
-                {/* HEADER */}
-                <div className="relative h-56 shrink-0 overflow-hidden">
-                    <img src={getMapImage(match?.map_name)} className="absolute inset-0 w-full h-full object-cover brightness-[0.2] scale-105" alt="" />
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/50 to-zinc-950" />
-                    <div className="absolute top-8 left-10 right-10 flex justify-between items-start">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                                    isWin ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                    isLoss ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                    'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'}`}>
+                {/* HEADER PREMIUM REESTILIZADA */}
+                <div className="relative h-72 shrink-0 overflow-hidden rounded-t-[40px] border-b border-white/5">
+                    {/* Imagem do Mapa com efeitos */}
+                    <img 
+                        src={getMapImage(match?.map_name)} 
+                        className="absolute inset-0 w-full h-full object-cover brightness-[0.25] scale-110 blur-[1px]" 
+                        alt="" 
+                    />
+                    
+                    {/* Gradients de Profundidade */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/40 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20" />
+
+                    <div className="absolute inset-0 p-12 flex justify-between items-end">
+                        <div className="relative z-10 flex flex-col">
+                            {/* Badges Superiores */}
+                            <div className="flex items-center gap-3 mb-4">
+                                <motion.span 
+                                    initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
+                                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] shadow-lg backdrop-blur-md border ${
+                                    isWin ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                    isLoss ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
+                                    'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'}`}>
                                     {isWin ? 'Vitória' : isLoss ? 'Derrota' : 'Empate'}
-                                </span>
-                                <span className="px-4 py-1 rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                                    <Trophy size={10} /> {match?.game_mode || 'MIX'}
+                                </motion.span>
+                                <span className="px-4 py-1.5 rounded-lg bg-white/5 text-yellow-500 border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] backdrop-blur-md flex items-center gap-2">
+                                    <Star size={10} fill="currentColor" /> {match?.game_mode || 'COMPETITIVO'}
                                 </span>
                             </div>
-                            <h2 className="text-5xl font-black italic uppercase tracking-tighter text-white">
+
+                            {/* Nome do Mapa */}
+                            <h2 className="text-7xl font-black italic uppercase tracking-tighter text-white drop-shadow-2xl leading-none mb-4">
                                 {(match?.map_name || 'PARTIDA').replace(/^de_/i, '')}
                             </h2>
-                            <div className="flex items-center gap-4 mt-2 text-zinc-500 font-bold text-xs uppercase tracking-widest">
-                                <span className="flex items-center gap-2">
-                                    <Calendar size={13} />
-                                    {match?.match_date ? new Date(match.match_date).toLocaleDateString('pt-BR') : '--/--/----'}
-                                </span>
-                                <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                                <span className="flex items-center gap-2"><Clock size={13} /> {match?.duration || '—'}</span>
-                            </div>
-                            <div className="mt-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2 bg-white/5 w-fit px-3 py-1.5 rounded-xl border border-white/10 shadow-inner">
-                                <span className="text-yellow-500/80">MATCH ID:</span>
-                                <span className="text-zinc-300 select-all font-bold">{match?.match_id || match?.id || matchId || '—'}</span>
+
+                            {/* Info de Data e Match ID */}
+                            <div className="flex flex-col gap-3">
+                                <div className="flex items-center gap-4 text-zinc-500 font-bold text-[10px] uppercase tracking-widest">
+                                    <span className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+                                        <Calendar size={12} className="text-zinc-400" />
+                                        {match?.match_date ? new Date(match.match_date).toLocaleDateString('pt-BR') : '--/--/----'}
+                                    </span>
+                                    <span className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+                                        <Clock size={12} className="text-zinc-400" /> 
+                                        {match?.duration || '—'}
+                                    </span>
+                                </div>
+                                <div className="text-[9px] font-black text-zinc-600 uppercase tracking-widest flex items-center gap-2 bg-black/40 w-fit px-4 py-2 rounded-xl border border-white/5">
+                                    <span className="text-yellow-500/60">SESSION ID:</span>
+                                    <span className="text-zinc-400 select-all font-mono">{(match?.match_id || match?.id || matchId || '—').substring(0, 16).toUpperCase()}</span>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-8">
-                            <div className="flex flex-col items-center">
-                                <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-1">MEU TIME</span>
-                                <span className={`text-6xl font-black italic ${isWin ? 'text-emerald-500' : 'text-white'}`}>{myScore}</span>
+
+                        {/* PLACAR CENTRAL ESTILIZADO */}
+                        <div className="relative flex items-center gap-12 bg-zinc-950/40 p-10 rounded-[40px] border border-white/5 backdrop-blur-xl shadow-2xl">
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-1 bg-yellow-500 rounded-full">
+                                <span className="text-[8px] font-black text-black uppercase tracking-[0.3em]">Scoreboard</span>
                             </div>
-                            <span className="text-3xl font-black text-zinc-800 mt-4">VS</span>
+
+                            {/* Meu Time */}
                             <div className="flex flex-col items-center">
-                                <span className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-1">INIMIGOS</span>
-                                <span className={`text-6xl font-black italic ${isLoss ? 'text-red-500' : 'text-zinc-500'}`}>{enemyScore}</span>
+                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.3em] mb-4">Meu Time</span>
+                                <div className={`relative text-7xl font-black italic tracking-tighter leading-none ${isWin ? 'text-emerald-500 drop-shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'text-white'}`}>
+                                    {myScore}
+                                </div>
+                            </div>
+
+                            {/* Divisor VS */}
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="w-px h-12 bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+                                <span className="text-xs font-black text-zinc-800 italic uppercase">VS</span>
+                                <div className="w-px h-12 bg-gradient-to-t from-transparent via-white/10 to-transparent" />
+                            </div>
+
+                            {/* Inimigos */}
+                            <div className="flex flex-col items-center">
+                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.3em] mb-4">Adversários</span>
+                                <div className={`relative text-7xl font-black italic tracking-tighter leading-none ${isLoss ? 'text-rose-500 drop-shadow-[0_0_20px_rgba(244,63,94,0.3)]' : 'text-zinc-400'}`}>
+                                    {enemyScore}
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <button onClick={onClose} className="absolute top-6 right-8 w-10 h-10 bg-white/5 hover:bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 transition-all">
-                        <X className="text-zinc-500 hover:text-white" size={18} />
+
+                    {/* Botão de Fechar */}
+                    <button onClick={onClose} className="absolute top-8 right-8 w-12 h-12 bg-white/5 hover:bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 transition-all group z-50">
+                        <X className="text-zinc-500 group-hover:text-white group-hover:rotate-90 transition-all" size={20} />
                     </button>
                 </div>
 

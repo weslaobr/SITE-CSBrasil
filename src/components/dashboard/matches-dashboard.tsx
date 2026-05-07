@@ -708,7 +708,7 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
 
                 {/* mapa */}
                 <div className="flex flex-wrap gap-1.5">
-                    {['all', 'mirage', 'inferno', 'ancient', 'nuke', 'dust', 'anubis', 'vertigo'].map(map => (
+                    {['all', 'mirage', 'inferno', 'ancient', 'nuke', 'dust', 'anubis', 'vertigo', 'cache', 'overpass', 'train'].map(map => (
                         <button
                             key={map}
                             onClick={() => setMapFilter(map)}

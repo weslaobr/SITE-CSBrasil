@@ -80,7 +80,6 @@ export default function MatchHistory({ matches, onSync, loading, steamId, steamN
 
     return (
         <MatchesDashboard 
-            variant="profile" 
             matches={mappedMatches}
             currentFaceit={steamNickname || ""}
             onUpdateFaceit={() => {}}
