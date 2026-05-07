@@ -34,7 +34,7 @@ const FALLBACK_MAP_POOL = [
 ];
 
 // Subcomponents
-function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMoveLeft, side, balanceMode, onEditRating }: { player: Player, pos: number, onRemove: ()=>void, onMoveUnassigned: ()=>void, onMoveRight?: ()=>void, onMoveLeft?: ()=>void, side: "left"|"right", balanceMode: "standard"|"resenha"|"tropa", onEditRating: (field: "sr"|"resenha", value: number)=>void }) {
+function PlayerCard({ player, onRemove, onMoveUnassigned, onMoveRight, onMoveLeft, side, balanceMode, onEditRating }: { player: Player, onRemove: ()=>void, onMoveUnassigned: ()=>void, onMoveRight?: ()=>void, onMoveLeft?: ()=>void, side: "left"|"right", balanceMode: "standard"|"resenha"|"tropa", onEditRating: (field: "sr"|"resenha", value: number)=>void }) {
     const [editingField, setEditingField] = React.useState<"sr"|"resenha"|null>(null);
     const [editVal, setEditVal] = React.useState("");
 
@@ -42,7 +42,8 @@ function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMo
     const resenhaVal = player.tempResenhaRating !== undefined ? player.tempResenhaRating : (player.resenhaRating || 5);
     
     const getTropaVal = () => {
-        const premierNorm = Math.min(100, srVal / 300);
+        const pR = player.tempRating ?? player.rating ?? 0;
+        const premierNorm = Math.min(100, pR / 300);
         const faceitNorm = (player.faceitLevel ?? 0) * 10;
         const gcNorm = ((player.gcLevel ?? 0) / 21) * 100;
         return Math.max(premierNorm, faceitNorm, gcNorm);
@@ -77,15 +78,14 @@ function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMo
                             <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.nickname} {player.isGuest && <span className="ml-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>}</p>
                             {!player.isGuest && (
                                 <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity flex-wrap">
-                                    {/* Additional ratings in mini-badges */}
                                     {balanceMode !== "standard" && <span className="text-[7px] font-black bg-yellow-500/20 text-yellow-400 px-1 rounded uppercase tracking-tighter">{srVal} SR</span>}
                                     {balanceMode !== "tropa" && <span className="text-[7px] font-black bg-emerald-500/20 text-emerald-400 px-1 rounded uppercase tracking-tighter">{getTropaVal().toFixed(1)} TR</span>}
                                     {balanceMode !== "resenha" && <span className="text-[7px] font-black bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">{resenhaVal.toFixed(1)} ★</span>}
                                     
                                     <div className="w-px h-2 bg-white/10 mx-0.5" />
 
-                                    {player.faceitLevel && player.faceitLevel > 0 && <span className="text-[7px] font-black bg-orange-500/20 text-orange-400 px-1 rounded uppercase tracking-tighter" title={`Faceit Level ${player.faceitLevel}`}>F{player.faceitLevel}</span>}
-                                    {player.gcLevel && player.gcLevel > 0 && <span className="text-[7px] font-black bg-sky-500/20 text-sky-400 px-1 rounded uppercase tracking-tighter" title={`GC Level ${player.gcLevel}`}>G{player.gcLevel}</span>}
+                                    {!!player.faceitLevel && player.faceitLevel > 0 && <span className="text-[7px] font-black bg-orange-500/20 text-orange-400 px-1 rounded uppercase tracking-tighter" title={`Faceit Level ${player.faceitLevel}`}>F{player.faceitLevel}</span>}
+                                    {!!player.gcLevel && player.gcLevel > 0 && <span className="text-[7px] font-black bg-sky-500/20 text-sky-400 px-1 rounded uppercase tracking-tighter" title={`GC Level ${player.gcLevel}`}>G{player.gcLevel}</span>}
                                 </div>
                             )}
                         </div>
@@ -106,8 +106,8 @@ function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMo
                         <div className="flex items-center gap-2 justify-end">
                             {!player.isGuest && (
                                 <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity flex-wrap justify-end">
-                                    {player.gcLevel && player.gcLevel > 0 && <span className="text-[7px] font-black bg-sky-500/20 text-sky-400 px-1 rounded uppercase tracking-tighter" title={`GC Level ${player.gcLevel}`}>G{player.gcLevel}</span>}
-                                    {player.faceitLevel && player.faceitLevel > 0 && <span className="text-[7px] font-black bg-orange-500/20 text-orange-400 px-1 rounded uppercase tracking-tighter" title={`Faceit Level ${player.faceitLevel}`}>F{player.faceitLevel}</span>}
+                                    {!!player.gcLevel && player.gcLevel > 0 && <span className="text-[7px] font-black bg-sky-500/20 text-sky-400 px-1 rounded uppercase tracking-tighter" title={`GC Level ${player.gcLevel}`}>G{player.gcLevel}</span>}
+                                    {!!player.faceitLevel && player.faceitLevel > 0 && <span className="text-[7px] font-black bg-orange-500/20 text-orange-400 px-1 rounded uppercase tracking-tighter" title={`Faceit Level ${player.faceitLevel}`}>F{player.faceitLevel}</span>}
                                     
                                     <div className="w-px h-2 bg-white/10 mx-0.5" />
 
@@ -674,12 +674,12 @@ export default function TeamBuilderPage() {
                                                         return Math.max(premierNorm, faceitNorm, gcNorm).toFixed(1);
                                                     })()} TR
                                                 </span>
-                                                {p.faceitLevel !== undefined && p.faceitLevel > 0 && (
+                                                {!!p.faceitLevel && p.faceitLevel > 0 && (
                                                     <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded font-mono font-bold" title={`Faceit Level ${p.faceitLevel} | ELO: ${p.faceitElo || '?'}`}>
                                                         F{p.faceitLevel} {p.faceitElo ? `(${p.faceitElo})` : ''}
                                                     </span>
                                                 )}
-                                                {p.gcLevel !== undefined && p.gcLevel > 0 && (
+                                                {!!p.gcLevel && p.gcLevel > 0 && (
                                                     <span className="text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono font-bold" title={`GamersClub Level ${p.gcLevel}`}>
                                                         GC{p.gcLevel}
                                                     </span>
@@ -983,7 +983,7 @@ export default function TeamBuilderPage() {
                             </div>
                             <div className="p-4 space-y-2 min-h-[300px]">
                                 {teamA.map((p, idx) => (
-                                    <PlayerCard key={p.steamId} player={p} pos={idx+1} onRemove={() => handleRemovePlayer(p.steamId)} onMoveUnassigned={() => handleAssign(p.steamId, "unassigned")} onMoveRight={() => handleAssign(p.steamId, "B")} side="left" balanceMode={balanceMode} onEditRating={(field, val) => handleTempRating(p.steamId, field, val)} />
+                                    <PlayerCard key={p.steamId} player={p} onRemove={() => handleRemovePlayer(p.steamId)} onMoveUnassigned={() => handleAssign(p.steamId, "unassigned")} onMoveRight={() => handleAssign(p.steamId, "B")} side="left" balanceMode={balanceMode} onEditRating={(field, val) => handleTempRating(p.steamId, field, val)} />
                                 ))}
                                 {Array.from({ length: 5 - teamA.length }).map((_, i) => (
                                     <EmptySlot key={`empty-a-${i}`} team="A" onClick={() => {
@@ -1024,7 +1024,7 @@ export default function TeamBuilderPage() {
                             </div>
                             <div className="p-4 space-y-2 min-h-[300px]">
                                 {teamB.map((p, idx) => (
-                                    <PlayerCard key={p.steamId} player={p} pos={idx+1} onRemove={() => handleRemovePlayer(p.steamId)} onMoveUnassigned={() => handleAssign(p.steamId, "unassigned")} onMoveLeft={() => handleAssign(p.steamId, "A")} side="right" balanceMode={balanceMode} onEditRating={(field, val) => handleTempRating(p.steamId, field, val)} />
+                                    <PlayerCard key={p.steamId} player={p} onRemove={() => handleRemovePlayer(p.steamId)} onMoveUnassigned={() => handleAssign(p.steamId, "unassigned")} onMoveLeft={() => handleAssign(p.steamId, "A")} side="right" balanceMode={balanceMode} onEditRating={(field, val) => handleTempRating(p.steamId, field, val)} />
                                 ))}
                                 {Array.from({ length: 5 - teamB.length }).map((_, i) => (
                                     <EmptySlot key={`empty-b-${i}`} team="B" onClick={() => {
