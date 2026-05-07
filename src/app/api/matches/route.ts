@@ -95,7 +95,24 @@ export async function GET(req: NextRequest) {
             const eloChange = meta.eloChange ?? meta.elo_change ?? null;
             const eloAfter = meta.eloAfter ?? meta.elo_after ?? null;
 
-            return { ...m, kills, deaths, assists, adr, hsPercentage, kast, rank, eloChange, eloAfter, impact };
+            // Robust GameMode Detection (Fix for Leetify games showing as Mix)
+            let gameMode = m.gameMode || 'Competitive';
+            const rawSource = (m.source || '').toLowerCase();
+            const metaMode = (meta.gameMode || meta.data_source || meta.detected_mode || '').toLowerCase();
+
+            if (rawSource.includes('gamersclub') || metaMode.includes('gamersclub')) {
+                gameMode = 'GamersClub';
+            } else if (rawSource.includes('faceit') || metaMode.includes('faceit')) {
+                gameMode = 'Faceit';
+            } else if (rawSource.includes('premier') || metaMode.includes('premier') || meta.rank_type === 11) {
+                gameMode = 'Premier';
+            } else if (rawSource.includes('wingman') || metaMode.includes('wingman')) {
+                gameMode = 'Wingman';
+            } else if (rawSource.includes('mix') || rawSource.includes('demo') || metaMode.includes('mix')) {
+                gameMode = 'Mix';
+            }
+
+            return { ...m, kills, deaths, assists, adr, hsPercentage, kast, rank, eloChange, eloAfter, impact, gameMode };
         });
 
         // Format Global Matches to match the old Match schema for the frontend
@@ -107,17 +124,24 @@ export async function GET(req: NextRequest) {
             const meta = (gmp.metadata as any) || {};
             const matchMeta = (gmp.GlobalMatch.metadata as any) || {};
             const rawSource = (gmp.GlobalMatch.source || 'mix').toLowerCase();
-            const sourceMode = (matchMeta.gameMode || '').toLowerCase();
+            const sourceMode = (matchMeta.gameMode || matchMeta.data_source || matchMeta.detected_mode || '').toLowerCase();
             let gameMode = 'Mix';
             
-            if (rawSource.includes('premier')) {
+            if (rawSource.includes('premier') || sourceMode.includes('premier') || matchMeta.rank_type === 11) {
                 gameMode = 'Premier';
-            } else if (rawSource.includes('competitivo') || rawSource.includes('competitive')) {
+            } else if (rawSource.includes('gamersclub') || sourceMode.includes('gamersclub')) {
+                gameMode = 'GamersClub';
+            } else if (rawSource.includes('faceit') || sourceMode.includes('faceit')) {
+                gameMode = 'Faceit';
+            } else if (rawSource.includes('competitivo') || rawSource.includes('competitive') || sourceMode.includes('competitive')) {
                 gameMode = 'Competitive';
             } else if (rawSource.includes('braço direito') || rawSource.includes('wingman') || sourceMode.includes('wingman') || sourceMode.includes('2v2')) {
                 gameMode = 'Wingman';
-            } else if (rawSource.includes('mix') || rawSource.includes('demo') || rawSource.includes('local')) {
+            } else if (rawSource.includes('mix') || rawSource.includes('demo') || rawSource.includes('local') || sourceMode.includes('mix')) {
                 gameMode = 'Mix';
+            } else {
+                // If it's from Leetify but we couldn't detect a specific platform, assume Competitive
+                if (rawSource.includes('leetify')) gameMode = 'Competitive';
             }
 
             // Fallback for result

@@ -129,21 +129,27 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
+    // Reset pagination on filter change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [mapFilter, modeFilter, searchTerm]);
+
     // Helper to detect the platform/mode of a match
     const detectMode = (m: Match): 'GamersClub' | 'Faceit' | 'Premier' | 'Mix' | 'Competitive' | 'Wingman' => {
         const src = (m.source || '').toLowerCase();
         const mode = (m.gameMode || '').toLowerCase();
-        const metaSource = (m.metadata?.source || m.metadata?.data_source || '').toLowerCase();
+        const meta = m.metadata || {};
+        const metaSource = (meta.source || meta.data_source || meta.detected_mode || '').toLowerCase();
 
         // 1. Specific Platforms (Highest Priority)
-        if (src.includes('gamersclub') || src.includes('gc') || mode.includes('gamersclub') || mode === 'gc') {
+        if (src.includes('gamersclub') || src.includes('gc') || mode.includes('gamersclub') || mode === 'gc' || metaSource.includes('gamersclub')) {
             return 'GamersClub';
         }
         if (src === 'faceit' || mode.includes('faceit') || metaSource.includes('faceit')) {
             return 'Faceit';
         }
         if (src.includes('premier') || mode.includes('premier') || metaSource.includes('premier') || 
-            m.metadata?.rank_type === 11 || 
+            meta.rank_type === 11 || 
             (!isNaN(parseInt(m.rank || '')) && parseInt(m.rank || '') > 1000 && !src.includes('gamersclub'))) {
             return 'Premier';
         }
@@ -155,11 +161,22 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
 
         // 3. Mix/Demo (Only if not a specific platform above)
         if (src.includes('mix') || src.includes('local') || mode.includes('mix') || metaSource.includes('mix')) {
+            // Check if it's actually a known platform even if it says 'mix' somewhere
+            if (metaSource.includes('gamersclub')) return 'GamersClub';
+            if (metaSource.includes('faceit')) return 'Faceit';
+            if (metaSource.includes('premier')) return 'Premier';
             return 'Mix';
         }
 
-        // If it's from the demo analyzer, but we didn't identify it as Premier/GC above, 
-        // we check if it's explicitly a Mix match or just a generic competitive demo
+        // 4. Fallback for Leetify/External sources
+        if (src.includes('leetify') || src.includes('steam') || src.includes('valve')) {
+            if (meta.rank_type === 11) return 'Premier';
+            if (mode.includes('competitive')) return 'Competitive';
+            // If it's leetify and we are here, it's likely a competitive match
+            return 'Competitive';
+        }
+
+        // 5. Default analyzer behavior
         if (src.includes('demo')) {
             if (mode.includes('premier')) return 'Premier';
             if (mode.includes('mix')) return 'Mix';
