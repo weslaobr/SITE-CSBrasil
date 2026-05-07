@@ -948,9 +948,16 @@ export default function TeamBuilderPage() {
 
                     {/* Veto Arena / Time A vs Time B */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative">
-                        {/* VS Badge */}
-                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-zinc-950 border-4 border-zinc-900 rounded-full flex items-center justify-center font-black italic text-zinc-500 z-10 select-none shadow-xl">
-                            VS
+                        {/* VS Badge with Pulse */}
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 z-10 pointer-events-none flex items-center justify-center">
+                            <motion.div 
+                                animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                                className="absolute inset-0 bg-yellow-500/20 rounded-full blur-xl"
+                            />
+                            <div className="w-12 h-12 bg-zinc-950 border-4 border-zinc-900 rounded-full flex items-center justify-center font-black italic text-zinc-500 select-none shadow-2xl">
+                                VS
+                            </div>
                         </div>
 
                         {/* TEAM A */}
@@ -1035,6 +1042,92 @@ export default function TeamBuilderPage() {
                             </div>
                         </div>
 
+                    </div>
+
+                    {/* BALANCE DASHBOARD */}
+                    <div className="bg-zinc-900/40 rounded-3xl border border-white/5 p-4 flex flex-col sm:flex-row items-center justify-center gap-8 backdrop-blur-sm overflow-hidden relative">
+                        <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-transparent to-blue-500/5 pointer-events-none" />
+                        
+                        <div className="flex flex-col items-center gap-1">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Diferença de Força</span>
+                            <div className="flex items-center gap-4">
+                                <div className="text-center">
+                                    <p className="text-[10px] font-bold text-yellow-500 uppercase">Média {balanceMode.toUpperCase()}</p>
+                                    <p className="text-xl font-black text-white">{avgA}</p>
+                                </div>
+                                <div className="h-8 w-px bg-white/10" />
+                                <div className="text-center">
+                                    <p className="text-[10px] font-bold text-emerald-400 uppercase">Gap de Equilíbrio</p>
+                                    <p className={`text-xl font-black ${Math.abs(parseFloat(avgA) - parseFloat(avgB)) < 2 ? 'text-green-500' : 'text-yellow-500'}`}>
+                                        {Math.abs(parseFloat(avgA) - parseFloat(avgB)).toFixed(1)}
+                                    </p>
+                                </div>
+                                <div className="h-8 w-px bg-white/10" />
+                                <div className="text-center">
+                                    <p className="text-[10px] font-bold text-blue-500 uppercase">Média {balanceMode.toUpperCase()}</p>
+                                    <p className="text-xl font-black text-white">{avgB}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 max-w-md w-full h-2 bg-white/5 rounded-full overflow-hidden relative border border-white/5">
+                            <motion.div 
+                                initial={{ width: "50%" }}
+                                animate={{ 
+                                    width: (() => {
+                                        const diff = parseFloat(avgA) - parseFloat(avgB);
+                                        // Aumentamos a sensibilidade para que pequenas diferenças sejam visíveis
+                                        let sensitivity = 1;
+                                        if (balanceMode === "standard") sensitivity = 0.02;  // Diferença de 500 SR = 10%
+                                        else if (balanceMode === "tropa") sensitivity = 4;    // Diferença de 2.5 TR = 10%
+                                        else if (balanceMode === "resenha") sensitivity = 30; // Diferença de 0.3 estrela = 10%
+                                        
+                                        const percentage = 50 + (diff * sensitivity);
+                                        return `${Math.max(5, Math.min(95, percentage))}%`;
+                                    })(),
+                                    backgroundColor: Math.abs(parseFloat(avgA) - parseFloat(avgB)) < (balanceMode === "standard" ? 400 : balanceMode === "tropa" ? 2 : 0.2) ? "#22c55e" : "#eab308"
+                                }}
+                                className="absolute inset-0 h-full shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+                            />
+                            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/50 shadow-[0_0_10px_white]" />
+                            
+                            {/* Advantage Labels */}
+                            <div className="absolute inset-x-0 -top-6 flex justify-between px-2">
+                                {parseFloat(avgA) > parseFloat(avgB) && (
+                                    <span className="text-[8px] font-black text-yellow-500 uppercase animate-pulse">Favorito A</span>
+                                )}
+                                <div className="flex-1" />
+                                {parseFloat(avgB) > parseFloat(avgA) && (
+                                    <span className="text-[8px] font-black text-blue-400 uppercase animate-pulse">Favorito B</span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="text-center sm:text-right">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Nível do Lobby</p>
+                            <div className="flex items-center gap-2">
+                                {(() => {
+                                    const avgTotal = (parseFloat(avgA) + parseFloat(avgB)) / 2;
+                                    let isElite = false;
+                                    let isComp = false;
+
+                                    if (balanceMode === "standard") {
+                                        isElite = avgTotal > 20000;
+                                        isComp = avgTotal > 14000;
+                                    } else if (balanceMode === "tropa") {
+                                        isElite = avgTotal > 80;
+                                        isComp = avgTotal > 55;
+                                    } else {
+                                        isElite = avgTotal > 8.5;
+                                        isComp = avgTotal > 6.5;
+                                    }
+
+                                    if (isElite) return <span className="text-xs font-black text-purple-400 flex items-center gap-1 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]"><Trophy size={14} /> ELITE MIX</span>;
+                                    if (isComp) return <span className="text-xs font-black text-blue-400 flex items-center gap-1"><Medal size={14} /> COMPETITIVO</span>;
+                                    return <span className="text-xs font-black text-zinc-400 flex items-center gap-1"><Users size={14} /> CASUAL</span>;
+                                })()}
+                            </div>
+                        </div>
                     </div>
 
                     {/* ── MAP VETO SECTION (Integrated) ── */}
@@ -1155,31 +1248,39 @@ export default function TeamBuilderPage() {
                                             </div>
                                         ) : (
                                             <div className="space-y-2">
-                                                {vetoHistory.map((entry, i) => (
-                                                    <motion.div 
-                                                        initial={{ opacity: 0, x: 10 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        key={i} 
-                                                        className="flex items-center gap-2 p-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all"
-                                                    >
-                                                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-inner ${
-                                                            entry.team === "A" ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 
-                                                            entry.team === "B" ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 
-                                                            'bg-zinc-800 text-zinc-500'
-                                                        }`}>
-                                                            <span className="font-black text-xs">{entry.team === "system" ? "?" : entry.team}</span>
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="font-black text-xs uppercase text-white truncate">
-                                                                {mapPool.find(m => m.id === entry.map)?.name}
-                                                            </p>
-                                                            <p className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
-                                                                <span className={`w-1.5 h-1.5 rounded-full ${entry.type === "pick" ? 'bg-green-500' : 'bg-red-500'}`} />
-                                                                {entry.type === "pick" ? "Selecionado" : "Banido"}
-                                                            </p>
-                                                        </div>
-                                                    </motion.div>
-                                                ))}
+                                                {vetoHistory.map((entry, i) => {
+                                                    const mapData = mapPool.find(m => m.id === entry.map);
+                                                    return (
+                                                        <motion.div 
+                                                            initial={{ opacity: 0, x: 10 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            key={i} 
+                                                            className="flex items-center gap-3 p-2 bg-zinc-900/50 rounded-xl border border-white/5 hover:border-white/10 transition-all overflow-hidden relative group"
+                                                        >
+                                                            <div className="absolute inset-0 opacity-20 pointer-events-none">
+                                                                <img src={mapData?.image} className="w-full h-full object-cover blur-[2px]" />
+                                                            </div>
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 z-10 shadow-lg ${
+                                                                entry.team === "A" ? 'bg-yellow-500 text-black font-black' : 
+                                                                entry.team === "B" ? 'bg-blue-500 text-white font-black' : 
+                                                                'bg-zinc-800 text-zinc-500'
+                                                            }`}>
+                                                                <span className="text-[10px]">{entry.team === "system" ? "?" : entry.team}</span>
+                                                            </div>
+                                                            <div className="flex-1 min-w-0 z-10">
+                                                                <p className="font-black text-xs uppercase text-white truncate drop-shadow-md">
+                                                                    {mapData?.name}
+                                                                </p>
+                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                    <div className={`w-1.5 h-1.5 rounded-full ${entry.type === "pick" ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]'}`} />
+                                                                    <p className="text-[8px] text-zinc-400 font-black uppercase tracking-widest">
+                                                                        {entry.type === "pick" ? "Selecionado" : "Banido"}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </motion.div>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
