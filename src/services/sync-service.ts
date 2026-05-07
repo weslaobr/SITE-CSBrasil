@@ -62,7 +62,8 @@ export async function syncUserMatches(steamId: string) {
                     kills = playerStat.total_kills ?? playerStat.kills ?? 0;
                     deaths = playerStat.total_deaths ?? playerStat.deaths ?? 0;
                     assists = playerStat.total_assists ?? playerStat.assists ?? 0;
-                    adr = playerStat.dpr ?? playerStat.adr ?? playerStat.average_damage_per_round ?? null;
+                    const rawAdr = playerStat.dpr ?? playerStat.adr ?? playerStat.average_damage_per_round ?? null;
+                    adr = isFinite(Number(rawAdr)) ? Number(rawAdr) : 0;
                     kast = m.kast ?? playerStat.kast ?? playerStat.kast_percent ?? playerStat.kast_percentage ?? playerStat.kastPercent ?? playerStat.kastPercentage ?? null;
                     
                     // Fallback to ratings if not in stats directly
@@ -128,7 +129,7 @@ export async function syncUserMatches(steamId: string) {
                             assists: p.total_assists ?? p.assists ?? 0,
                             score: p.score ?? 0,
                             mvps: p.mvps ?? 0,
-                            adr: p.dpr ?? p.adr ?? p.average_damage_per_round ?? 0,
+                            adr: isFinite(Number(p.dpr ?? p.adr ?? p.average_damage_per_round)) ? Number(p.dpr ?? p.adr ?? p.average_damage_per_round) : 0,
                             hsPercentage: rawHs > 1 ? Math.round(rawHs) : Math.round(rawHs * 100),
                             matchResult: p.match_result ?? p.outcome ?? result,
                             metadata: p 
@@ -191,7 +192,7 @@ export async function syncUserMatches(steamId: string) {
                 deaths,
                 assists,
                 score: scoreStr,
-                adr,
+                adr: isFinite(Number(adr)) ? Number(adr) : 0,
                 hsPercentage,
                 result,
                 matchDate,
