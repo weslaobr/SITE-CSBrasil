@@ -8,12 +8,21 @@ export async function GET(req: NextRequest) {
         const lobbies = await prisma.lobby.findMany({
             where: { status: { in: ["waiting", "picking"] } },
             include: {
-                creator: { select: { name: true, image: true } },
-                _count: { select: { players: true } }
+                User: { select: { name: true, image: true } },
+                _count: { select: { LobbyPlayer: true } }
             },
             orderBy: { createdAt: "desc" }
         });
-        return NextResponse.json(lobbies);
+
+        const formattedLobbies = lobbies.map((l: any) => ({
+            ...l,
+            creator: l.User,
+            _count: {
+                players: l._count.LobbyPlayer
+            }
+        }));
+
+        return NextResponse.json(formattedLobbies);
     } catch (error) {
         return NextResponse.json({ error: "Failed to fetch lobbies" }, { status: 500 });
     }
@@ -37,8 +46,9 @@ export async function POST(req: NextRequest) {
                 password: password || null,
                 rpsEnabled: !!rpsEnabled,
                 creatorId: userId,
-                players: {
+                LobbyPlayer: {
                     create: {
+                        id: `lp_${Date.now()}_${userId}`,
                         userId: userId,
                         isLeader: false,
                         team: "none"

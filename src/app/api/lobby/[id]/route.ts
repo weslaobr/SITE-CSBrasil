@@ -23,7 +23,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
             }
         });
         if (!lobby) return NextResponse.json({ error: "Lobby not found" }, { status: 404 });
-        return NextResponse.json(lobby);
+
+        const formattedLobby = {
+            ...lobby,
+            creator: lobby.User,
+            players: lobby.LobbyPlayer.map((lp: any) => ({
+                ...lp,
+                user: lp.User
+            }))
+        };
+
+        return NextResponse.json(formattedLobby);
     } catch (error) {
         return NextResponse.json({ error: "Failed to fetch lobby" }, { status: 500 });
     }

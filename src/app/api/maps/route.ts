@@ -40,7 +40,7 @@ export async function GET() {
         // Buscar todas as partidas globais usando any para compatibilidade
         const matches = await (prisma as any).globalMatch.findMany({
             include: {
-                players: {
+                GlobalMatchPlayer: {
                     select: {
                         userId: true,
                         matchResult: true,
@@ -67,6 +67,7 @@ export async function GET() {
         }> = {};
 
         for (const match of matches) {
+            const players = match.GlobalMatchPlayer || [];
             const key = normalizeMapName(match.mapName);
 
             if (!mapAgg[key]) {
@@ -88,7 +89,7 @@ export async function GET() {
             // Determinar vitória da tropa: 
             // 1. Se houver membros registrados (userId != null), basta um deles ter ganho
             // 2. Fallback para dados legados ou se não houver userId: checa se alguém ganhou (menos preciso)
-            const members = match.players.filter((p: any) => p.userId !== null);
+            const members = players.filter((p: any) => p.userId !== null);
             let isWin = false;
 
             if (members.length > 0) {
@@ -97,14 +98,14 @@ export async function GET() {
                 // Se não há userId populado (dados antigos), checamos se houve vitória.
                 // Num 5v5 completo, sempre há 5 vitórias, então isso daria 100% WR.
                 // Para evitar isso, vamos ser mais rigorosos no fallback:
-                const winCount = match.players.filter((p: any) => p.matchResult?.toLowerCase() === 'win').length;
-                const lossCount = match.players.filter((p: any) => p.matchResult?.toLowerCase() === 'loss').length;
+                const winCount = players.filter((p: any) => p.matchResult?.toLowerCase() === 'win').length;
+                const lossCount = players.filter((p: any) => p.matchResult?.toLowerCase() === 'loss').length;
                 isWin = winCount > lossCount; // Isso geralmente falha (5 v 5), o que é seguro
             }
 
             if (isWin) agg.wins += 1;
 
-            for (const p of match.players) {
+            for (const p of players) {
                 agg.totalKills += p.kills || 0;
                 agg.totalDeaths += p.deaths || 0;
                 if (p.adr != null) {

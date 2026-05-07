@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 // Middleware for admin check
 async function isAdmin(req: NextRequest) {
     const session = await getServerSession(getAuthOptions(req));
+    console.log("[Admin API Auth Check] Session:", session ? "Found" : "Not Found", "isAdmin:", session?.user ? (session.user as any).isAdmin : "N/A");
     return session?.user && (session.user as any).isAdmin;
 }
 
@@ -26,10 +27,9 @@ export async function GET(req: NextRequest) {
         const matches = await prisma.globalMatch.findMany({
             where,
             include: {
-
-                players: {
+                GlobalMatchPlayer: {
                     include: {
-                        user: {
+                        User: {
                             select: {
                                 name: true,
                                 image: true,
@@ -43,6 +43,10 @@ export async function GET(req: NextRequest) {
         });
 
         const formattedMatches = matches.map(m => {
+            const players = ((m as any).GlobalMatchPlayer || []).map((p: any) => ({
+                ...p,
+                user: p.User
+            }));
             let mapName = m.mapName;
             const meta = (m.metadata as any) || {};
 
@@ -65,13 +69,20 @@ export async function GET(req: NextRequest) {
                 }
             }
 
-            return { ...m, mapName };
+            return { ...m, mapName, players };
         });
 
         return NextResponse.json({ matches: formattedMatches });
     } catch (error) {
-        console.error("[Admin Matches GET] Error:", error);
-        return NextResponse.json({ error: "Failed to fetch matches" }, { status: 500 });
+        console.error("[Admin Matches GET] CRITICAL ERROR:", error);
+        if (error instanceof Error) {
+            console.error("Error Message:", error.message);
+            console.error("Error Stack:", error.stack);
+        }
+        return NextResponse.json({ 
+            error: "Failed to fetch matches", 
+            details: error instanceof Error ? error.message : String(error) 
+        }, { status: 500 });
     }
 }
 

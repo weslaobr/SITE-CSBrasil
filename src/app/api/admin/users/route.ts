@@ -23,14 +23,22 @@ export async function GET() {
                 isAdmin: true,
                 _count: {
                     select: {
-                        matches: true,
-                        lobbiesCreated: true
+                        GlobalMatchPlayer: true,
+                        Lobby: true
                     }
                 }
             }
         });
 
-        return NextResponse.json(users);
+        const formattedUsers = users.map((u: any) => ({
+            ...u,
+            _count: {
+                matches: u._count.GlobalMatchPlayer,
+                lobbiesCreated: u._count.Lobby
+            }
+        }));
+
+        return NextResponse.json(formattedUsers);
     } catch (error) {
         console.error("[USERS_GET]", error);
         return new NextResponse("Internal Error", { status: 500 });

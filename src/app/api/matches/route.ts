@@ -104,9 +104,10 @@ export async function GET(req: NextRequest) {
         const formattedGlobalMatches = globalMatchPlayers.map(gmp => {
             let res = (gmp.matchResult || '').toLowerCase();
             let mappedResult = res === 'win' ? 'Win' : (res === 'loss' ? 'Loss' : 'Tie');
-            const sourceMode = (gmp.GlobalMatch as any).gameMode?.toLowerCase() || '';
-            const meta = gmp.metadata as any;
-            let gameMode = 'Competitive';
+            const meta = (gmp.metadata as any) || {};
+            const matchMeta = (gmp.GlobalMatch.metadata as any) || {};
+            const sourceMode = (matchMeta.gameMode || '').toLowerCase();
+            let gameMode = 'Mix';
             
             if (['mix', 'demo', 'local'].some(s => (gmp.GlobalMatch.source || 'mix').toLowerCase().includes(s))) {
                 gameMode = 'Mix';
@@ -152,7 +153,7 @@ export async function GET(req: NextRequest) {
             return {
                 id: gmp.globalMatchId,
                 playerId: gmp.id,
-                externalId: gmp.GlobalMatch.externalId || gmp.globalMatchId,
+                externalId: (gmp.GlobalMatch as any).externalId || matchMeta.externalId || gmp.globalMatchId,
                 source: gmp.GlobalMatch.source || 'mix',
                 gameMode,
                 mapName,

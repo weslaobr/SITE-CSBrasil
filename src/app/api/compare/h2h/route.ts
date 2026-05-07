@@ -32,12 +32,12 @@ export async function GET(request: NextRequest) {
         const commonMatches = await prisma.globalMatch.findMany({
             where: {
                 id: { in: matchIds },
-                players: {
+                GlobalMatchPlayer: {
                     some: { steamId: steamIdB }
                 }
             },
             include: {
-                players: {
+                GlobalMatchPlayer: {
                     where: { steamId: { in: [steamIdA, steamIdB] } }
                 }
             },
@@ -50,8 +50,9 @@ export async function GET(request: NextRequest) {
         let winsB = 0;
 
         const results = commonMatches.map(match => {
-            const playerA = match.players.find(p => p.steamId === steamIdA);
-            const playerB = match.players.find(p => p.steamId === steamIdB);
+            const players = (match as any).GlobalMatchPlayer || [];
+            const playerA = players.find((p: any) => p.steamId === steamIdA);
+            const playerB = players.find((p: any) => p.steamId === steamIdB);
 
             if (!playerA || !playerB) return null; // Fallback inesperado
 
