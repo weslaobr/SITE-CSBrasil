@@ -957,7 +957,7 @@ export default function TeamBuilderPage() {
                     </div>
 
                     {/* ── MAP VETO SECTION (Integrated) ── */}
-                    <div className="mt-8 space-y-6 bg-zinc-900/20 p-6 rounded-3xl border border-white/5 backdrop-blur-sm">
+                    <div className="mt-6 space-y-4 bg-zinc-900/20 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
                         <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-4 border-b border-white/5 pb-5">
                             <div>
                                 <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white flex items-center gap-3">
@@ -991,7 +991,7 @@ export default function TeamBuilderPage() {
 
                         <div className="flex flex-col 2xl:flex-row gap-6">
                             {/* Map Grid */}
-                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 gap-4">
+                            <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                                 {mapPool.map((map) => {
                                     const state = vetoMaps[map.id];
                                     const isBanned = state?.type === "ban";
@@ -1001,7 +1001,7 @@ export default function TeamBuilderPage() {
                                         <motion.div 
                                             key={map.id}
                                             layout
-                                            className={`relative aspect-[16/9] rounded-2xl overflow-hidden border transition-all group ${
+                                            className={`relative aspect-[4/3] rounded-xl overflow-hidden border transition-all group ${
                                                 isBanned ? 'border-red-500/50 opacity-40 grayscale' :
                                                 isPicked ? 'border-green-500 shadow-xl shadow-green-500/10' :
                                                 'border-white/5 hover:border-yellow-500/40'
@@ -1010,7 +1010,7 @@ export default function TeamBuilderPage() {
                                             <img src={map.image} alt={map.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
                                             
-                                            <div className="absolute inset-0 p-4 flex flex-col justify-between">
+                                            <div className="absolute inset-0 p-3 flex flex-col justify-between">
                                                 <div className="flex justify-between items-start">
                                                     <span className="text-sm font-black italic uppercase tracking-tighter text-white drop-shadow-lg">
                                                         {map.name}
@@ -1025,16 +1025,16 @@ export default function TeamBuilderPage() {
                                                 </div>
 
                                                 {!state && (
-                                                    <div className="flex gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                                                    <div className="flex gap-1.5 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                                                         <button 
                                                             onClick={() => handleMapAction(map.id, "pick")}
-                                                            className="flex-1 bg-green-500 hover:bg-green-400 text-black py-2 rounded-lg font-black text-[10px] uppercase shadow-lg shadow-green-900/30"
+                                                            className="flex-1 bg-green-500 hover:bg-green-400 text-black py-1.5 rounded-lg font-black text-[9px] uppercase shadow-lg shadow-green-900/30"
                                                         >
                                                             Pick
                                                         </button>
                                                         <button 
                                                             onClick={() => handleMapAction(map.id, "ban")}
-                                                            className="flex-1 bg-red-500 hover:bg-red-400 text-white py-2 rounded-lg font-black text-[10px] uppercase shadow-lg shadow-red-900/30"
+                                                            className="flex-1 bg-red-500 hover:bg-red-400 text-white py-1.5 rounded-lg font-black text-[9px] uppercase shadow-lg shadow-red-900/30"
                                                         >
                                                             Ban
                                                         </button>
@@ -1056,7 +1056,7 @@ export default function TeamBuilderPage() {
 
                             {/* Veto Log / History (Simplified) */}
                             <div className="2xl:w-72 shrink-0">
-                                <div className="bg-black/30 p-5 rounded-2xl border border-white/5 h-full flex flex-col shadow-inner">
+                                <div className="bg-black/30 p-4 rounded-2xl border border-white/5 h-full flex flex-col shadow-inner">
                                     <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
                                         <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                                             <History size={14} className="text-yellow-500" /> Log de Veto
@@ -1079,9 +1079,9 @@ export default function TeamBuilderPage() {
                                                         initial={{ opacity: 0, x: 10 }}
                                                         animate={{ opacity: 1, x: 0 }}
                                                         key={i} 
-                                                        className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all"
+                                                        className="flex items-center gap-2 p-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all"
                                                     >
-                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-inner ${
+                                                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-inner ${
                                                             entry.team === "A" ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 
                                                             entry.team === "B" ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 
                                                             'bg-zinc-800 text-zinc-500'
