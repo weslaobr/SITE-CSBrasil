@@ -76,7 +76,14 @@ function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMo
                         <div className="flex items-center gap-2">
                             <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.nickname} {player.isGuest && <span className="ml-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>}</p>
                             {!player.isGuest && (
-                                <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity flex-wrap">
+                                    {/* Additional ratings in mini-badges */}
+                                    {balanceMode !== "standard" && <span className="text-[7px] font-black bg-yellow-500/20 text-yellow-400 px-1 rounded uppercase tracking-tighter">{srVal} SR</span>}
+                                    {balanceMode !== "tropa" && <span className="text-[7px] font-black bg-emerald-500/20 text-emerald-400 px-1 rounded uppercase tracking-tighter">{getTropaVal().toFixed(1)} TR</span>}
+                                    {balanceMode !== "resenha" && <span className="text-[7px] font-black bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">{resenhaVal.toFixed(1)} ★</span>}
+                                    
+                                    <div className="w-px h-2 bg-white/10 mx-0.5" />
+
                                     {player.faceitLevel && player.faceitLevel > 0 && <span className="text-[7px] font-black bg-orange-500/20 text-orange-400 px-1 rounded uppercase tracking-tighter" title={`Faceit Level ${player.faceitLevel}`}>F{player.faceitLevel}</span>}
                                     {player.gcLevel && player.gcLevel > 0 && <span className="text-[7px] font-black bg-sky-500/20 text-sky-400 px-1 rounded uppercase tracking-tighter" title={`GC Level ${player.gcLevel}`}>G{player.gcLevel}</span>}
                                 </div>
@@ -98,9 +105,15 @@ function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMo
                     <div className="flex flex-col flex-1 min-w-0 mr-3 text-right items-end">
                         <div className="flex items-center gap-2 justify-end">
                             {!player.isGuest && (
-                                <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity flex-wrap justify-end">
                                     {player.gcLevel && player.gcLevel > 0 && <span className="text-[7px] font-black bg-sky-500/20 text-sky-400 px-1 rounded uppercase tracking-tighter" title={`GC Level ${player.gcLevel}`}>G{player.gcLevel}</span>}
                                     {player.faceitLevel && player.faceitLevel > 0 && <span className="text-[7px] font-black bg-orange-500/20 text-orange-400 px-1 rounded uppercase tracking-tighter" title={`Faceit Level ${player.faceitLevel}`}>F{player.faceitLevel}</span>}
+                                    
+                                    <div className="w-px h-2 bg-white/10 mx-0.5" />
+
+                                    {balanceMode !== "resenha" && <span className="text-[7px] font-black bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">{resenhaVal.toFixed(1)} ★</span>}
+                                    {balanceMode !== "tropa" && <span className="text-[7px] font-black bg-emerald-500/20 text-emerald-400 px-1 rounded uppercase tracking-tighter">{getTropaVal().toFixed(1)} TR</span>}
+                                    {balanceMode !== "standard" && <span className="text-[7px] font-black bg-yellow-500/20 text-yellow-400 px-1 rounded uppercase tracking-tighter">{srVal} SR</span>}
                                 </div>
                             )}
                             <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.isGuest && <span className="mr-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>} {player.nickname}</p>
@@ -421,38 +434,60 @@ export default function TeamBuilderPage() {
     };
 
 
-    const handleAutoBalance = () => {
+    const handleAutoBalance = (overrideMode?: "standard" | "resenha" | "tropa") => {
         if (selectedPlayers.length !== 10) {
-            alert("Selecione exatamente 10 jogadores para balancear os times automaticamente.");
+            if (!overrideMode) alert("Selecione exatamente 10 jogadores para balancear os times automaticamente.");
             return;
         }
 
-        const getRating = (p: Player) => balanceMode === "resenha"
-            ? (p.tempResenhaRating !== undefined ? p.tempResenhaRating : (p.resenhaRating || 5))
-            : (p.tempRating !== undefined ? p.tempRating : p.rating);
+        const modeToUse = overrideMode || balanceMode;
 
-        const sorted = [...selectedPlayers].sort((a, b) => getRating(b) - getRating(a));
-        let tA = 0;
-        let tB = 0;
-        let cA = 0;
-        let cB = 0;
+        const getRatingForBalance = (p: Player) => {
+            if (modeToUse === "resenha") {
+                return p.tempResenhaRating !== undefined ? p.tempResenhaRating : (p.resenhaRating || 5);
+            }
+            if (modeToUse === "tropa") {
+                const pR = p.tempRating ?? p.rating ?? 0;
+                const premierNorm = Math.min(100, pR / 300);
+                const faceitNorm = (p.faceitLevel ?? 0) * 10;
+                const gcNorm = ((p.gcLevel ?? 0) / 21) * 100;
+                return Math.max(premierNorm, faceitNorm, gcNorm);
+            }
+            return p.tempRating !== undefined ? p.tempRating : p.rating;
+        };
 
-        const newAssignments = sorted.map(p => {
-            const pRating = getRating(p);
-            if (cA === 5) {
-                cB++; tB += pRating; return { ...p, assignment: "B" as const };
-            }
-            if (cB === 5) {
-                cA++; tA += pRating; return { ...p, assignment: "A" as const };
-            }
-            if (tA <= tB) {
-                cA++; tA += pRating; return { ...p, assignment: "A" as const };
-            } else {
-                cB++; tB += pRating; return { ...p, assignment: "B" as const };
-            }
-        });
+        const sorted = [...selectedPlayers].sort((a, b) => getRatingForBalance(b) - getRatingForBalance(a));
+        
+        // Exhaustive search for the best split (126 combinations)
+        let bestDiff = Infinity;
+        let bestSplit: Player[] = [];
 
-        setSelectedPlayers(newAssignments);
+        const findBestSplit = (index: number, teamA: Player[], teamB: Player[], sumA: number, sumB: number) => {
+            if (index === 10) {
+                const diff = Math.abs(sumA - sumB);
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    bestSplit = [...teamA.map(p => ({ ...p, assignment: "A" as const })), ...teamB.map(p => ({ ...p, assignment: "B" as const }))];
+                }
+                return;
+            }
+
+            const p = sorted[index];
+            const pRating = getRatingForBalance(p);
+
+            // Try adding to Team A if not full
+            if (teamA.length < 5) {
+                findBestSplit(index + 1, [...teamA, p], teamB, sumA + pRating, sumB);
+            }
+
+            // Try adding to Team B if not full
+            if (teamB.length < 5) {
+                findBestSplit(index + 1, teamA, [...teamB, p], sumA, sumB + pRating);
+            }
+        };
+
+        findBestSplit(0, [], [], 0, 0);
+        setSelectedPlayers(bestSplit);
     };
 
     const handleMapAction = (mapId: string, type: "ban" | "pick", isRandom = false) => {
@@ -802,19 +837,19 @@ export default function TeamBuilderPage() {
                                 <div className="flex items-center gap-2 shrink-0">
                                     <div className="flex bg-zinc-800 p-1 rounded-xl border border-white/5 mr-2">
                                         <button 
-                                            onClick={() => setBalanceMode("standard")}
+                                            onClick={() => { setBalanceMode("standard"); handleAutoBalance("standard"); }}
                                             className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${balanceMode === "standard" ? "bg-yellow-500 text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}
                                         >
                                             Standard
                                         </button>
                                         <button 
-                                            onClick={() => setBalanceMode("tropa")}
+                                            onClick={() => { setBalanceMode("tropa"); handleAutoBalance("tropa"); }}
                                             className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${balanceMode === "tropa" ? "bg-emerald-500 text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}
                                         >
                                             Tropa
                                         </button>
                                         <button 
-                                            onClick={() => setBalanceMode("resenha")}
+                                            onClick={() => { setBalanceMode("resenha"); handleAutoBalance("resenha"); }}
                                             className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${balanceMode === "resenha" ? "bg-purple-500 text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}
                                         >
                                             Resenha
