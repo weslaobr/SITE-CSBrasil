@@ -1712,6 +1712,7 @@ const MatchReportModal: React.FC<Props> = ({
         };
 
         const allPs = [...t1, ...t2];
+        const weaponStats = currentMatch?.metadata?.weapon_stats || [];
 
         return (
             <div className="relative flex items-start gap-6 mt-6 pb-10">
@@ -1902,15 +1903,15 @@ const MatchReportModal: React.FC<Props> = ({
                                                         <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest">FRAGS</span>
                                                     </div>
                                                     <div className="flex flex-col items-end opacity-60">
-                                                        <span className="text-sm font-black text-zinc-300 italic">{p.total_damage || 0}</span>
+                                                        <span className="text-sm font-black text-zinc-300 italic">{Math.round(p.totalDamage || 0)}</span>
                                                         <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">DMG</span>
                                                     </div>
                                                     <div className="flex flex-col items-end opacity-60">
-                                                        <span className="text-sm font-black text-zinc-300 italic">{p.adr || 0}</span>
+                                                        <span className="text-sm font-black text-zinc-300 italic">{Math.round(p.adr || 0)}</span>
                                                         <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">ADR</span>
                                                     </div>
                                                     <div className="flex flex-col items-end opacity-60">
-                                                        <span className="text-sm font-black text-zinc-300 italic">{Math.round((p.accuracy_head || 0) * 100)}%</span>
+                                                        <span className="text-sm font-black text-zinc-300 italic">{Math.round(p.hs || 0)}%</span>
                                                         <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">HS%</span>
                                                     </div>
                                                 </div>
