@@ -687,6 +687,7 @@ const GlobalRanking: React.FC = () => {
                             <th className="px-4 py-3.5 text-center hidden md:table-cell">HS%</th>
                             <th className="px-4 py-3.5 text-center hidden md:table-cell">Mix LV</th>
                             <th className="px-4 py-3.5 text-center hidden md:table-cell">Tropoints</th>
+                            <th className="px-4 py-3.5 text-center hidden md:table-cell">Faceit</th>
                             <th className="px-4 py-3.5 text-right"></th>
                         </tr>
                     </thead>

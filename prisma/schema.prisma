@@ -9,7 +9,7 @@ datasource db {
 }
 
 model Account {
-  id                String  @id @default(cuid())
+  id                String  @id
   userId            String
   type              String
   provider          String
@@ -21,191 +21,9 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model User {
-  id                    String              @id @default(cuid())
-  name                  String?
-  email                 String?             @unique
-  emailVerified         DateTime?
-  image                 String?
-  steamId               String?             @unique
-  steamMatchAuthCode    String?
-  steamLatestMatchCode  String?
-  faceitNickname        String?
-  gcNickname            String?
-  gcLevel               Int?
-  cs2Rank               String?
-  adr                   Float?
-  hsPercentage          Float?
-  winRate               Float?
-  matchesPlayed         Int                 @default(0)
-  isAdmin               Boolean?            @default(false)
-  rankingPoints         Int?                @default(500)
-  mixLevel              Int?                @default(5)
-  accounts              Account[]
-  crosshairs            Crosshair[]
-  evaluationLists       EvaluationList[]    @relation("EvaluationCreator")
-  globalMatchPlayers    GlobalMatchPlayer[]
-  lobbiesCreated        Lobby[]             @relation("LobbyCreator")
-  lobbyParticipations   LobbyPlayer[]
-  mapVetoesCreated      MapVetoLobby[]      @relation("MapVetoCreator")
-  mapVetoesParticipated MapVetoLobby[]      @relation("MapVetoOpponent")
-  matches               Match[]
-  sessions              Session[]
-  inventoryItems        UserInventoryItem[]
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-model Match {
-  id           String   @id @default(cuid())
-  userId       String
-  source       String   @default("internal")
-  externalId   String?  @unique
-  gameMode     String?
-  mapName      String
-  kills        Int
-  deaths       Int
-  assists      Int
-  score        String
-  mvps         Int
-  duration     String?
-  url          String?
-  matchDate    DateTime @default(now())
-  result       String
-  adr          Float?
-  hsPercentage Float?
-  metadata     Json?    @default("{}")
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Lobby {
-  id         String        @id @default(cuid())
-  name       String
-  password   String?
-  status     String        @default("waiting")
-  creatorId  String
-  leaderAId  String?
-  leaderBId  String?
-  turn       String        @default("A")
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  rpsEnabled Boolean       @default(false)
-  rpsState   String?
-  creator    User          @relation("LobbyCreator", fields: [creatorId], references: [id])
-  players    LobbyPlayer[]
-}
-
-model LobbyPlayer {
-  id       String   @id @default(cuid())
-  lobbyId  String
-  userId   String
-  team     String   @default("none")
-  isLeader Boolean  @default(false)
-  joinedAt DateTime @default(now())
-  lobby    Lobby    @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([lobbyId, userId])
-}
-
-model GuildConfig {
-  id                   String            @id
-  logChannelId         String?
-  auditChannelId       String?
-  enableAudit          Boolean           @default(true)
-  enableVoice          Boolean           @default(true)
-  updatedAt            DateTime          @updatedAt
-  enableInvites        Boolean           @default(true)
-  invitesChannelId     String?
-  rankingChannelId     String?
-  rankingMessageId     String?
-  enableRoleSync       Boolean           @default(false)
-  matchReportChannelId String?
-  AuditLogSetting      AuditLogSetting[]
-  AutoClearConfig      AutoClearConfig[]
-  RoleMapping          RoleMapping[]
-}
-
-model Player {
-  id           Int      @id @default(autoincrement())
-  discordId    String   @unique
-  steamId      String   @unique
-  steamUrl     String
-  faceitId     String?  @unique
-  faceitName   String?
-  leetifyId    String?  @unique
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  invitesCount Int      @default(0)
-  referredById String?
-  steamName    String?
-  steamAvatar  String?
-  Stats        Stats?
-}
-
-model RoleMapping {
-  id          Int         @id @default(autoincrement())
-  guildId     String
-  minRating   Int
-  roleId      String
-  createdAt   DateTime    @default(now())
-  GuildConfig GuildConfig @relation(fields: [guildId], references: [id])
-
-  @@unique([guildId, minRating])
-}
-
-model Stats {
-  id            Int      @id @default(autoincrement())
-  playerId      Int      @unique
-  leetifyRating Float?
-  faceitElo     Int?
-  faceitLevel   Int?
-  updatedAt     DateTime @updatedAt
-  gcLevel       Int?
-  premierRating Int?
-  Player        Player   @relation(fields: [playerId], references: [id])
-}
-
-model UserInventoryItem {
-  id             String   @id @default(cuid())
-  userId         String
-  assetId        String
-  marketHashName String
-  paidPrice      Float?
-  currency       String   @default("BRL")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, assetId])
-}
-
-model ItemPriceBase {
-  id             String   @id @default(cuid())
-  marketHashName String   @unique
-  price          Float
-  currency       String   @default("BRL")
-  source         String   @default("csgotrader")
-  lastUpdate     DateTime @default(now())
 }
 
 model AuditLogSetting {
@@ -217,137 +35,6 @@ model AuditLogSetting {
   GuildConfig GuildConfig @relation(fields: [guildId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([guildId, key])
-}
-
-model MapVetoLobby {
-  id          String    @id @default(cuid())
-  creatorId   String
-  opponentId  String?
-  format      String    @default("BO3")
-  status      String    @default("WAITING")
-  turn        String?
-  rpsState    Json?     @default("{}")
-  mapPool     Json?     @default("[\"Mirage\", \"Inferno\", \"Nuke\", \"Vertigo\", \"Ancient\", \"Anubis\", \"Dust2\"]")
-  vetoHistory Json?     @default("[]")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  timerStart  DateTime?
-  knifeRound  Boolean?  @default(false)
-  creator     User      @relation("MapVetoCreator", fields: [creatorId], references: [id])
-  opponent    User?     @relation("MapVetoOpponent", fields: [opponentId], references: [id])
-}
-
-model GlobalMatch {
-  id        String              @id
-  source    String              @default("matchmaking")
-  mapName   String
-  duration  String?
-  matchDate DateTime            @default(now())
-  scoreA    Int?
-  scoreB    Int?
-  metadata  Json?               @default("{}")
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
-  players   GlobalMatchPlayer[]
-}
-
-model GlobalMatchPlayer {
-  id            String      @id @default(uuid())
-  globalMatchId String
-  steamId       String
-  userId        String?
-  team          String
-  kills         Int
-  deaths        Int
-  assists       Int
-  score         Int
-  mvps          Int
-  adr           Float?
-  hsPercentage  Float?
-  impact        Float?      @default(0)
-  matchResult   String
-  metadata      Json?       @default("{}")
-  eloChange     Int?
-  eloAfter      Int?
-  match         GlobalMatch @relation(fields: [globalMatchId], references: [id], onDelete: Cascade)
-  user          User?       @relation(fields: [userId], references: [id])
-
-  @@unique([globalMatchId, steamId])
-}
-
-model Tournament {
-  id          String            @id @default(cuid())
-  name        String
-  description String?
-  format      String            @default("BO1")
-  status      String            @default("OPEN")
-  creatorId   String
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @default(now()) @updatedAt
-  matches     TournamentMatch[]
-  teams       TournamentTeam[]
-}
-
-model TournamentTeam {
-  id           String            @id @default(cuid())
-  tournamentId String
-  name         String
-  playerIds    Json              @default("[]")
-  createdAt    DateTime          @default(now())
-  matchesA     TournamentMatch[] @relation("TeamA")
-  matchesB     TournamentMatch[] @relation("TeamB")
-  wins         TournamentMatch[] @relation("Winner")
-  tournament   Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-}
-
-model TournamentMatch {
-  id           String          @id @default(cuid())
-  tournamentId String
-  teamAId      String
-  teamBId      String
-  winnerId     String?
-  scoreA       Int?
-  scoreB       Int?
-  round        Int             @default(1)
-  status       String          @default("PENDING")
-  mapName      String?
-  createdAt    DateTime        @default(now())
-  teamA        TournamentTeam  @relation("TeamA", fields: [teamAId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  teamB        TournamentTeam  @relation("TeamB", fields: [teamBId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  tournament   Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  winner       TournamentTeam? @relation("Winner", fields: [winnerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-model EvaluationList {
-  id          String             @id @default(cuid())
-  creatorId   String
-  title       String
-  description String?
-  isPublic    Boolean            @default(true)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @default(now()) @updatedAt
-  creator     User               @relation("EvaluationCreator", fields: [creatorId], references: [id], onDelete: Cascade)
-  evaluations PlayerEvaluation[]
-}
-
-model PlayerEvaluation {
-  id                  String         @id @default(cuid())
-  listId              String
-  evaluatedPlayerName String
-  evaluatedSteamId    String?
-  aimScore            Float
-  utilityScore        Float
-  positioningScore    Float
-  duelScore           Float
-  clutchScore         Float
-  decisionScore       Float
-  overallScore        Float
-  notes               String?
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @default(now()) @updatedAt
-  list                EvaluationList @relation(fields: [listId], references: [id], onDelete: Cascade)
-
-  @@unique([listId, evaluatedPlayerName])
 }
 
 model AutoClearConfig {
@@ -365,20 +52,335 @@ model AutoClearConfig {
 }
 
 model Crosshair {
-  id           String   @id @default(cuid())
+  id           String   @id
   userId       String
   name         String
   code         String
   description  String?
   isPublic     Boolean  @default(true)
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @default(now()) @updatedAt
+  updatedAt    DateTime @default(now())
   previewColor String?  @default("#00ff00")
   previewSize  Float?   @default(5)
   previewGap   Float?   @default(0)
   previewThick Float?   @default(1)
   previewDot   Boolean? @default(false)
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "crosshair_userid_fkey")
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "crosshair_userid_fkey")
+}
+
+model EvaluationList {
+  id               String             @id
+  creatorId        String
+  title            String
+  description      String?
+  isPublic         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @default(now())
+  User             User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  PlayerEvaluation PlayerEvaluation[]
+}
+
+model GlobalMatch {
+  id                String              @id
+  source            String              @default("matchmaking")
+  mapName           String
+  duration          String?
+  matchDate         DateTime            @default(now())
+  scoreA            Int?
+  scoreB            Int?
+  metadata          Json?               @default("{}")
+  createdAt         DateTime?           @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime?           @default(now()) @db.Timestamptz(6)
+  GlobalMatchPlayer GlobalMatchPlayer[]
+}
+
+model GlobalMatchPlayer {
+  id            String      @id
+  globalMatchId String
+  steamId       String
+  userId        String?
+  team          String
+  kills         Int
+  deaths        Int
+  assists       Int
+  score         Int
+  mvps          Int
+  adr           Float?
+  hsPercentage  Float?
+  matchResult   String
+  metadata      Json?       @default("{}")
+  eloChange     Int?
+  eloAfter      Int?
+  impact        Float?      @default(0)
+  GlobalMatch   GlobalMatch @relation(fields: [globalMatchId], references: [id], onDelete: Cascade)
+  User          User?       @relation(fields: [userId], references: [id])
+
+  @@unique([globalMatchId, steamId])
+}
+
+model GuildConfig {
+  id                   String            @id
+  logChannelId         String?
+  auditChannelId       String?
+  enableAudit          Boolean           @default(true)
+  enableVoice          Boolean           @default(true)
+  updatedAt            DateTime
+  enableInvites        Boolean           @default(true)
+  invitesChannelId     String?
+  rankingChannelId     String?
+  rankingMessageId     String?
+  enableRoleSync       Boolean           @default(false)
+  matchReportChannelId String?
+  AuditLogSetting      AuditLogSetting[]
+  AutoClearConfig      AutoClearConfig[]
+  RoleMapping          RoleMapping[]
+}
+
+model ItemPriceBase {
+  id             String   @id
+  marketHashName String   @unique
+  price          Float
+  currency       String   @default("BRL")
+  source         String   @default("csgotrader")
+  lastUpdate     DateTime @default(now())
+}
+
+model Lobby {
+  id          String        @id
+  name        String
+  password    String?
+  status      String        @default("waiting")
+  creatorId   String
+  leaderAId   String?
+  leaderBId   String?
+  turn        String        @default("A")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  rpsEnabled  Boolean       @default(false)
+  rpsState    String?
+  User        User          @relation(fields: [creatorId], references: [id])
+  LobbyPlayer LobbyPlayer[]
+}
+
+model LobbyPlayer {
+  id       String   @id
+  lobbyId  String
+  userId   String
+  team     String   @default("none")
+  isLeader Boolean  @default(false)
+  joinedAt DateTime @default(now())
+  Lobby    Lobby    @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  User     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lobbyId, userId])
+}
+
+model MapVetoLobby {
+  id                                 String    @id
+  creatorId                          String
+  opponentId                         String?
+  format                             String    @default("BO3")
+  status                             String    @default("WAITING")
+  turn                               String?
+  rpsState                           Json?     @default("{}")
+  mapPool                            Json?     @default("[\"Mirage\", \"Inferno\", \"Nuke\", \"Vertigo\", \"Ancient\", \"Anubis\", \"Dust2\"]")
+  vetoHistory                        Json?     @default("[]")
+  createdAt                          DateTime  @default(now())
+  updatedAt                          DateTime
+  timerStart                         DateTime?
+  knifeRound                         Boolean?  @default(false)
+  User_MapVetoLobby_creatorIdToUser  User      @relation("MapVetoLobby_creatorIdToUser", fields: [creatorId], references: [id])
+  User_MapVetoLobby_opponentIdToUser User?     @relation("MapVetoLobby_opponentIdToUser", fields: [opponentId], references: [id])
+}
+
+model Match {
+  id           String   @id
+  userId       String
+  source       String   @default("internal")
+  externalId   String?  @unique
+  gameMode     String?
+  mapName      String
+  kills        Int
+  deaths       Int
+  assists      Int
+  score        String
+  mvps         Int
+  duration     String?
+  url          String?
+  matchDate    DateTime @default(now())
+  result       String
+  adr          Float?
+  hsPercentage Float?
+  metadata     Json?    @default("{}")
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Player {
+  id           Int      @id @default(autoincrement())
+  discordId    String   @unique
+  steamId      String   @unique
+  steamUrl     String
+  faceitId     String?  @unique
+  faceitName   String?
+  leetifyId    String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  invitesCount Int      @default(0)
+  referredById String?
+  steamName    String?
+  steamAvatar  String?
+  Stats        Stats?
+}
+
+model PlayerEvaluation {
+  id                  String         @id
+  listId              String
+  evaluatedPlayerName String
+  evaluatedSteamId    String?
+  aimScore            Float
+  utilityScore        Float
+  positioningScore    Float
+  duelScore           Float
+  clutchScore         Float
+  decisionScore       Float
+  overallScore        Float
+  notes               String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @default(now())
+  EvaluationList      EvaluationList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, evaluatedPlayerName])
+}
+
+model RoleMapping {
+  id          Int         @id @default(autoincrement())
+  guildId     String
+  minRating   Int
+  roleId      String
+  createdAt   DateTime    @default(now())
+  GuildConfig GuildConfig @relation(fields: [guildId], references: [id])
+
+  @@unique([guildId, minRating])
+}
+
+model Session {
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Stats {
+  id            Int      @id @default(autoincrement())
+  playerId      Int      @unique
+  leetifyRating Float?
+  faceitElo     Int?
+  faceitLevel   Int?
+  updatedAt     DateTime
+  gcLevel       Int?
+  premierRating Int?
+  Player        Player   @relation(fields: [playerId], references: [id])
+}
+
+model Tournament {
+  id              String            @id
+  name            String
+  description     String?
+  format          String            @default("BO1")
+  status          String            @default("OPEN")
+  creatorId       String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now())
+  TournamentMatch TournamentMatch[]
+  TournamentTeam  TournamentTeam[]
+}
+
+model TournamentMatch {
+  id                                                      String          @id
+  tournamentId                                            String
+  teamAId                                                 String
+  teamBId                                                 String
+  winnerId                                                String?
+  scoreA                                                  Int?
+  scoreB                                                  Int?
+  round                                                   Int             @default(1)
+  status                                                  String          @default("PENDING")
+  mapName                                                 String?
+  createdAt                                               DateTime        @default(now())
+  TournamentTeam_TournamentMatch_teamAIdToTournamentTeam  TournamentTeam  @relation("TournamentMatch_teamAIdToTournamentTeam", fields: [teamAId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  TournamentTeam_TournamentMatch_teamBIdToTournamentTeam  TournamentTeam  @relation("TournamentMatch_teamBIdToTournamentTeam", fields: [teamBId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Tournament                                              Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  TournamentTeam_TournamentMatch_winnerIdToTournamentTeam TournamentTeam? @relation("TournamentMatch_winnerIdToTournamentTeam", fields: [winnerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model TournamentTeam {
+  id                                                       String            @id
+  tournamentId                                             String
+  name                                                     String
+  playerIds                                                Json              @default("[]")
+  createdAt                                                DateTime          @default(now())
+  TournamentMatch_TournamentMatch_teamAIdToTournamentTeam  TournamentMatch[] @relation("TournamentMatch_teamAIdToTournamentTeam")
+  TournamentMatch_TournamentMatch_teamBIdToTournamentTeam  TournamentMatch[] @relation("TournamentMatch_teamBIdToTournamentTeam")
+  TournamentMatch_TournamentMatch_winnerIdToTournamentTeam TournamentMatch[] @relation("TournamentMatch_winnerIdToTournamentTeam")
+  Tournament                                               Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model User {
+  id                                         String              @id
+  name                                       String?
+  email                                      String?             @unique
+  emailVerified                              DateTime?
+  image                                      String?
+  steamId                                    String?             @unique
+  steamMatchAuthCode                         String?
+  steamLatestMatchCode                       String?
+  faceitNickname                             String?
+  gcNickname                                 String?
+  gcLevel                                    Int?
+  faceitLevel                                Int?
+  faceitElo                                  Int?
+  cs2Rank                                    String?
+  adr                                        Float?
+  hsPercentage                               Float?
+  winRate                                    Float?
+  matchesPlayed                              Int                 @default(0)
+  isAdmin                                    Boolean?            @default(false)
+  rankingPoints                              Int?                @default(500)
+  mixLevel                                   Int?                @default(5)
+  Account                                    Account[]
+  Crosshair                                  Crosshair[]
+  EvaluationList                             EvaluationList[]
+  GlobalMatchPlayer                          GlobalMatchPlayer[]
+  Lobby                                      Lobby[]
+  LobbyPlayer                                LobbyPlayer[]
+  MapVetoLobby_MapVetoLobby_creatorIdToUser  MapVetoLobby[]      @relation("MapVetoLobby_creatorIdToUser")
+  MapVetoLobby_MapVetoLobby_opponentIdToUser MapVetoLobby[]      @relation("MapVetoLobby_opponentIdToUser")
+  Match                                      Match[]
+  Session                                    Session[]
+  UserInventoryItem                          UserInventoryItem[]
+}
+
+model UserInventoryItem {
+  id             String   @id
+  userId         String
+  assetId        String
+  marketHashName String
+  paidPrice      Float?
+  currency       String   @default("BRL")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 model tracker_clutch_events {
@@ -469,8 +471,6 @@ model tracker_match_players {
   trades               Int?
   enemies_flashed      Int?
   total_blind_duration Float?
-  impact               Float?          @default(0)
-  impact_rating        Float?          @default(0)
   avg_kill_distance    Float?
   avg_ttd              Float?
   utility_damage_roi   Float?
@@ -480,6 +480,8 @@ model tracker_match_players {
   molotovs_thrown      Int?            @default(0)
   elo_change           Int?
   elo_after            Int?
+  impact               Float?          @default(0)
+  impact_rating        Float?          @default(0)
   tracker_matches      tracker_matches @relation(fields: [match_id], references: [match_id], onDelete: Cascade, onUpdate: NoAction)
   tracker_players      tracker_players @relation(fields: [steamid64], references: [steamid64], onDelete: NoAction, onUpdate: NoAction)
 
