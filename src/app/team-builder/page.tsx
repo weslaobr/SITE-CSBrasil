@@ -34,13 +34,21 @@ const FALLBACK_MAP_POOL = [
 ];
 
 // Subcomponents
-function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMoveLeft, side, balanceMode, onEditRating }: { player: Player, pos: number, onRemove: ()=>void, onMoveUnassigned: ()=>void, onMoveRight?: ()=>void, onMoveLeft?: ()=>void, side: "left"|"right", balanceMode: "standard"|"resenha", onEditRating: (field: "sr"|"resenha", value: number)=>void }) {
+function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMoveLeft, side, balanceMode, onEditRating }: { player: Player, pos: number, onRemove: ()=>void, onMoveUnassigned: ()=>void, onMoveRight?: ()=>void, onMoveLeft?: ()=>void, side: "left"|"right", balanceMode: "standard"|"resenha"|"tropa", onEditRating: (field: "sr"|"resenha", value: number)=>void }) {
     const [editingField, setEditingField] = React.useState<"sr"|"resenha"|null>(null);
     const [editVal, setEditVal] = React.useState("");
 
     const srVal = player.tempRating !== undefined ? player.tempRating : player.rating;
     const resenhaVal = player.tempResenhaRating !== undefined ? player.tempResenhaRating : (player.resenhaRating || 5);
-    const displayRating = balanceMode === "resenha" ? `${resenhaVal.toFixed(1)} ★` : `${srVal} SR`;
+    
+    const getTropaVal = () => {
+        const premierNorm = Math.min(100, srVal / 300);
+        const faceitNorm = (player.faceitLevel ?? 0) * 10;
+        const gcNorm = ((player.gcLevel ?? 0) / 21) * 100;
+        return Math.max(premierNorm, faceitNorm, gcNorm);
+    };
+
+    const displayRating = balanceMode === "resenha" ? `${resenhaVal.toFixed(1)} ★` : balanceMode === "tropa" ? `${getTropaVal().toFixed(1)} TR` : `${srVal} SR`;
     const isOverridden = balanceMode === "resenha" ? player.tempResenhaRating !== undefined : player.tempRating !== undefined;
 
     const startEdit = () => {
@@ -162,7 +170,7 @@ export default function TeamBuilderPage() {
     const [guestRating, setGuestRating] = useState("");
     const [showGuestForm, setShowGuestForm] = useState(false);
 
-    const [balanceMode, setBalanceMode] = useState<"standard" | "resenha">("standard");
+    const [balanceMode, setBalanceMode] = useState<"standard" | "resenha" | "tropa">("standard");
 
     // Map Veto State
     const [vetoMaps, setVetoMaps] = useState<Record<string, { type: "ban" | "pick", team: "A" | "B" | "system" }>>({});
@@ -479,17 +487,30 @@ export default function TeamBuilderPage() {
     const teamA = selectedPlayers.filter(p => p.assignment === "A");
     const teamB = selectedPlayers.filter(p => p.assignment === "B");
 
-    const getPlayerRating = (p: Player) => balanceMode === "resenha"
-        ? (p.tempResenhaRating !== undefined ? p.tempResenhaRating : (p.resenhaRating || 5))
-        : (p.tempRating !== undefined ? p.tempRating : p.rating);
+    const getPlayerRating = (p: Player) => {
+        if (balanceMode === "resenha") {
+            return p.tempResenhaRating !== undefined ? p.tempResenhaRating : (p.resenhaRating || 5);
+        }
+        if (balanceMode === "tropa") {
+            const premierNorm = Math.min(100, (p.tempRating ?? p.rating ?? 0) / 300);
+            const faceitNorm = (p.faceitLevel ?? 0) * 10;
+            const gcNorm = ((p.gcLevel ?? 0) / 21) * 100;
+            return Math.max(premierNorm, faceitNorm, gcNorm);
+        }
+        return p.tempRating !== undefined ? p.tempRating : p.rating;
+    };
 
-    const avgA = teamA.length > 0 ? (balanceMode === "resenha"
-        ? Math.round((teamA.reduce((acc, p) => acc + getPlayerRating(p), 0) / teamA.length) * 10) / 10
-        : Math.round(teamA.reduce((acc, p) => acc + getPlayerRating(p), 0) / teamA.length)) : 0;
+    const avgA = teamA.length > 0 ? (
+        balanceMode === "resenha" || balanceMode === "tropa"
+            ? Math.round((teamA.reduce((acc, p) => acc + getPlayerRating(p), 0) / teamA.length) * 10) / 10
+            : Math.round(teamA.reduce((acc, p) => acc + getPlayerRating(p), 0) / teamA.length)
+    ) : 0;
 
-    const avgB = teamB.length > 0 ? (balanceMode === "resenha"
-        ? Math.round((teamB.reduce((acc, p) => acc + getPlayerRating(p), 0) / teamB.length) * 10) / 10
-        : Math.round(teamB.reduce((acc, p) => acc + getPlayerRating(p), 0) / teamB.length)) : 0;
+    const avgB = teamB.length > 0 ? (
+        balanceMode === "resenha" || balanceMode === "tropa"
+            ? Math.round((teamB.reduce((acc, p) => acc + getPlayerRating(p), 0) / teamB.length) * 10) / 10
+            : Math.round(teamB.reduce((acc, p) => acc + getPlayerRating(p), 0) / teamB.length)
+    ) : 0;
 
     const handleTempRating = (steamId: string, field: "sr" | "resenha", value: number) => {
         setSelectedPlayers(prev => prev.map(p => p.steamId === steamId
@@ -608,8 +629,16 @@ export default function TeamBuilderPage() {
                                         <div className="flex-1 min-w-0">
                                             <p className="font-bold text-sm truncate group-hover:text-purple-400 transition-colors">{p.nickname}</p>
                                             <div className="flex flex-wrap gap-2 mt-1">
-                                                <span className={`text-[10px] bg-black/50 ${balanceMode === 'standard' ? 'text-yellow-500 border-yellow-500/30 border' : 'text-zinc-500'} px-1.5 py-0.5 rounded font-mono font-bold`}>{p.rating || 0} SR</span>
-                                                <span className={`text-[10px] bg-black/50 ${balanceMode === 'resenha' ? 'text-purple-400 border-purple-400/30 border' : 'text-zinc-500'} px-1.5 py-0.5 rounded font-mono font-bold`}>{(p.resenhaRating || 5).toFixed(1)} ★</span>
+                                                <span className={`text-[10px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 py-0.5 rounded font-mono font-bold ${balanceMode === 'standard' ? 'ring-1 ring-yellow-500/50 shadow-[0_0_10px_rgba(234,179,8,0.2)]' : 'opacity-70'}`}>{p.rating || 0} SR</span>
+                                                <span className={`text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded font-mono font-bold ${balanceMode === 'resenha' ? 'ring-1 ring-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'opacity-70'}`}>{(p.resenhaRating || 5).toFixed(1)} ★</span>
+                                                <span className={`text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-mono font-bold ${balanceMode === 'tropa' ? 'ring-1 ring-emerald-500/50 shadow-[0_0_10px_rgba(52,211,153,0.2)]' : 'opacity-70'}`} title="Tropa Rating (Unified Skill)">
+                                                    {(() => {
+                                                        const premierNorm = Math.min(100, (p.rating ?? 0) / 300);
+                                                        const faceitNorm = (p.faceitLevel ?? 0) * 10;
+                                                        const gcNorm = ((p.gcLevel ?? 0) / 21) * 100;
+                                                        return Math.max(premierNorm, faceitNorm, gcNorm).toFixed(1);
+                                                    })()} TR
+                                                </span>
                                                 {p.faceitLevel !== undefined && p.faceitLevel > 0 && (
                                                     <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded font-mono font-bold" title={`Faceit Level ${p.faceitLevel} | ELO: ${p.faceitElo || '?'}`}>
                                                         F{p.faceitLevel} {p.faceitElo ? `(${p.faceitElo})` : ''}
@@ -677,10 +706,19 @@ export default function TeamBuilderPage() {
                                                         onKeyDown={e => { if (e.key === "Enter") { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "sr", n); setEditingUnassigned(null); } if (e.key === "Escape") setEditingUnassigned(null); }}
                                                         className="w-20 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none" />
                                                 ) : (
-                                                    <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "sr", value: String(p.tempRating ?? p.rating) }); }} className={`text-[10px] font-mono font-bold hover:text-yellow-400 transition-colors flex items-center gap-0.5 ${p.tempRating !== undefined ? 'text-purple-400' : balanceMode === 'standard' ? 'text-yellow-500' : 'text-zinc-500'}`} title="Editar SR">
+                                                    <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "sr", value: String(p.tempRating ?? p.rating) }); }} className="text-[10px] font-mono font-bold hover:text-yellow-400 transition-colors flex items-center gap-0.5 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 rounded py-0.5" title="Editar SR">
                                                         {p.tempRating ?? p.rating} SR{p.tempRating !== undefined && <Pencil size={7} />}
                                                     </button>
                                                 )}
+                                                <span className="text-[10px] font-mono font-black flex items-center gap-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-400/20 px-1.5 rounded py-0.5" title="Tropa Rating (Unified Skill Score)">
+                                                    {(() => {
+                                                        const pR = p.tempRating ?? p.rating ?? 0;
+                                                        const premierNorm = Math.min(100, pR / 300);
+                                                        const faceitNorm = (p.faceitLevel ?? 0) * 10;
+                                                        const gcNorm = ((p.gcLevel ?? 0) / 21) * 100;
+                                                        return Math.max(premierNorm, faceitNorm, gcNorm).toFixed(1);
+                                                    })()} TR
+                                                </span>
                                                 {editingUnassigned?.steamId === p.steamId && editingUnassigned.field === "resenha" ? (
                                                     <input autoFocus type="number" step="0.1" value={editingUnassigned.value}
                                                         onChange={e => setEditingUnassigned({ ...editingUnassigned, value: e.target.value })}
@@ -688,7 +726,7 @@ export default function TeamBuilderPage() {
                                                         onKeyDown={e => { if (e.key === "Enter") { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "resenha", n); setEditingUnassigned(null); } if (e.key === "Escape") setEditingUnassigned(null); }}
                                                         className="w-16 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none" />
                                                 ) : (
-                                                    <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "resenha", value: (p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1) }); }} className={`text-[10px] font-mono font-bold hover:text-purple-300 transition-colors flex items-center gap-0.5 ${p.tempResenhaRating !== undefined ? 'text-purple-400' : balanceMode === 'resenha' ? 'text-purple-400' : 'text-zinc-500'}`} title="Editar Resenha">
+                                                    <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "resenha", value: (p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1) }); }} className="text-[10px] font-mono font-bold hover:text-purple-300 transition-colors flex items-center gap-0.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 rounded py-0.5" title="Editar Resenha">
                                                         {(p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1)} ★{p.tempResenhaRating !== undefined && <Pencil size={7} />}
                                                     </button>
                                                 )}
@@ -765,9 +803,15 @@ export default function TeamBuilderPage() {
                                     <div className="flex bg-zinc-800 p-1 rounded-xl border border-white/5 mr-2">
                                         <button 
                                             onClick={() => setBalanceMode("standard")}
-                                            className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${balanceMode === "standard" ? "bg-purple-500 text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}
+                                            className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${balanceMode === "standard" ? "bg-yellow-500 text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}
                                         >
                                             Standard
+                                        </button>
+                                        <button 
+                                            onClick={() => setBalanceMode("tropa")}
+                                            className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${balanceMode === "tropa" ? "bg-emerald-500 text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}
+                                        >
+                                            Tropa
                                         </button>
                                         <button 
                                             onClick={() => setBalanceMode("resenha")}
@@ -898,7 +942,7 @@ export default function TeamBuilderPage() {
                                 <div className="flex items-center gap-2 mt-2">
                                     <Medal size={14} className="text-zinc-400" />
                                     <p className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-widest">
-                                        Média {balanceMode === "resenha" ? "Resenha" : "SR"}: <span className="text-white text-sm">{avgA}{balanceMode === "resenha" ? " ★" : ""}</span>
+                                        Média {balanceMode === "resenha" ? "Resenha" : balanceMode === "tropa" ? "Tropa" : "SR"}: <span className={`text-sm ${balanceMode === 'tropa' ? 'text-emerald-400' : 'text-white'}`}>{avgA}{balanceMode === "resenha" ? " ★" : balanceMode === "tropa" ? " TR" : ""}</span>
                                     </p>
                                 </div>
                             </div>
@@ -937,7 +981,9 @@ export default function TeamBuilderPage() {
                                     <h3 className="text-2xl font-black italic uppercase tracking-tighter text-blue-500 drop-shadow-md">Time CT</h3>
                                 </div>
                                 <div className="flex items-center gap-2 mt-2 justify-end text-right">
-                                    <p className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-widest"><span className="text-white text-sm">{avgB}{balanceMode === "resenha" ? " ★" : ""}</span> :{balanceMode === "resenha" ? "Resenha" : "SR"} Média</p>
+                                    <p className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-widest">
+                                        <span className={`text-sm ${balanceMode === 'tropa' ? 'text-emerald-400' : 'text-white'}`}>{avgB}{balanceMode === "resenha" ? " ★" : balanceMode === "tropa" ? " TR" : ""}</span> :{balanceMode === "resenha" ? "Resenha" : balanceMode === "tropa" ? "Tropa" : "SR"} Média
+                                    </p>
                                     <Medal size={14} className="text-zinc-400" />
                                 </div>
                             </div>
