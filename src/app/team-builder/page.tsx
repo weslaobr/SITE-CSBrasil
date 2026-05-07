@@ -14,6 +14,7 @@ interface Player {
     tempResenhaRating?: number;
     gcLevel?: number;
     faceitLevel?: number;
+    faceitElo?: number;
     isGuest?: boolean;
     assignment: "unassigned" | "A" | "B";
 }
@@ -64,7 +65,15 @@ function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMo
                 <>
                     <img src={player.avatar} className="w-8 h-8 rounded-md border border-white/10 shrink-0" />
                     <div className="flex flex-col flex-1 min-w-0 ml-3">
-                        <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.nickname} {player.isGuest && <span className="ml-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.nickname} {player.isGuest && <span className="ml-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>}</p>
+                            {!player.isGuest && (
+                                <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                    {player.faceitLevel && player.faceitLevel > 0 && <span className="text-[7px] font-black bg-orange-500/20 text-orange-400 px-1 rounded uppercase tracking-tighter" title={`Faceit Level ${player.faceitLevel}`}>F{player.faceitLevel}</span>}
+                                    {player.gcLevel && player.gcLevel > 0 && <span className="text-[7px] font-black bg-sky-500/20 text-sky-400 px-1 rounded uppercase tracking-tighter" title={`GC Level ${player.gcLevel}`}>G{player.gcLevel}</span>}
+                                </div>
+                            )}
+                        </div>
                         {editingField ? (
                             <input autoFocus type="number" value={editVal} onChange={e => setEditVal(e.target.value)}
                                 onBlur={commitEdit} onKeyDown={e => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingField(null); }}
@@ -79,7 +88,15 @@ function PlayerCard({ player, pos, onRemove, onMoveUnassigned, onMoveRight, onMo
             ) : (
                 <>
                     <div className="flex flex-col flex-1 min-w-0 mr-3 text-right items-end">
-                        <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.isGuest && <span className="mr-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>} {player.nickname}</p>
+                        <div className="flex items-center gap-2 justify-end">
+                            {!player.isGuest && (
+                                <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                    {player.gcLevel && player.gcLevel > 0 && <span className="text-[7px] font-black bg-sky-500/20 text-sky-400 px-1 rounded uppercase tracking-tighter" title={`GC Level ${player.gcLevel}`}>G{player.gcLevel}</span>}
+                                    {player.faceitLevel && player.faceitLevel > 0 && <span className="text-[7px] font-black bg-orange-500/20 text-orange-400 px-1 rounded uppercase tracking-tighter" title={`Faceit Level ${player.faceitLevel}`}>F{player.faceitLevel}</span>}
+                                </div>
+                            )}
+                            <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.isGuest && <span className="mr-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>} {player.nickname}</p>
+                        </div>
                         {editingField ? (
                             <input autoFocus type="number" value={editVal} onChange={e => setEditVal(e.target.value)}
                                 onBlur={commitEdit} onKeyDown={e => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingField(null); }}
@@ -510,10 +527,10 @@ export default function TeamBuilderPage() {
                 </div>
             </header>
 
-            <div className="flex flex-col lg:flex-row gap-8">
+            <div className="flex flex-col lg:flex-row gap-6">
                 
                 {/* Lado Esquerdo: Base de Dados & Convidados */}
-                <div className="lg:w-1/3 flex flex-col space-y-6">
+                <div className="lg:w-[22%] flex flex-col space-y-6">
                     <div className="bg-zinc-900/40 p-6 rounded-2xl border border-white/5 space-y-4 backdrop-blur-xl">
                         <div className="flex items-center justify-between">
                             <h2 className="text-sm font-black uppercase text-white tracking-widest flex items-center gap-2">
@@ -590,9 +607,19 @@ export default function TeamBuilderPage() {
                                         <img src={p.avatar} alt={p.nickname} className="w-10 h-10 rounded-md border border-white/10" />
                                         <div className="flex-1 min-w-0">
                                             <p className="font-bold text-sm truncate group-hover:text-purple-400 transition-colors">{p.nickname}</p>
-                                            <div className="flex gap-2 mt-1">
-                                                <span className={`text-[10px] bg-black/50 ${balanceMode === 'standard' ? 'text-yellow-500' : 'text-zinc-500'} px-1.5 py-0.5 rounded font-mono font-bold`}>{p.rating} SR</span>
-                                                <span className={`text-[10px] bg-black/50 ${balanceMode === 'resenha' ? 'text-purple-400' : 'text-zinc-500'} px-1.5 py-0.5 rounded font-mono font-bold`}>{(p.resenhaRating || 5).toFixed(1)} ★</span>
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                <span className={`text-[10px] bg-black/50 ${balanceMode === 'standard' ? 'text-yellow-500 border-yellow-500/30 border' : 'text-zinc-500'} px-1.5 py-0.5 rounded font-mono font-bold`}>{p.rating || 0} SR</span>
+                                                <span className={`text-[10px] bg-black/50 ${balanceMode === 'resenha' ? 'text-purple-400 border-purple-400/30 border' : 'text-zinc-500'} px-1.5 py-0.5 rounded font-mono font-bold`}>{(p.resenhaRating || 5).toFixed(1)} ★</span>
+                                                {p.faceitLevel !== undefined && p.faceitLevel > 0 && (
+                                                    <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded font-mono font-bold" title={`Faceit Level ${p.faceitLevel} | ELO: ${p.faceitElo || '?'}`}>
+                                                        F{p.faceitLevel} {p.faceitElo ? `(${p.faceitElo})` : ''}
+                                                    </span>
+                                                )}
+                                                {p.gcLevel !== undefined && p.gcLevel > 0 && (
+                                                    <span className="text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono font-bold" title={`GamersClub Level ${p.gcLevel}`}>
+                                                        GC{p.gcLevel}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-1.5">
@@ -625,7 +652,70 @@ export default function TeamBuilderPage() {
                 </div>
 
                 {/* Lado Direito: Arena de Montagem */}
-                <div className="lg:w-2/3 flex flex-col space-y-6">
+                <div className="lg:w-[78%] flex flex-col space-y-6">
+                    
+                    {/* Unassigned Grid (Top) */}
+                    {unassigned.length > 0 && (
+                        <div className="bg-zinc-900/20 p-5 rounded-2xl border border-dashed border-white/5 backdrop-blur-sm">
+                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-4 flex items-center gap-2">
+                                <Users size={14} className="text-zinc-600"/>
+                                Jogadores no Saguão
+                                <span className="ml-auto bg-black/40 px-2 py-1 rounded text-zinc-400">{unassigned.length} aguardando alocação</span>
+                            </h3>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
+                                {unassigned.map(p => (
+                                    <div key={p.steamId} className="group relative hover:z-50 flex items-center bg-zinc-950 border border-white/5 p-2 pr-4 rounded-2xl hover:border-purple-500/50 transition-all shadow-md">
+                                        <img src={p.avatar} title={p.nickname} className="w-10 h-10 rounded-full border border-white/10 shadow-sm shrink-0 group-hover:opacity-20 transition-all" />
+                                        <div className="flex flex-col ml-3 group-hover:opacity-20 transition-all min-w-0">
+                                            <p className="font-bold text-sm text-white truncate">{p.nickname}</p>
+                                            <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                                {editingUnassigned?.steamId === p.steamId && editingUnassigned.field === "sr" ? (
+                                                    <input autoFocus type="number" value={editingUnassigned.value}
+                                                        onChange={e => setEditingUnassigned({ ...editingUnassigned, value: e.target.value })}
+                                                        onBlur={() => { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "sr", n); setEditingUnassigned(null); }}
+                                                        onKeyDown={e => { if (e.key === "Enter") { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "sr", n); setEditingUnassigned(null); } if (e.key === "Escape") setEditingUnassigned(null); }}
+                                                        className="w-20 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none" />
+                                                ) : (
+                                                    <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "sr", value: String(p.tempRating ?? p.rating) }); }} className={`text-[10px] font-mono font-bold hover:text-yellow-400 transition-colors flex items-center gap-0.5 ${p.tempRating !== undefined ? 'text-purple-400' : balanceMode === 'standard' ? 'text-yellow-500' : 'text-zinc-500'}`} title="Editar SR">
+                                                        {p.tempRating ?? p.rating} SR{p.tempRating !== undefined && <Pencil size={7} />}
+                                                    </button>
+                                                )}
+                                                {editingUnassigned?.steamId === p.steamId && editingUnassigned.field === "resenha" ? (
+                                                    <input autoFocus type="number" step="0.1" value={editingUnassigned.value}
+                                                        onChange={e => setEditingUnassigned({ ...editingUnassigned, value: e.target.value })}
+                                                        onBlur={() => { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "resenha", n); setEditingUnassigned(null); }}
+                                                        onKeyDown={e => { if (e.key === "Enter") { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "resenha", n); setEditingUnassigned(null); } if (e.key === "Escape") setEditingUnassigned(null); }}
+                                                        className="w-16 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none" />
+                                                ) : (
+                                                    <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "resenha", value: (p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1) }); }} className={`text-[10px] font-mono font-bold hover:text-purple-300 transition-colors flex items-center gap-0.5 ${p.tempResenhaRating !== undefined ? 'text-purple-400' : balanceMode === 'resenha' ? 'text-purple-400' : 'text-zinc-500'}`} title="Editar Resenha">
+                                                        {(p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1)} ★{p.tempResenhaRating !== undefined && <Pencil size={7} />}
+                                                    </button>
+                                                )}
+                                                
+                                                {!p.isGuest && (
+                                                    <>
+                                                        {p.faceitLevel !== undefined && p.faceitLevel > 0 && (
+                                                            <span className="text-[8px] font-black bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1 rounded uppercase tracking-tighter">F{p.faceitLevel}</span>
+                                                        )}
+                                                        {p.gcLevel !== undefined && p.gcLevel > 0 && (
+                                                            <span className="text-[8px] font-black bg-sky-500/10 text-sky-400 border border-sky-500/20 px-1 rounded uppercase tracking-tighter">GC{p.gcLevel}</span>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="absolute inset-0 flex items-stretch justify-center opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 transition-all z-50 bg-zinc-900/95 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10">
+                                            <button onClick={() => handleAssign(p.steamId, "A")} className="flex-1 bg-yellow-500 text-black hover:bg-yellow-400 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-colors" title="Para Time A"><ArrowLeft size={16} /> A</button>
+                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="px-5 bg-red-500 text-white hover:bg-red-400 border-x border-red-600/50 transition-colors flex items-center justify-center" title="Remover"><X size={16} /></button>
+                                            <button onClick={() => handleAssign(p.steamId, "B")} className="flex-1 bg-blue-500 text-white hover:bg-blue-400 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-colors" title="Para Time B">B <ArrowRight size={16} /></button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     
                     {/* Status Bar */}
                     <div className="flex flex-col sm:flex-row items-center justify-between bg-zinc-900/40 p-5 rounded-2xl border border-white/5 backdrop-blur-xl gap-4">
@@ -776,57 +866,6 @@ export default function TeamBuilderPage() {
                         </div>
                     </div>
 
-                    {/* Unassigned Grid */}
-                    {unassigned.length > 0 && (
-                        <div className="bg-zinc-900/20 p-5 rounded-2xl border border-dashed border-white/5 backdrop-blur-sm">
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-4 flex items-center gap-2">
-                                <Users size={14} className="text-zinc-600"/>
-                                Jogadores no Saguão
-                                <span className="ml-auto bg-black/40 px-2 py-1 rounded text-zinc-400">{unassigned.length} aguardando alocação</span>
-                            </h3>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
-                                {unassigned.map(p => (
-                                    <div key={p.steamId} className="group relative hover:z-50 flex items-center bg-zinc-950 border border-white/5 p-2 pr-4 rounded-2xl hover:border-purple-500/50 transition-all shadow-md">
-                                        <img src={p.avatar} title={p.nickname} className="w-10 h-10 rounded-full border border-white/10 shadow-sm shrink-0 group-hover:opacity-20 transition-all" />
-                                        <div className="flex flex-col ml-3 group-hover:opacity-20 transition-all min-w-0">
-                                            <p className="font-bold text-sm text-white truncate">{p.nickname}</p>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                {editingUnassigned?.steamId === p.steamId && editingUnassigned.field === "sr" ? (
-                                                    <input autoFocus type="number" value={editingUnassigned.value}
-                                                        onChange={e => setEditingUnassigned({ ...editingUnassigned, value: e.target.value })}
-                                                        onBlur={() => { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "sr", n); setEditingUnassigned(null); }}
-                                                        onKeyDown={e => { if (e.key === "Enter") { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "sr", n); setEditingUnassigned(null); } if (e.key === "Escape") setEditingUnassigned(null); }}
-                                                        className="w-20 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none" />
-                                                ) : (
-                                                    <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "sr", value: String(p.tempRating ?? p.rating) }); }} className={`text-[10px] font-mono font-bold hover:text-yellow-400 transition-colors flex items-center gap-0.5 ${p.tempRating !== undefined ? 'text-purple-400' : balanceMode === 'standard' ? 'text-yellow-500' : 'text-zinc-500'}`} title="Editar SR">
-                                                        {p.tempRating ?? p.rating} SR{p.tempRating !== undefined && <Pencil size={7} />}
-                                                    </button>
-                                                )}
-                                                {editingUnassigned?.steamId === p.steamId && editingUnassigned.field === "resenha" ? (
-                                                    <input autoFocus type="number" step="0.1" value={editingUnassigned.value}
-                                                        onChange={e => setEditingUnassigned({ ...editingUnassigned, value: e.target.value })}
-                                                        onBlur={() => { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "resenha", n); setEditingUnassigned(null); }}
-                                                        onKeyDown={e => { if (e.key === "Enter") { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "resenha", n); setEditingUnassigned(null); } if (e.key === "Escape") setEditingUnassigned(null); }}
-                                                        className="w-16 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none" />
-                                                ) : (
-                                                    <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "resenha", value: (p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1) }); }} className={`text-[10px] font-mono font-bold hover:text-purple-300 transition-colors flex items-center gap-0.5 ${p.tempResenhaRating !== undefined ? 'text-purple-400' : balanceMode === 'resenha' ? 'text-purple-400' : 'text-zinc-500'}`} title="Editar Resenha">
-                                                        {(p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1)} ★{p.tempResenhaRating !== undefined && <Pencil size={7} />}
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="absolute inset-0 flex items-stretch justify-center opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 transition-all z-50 bg-zinc-900/95 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10">
-                                            <button onClick={() => handleAssign(p.steamId, "A")} className="flex-1 bg-yellow-500 text-black hover:bg-yellow-400 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-colors" title="Para Time A"><ArrowLeft size={16} /> A</button>
-                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="px-5 bg-red-500 text-white hover:bg-red-400 border-x border-red-600/50 transition-colors flex items-center justify-center" title="Remover"><X size={16} /></button>
-                                            <button onClick={() => handleAssign(p.steamId, "B")} className="flex-1 bg-blue-500 text-white hover:bg-blue-400 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-colors" title="Para Time B">B <ArrowRight size={16} /></button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
 
                     {/* Veto Arena / Time A vs Time B */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative">
@@ -917,168 +956,157 @@ export default function TeamBuilderPage() {
 
                     </div>
 
-                </div>
-            </div>
-
-
-            {/* ── MAP VETO SECTION ── */}
-            <div className="mt-20 space-y-8 bg-zinc-900/20 p-8 rounded-3xl border border-white/5 backdrop-blur-sm">
-                <div className="flex flex-col md:flex-row justify-between items-end gap-4 border-b border-white/5 pb-6">
-                    <div>
-                        <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter text-white flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
-                                <MapIcon className="text-yellow-500 w-6 h-6" />
+                    {/* ── MAP VETO SECTION (Integrated) ── */}
+                    <div className="mt-8 space-y-6 bg-zinc-900/20 p-6 rounded-3xl border border-white/5 backdrop-blur-sm">
+                        <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-4 border-b border-white/5 pb-5">
+                            <div>
+                                <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
+                                        <MapIcon className="text-yellow-500 w-5 h-5" />
+                                    </div>
+                                    Veto de Mapas
+                                </h2>
+                                <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em] mt-1.5 flex items-center gap-2">
+                                    <span className="w-6 h-px bg-yellow-500/30" />
+                                    Selecione os mapas ou use o sorteador aleatório
+                                </p>
                             </div>
-                            Veto de Mapas
-                        </h2>
-                        <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mt-2 flex items-center gap-2">
-                            <span className="w-8 h-px bg-yellow-500/30" />
-                            Selecione os mapas ou use o sorteador aleatório
-                        </p>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                        <button 
-                            onClick={resetVeto}
-                            className="p-4 bg-zinc-900 border border-white/10 rounded-2xl text-zinc-500 hover:text-white hover:border-white/30 transition-all active:scale-95 shadow-lg"
-                            title="Resetar Veto"
-                        >
-                            <RotateCcw size={20} />
-                        </button>
-                        <button 
-                            onClick={handleRandomMap}
-                            className="flex items-center gap-3 px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase text-xs rounded-2xl transition-all shadow-xl active:scale-95 border border-yellow-300/30 shadow-yellow-500/10"
-                        >
-                            <Shuffle size={18} /> Mapa Aleatório
-                        </button>
-                    </div>
-                </div>
-
-                <div className="flex flex-col xl:flex-row gap-10">
-                    {/* Map Grid */}
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {mapPool.map((map) => {
-                            const state = vetoMaps[map.id];
-                            const isBanned = state?.type === "ban";
-                            const isPicked = state?.type === "pick";
                             
-                            return (
-                                <motion.div 
-                                    key={map.id}
-                                    layout
-                                    className={`relative aspect-[16/10] rounded-3xl overflow-hidden border-2 transition-all group ${
-                                        isBanned ? 'border-red-500/50 opacity-40 grayscale' :
-                                        isPicked ? 'border-green-500 shadow-2xl shadow-green-500/20' :
-                                        'border-white/5 hover:border-yellow-500/50'
-                                    }`}
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={resetVeto}
+                                    className="p-3 bg-zinc-900 border border-white/10 rounded-xl text-zinc-500 hover:text-white hover:border-white/30 transition-all active:scale-95 shadow-lg"
+                                    title="Resetar Veto"
                                 >
-                                    <img src={map.image} alt={map.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
-                                    
-                                    <div className="absolute inset-0 p-6 flex flex-col justify-between">
-                                        <div className="flex justify-between items-start">
-                                            <span className="text-xl font-black italic uppercase tracking-tighter text-white drop-shadow-2xl">
-                                                {map.name}
-                                            </span>
-                                            {state && (
-                                                <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-2xl ${
-                                                    state.type === "pick" ? 'bg-green-500 text-black' : 'bg-red-500 text-white'
-                                                }`}>
-                                                    {state.type === "pick" ? "Selecionado" : "Banido"}
-                                                </span>
-                                            )}
-                                        </div>
+                                    <RotateCcw size={16} />
+                                </button>
+                                <button 
+                                    onClick={handleRandomMap}
+                                    className="flex items-center gap-2 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase text-[10px] rounded-xl transition-all shadow-xl active:scale-95 border border-yellow-300/30"
+                                >
+                                    <Shuffle size={14} /> Mapa Aleatório
+                                </button>
+                            </div>
+                        </div>
 
-                                        {!state && (
-                                            <div className="flex gap-3 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                                                <button 
-                                                    onClick={() => handleMapAction(map.id, "pick")}
-                                                    className="flex-1 bg-green-500 hover:bg-green-400 text-black py-3 rounded-xl font-black text-xs uppercase shadow-xl shadow-green-900/40 transition-colors"
-                                                >
-                                                    Pick
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleMapAction(map.id, "ban")}
-                                                    className="flex-1 bg-red-500 hover:bg-red-400 text-white py-3 rounded-xl font-black text-xs uppercase shadow-xl shadow-red-900/40 transition-colors"
-                                                >
-                                                    Ban
-                                                </button>
+                        <div className="flex flex-col 2xl:flex-row gap-6">
+                            {/* Map Grid */}
+                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 gap-4">
+                                {mapPool.map((map) => {
+                                    const state = vetoMaps[map.id];
+                                    const isBanned = state?.type === "ban";
+                                    const isPicked = state?.type === "pick";
+                                    
+                                    return (
+                                        <motion.div 
+                                            key={map.id}
+                                            layout
+                                            className={`relative aspect-[16/9] rounded-2xl overflow-hidden border transition-all group ${
+                                                isBanned ? 'border-red-500/50 opacity-40 grayscale' :
+                                                isPicked ? 'border-green-500 shadow-xl shadow-green-500/10' :
+                                                'border-white/5 hover:border-yellow-500/40'
+                                            }`}
+                                        >
+                                            <img src={map.image} alt={map.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
+                                            
+                                            <div className="absolute inset-0 p-4 flex flex-col justify-between">
+                                                <div className="flex justify-between items-start">
+                                                    <span className="text-sm font-black italic uppercase tracking-tighter text-white drop-shadow-lg">
+                                                        {map.name}
+                                                    </span>
+                                                    {state && (
+                                                        <span className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-tighter ${
+                                                            state.type === "pick" ? 'bg-green-500 text-black' : 'bg-red-500 text-white'
+                                                        }`}>
+                                                            {state.type === "pick" ? "Picked" : "Banned"}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {!state && (
+                                                    <div className="flex gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                                                        <button 
+                                                            onClick={() => handleMapAction(map.id, "pick")}
+                                                            className="flex-1 bg-green-500 hover:bg-green-400 text-black py-2 rounded-lg font-black text-[10px] uppercase shadow-lg shadow-green-900/30"
+                                                        >
+                                                            Pick
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleMapAction(map.id, "ban")}
+                                                            className="flex-1 bg-red-500 hover:bg-red-400 text-white py-2 rounded-lg font-black text-[10px] uppercase shadow-lg shadow-red-900/30"
+                                                        >
+                                                            Ban
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {isBanned && (
+                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                    <div className="text-red-500 text-2xl font-black border-4 border-red-500 px-4 py-1 rounded-xl rotate-[-15deg] shadow-2xl bg-black/40 backdrop-blur-sm">
+                                                        BAN
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Veto Log / History (Simplified) */}
+                            <div className="2xl:w-72 shrink-0">
+                                <div className="bg-black/30 p-5 rounded-2xl border border-white/5 h-full flex flex-col shadow-inner">
+                                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                            <History size={14} className="text-yellow-500" /> Log de Veto
+                                        </h3>
+                                        <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${vetoTurn === "A" ? 'bg-yellow-500 text-black' : 'bg-blue-500 text-white'}`}>
+                                            TURNO {vetoTurn}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex-1 space-y-2 max-h-[450px] overflow-y-auto no-scrollbar">
+                                        {vetoHistory.length === 0 ? (
+                                            <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-10">
+                                                <MapIcon size={32} className="mb-2" />
+                                                <p className="text-[8px] font-black uppercase tracking-widest">Aguardando ações</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {vetoHistory.map((entry, i) => (
+                                                    <motion.div 
+                                                        initial={{ opacity: 0, x: 10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        key={i} 
+                                                        className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all"
+                                                    >
+                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-inner ${
+                                                            entry.team === "A" ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 
+                                                            entry.team === "B" ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 
+                                                            'bg-zinc-800 text-zinc-500'
+                                                        }`}>
+                                                            <span className="font-black text-xs">{entry.team === "system" ? "?" : entry.team}</span>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-black text-xs uppercase text-white truncate">
+                                                                {mapPool.find(m => m.id === entry.map)?.name}
+                                                            </p>
+                                                            <p className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
+                                                                <span className={`w-1.5 h-1.5 rounded-full ${entry.type === "pick" ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                                {entry.type === "pick" ? "Selecionado" : "Banido"}
+                                                            </p>
+                                                        </div>
+                                                    </motion.div>
+                                                ))}
                                             </div>
                                         )}
                                     </div>
-
-                                    {isBanned && (
-                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                            <div className="text-red-500 text-5xl font-black border-8 border-red-500 px-6 py-2 rounded-2xl rotate-[-15deg] shadow-2xl bg-black/40 backdrop-blur-sm">
-                                                BAN
-                                            </div>
-                                        </div>
-                                    )}
-                                </motion.div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Veto Sidebar / History */}
-                    <div className="xl:w-96 space-y-4">
-                        <div className="bg-zinc-950/50 p-6 rounded-3xl border border-white/5 backdrop-blur-3xl h-full flex flex-col shadow-2xl">
-                            <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                                <h3 className="text-sm font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                                    <History size={16} className="text-yellow-500" /> Log de Veto
-                                </h3>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Turno:</span>
-                                    <span className={`text-[10px] font-black px-3 py-1 rounded-full ${vetoTurn === "A" ? 'bg-yellow-500 text-black' : 'bg-blue-500 text-white'}`}>
-                                        TIME {vetoTurn}
-                                    </span>
                                 </div>
-                            </div>
-
-                            <div className="flex-1 space-y-4 min-h-[400px]">
-                                {vetoHistory.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-20">
-                                        <MapIcon size={64} className="mb-4" />
-                                        <p className="text-sm font-black uppercase tracking-[0.2em]">Nenhuma ação registrada</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {vetoHistory.map((entry, i) => (
-                                            <motion.div 
-                                                initial={{ opacity: 0, x: 20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                key={i} 
-                                                className="flex items-center gap-4 p-4 bg-zinc-900/80 border border-white/5 rounded-2xl hover:border-white/10 transition-colors"
-                                            >
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-inner ${
-                                                    entry.type === "pick" ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
-                                                }`}>
-                                                    {entry.type === "pick" ? <Trophy size={20} /> : <X size={20} />}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-baseline justify-between mb-0.5">
-                                                        <p className="font-black text-base uppercase text-white truncate drop-shadow-md">
-                                                            {mapPool.find(m => m.id === entry.map)?.name}
-                                                        </p>
-                                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                                                            entry.team === "A" ? 'bg-yellow-500/20 text-yellow-500' : 
-                                                            entry.team === "B" ? 'bg-blue-500/20 text-blue-500' : 
-                                                            'bg-zinc-800 text-zinc-500'
-                                                        }`}>
-                                                            {entry.team === "system" ? "Random" : `Time ${entry.team}`}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest flex items-center gap-2">
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${entry.type === "pick" ? 'bg-green-500' : 'bg-red-500'}`} />
-                                                        {entry.type === "pick" ? "Selecionado para a partida" : "Banido da partida"}
-                                                    </p>
-                                                </div>
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
