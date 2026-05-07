@@ -91,6 +91,36 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: "Missing match ID" }, { status: 400 });
         }
 
+        // 1. Buscar a partida e seus jogadores antes de deletar para reverter os pontos
+        const match = await prisma.globalMatch.findUnique({
+            where: { id },
+            include: { GlobalMatchPlayer: true }
+        });
+
+        if (match) {
+            const { getMixLevelFromPoints } = await import("@/lib/mix-level");
+            
+            // 2. Reverter os pontos para cada jogador que seja usuário do site
+            for (const p of match.GlobalMatchPlayer) {
+                if (p.userId && p.eloChange) {
+                    const user = await prisma.user.findUnique({ where: { id: p.userId } });
+                    if (user) {
+                        const newPoints = Math.max(0, (user.rankingPoints ?? 500) - p.eloChange);
+                        const { level: newLevel } = getMixLevelFromPoints(newPoints);
+                        
+                        await prisma.user.update({
+                            where: { id: p.userId },
+                            data: {
+                                rankingPoints: newPoints,
+                                mixLevel: newLevel
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        // 3. Deletar a partida (os GlobalMatchPlayer serão deletados em cascata)
         await prisma.globalMatch.delete({
             where: { id }
         });
@@ -122,6 +152,16 @@ export async function PATCH(req: NextRequest) {
                 mapName: mapName || undefined
             }
         });
+
+        // Se mudou o placar, os Tropoints podem mudar. Recalculamos.
+        if (scoreA !== undefined || scoreB !== undefined) {
+            const { calculateMatchTropoints } = await import("@/services/ranking-service");
+            try {
+                await calculateMatchTropoints(id);
+            } catch (e) {
+                console.warn(`[Admin Patch] Falha ao recalcular tropoints para ${id}:`, e);
+            }
+        }
 
         return NextResponse.json({ success: true, match: updatedMatch });
     } catch (error) {
