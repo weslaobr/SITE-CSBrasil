@@ -18,32 +18,32 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
         };
     }
 
+    // Determinar a URL base (origin)
+    let origin = process.env.SITE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+    if (req) {
+        const host = req.headers.get("host");
+        const protocol = req.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
+        if (host) origin = `${protocol}://${host}`;
+    }
+    origin = origin.replace(/\/$/, "");
+
     return {
         adapter: adapter,
         providers: [
             {
-                ...(() => {
-                    // Na Vercel, o NEXTAUTH_URL nem sempre é necessário se as URLs de callback forem relativas
-                    // ou se basearem no host da requisição.
-                    const url = req ? new URL(req.url) : null;
-                    const protocol = (url?.protocol === 'http:' && (url.hostname.includes('localhost') || url.hostname === '127.0.0.1')) ? 'http:' : 'https:';
-                    const host = url ? url.host : (process.env.NEXTAUTH_URL?.replace('https://', '')?.replace('http://', '') || '');
-                    const origin = host ? `${protocol}//${host}` : process.env.NEXTAUTH_URL;
-                    
-                    return SteamProvider(req || {} as any, {
-                        clientSecret: process.env.STEAM_API_KEY!,
-                        callbackUrl: `${origin}/api/auth/callback/steam`,
-                        profile(profile: any) {
-                            return {
-                                id: profile.steamid,
-                                name: profile.personaname,
-                                email: `${profile.steamid}@steam.local`,
-                                image: profile.avatarfull,
-                                steamId: profile.steamid,
-                            }
+                ...SteamProvider(req as any, {
+                    clientSecret: process.env.STEAM_API_KEY!,
+                    callbackUrl: `${origin}/api/auth/callback/steam`,
+                    profile(profile: any) {
+                        return {
+                            id: profile.steamid,
+                            name: profile.personaname,
+                            email: `${profile.steamid}@steam.local`,
+                            image: profile.avatarfull,
+                            steamId: profile.steamid,
                         }
-                    } as any);
-                })(),
+                    }
+                } as any),
                 allowDangerousEmailAccountLinking: true,
             },
         ],
