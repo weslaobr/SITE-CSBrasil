@@ -5,7 +5,7 @@ import {
     Activity, Clock, Layers, RefreshCw, 
     CheckCircle2, AlertCircle, Loader2, Play,
     Database, Users, FileCode, Search,
-    ChevronRight, BarChart3, Zap
+    ChevronRight, BarChart3, Zap, X, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -31,6 +31,7 @@ export default function QueueTab() {
         completed_today: 0,
         failed_today: 0
     });
+    const [cancellingId, setCancellingId] = useState<string | null>(null);
 
     const fetchQueue = async (isManual = false) => {
         if (isManual) setRefreshing(true);
@@ -63,6 +64,36 @@ export default function QueueTab() {
         const interval = setInterval(() => fetchQueue(), 10000);
         return () => clearInterval(interval);
     }, []);
+
+    const cancelTask = async (id: string) => {
+        if (!confirm('Tem certeza que deseja cancelar esta tarefa?')) return;
+        setCancellingId(id);
+        try {
+            const res = await fetch(`/api/admin/queue?id=${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Falha ao cancelar');
+            await fetchQueue();
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao cancelar tarefa');
+        } finally {
+            setCancellingId(null);
+        }
+    };
+
+    const clearQueue = async () => {
+        if (!confirm('Tem certeza que deseja limpar todas as tarefas pendentes?')) return;
+        setRefreshing(true);
+        try {
+            const res = await fetch(`/api/admin/queue?clear=true`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Falha ao limpar fila');
+            await fetchQueue();
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao limpar fila');
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     const getStatusConfig = (status: string) => {
         switch (status) {
@@ -119,13 +150,22 @@ export default function QueueTab() {
                         <h3 className="text-sm font-black italic uppercase tracking-tighter text-white">Tarefas em Tempo Real</h3>
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                     </div>
-                    <button 
-                        onClick={() => fetchQueue(true)}
-                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-colors"
-                    >
-                        <RefreshCw size={12} className={refreshing ? 'animate-spin text-yellow-500' : ''} />
-                        {refreshing ? 'Atualizando...' : 'Atualizar Fila'}
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={clearQueue}
+                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-400 transition-colors px-3 py-1 bg-rose-500/5 border border-rose-500/10 rounded-lg"
+                        >
+                            <Trash2 size={12} />
+                            Limpar Fila
+                        </button>
+                        <button 
+                            onClick={() => fetchQueue(true)}
+                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-colors"
+                        >
+                            <RefreshCw size={12} className={refreshing ? 'animate-spin text-yellow-500' : ''} />
+                            {refreshing ? 'Atualizando...' : 'Atualizar Fila'}
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-2">
@@ -196,6 +236,22 @@ export default function QueueTab() {
                                                 ID: {item.id.slice(0, 8)}
                                             </div>
                                         </div>
+
+                                        {/* Action Section */}
+                                        {(item.status === 'processing' || item.status === 'pending') && (
+                                            <button
+                                                onClick={() => cancelTask(item.id)}
+                                                disabled={cancellingId === item.id}
+                                                className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-zinc-500 hover:bg-rose-500/10 hover:text-rose-500 hover:border-rose-500/20 transition-all"
+                                                title="Cancelar Tarefa"
+                                            >
+                                                {cancellingId === item.id ? (
+                                                    <Loader2 size={16} className="animate-spin" />
+                                                ) : (
+                                                    <X size={16} />
+                                                )}
+                                            </button>
+                                        )}
 
                                         {/* Error Alert */}
                                         {item.status === 'failed' && item.error && (

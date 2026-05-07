@@ -10,6 +10,7 @@ from app.tasks.match_tasks import process_match_task
 from app.services.downloader import DownloaderService
 from app.services.demo_analyzer import DemoAnalyzerService
 from app.core.config import settings
+from app.core.celery_app import celery_app
 import logging
 
 logger = logging.getLogger(__name__)
@@ -241,6 +242,64 @@ async def startup_event():
                 
     # Inicia a task em background nativa do python
     asyncio.create_task(run_periodic_sync())
+
+
+@app.get("/api/admin/queue", tags=["Admin"])
+async def get_queue_status():
+    """
+    Returns active, reserved, and scheduled tasks from Celery.
+    """
+    i = celery_app.control.inspect()
+    active = i.active() or {}
+    reserved = i.reserved() or {}
+    
+    # Flatten results from all workers
+    active_tasks = []
+    for worker, tasks in active.items():
+        for t in tasks:
+            active_tasks.append({
+                "id": t["id"],
+                "name": t["name"],
+                "args": t["args"],
+                "kwargs": t["kwargs"],
+                "status": "processing",
+                "started_at": t.get("time_start")
+            })
+            
+    pending_tasks = []
+    for worker, tasks in reserved.items():
+        for t in tasks:
+            pending_tasks.append({
+                "id": t["id"],
+                "name": t["name"],
+                "args": t["args"],
+                "kwargs": t["kwargs"],
+                "status": "pending"
+            })
+            
+    return {
+        "queue": active_tasks + pending_tasks,
+        "stats": {
+            "active": len(active_tasks),
+            "pending": len(pending_tasks)
+        }
+    }
+
+@app.delete("/api/admin/queue/{task_id}", tags=["Admin"])
+async def cancel_task(task_id: str):
+    """
+    Revokes and terminates a Celery task.
+    """
+    celery_app.control.revoke(task_id, terminate=True, signal='SIGKILL')
+    return {"status": "cancelled", "task_id": task_id}
+
+@app.delete("/api/admin/queue/clear", tags=["Admin"])
+async def clear_all_tasks():
+    """
+    Revokes all pending tasks.
+    """
+    celery_app.control.purge()
+    return {"status": "cleared"}
 
 # Entry point for local testing
 if __name__ == "__main__":
