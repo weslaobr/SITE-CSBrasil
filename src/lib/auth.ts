@@ -18,8 +18,14 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
         };
     }
 
-    // Determinar a URL base (origin) de forma consistente com o ambiente
-    const origin = "https://www.tropacs.com.br";
+    // Determinar a URL base (origin) de forma dinâmica para suportar local e produção
+    let origin = process.env.NEXTAUTH_URL || process.env.SITE_URL || "http://localhost:3000";
+    if (req) {
+        const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+        const protocol = req.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
+        if (host) origin = `${protocol}://${host}`;
+    }
+    origin = origin.replace(/\/$/, "");
     
     if (!process.env.STEAM_API_KEY) {
         console.error("[Auth] ERRO: STEAM_API_KEY não encontrada no .env");
