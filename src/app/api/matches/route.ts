@@ -31,12 +31,36 @@ export async function GET(req: NextRequest) {
             orderBy: { matchDate: 'desc' }
         });
         
-        // Fetch matches imported via Local CS2 Demo Processor
-        const globalMatchPlayers = await prisma.globalMatchPlayer.findMany({
-            where: { steamId: (session.user as any)?.steamId || '' },
-            include: { GlobalMatch: true },
-            orderBy: { GlobalMatch: { matchDate: 'desc' } }
+        // ── CÁLCULO AUTOMÁTICO DE TROPOINTS (LISTA) ──────────────────────────
+        // Para partidas MIX/Locais que ainda estão com 0 pontos, calculamos agora.
+        // Limitamos a 5 por requisição para evitar travamentos/timeouts.
+        const pendingCalculation = globalMatchPlayers.filter(gmp => {
+            const src = (gmp.GlobalMatch.source || '').toLowerCase();
+            const isValidSrc = ['mix', 'manual', 'demo', 'local', 'demo-analyzer'].includes(src);
+            return isValidSrc && (gmp.eloChange === null || gmp.eloChange === 0);
         });
+
+        if (pendingCalculation.length > 0) {
+            console.log(`[AutoTropoints] Calculando pontos para ${pendingCalculation.length} partidas pendentes...`);
+            const { calculateMatchTropoints } = await import('@/services/ranking-service');
+            // Processar sequencialmente para não sobrecarregar o banco
+            for (const p of pendingCalculation.slice(0, 5)) {
+                try {
+                    await calculateMatchTropoints(p.globalMatchId);
+                } catch (err: any) {
+                    console.warn(`[AutoTropoints] Falha para ${p.globalMatchId}: ${err.message}`);
+                }
+            }
+            
+            // Re-buscar para obter os valores atualizados
+            const updatedPlayers = await prisma.globalMatchPlayer.findMany({
+                where: { steamId: (session.user as any)?.steamId || '' },
+                include: { GlobalMatch: true },
+                orderBy: { GlobalMatch: { matchDate: 'desc' } }
+            });
+            globalMatchPlayers.length = 0;
+            globalMatchPlayers.push(...updatedPlayers);
+        }
 
         console.log(`[Matches GET] userId=${userId} — Found ${rawMatches.length} legacy matches, ${globalMatchPlayers.length} local demos in DB`);
 
