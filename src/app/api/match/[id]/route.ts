@@ -54,13 +54,25 @@ async function fetchAvatars(stats: any[]) {
                 }).catch(() => {});
             }));
 
-            return stats.map((p: any) => ({
-                ...p,
-                avatar_url: avatarMap.get(p.steam64_id || p.player_id || p.steamId) || p.avatar_url,
-                nickname: avatarMap.has(p.steam64_id || p.player_id || p.steamId) 
-                    ? steamProfiles.find((x: any) => x.steamid === (p.steam64_id || p.player_id || p.steamId))?.personaname 
-                    : p.name
-            }));
+            // Criar mapa para retorno rápido
+            const avatarMap = new Map();
+            steamProfiles.forEach((profile: any) => {
+                avatarMap.set(profile.steamid, {
+                    avatar: profile.avatarfull,
+                    name: profile.personaname
+                });
+            });
+
+            return stats.map((p: any) => {
+                const sid = p.steam64_id || p.player_id || p.steamId;
+                const steamData = avatarMap.get(sid);
+                
+                return {
+                    ...p,
+                    avatar_url: steamData?.avatar || p.avatar_url,
+                    nickname: steamData?.name || p.name
+                };
+            });
         } catch (steamError) {
             console.error("Error fetching and persisting Steam avatars:", steamError);
         }
