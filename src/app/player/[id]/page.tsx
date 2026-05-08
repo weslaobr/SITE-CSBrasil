@@ -144,7 +144,7 @@ export default function PlayerProfilePage() {
         );
     }
 
-    const { profile, steamStats, dbUser, playerStats, leetifyData, inventory, steamLevel, trustRating, trustBreakdown, anomalies, inventoryValue, matches } = data;
+    const { profile, steamStats, dbUser, playerStats, leetifyData, inventory, steamLevel, trustRating, trustBreakdown, anomalies, inventoryValue, matches, mapStats, weaponStats } = data;
     const isOwner = (session?.user as any)?.steamId === steamId;
 
     // ── WinRate exclusivo de MIX ─────────────────────────────────────────────
@@ -426,20 +426,51 @@ export default function PlayerProfilePage() {
                             <AnomaliesDetected anomalies={anomalies} />
                         </motion.div>
 
-                        {/* Stats Analysis Section */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.4 }}
-                        >
-                            <StatsAnalysis stats={leetifyData?.ratings} />
-                        </motion.div>
+                         {/* Stats Analysis Section */}
+                         <motion.div
+                             initial={{ opacity: 0, y: 20 }}
+                             animate={{ opacity: 1, y: 0 }}
+                             transition={{ delay: 0.4 }}
+                         >
+                             <StatsAnalysis stats={leetifyData?.ratings} />
+                         </motion.div>
 
-                        <p className="text-[9px] text-zinc-600 font-bold uppercase italic flex items-start gap-2 max-w-4xl opacity-60">
-                            <span className="text-amber-500 font-black italic">⚠️ Aviso Legal:</span>
-                            Esta análise fornece estimativas estatísticas baseadas em padrões de jogabilidade e deve ser usada apenas como uma ferramenta complementar. Os resultados podem variar e não devem ser considerados provas definitivas de qualquer comportamento. Sempre considere vários fatores e o contexto ao avaliar a reputação do jogador.
-                        </p>
-                    </div>
+                         {/* Map Performance Section */}
+                         <motion.div
+                             initial={{ opacity: 0, y: 20 }}
+                             animate={{ opacity: 1, y: 0 }}
+                             transition={{ delay: 0.5 }}
+                         >
+                             <div className="bg-zinc-900/40 rounded-[2rem] border border-white/5 p-6 backdrop-blur-xl">
+                                 <h3 className="text-sm font-black italic uppercase tracking-tighter mb-4 flex items-center gap-2">
+                                     <span className="w-1.5 h-5 bg-yellow-500 rounded-full" /> Desempenho por Mapa
+                                 </h3>
+                                 <div className="space-y-3">
+                                     {Object.keys(mapStats || {}).length > 0 ? (
+                                         Object.entries(mapStats || {}).map(([mapName, stats]: [string, any]) => (
+                                             <div key={mapName} className="flex items-center justify-between px-3 py-2 bg-zinc-800/20 rounded-xl">
+                                                 <div className="flex items-center gap-3">
+                                                     <div className="w-8 h-8 flex items-center justify-center bg-zinc-700 rounded text-xs font-black">{mapName.toUpperCase().replace('DE_', '')}</div>
+                                                     <div className="space-y-1">
+                                                         <p className="text-xs font-black">{stats.winRate}% WR • {stats.avgKDR} KDR • {stats.avgADR} ADR</p>
+                                                         <p className="text-[9px] text-zinc-500">{stats.matches} partidas • {stats.avgHS}% HS • {stats.avgKast}% KAST</p>
+                                                     </div>
+                                                 </div>
+                                                 <div className="w-10 h-2 bg-gradient-to-r from-yellow-500 to-transparent" style={{ width: `${Math.min(stats.performanceScore, 100)}%` }}></div>
+                                             </div>
+                                         ))
+                                     ) : (
+                                         <p className="text-zinc-500 text-center py-4">Nenhum dado de mapa disponível</p>
+                                     )}
+                                 </div>
+                             </div>
+                         </motion.div>
+
+                         <p className="text-[9px] text-zinc-600 font-bold uppercase italic flex items-start gap-2 max-w-4xl opacity-60">
+                             <span className="text-amber-500 font-black italic">⚠️ Aviso Legal:</span>
+                             Esta análise fornece estimativas estatísticas baseadas em padrões de jogabilidade e deve ser usada apenas como uma ferramenta complementar. Os resultados podem variar e não devem ser considerados provas definitivas de qualquer comportamento. Sempre considere vários fatores e o contexto ao avaliar a reputação do jogador.
+                         </p>
+                     </div>
                 </div>
 
                 {/* Match History Section */}

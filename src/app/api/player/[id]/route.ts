@@ -5,6 +5,120 @@ import { getLeetifyPlayerData } from "@/services/leetify-tropacs";
 import { getCS2SpacePlayerInfo } from "@/services/cs2space-service";
 import { getMixLevelFromPoints } from "@/lib/mix-level";
 
+// --- Helper Functions ---
+
+/**
+ * Calculate map-specific statistics from a list of matches
+ */
+const calculateMapStats = (matches: any[]): any => {
+    const mapStats: Record<string, any> = {};
+    
+    matches.forEach((match: any) => {
+        const mapName = match.mapName || 'Unknown';
+        
+        if (!mapStats[mapName]) {
+            mapStats[mapName] = {
+                matches: 0,
+                wins: 0,
+                losses: 0,
+                ties: 0,
+                totalKills: 0,
+                totalDeaths: 0,
+                totalAssists: 0,
+                totalADR: 0,
+                totalHS: 0,
+                totalKast: 0
+            };
+        }
+        
+        const stats = mapStats[mapName];
+        stats.matches += 1;
+        
+        if (match.result === 'Win') stats.wins += 1;
+        else if (match.result === 'Loss') stats.losses += 1;
+        else if (match.result === 'Tie') stats.ties += 1;
+        
+        stats.totalKills += match.kills || 0;
+        stats.totalDeaths += match.deaths || 0;
+        stats.totalAssists += match.assists || 0;
+        stats.totalADR += match.adr || 0;
+        stats.totalHS += match.hsPercentage || 0;
+        stats.totalKast += match.kast || 0;
+    });
+    
+    // Calculate averages and win rates
+    Object.keys(mapStats).forEach(mapName => {
+        const stats = mapStats[mapName];
+        if (stats.matches > 0) {
+            stats.winRate = Math.round((stats.wins / stats.matches) * 100);
+            stats.avgKDR = stats.totalDeaths > 0 ? (stats.totalKills / stats.totalDeaths).toFixed(2) : (stats.totalKills || 0).toFixed(2);
+            stats.avgADR = Math.round(stats.totalADR / stats.matches);
+            stats.avgHS = Math.round(stats.totalHS / stats.matches);
+            stats.avgKast = Math.round(stats.totalKast / stats.matches);
+            
+            // Calculate performance rating (simple composite score)
+            stats.performanceScore = Math.round(
+                (stats.winRate * 0.4) + 
+                (Math.min(stats.avgADR / 100 * 100, 100) * 0.3) + 
+                (stats.avgHS * 0.2) + 
+                (stats.avgKast * 0.1)
+            );
+        }
+    });
+    
+    return mapStats;
+};
+
+/**
+ * Calculate weapon-specific statistics from a list of matches
+ */
+const calculateWeaponStats = (matches: any[]): any => {
+    const weaponStats: Record<string, any> = {};
+    
+    matches.forEach((match: any) => {
+        // Get weapon stats from match metadata if available
+        const matchWeaponStats = match.metadata?.weaponStats || {};
+        
+        Object.entries(matchWeaponStats).forEach(([weapon, stats]: [string, any]) => {
+            if (!weaponStats[weapon]) {
+                weaponStats[weapon] = {
+                    matches: 0,
+                    totalKills: 0,
+                    totalDeaths: 0,
+                    totalHeadshots: 0,
+                    totalDamage: 0
+                };
+            }
+            
+            const wpnStats = weaponStats[weapon];
+            wpnStats.matches += 1;
+            wpnStats.totalKills += stats.kills || 0;
+            wpnStats.totalDeaths += stats.deaths || 0;
+            wpnStats.totalHeadshots += stats.headshots || 0;
+            wpnStats.totalDamage += stats.damage || 0;
+        });
+    });
+    
+    // Calculate averages and ratios
+    Object.keys(weaponStats).forEach(weapon => {
+        const stats = weaponStats[weapon];
+        if (stats.matches > 0) {
+            stats.avgKills = (stats.totalKills / stats.matches).toFixed(2);
+            stats.avgDeaths = (stats.totalDeaths / stats.matches).toFixed(2);
+            stats.avgHeadshots = (stats.totalHeadshots / stats.matches).toFixed(2);
+            stats.avgDamage = Math.round(stats.totalDamage / stats.matches);
+            
+            // Calculate KDR
+            stats.kdr = stats.totalDeaths > 0 ? (stats.totalKills / stats.totalDeaths).toFixed(2) : (stats.totalKills || 0).toFixed(2);
+            
+            // Calculate HS%
+            stats.hsPercentage = stats.totalKills > 0 ? Math.round((stats.totalHeadshots / stats.totalKills) * 100) : 0;
+        }
+    });
+    
+    return weaponStats;
+};
+
 
 export async function GET(
     req: NextRequest,
@@ -126,6 +240,9 @@ export async function GET(
         r.positioning = r.positioning || Math.max(10, Math.min(100, Math.round(60 + (base * 10) + (variance() * 15))));
         r.clutching = r.clutching || Math.max(10, Math.min(100, Math.round(50 + (base * 12) + (variance() * 25))));
         r.opening = r.opening || Math.max(10, Math.min(100, Math.round(48 + (base * 14) + (variance() * 20))));
+
+        // 3. Format Global Matches and Merge with deduplication
+
 
         // 1. Calculate Trust Rating (Heuristic)
         let trustRating = 50; // Neutral base
@@ -321,6 +438,21 @@ export async function GET(
                 ? (isTeamA(gmp.team) ? `${gmp.GlobalMatch.scoreA}-${gmp.GlobalMatch.scoreB}` : `${gmp.GlobalMatch.scoreB}-${gmp.GlobalMatch.scoreA}`)
                 : '0-0';
 
+            // Extract weapon stats if available in metadata
+            const weaponStats = {};
+            if (meta?.weaponStats) {
+                // Assuming weaponStats is an object like { ak47: { kills: 10, deaths: 5 }, m4a1s: { kills: 8, deaths: 3 } }
+                Object.entries(meta.weaponStats).forEach(([weapon, stats]: [string, any]) => {
+                    if (!weaponStats[weapon]) {
+                        weaponStats[weapon] = { kills: 0, deaths: 0, headshots: 0, matches: 0 };
+                    }
+                    weaponStats[weapon].kills += stats.kills || 0;
+                    weaponStats[weapon].deaths += stats.deaths || 0;
+                    weaponStats[weapon].headshots += stats.headshots || 0;
+                    weaponStats[weapon].matches += 1;
+                });
+            }
+
             const m = {
                 id: gmp.id,
                 externalId: gmp.GlobalMatch.externalId || gmp.globalMatchId,
@@ -340,7 +472,8 @@ export async function GET(
                 eloChange: gmp.eloChange,
                 eloAfter: gmp.eloAfter,
                 url: (gmp.GlobalMatch.metadata as any)?.demoUrl || (gmp.GlobalMatch.metadata as any)?.demo_url || null,
-                metadata: { ...(gmp.GlobalMatch.metadata as any || {}), ...meta }
+                metadata: { ...(gmp.GlobalMatch.metadata as any || {}), ...meta },
+                weaponStats: meta?.weaponStats || null
             };
 
             // Add to dedupe set
@@ -383,6 +516,11 @@ export async function GET(
                 })
         ].filter(Boolean).sort((a: any, b: any) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
 
+        // Calculate map-specific statistics
+        const mapStats = calculateMapStats(allMatches);
+        // Calculate weapon-specific statistics
+        const weaponStats = calculateWeaponStats(allMatches);
+
         return NextResponse.json({
             profile,
             steamStats,
@@ -396,7 +534,9 @@ export async function GET(
             trustBreakdown: breakdown,
             anomalies,
             inventoryValue,
-            matches: allMatches
+            matches: allMatches,
+            mapStats,
+            weaponStats
         });
     } catch (error: any) {
         console.error("Error fetching dynamic player data:", error);
