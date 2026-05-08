@@ -27,10 +27,32 @@ async function fetchAvatars(stats: any[]) {
             const { getMultiplePlayerProfiles } = await import('@/services/steam-service');
             const steamProfiles = await getMultiplePlayerProfiles(steamIds);
             
-            const avatarMap = new Map();
-            steamProfiles.forEach((profile: any) => {
-                avatarMap.set(profile.steamid, profile.avatarfull);
-            });
+            // Persistir atualizações no Banco de Dados
+            const { prisma } = await import('@/lib/prisma');
+            await Promise.all(steamProfiles.map(async (sp: any) => {
+                const sid = sp.steamid;
+                const name = sp.personaname;
+                const avatar = sp.avatarfull;
+
+                // 1. Atualizar tracker_players (usado pelo analisador de demos)
+                await (prisma as any).tracker_players.upsert({
+                    where: { steamid64: BigInt(sid) },
+                    update: { personaname: name, avatar_url: avatar, last_updated: new Date() },
+                    create: { steamid64: BigInt(sid), personaname: name, avatar_url: avatar }
+                }).catch(() => {});
+
+                // 2. Atualizar Player (usado no ranking)
+                await (prisma.player as any).updateMany({
+                    where: { steamId: sid },
+                    data: { steamName: name, steamAvatar: avatar, updatedAt: new Date() }
+                }).catch(() => {});
+
+                // 3. Atualizar User (se for usuário registrado)
+                await prisma.user.updateMany({
+                    where: { steamId: sid },
+                    data: { name: name, image: avatar }
+                }).catch(() => {});
+            }));
 
             return stats.map((p: any) => ({
                 ...p,
@@ -40,7 +62,7 @@ async function fetchAvatars(stats: any[]) {
                     : p.name
             }));
         } catch (steamError) {
-            console.error("Error fetching Steam avatars for match details:", steamError);
+            console.error("Error fetching and persisting Steam avatars:", steamError);
         }
     }
     return stats;

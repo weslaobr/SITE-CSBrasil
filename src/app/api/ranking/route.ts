@@ -52,8 +52,14 @@ export async function GET() {
             return NextResponse.json({ error: "Erro de banco de dados" }, { status: 500 });
         }
 
-        // 2. Identificar players que precisam de atualização de perfil
-        const playersToUpdate = players.filter(p => !(p as any).steamName || !(p as any).steamAvatar);
+        // 2. Identificar players que precisam de atualização de perfil (novos ou desatualizados há mais de 24h)
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const playersToUpdate = players.filter(p => 
+            !(p as any).steamName || 
+            !(p as any).steamAvatar || 
+            !p.updatedAt || 
+            p.updatedAt < oneDayAgo
+        ).slice(0, 50); // Limite de 50 por chamada para performance
 
         if (playersToUpdate.length > 0 && STEAM_API_KEY) {
             const steamIds = playersToUpdate.map(p => p.steamId).join(',');
@@ -64,27 +70,36 @@ export async function GET() {
                         steamids: steamIds
                     }
                 });
-
+                
                 const steamPlayers = response.data?.response?.players || [];
                 
-                await Promise.all(steamPlayers.map(async (sp: any) => {
-                    return (prisma.player as any).update({
+                for (const sp of steamPlayers) {
+                    // Atualizar tabela Player (Global)
+                    await (prisma.player as any).update({
                         where: { steamId: sp.steamid },
                         data: {
                             steamName: sp.personaname,
                             steamAvatar: sp.avatarfull,
                             updatedAt: new Date()
                         }
-                    });
-                }));
+                    }).catch(() => {});
 
-                players.forEach(p => {
-                    const sp = steamPlayers.find((s: any) => s.steamid === p.steamId);
-                    if (sp) {
+                    // Sincronizar com a tabela User (Usuários Registrados)
+                    await prisma.user.updateMany({
+                        where: { steamId: sp.steamid },
+                        data: {
+                            name: sp.personaname,
+                            image: sp.avatarfull
+                        }
+                    }).catch(() => {});
+
+                    // Atualizar na lista local para o retorno imediato da API
+                    const p = players.find(x => x.steamId === sp.steamid);
+                    if (p) {
                         (p as any).steamName = sp.personaname;
                         (p as any).steamAvatar = sp.avatarfull;
                     }
-                });
+                }
             } catch (steamError) {
                 console.error("[RankingAPI] Steam API Error:", steamError);
             }
