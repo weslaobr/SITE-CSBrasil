@@ -156,16 +156,37 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
         else t2.push(p);
     });
 
-    // Usuário sempre "MEU TIME" primeiro
-    const userInT2 = t2.some(p => p.is_user);
-    const myTeam    = userInT2 ? t2 : t1;
-    const enemyTeam = userInT2 ? t1 : t2;
-    const myScore    = userInT2 ? (match?.team_2_score ?? 0) : (match?.team_3_score ?? 0);
-    const enemyScore = userInT2 ? (match?.team_3_score ?? 0) : (match?.team_2_score ?? 0);
+    // ── IDENTIFICAÇÃO DE TIME ────────────────────────────────────────────────
+    // Busca o jogador que é o "dono" do perfil (is_user da API ou via userSteamId)
+    const profilePlayer = stats.find(p => {
+        if (p.is_user) return true;
+        const sid = String(p.steam64_id || '').trim();
+        const target = String(userSteamId || '').trim();
+        return target && sid === target;
+    });
+
+    const userTeamId = profilePlayer?.team_id || null;
+    const userInT2 = userTeamId ? (userTeamId === '2' || userTeamId === 'T' || userTeamId === 'B') : t2.some(p => p.is_user);
+
+    let myTeam    = userInT2 ? t2 : t1;
+    let enemyTeam = userInT2 ? t1 : t2;
+    let myScore    = userInT2 ? (match?.team_2_score ?? 0) : (match?.team_3_score ?? 0);
+    let enemyScore = userInT2 ? (match?.team_3_score ?? 0) : (match?.team_2_score ?? 0);
 
     const resultStr = (match?.result || '').toLowerCase();
-    const isWin  = resultStr === 'win'  || resultStr === 'vitoria';
+    const isWin  = resultStr === 'win'  || resultStr === 'vitoria' || resultStr === 'vitória';
     const isLoss = resultStr === 'loss' || resultStr === 'derrota';
+
+    // ── SALVAGUARDA DE PLACAR ────────────────────────────────────────────────
+    // Se o resultado oficial contradiz a posição dos pontos (ex: derrota mas meu time tem mais pontos), 
+    // invertemos para garantir consistência visual para o usuário.
+    if (isWin && myScore < enemyScore) {
+        [myScore, enemyScore] = [enemyScore, myScore];
+        [myTeam, enemyTeam] = [enemyTeam, myTeam];
+    } else if (isLoss && myScore > enemyScore) {
+        [myScore, enemyScore] = [enemyScore, myScore];
+        [myTeam, enemyTeam] = [enemyTeam, myTeam];
+    }
 
     return (
         <div className="fixed inset-0 z-[999] overflow-y-auto" onClick={onClose}>

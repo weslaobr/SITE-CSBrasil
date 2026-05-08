@@ -66,9 +66,39 @@ export default function MatchHistory({ matches, onSync, loading, steamId, steamN
 
             return 'Draw';
         })(),
-        score: typeof m.score === 'string' 
-            ? m.score 
-            : (Array.isArray(m.score) ? `${m.score[0]}-${m.score[1]}` : '0-0'),
+        score: (() => {
+            const sA = m.scoreA ?? m.team1Score ?? m.team_3_score ?? 0;
+            const sB = m.scoreB ?? m.team2Score ?? m.team_2_score ?? 0;
+            const res = (m.result || m.outcome || '').toLowerCase();
+            const isWin = res === 'win' || res === 'vitoria' || res === 'vitória';
+            const isLoss = res === 'loss' || res === 'derrota';
+            
+            // Se m.score já for uma string, tentamos extrair os números
+            let valA = sA;
+            let valB = sB;
+            if (typeof m.score === 'string' && m.score.includes('-')) {
+                const parts = m.score.split('-').map(n => parseInt(n.trim()));
+                if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                    valA = parts[0];
+                    valB = parts[1];
+                }
+            } else if (Array.isArray(m.score) && m.score.length === 2) {
+                valA = m.score[0];
+                valB = m.score[1];
+            }
+
+            // Garantir que o score do usuário venha primeiro baseado no resultado
+            if (isWin) {
+                const high = Math.max(valA, valB);
+                const low = Math.min(valA, valB);
+                return `${high}-${low}`;
+            } else if (isLoss) {
+                const high = Math.max(valA, valB);
+                const low = Math.min(valA, valB);
+                return `${low}-${high}`;
+            }
+            return `${valA}-${valB}`;
+        })(),
         rank: m.rank || m.metadata?.rank || m.metadata?.skill_level || null,
         eloChange: m.eloChange,
         eloAfter: m.eloAfter,
