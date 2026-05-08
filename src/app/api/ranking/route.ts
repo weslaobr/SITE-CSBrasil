@@ -39,11 +39,18 @@ function detectPlatform(source: string, metadata: any): 'mix' | 'premier' | 'fac
 export async function GET() {
     try {
         // 1. Buscar Players com Stats
-        const players = await prisma.player.findMany({
-            include: {
-                Stats: true,
-            },
-        });
+        let players = [];
+        try {
+            players = await prisma.player.findMany({
+                include: {
+                    Stats: true,
+                },
+            });
+        } catch (dbErr: any) {
+            console.error("[RankingAPI] Critical DB Error fetching players:", dbErr.message);
+            // Se falhar o fetch inicial, não há muito o que fazer, mas evitamos o crash total.
+            return NextResponse.json({ error: "Erro de banco de dados" }, { status: 500 });
+        }
 
         // 2. Identificar players que precisam de atualização de perfil
         const playersToUpdate = players.filter(p => !(p as any).steamName || !(p as any).steamAvatar);
