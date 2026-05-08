@@ -18,9 +18,9 @@ export async function calculateMatchTropoints(matchId: string): Promise<Calculat
         throw new Error('Partida não encontrada');
     }
 
-    // Aceitamos 'mix', 'manual', 'demo' como fontes válidas para Tropoints
+    // Aceitamos 'mix', 'manual', 'demo', 'local', 'demo-analyzer' e 'leetify' como fontes válidas para Tropoints
     const source = (match.source || '').toLowerCase();
-    const validSources = ['mix', 'manual', 'demo', 'local', 'demo-analyzer'];
+    const validSources = ['mix', 'manual', 'demo', 'local', 'demo-analyzer', 'leetify'];
     
     if (!validSources.includes(source)) {
         throw new Error(`Tropoints só são calculados para partidas MIX/Locais. Fonte atual: ${source}`);

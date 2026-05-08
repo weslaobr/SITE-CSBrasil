@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
         // Limitamos a 5 por requisição para evitar travamentos/timeouts.
         const pendingCalculation = globalMatchPlayers.filter(gmp => {
             const src = (gmp.GlobalMatch.source || '').toLowerCase();
-            const isValidSrc = ['mix', 'manual', 'demo', 'local', 'demo-analyzer'].includes(src);
+            const isValidSrc = ['mix', 'manual', 'demo', 'local', 'demo-analyzer', 'leetify'].includes(src);
             return isValidSrc && (gmp.eloChange === null || gmp.eloChange === 0);
         });
 
