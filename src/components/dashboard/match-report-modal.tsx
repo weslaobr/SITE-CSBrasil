@@ -2688,8 +2688,8 @@ const MatchReportModal: React.FC<Props> = ({
                                         <span className="hidden sm:inline">{isSyncing ? 'Atualizando...' : 'Atualizar'}</span>
                                     </button>
 
-                                    {/* Botão Recalcular Tropoints — apenas admin, apenas MIX */}
-                                    {(session?.user as any)?.isAdmin && (currentMatch?.source || currentMatch?.gameMode || '').toLowerCase().includes('mix') && (
+                                    {/* Botão Recalcular Tropoints — apenas admin, para fontes válidas (MIX, Manual, Local, Leetify) */}
+                                    {(session?.user as any)?.isAdmin && (['mix', 'manual', 'demo', 'local', 'demo-analyzer', 'leetify'].some(s => (currentMatch?.source || currentMatch?.gameMode || '').toLowerCase().includes(s))) && (
                                         <button
                                             onClick={handleRecalculateTropoints}
                                             disabled={isRecalculating}

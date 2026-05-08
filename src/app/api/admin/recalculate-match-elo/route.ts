@@ -19,9 +19,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
     }
 
-    const { matchId } = await req.json();
+    let { matchId } = await req.json();
     if (!matchId) {
         return NextResponse.json({ error: 'matchId obrigatório' }, { status: 400 });
+    }
+
+    // Fallback para IDs com sufixo (ex: demo_HASH_STEAMID -> demo_HASH)
+    if (matchId.startsWith('demo_')) {
+        const parts = matchId.split('_');
+        if (parts.length >= 3) {
+            matchId = `${parts[0]}_${parts[1]}`;
+        }
     }
 
     try {

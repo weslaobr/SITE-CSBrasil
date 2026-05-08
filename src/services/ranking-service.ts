@@ -81,9 +81,16 @@ export async function calculateMatchTropoints(matchId: string): Promise<Calculat
         let newPoints = 0;
         let newLevel = 1;
 
-        if (p.userId) {
+        // Tentar encontrar o usuário no sistema (seja via userId já linkado ou via SteamId)
+        let userId = p.userId;
+        if (!userId && p.steamId) {
+            const linkedUser = await prisma.user.findUnique({ where: { steamId: String(p.steamId) } });
+            if (linkedUser) userId = linkedUser.id;
+        }
+
+        if (userId) {
             // Buscar saldo atual do usuário
-            const user = await prisma.user.findUnique({ where: { id: p.userId } });
+            const user = await prisma.user.findUnique({ where: { id: userId } });
             if (user) {
                 const diff = newEloChange - oldEloChange;
                 const currentPoints = user.rankingPoints ?? 500;
@@ -94,7 +101,7 @@ export async function calculateMatchTropoints(matchId: string): Promise<Calculat
                 newLevel = nLevel;
 
                 await prisma.user.update({
-                    where: { id: p.userId },
+                    where: { id: userId },
                     data: { 
                         rankingPoints: newPoints, 
                         mixLevel: newLevel 

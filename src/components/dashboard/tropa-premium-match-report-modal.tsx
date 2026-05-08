@@ -108,10 +108,11 @@ const TropaPremiumMatchReportModal: React.FC<Props> = ({ matchId, isOpen, onClos
         if (!matchId || recalculating) return;
         setRecalculating(true);
         try {
-            await axios.post('/api/admin/recalculate-match-elo', { matchId });
+            const effectiveId = match?.match_id || matchId;
+            await axios.post('/api/admin/recalculate-match-elo', { matchId: effectiveId });
             toast.success("Tropoints recalculados com sucesso!");
             // Recarregar dados da partida
-            const r = await axios.get(`/api/match/${matchId}${userSteamId ? `?profileSteamId=${userSteamId}` : ''}`);
+            const r = await axios.get(`/api/match/${effectiveId}${userSteamId ? `?profileSteamId=${userSteamId}` : ''}`);
             setMatch(r.data);
         } catch (e: any) {
             toast.error(e.response?.data?.error || "Erro ao recalcular elo");
