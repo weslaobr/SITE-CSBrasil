@@ -125,6 +125,17 @@ export async function DELETE(req: NextRequest) {
             where: { id }
         });
 
+        // 4. NOVO: Deletar resquícios nas tabelas do analisador (tracker_*)
+        // Isso evita que informações fiquem duplicadas ao re-importar a mesma demo
+        try {
+            await (prisma as any).tracker_matches.delete({
+                where: { match_id: id }
+            });
+            console.log(`[Admin Delete] Tracker records cleaned up for match ${id}`);
+        } catch (trackerErr) {
+            // Pode não existir se a partida for do Leetify, então ignoramos se falhar
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("[Admin Matches DELETE] Error:", error);

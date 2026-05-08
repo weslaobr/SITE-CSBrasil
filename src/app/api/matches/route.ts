@@ -30,6 +30,13 @@ export async function GET(req: NextRequest) {
             where: { userId },
             orderBy: { matchDate: 'desc' }
         });
+
+        const userSteamId = (session.user as any)?.steamId || '';
+        const globalMatchPlayers = await prisma.globalMatchPlayer.findMany({
+            where: { steamId: userSteamId },
+            include: { GlobalMatch: true },
+            orderBy: { GlobalMatch: { matchDate: 'desc' } }
+        });
         
         // ── CÁLCULO AUTOMÁTICO DE TROPOINTS (LISTA) ──────────────────────────
         // Para partidas MIX/Locais que ainda estão com 0 pontos, calculamos agora.
@@ -228,8 +235,30 @@ export async function GET(req: NextRequest) {
             };
         });
 
-        // Merge and sort
-        const allMatches = [...matches, ...formattedGlobalMatches].sort((a, b) => 
+        // Merge and deduplicate by externalId or ID
+        const allMatchesMap = new Map<string, any>();
+        
+        // Process global matches first (they are usually richer/local)
+        formattedGlobalMatches.forEach(m => {
+            const key = m.externalId || m.id;
+            allMatchesMap.set(key, m);
+        });
+
+        // Add legacy matches only if they don't already exist
+        matches.forEach(m => {
+            const key = m.externalId || m.id;
+            if (!allMatchesMap.has(key)) {
+                allMatchesMap.set(key, m);
+            } else {
+                // If it exists, we might want to merge some metadata
+                const existing = allMatchesMap.get(key);
+                if (m.source === 'Faceit' || m.source === 'GamersClub') {
+                    existing.source = m.source;
+                }
+            }
+        });
+
+        const allMatches = Array.from(allMatchesMap.values()).sort((a, b) => 
             new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime()
         );
 
