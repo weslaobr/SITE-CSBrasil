@@ -20,61 +20,66 @@ async function fetchAvatars(stats: any[]) {
     
     const steamIds = stats
         .map((p: any) => p.steam64_id || p.player_id || p.steamId)
-        .filter(Boolean);
+        .filter(sid => sid && typeof sid === 'string' && /^\d+$/.test(sid));
 
     if (steamIds.length > 0) {
         try {
             const { getMultiplePlayerProfiles } = await import('@/services/steam-service');
             const steamProfiles = await getMultiplePlayerProfiles(steamIds);
             
-            // Persistir atualizações no Banco de Dados
-            const { prisma } = await import('@/lib/prisma');
-            await Promise.all(steamProfiles.map(async (sp: any) => {
-                const sid = sp.steamid;
-                const name = sp.personaname;
-                const avatar = sp.avatarfull;
+            if (steamProfiles && steamProfiles.length > 0) {
+                // Persistir atualizações no Banco de Dados de forma assíncrona (não bloqueante para a resposta da API)
+                Promise.all(steamProfiles.map(async (sp: any) => {
+                    const sid = sp.steamid;
+                    const name = sp.personaname;
+                    const avatar = sp.avatarfull;
 
-                // 1. Atualizar tracker_players (usado pelo analisador de demos)
-                await (prisma as any).tracker_players.upsert({
-                    where: { steamid64: BigInt(sid) },
-                    update: { personaname: name, avatar_url: avatar, last_updated: new Date() },
-                    create: { steamid64: BigInt(sid), personaname: name, avatar_url: avatar }
-                }).catch(() => {});
+                    try {
+                        // 1. Atualizar tracker_players (usado pelo analisador de demos)
+                        await (prisma as any).tracker_players.upsert({
+                            where: { steamid64: BigInt(sid) },
+                            update: { personaname: name, avatar_url: avatar, last_updated: new Date() },
+                            create: { steamid64: BigInt(sid), personaname: name, avatar_url: avatar }
+                        });
 
-                // 2. Atualizar Player (usado no ranking)
-                await (prisma.player as any).updateMany({
-                    where: { steamId: sid },
-                    data: { steamName: name, steamAvatar: avatar, updatedAt: new Date() }
-                }).catch(() => {});
+                        // 2. Atualizar Player (usado no ranking)
+                        await prisma.player.updateMany({
+                            where: { steamId: sid },
+                            data: { steamName: name, steamAvatar: avatar, updatedAt: new Date() }
+                        });
 
-                // 3. Atualizar User (se for usuário registrado)
-                await prisma.user.updateMany({
-                    where: { steamId: sid },
-                    data: { name: name, image: avatar }
-                }).catch(() => {});
-            }));
+                        // 3. Atualizar User (se for usuário registrado)
+                        await prisma.user.updateMany({
+                            where: { steamId: sid },
+                            data: { name: name, image: avatar }
+                        });
+                    } catch (dbErr) {
+                        // Silently fail DB updates to not break the match view
+                    }
+                })).catch(e => console.warn("[FetchAvatars] Background sync error:", e));
 
-            // Criar mapa para retorno rápido
-            const avatarMap = new Map();
-            steamProfiles.forEach((profile: any) => {
-                avatarMap.set(profile.steamid, {
-                    avatar: profile.avatarfull,
-                    name: profile.personaname
+                // Criar mapa para retorno rápido
+                const avatarMap = new Map();
+                steamProfiles.forEach((profile: any) => {
+                    avatarMap.set(profile.steamid, {
+                        avatar: profile.avatarfull,
+                        name: profile.personaname
+                    });
                 });
-            });
 
-            return stats.map((p: any) => {
-                const sid = p.steam64_id || p.player_id || p.steamId;
-                const steamData = avatarMap.get(sid);
-                
-                return {
-                    ...p,
-                    avatar_url: steamData?.avatar || p.avatar_url,
-                    nickname: steamData?.name || p.name
-                };
-            });
+                return stats.map((p: any) => {
+                    const sid = p.steam64_id || p.player_id || p.steamId;
+                    const steamData = avatarMap.get(sid);
+                    
+                    return {
+                        ...p,
+                        avatar_url: steamData?.avatar || p.avatar_url,
+                        nickname: steamData?.name || p.name || p.nickname || 'Jogador'
+                    };
+                });
+            }
         } catch (steamError) {
-            console.error("Error fetching and persisting Steam avatars:", steamError);
+            console.error("Error in fetchAvatars:", steamError);
         }
     }
     return stats;
@@ -833,22 +838,64 @@ export async function GET(
             return NextResponse.json(data);
         } catch (leetifyError: any) {
             console.warn(`[LeetifyFetch] Partida ${leetifyMatchId} falhou no Leetify: ${leetifyError.message}`);
+            
+            // Fallback para qualquer dado que tenhamos localmente (Global ou Legacy)
+            const m = localMatch || legacyMatch;
+            if (m) {
+                const scoreA = (m as any).scoreA ?? (m as any).score?.split('-')[0] ?? 0;
+                const scoreB = (m as any).scoreB ?? (m as any).score?.split('-')[1] ?? 0;
+                const date = (m as any).matchDate || (m as any).createdAt || new Date();
+
+                return NextResponse.json({
+                    match_id: m.id,
+                    status: 'partial',
+                    map_name: (m as any).mapName || (m as any).map_name || 'Desconhecido',
+                    game_mode: (m as any).gameMode || (m as any).source || 'Competitive',
+                    match_date: date instanceof Date ? date.toISOString() : new Date(date).toISOString(),
+                    team_2_score: parseInt(String(scoreA)) || 0,
+                    team_3_score: parseInt(String(scoreB)) || 0,
+                    result: (m as any).result?.toLowerCase() || 'unknown',
+                    stats: (m as any).GlobalMatchPlayer ? (m as any).GlobalMatchPlayer.map((p: any) => ({
+                        steam64_id: p.steamId,
+                        kills: p.kills,
+                        deaths: p.deaths,
+                        assists: p.assists,
+                        adr: p.adr,
+                        is_user: profileSteamId === p.steamId
+                    })) : [{
+                        steam64_id: profileSteamId || '',
+                        name: 'Você',
+                        kills: (m as any).kills || 0,
+                        deaths: (m as any).deaths || 0,
+                        assists: (m as any).assists || 0,
+                        is_user: true
+                    }]
+                });
+            }
+
             if (leetifyError.response?.status === 404) {
                  return NextResponse.json({ error: "Partida não encontrada no Leetify." }, { status: 404 });
             }
-            // Se for outro erro (como 500), retornamos um erro amigável em vez de crashar
+
             return NextResponse.json({ 
-                error: "Erro ao buscar dados no Leetify", 
-                message: leetifyError.message,
-                status: leetifyError.response?.status 
-            }, { status: leetifyError.response?.status || 500 });
+                match_id: matchId,
+                status: 'error',
+                error: "Erro no serviço externo", 
+                message: "O Leetify está instável ou retornou erro para esta partida. Tente novamente em instantes.",
+                stats: []
+            });
         }
     } catch (error: any) {
-        if (error.response?.status === 404) {
-            return NextResponse.json({ error: "Partida não encontrada no Banco nem no Leetify." }, { status: 404 });
-        }
-        console.error(`Error fetching match ${matchId}:`, error);
-        return NextResponse.json({ error: "Failed to fetch match details", message: error.message, stack: error.stack }, { status: 500 });
+        console.error(`[GET Match Detail Error] matchId=${matchId}:`, error);
+        
+        // Fallback final de emergência para não quebrar o modal
+        return NextResponse.json({ 
+            match_id: matchId,
+            status: 'error',
+            error: "Erro interno no servidor",
+            message: error.message,
+            stats: []
+        });
     }
 }
 

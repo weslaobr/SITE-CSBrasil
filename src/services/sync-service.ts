@@ -172,14 +172,14 @@ export async function syncUserMatches(steamId: string) {
                 }
             }
 
-            // Trigger auto-import for NEW matches with demos
-            const existingMatch = await prisma.match.findUnique({
-                where: { externalId }
+            // Trigger auto-import for matches that don't have rich data yet
+            const hasRichData = await prisma.globalMatch.findUnique({
+                where: { id: m.id }
             });
 
-            if (!existingMatch && demoUrl) {
+            if (!hasRichData && demoUrl) {
                 const pythonUrl = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
-                console.log(`[AutoSync] Triggering import for new match ${m.id} (${detectedGameMode})`);
+                console.log(`[AutoSync] Triggering analysis for match ${m.id} (${detectedGameMode})`);
                 axios.post(`${pythonUrl}/api/importer/import-match`, {
                     steamid: user.steamId,
                     auth_code: "auto-sync",
