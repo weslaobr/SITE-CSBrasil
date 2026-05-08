@@ -5,12 +5,7 @@ import { syncUserMatches, syncUserStats } from "@/services/sync-service";
 
 export async function POST(req: NextRequest) {
     try {
-        const session = await getServerSession(getAuthOptions(req));
-
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
+        // Allow public profile updates (no session check needed for public sync)
         const { steamId } = await req.json();
 
         if (!steamId) {

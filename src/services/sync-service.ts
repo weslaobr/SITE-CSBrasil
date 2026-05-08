@@ -6,6 +6,20 @@ const LEETIFY_API_KEY = process.env.LEETIFY_API_KEY || '4549d73d-8a0d-40ff-9051-
 const LEETIFY_BASE_URL = 'https://api-public.cs-prod.leetify.com';
 
 export async function syncUserMatches(steamId: string) {
+    if (!steamId) throw new Error("SteamID is required");
+
+    // 1. TropaCS Go Demo Analyzer Sync (Sempre aciona se houver SteamID)
+    try {
+        const pythonApiUrl = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
+        console.log(`[SyncService] Triggering Go Demo Analyzer sync for ${steamId} at ${pythonApiUrl}`);
+        // Não usamos await aqui para não travar o resto do sync se o analyzer demorar
+        axios.post(`${pythonApiUrl}/api/sync/user`, { steamId }, { timeout: 15000 })
+            .then(res => console.log(`[SyncService] Go Analyzer response: ${res.status}`))
+            .catch(e => console.warn(`[SyncService] Go Analyzer sync failed: ${e.message}`));
+    } catch (e: any) {
+        console.warn(`[SyncService] Error initiating Go Analyzer sync: ${e.message}`);
+    }
+
     const user = await prisma.user.findUnique({
         where: { steamId },
         select: {
@@ -16,8 +30,9 @@ export async function syncUserMatches(steamId: string) {
         }
     });
 
-    if (!user || !user.steamId) {
-        throw new Error("User not found or has no SteamID linked");
+    if (!user) {
+        console.log(`[SyncService] User ${steamId} not found in local database, skipping Leetify detail sync.`);
+        return 0;
     }
 
     let syncedCount = 0;
@@ -218,15 +233,6 @@ export async function syncUserMatches(steamId: string) {
         }
     } catch (e) {
         console.error("[SyncService] Leetify sync failed:", e);
-    }
-
-    // TropaCS Go Demo Analyzer Sync
-    try {
-        const pythonApiUrl = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
-        await axios.post(`${pythonApiUrl}/api/sync/user`, { steamId }, { timeout: 10000 });
-        console.log(`[SyncService] Triggered Go Demo Analyzer sync for ${steamId}`);
-    } catch (e: any) {
-        console.warn(`[SyncService] Go Demo Analyzer sync failed for ${steamId}: ${e.message}`);
     }
 
     return syncedCount;
