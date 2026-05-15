@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getAuthOptions } from '@/lib/auth';
+import axios from 'axios';
 
 export async function POST(req: NextRequest) {
     try {
@@ -20,33 +21,35 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Comando não fornecido' }, { status: 400 });
         }
 
-        const apiKey = process.env.PTERODACTYL_API_KEY;
-        const serverId = process.env.PTERODACTYL_SERVER_ID;
-        const panelUrl = process.env.PTERODACTYL_PANEL_URL;
+        const dathostApiKey = process.env.DATHOST_API_KEY;
+        const dathostServerId = process.env.DATHOST_SERVER_ID;
 
-        if (!apiKey || !serverId || !panelUrl) {
-            return NextResponse.json({ error: 'Configuração incompleta' }, { status: 500 });
+        if (!dathostApiKey || dathostApiKey === 'COLOQUE_SUA_API_KEY_DA_DATHOST_AQUI') {
+            return NextResponse.json({ error: 'API Key da DatHost não configurada no .env' }, { status: 500 });
         }
 
-        const response = await fetch(`${panelUrl}/api/client/servers/${serverId}/command`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ command })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            return NextResponse.json({
-                error: `Erro ao enviar comando: ${response.status}`,
-                details: errorData
-            }, { status: response.status });
+        try {
+            await axios.post(
+                `https://dathost.net/api/0.1/game-servers/${dathostServerId}/console`,
+                `line=${encodeURIComponent(command)}`,
+                {
+                    auth: {
+                        username: dathostApiKey,
+                        password: ''
+                    },
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                }
+            );
+            return NextResponse.json({ success: true });
+        } catch (err: any) {
+            console.error('[DATHOST_COMMAND_ERROR]', err.response?.data || err.message);
+            return NextResponse.json({ 
+                error: 'Erro ao enviar comando para DatHost', 
+                details: err.response?.data || err.message 
+            }, { status: 500 });
         }
-
-        return NextResponse.json({ success: true });
 
     } catch (error: any) {
         console.error('[SERVER_COMMAND_API]', error);

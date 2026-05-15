@@ -14,14 +14,14 @@ export default function ServidorPage() {
     const [mounted, setMounted] = useState(false);
     const [countdown, setCountdown] = useState(5);
     const [autoConnect, setAutoConnect] = useState(true);
-    const serverIp = '103.14.27.41:27272';
-    const serverPassword = '091867';
-    const connectUrl = `steam://connect/${serverIp}/${serverPassword}`;
+    const serverIp = 'tropacs.globalelite.club:26631';
+    const serverPassword = ''; // Removido conforme solicitação de novo IP
+    const connectUrl = `steam://connect/${serverIp}`;
     const [copied, setCopied] = useState(false);
     const [status, setStatus] = useState<'online' | 'offline' | 'loading'>('loading');
 
     const handleCopy = () => {
-        const command = `connect ${serverIp}; password ${serverPassword}`;
+        const command = serverPassword ? `connect ${serverIp}; password ${serverPassword}` : `connect ${serverIp}`;
         navigator.clipboard.writeText(command);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -132,7 +132,7 @@ export default function ServidorPage() {
                                             {copied ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
                                         </button>
                                     </div>
-                                    <p className="text-[9px] text-zinc-600 font-bold uppercase mt-2">Senha: {serverPassword}</p>
+                                    {serverPassword && <p className="text-[9px] text-zinc-600 font-bold uppercase mt-2">Senha: {serverPassword}</p>}
                                 </div>
                             </div>
 

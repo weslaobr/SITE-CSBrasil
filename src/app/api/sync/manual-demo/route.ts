@@ -13,10 +13,18 @@ export async function POST(req: NextRequest) {
         }
 
         const data = await req.json();
-        const { url } = data;
+        const { url, filePath } = data;
 
-        if (!url || (!url.startsWith('http') && !url.startsWith('CSGO-'))) {
-            return NextResponse.json({ error: "URL ou Código de compartilhamento inválido." }, { status: 400 });
+        let finalUrl = url;
+
+        if (filePath) {
+            const siteUrl = process.env.SITE_URL || 'https://www.tropacs.com.br';
+            const secret = process.env.SYNC_SECRET_TOKEN;
+            finalUrl = `${siteUrl}/api/server/demos/download?file=${encodeURIComponent(filePath)}&token=${secret}`;
+        }
+
+        if (!finalUrl || (!finalUrl.startsWith('http') && !finalUrl.startsWith('CSGO-'))) {
+            return NextResponse.json({ error: "URL, Caminho ou Código de compartilhamento inválido." }, { status: 400 });
         }
 
         const userId = (session.user as any).id;
@@ -32,7 +40,7 @@ export async function POST(req: NextRequest) {
         const response = await axios.post(`${pythonApiUrl}/api/importer/import-match`, {
             steamid: user?.steamId || "0",
             auth_code: "manual",
-            share_code: url
+            share_code: finalUrl
         }, { timeout: 15000 });
 
         return NextResponse.json({ success: true, python_response: response.data });

@@ -133,8 +133,8 @@ const GradientChart = ({ data, dataKey, color, unit }: any) => (
 // Main Component
 // ─────────────────────────────────────────────
 export function ServerDashboard() {
-    const SERVER_IP = '103.14.27.41:27272';
-    const SERVER_PASS = '091867';
+    const SERVER_IP = 'tropacs.globalelite.club:26631';
+    const SERVER_PASS = '';
 
     const [resources, setResources] = useState<Resources | null>(null);
     const [history, setHistory] = useState<any[]>([]);
@@ -470,7 +470,8 @@ export function ServerDashboard() {
     };
 
     const copyIp = () => {
-        navigator.clipboard.writeText(`connect ${SERVER_IP}; password ${SERVER_PASS}`);
+        const cmd = SERVER_PASS ? `connect ${SERVER_IP}; password ${SERVER_PASS}` : `connect ${SERVER_IP}`;
+        navigator.clipboard.writeText(cmd);
         setCopiedIp(true);
         setTimeout(() => setCopiedIp(false), 2000);
     };
@@ -605,13 +606,15 @@ export function ServerDashboard() {
                             <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500">Conexão ao Servidor</h3>
                         </div>
                         <div className="bg-black/30 rounded-xl p-3 flex items-center justify-between gap-2">
-                            <code className="text-[11px] text-yellow-400 font-mono truncate">connect {SERVER_IP}; password {SERVER_PASS}</code>
+                            <code className="text-[11px] text-yellow-400 font-mono truncate">
+                                connect {SERVER_IP}{SERVER_PASS ? `; password ${SERVER_PASS}` : ''}
+                            </code>
                             <button onClick={copyIp} className="flex-shrink-0 p-1.5 hover:bg-white/5 rounded-lg transition-all text-zinc-500 hover:text-yellow-500">
                                 {copiedIp ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
                             </button>
                         </div>
                         <a
-                            href={`steam://connect/${SERVER_IP}/${SERVER_PASS}`}
+                            href={SERVER_PASS ? `steam://connect/${SERVER_IP}/${SERVER_PASS}` : `steam://connect/${SERVER_IP}`}
                             className="flex items-center justify-center gap-2 w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
                         >
                             Conectar via Steam
@@ -643,7 +646,17 @@ export function ServerDashboard() {
                             <div className="flex flex-col items-center justify-center h-full gap-3 opacity-30">
                                 <Terminal size={32} className="text-zinc-600" />
                                 <p className="text-zinc-600 text-xs uppercase tracking-widest font-bold">Aguardando logs do servidor...</p>
-                                {wsStatus === 'disconnected' && <p className="text-red-500 text-[10px]">WebSocket desconectado. Reconectando em breve...</p>}
+                                {wsStatus === 'disconnected' && (
+                                    <div className="text-center space-y-2 mt-4">
+                                        <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest">Console Indisponível</p>
+                                        <p className="text-zinc-500 text-[9px] max-w-xs mx-auto leading-relaxed">
+                                            Para usar o console em tempo real com a DatHost, você precisa configurar a <code className="text-yellow-500 bg-yellow-500/5 px-1 rounded">DATHOST_API_KEY</code> no arquivo .env.
+                                        </p>
+                                        <p className="text-zinc-600 text-[9px] italic">
+                                            Use a nova aba <b>"Arquivos"</b> para configurar o servidor via FTP enquanto isso.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         ) : logs.map((line, i) => (
                             <div key={i} className={`${colorLog(line)} px-2 py-0.5 rounded hover:bg-white/5 transition-all border-l-2 border-transparent hover:border-yellow-500/20`}>

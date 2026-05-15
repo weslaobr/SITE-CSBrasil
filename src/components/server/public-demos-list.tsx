@@ -48,20 +48,8 @@ export function PublicDemosList() {
     };
 
     const handleDownload = async (file: DemoFile) => {
-        setDownloadingFile(file.name);
-        try {
-            const res = await fetch(`/api/server/demos/download?file=${encodeURIComponent(file.path)}`);
-            if (!res.ok) throw new Error('Erro ao gerar link de download');
-            
-            const data = await res.json();
-            if (data.downloadUrl) {
-                window.open(data.downloadUrl, '_blank');
-            }
-        } catch (err: any) {
-            alert(err.message);
-        } finally {
-            setDownloadingFile(null);
-        }
+        // Direct link to the download API which now streams the file
+        window.location.href = `/api/server/demos/download?file=${encodeURIComponent(file.path)}`;
     };
 
     const handleProcess = async (file: DemoFile) => {
@@ -69,18 +57,11 @@ export function PublicDemosList() {
         setProcessingStatus(prev => ({ ...prev, [file.name]: 'loading' }));
         
         try {
-            // 1. Get signed download URL
-            const downloadRes = await fetch(`/api/server/demos/download?file=${encodeURIComponent(file.path)}`);
-            if (!downloadRes.ok) throw new Error('Erro ao obter link da demo');
-            const downloadData = await downloadRes.json();
-            
-            if (!downloadData.downloadUrl) throw new Error('Link de download não gerado');
-
-            // 2. Send to processor
+            // Send to sync API which will handle the internal download URL
             const res = await fetch('/api/sync/manual-demo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: downloadData.downloadUrl }),
+                body: JSON.stringify({ filePath: file.path }),
             });
 
             if (!res.ok) {

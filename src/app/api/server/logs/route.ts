@@ -1,8 +1,7 @@
-
 import { NextResponse } from 'next/server';
-import WebSocket from 'ws';
+import axios from 'axios';
 
-// Persist logs in memory for 15s cache
+// Persist logs in memory for caching
 let cachedLogs: string[] = [];
 let lastFetch = 0;
 
@@ -12,40 +11,28 @@ export async function GET() {
     // Refresh every 5s
     if (now - lastFetch > 5000) {
         lastFetch = now;
-        const newLogs: string[] = [];
         
-        try {
-            const authRes = await fetch(`${process.env.PTERODACTYL_PANEL_URL}/api/client/servers/${process.env.PTERODACTYL_SERVER_ID}/websocket`, {
-                headers: { 'Authorization': `Bearer ${process.env.PTERODACTYL_API_KEY}` }
-            });
-            const { data } = await authRes.json();
+        const dathostApiKey = process.env.DATHOST_API_KEY;
+        const dathostServerId = process.env.DATHOST_SERVER_ID;
 
-            const ws = new WebSocket(data.socket);
-            
-            await new Promise((resolve) => {
-                ws.on('open', () => {
-                    ws.send(JSON.stringify({ event: 'auth', args: [data.token] }));
-                    ws.send(JSON.stringify({ event: 'send command', args: ['status'] }));
-                });
-
-                ws.on('message', (buf) => {
-                    try {
-                        const msg = JSON.parse(buf.toString());
-                        if (msg.event === 'console output') {
-                            newLogs.push(msg.args[0]);
+        if (dathostApiKey && dathostApiKey !== 'COLOQUE_SUA_API_KEY_DA_DATHOST_AQUI') {
+            try {
+                const response = await axios.get(
+                    `https://dathost.net/api/0.1/game-servers/${dathostServerId}/console`,
+                    {
+                        auth: {
+                            username: dathostApiKey,
+                            password: ''
                         }
-                    } catch (e) {}
-                });
-
-                // Stay for 3s then return only NEW logs
-                setTimeout(() => {
-                    ws.close();
-                    if (newLogs.length > 0) cachedLogs = newLogs;
-                    resolve(true);
-                }, 3000);
-            });
-        } catch (e) {
-            console.error("Erro no Túnel:", e);
+                    }
+                );
+                
+                if (response.data && response.data.lines) {
+                    cachedLogs = response.data.lines;
+                }
+            } catch (err: any) {
+                console.error('[DATHOST_LOGS_ERROR]', err.message);
+            }
         }
     }
 

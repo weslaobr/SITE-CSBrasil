@@ -1,58 +1,78 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getAuthOptions } from '@/lib/auth';
+import * as ftp from 'basic-ftp';
+import { Readable } from 'stream';
 
 export async function GET(req: NextRequest) {
+    const client = new ftp.Client();
+    
     try {
         const session = await getServerSession(getAuthOptions(req));
-
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Não autorizado. Faça login com a Steam.' }, { status: 401 });
-        }
-
         const { searchParams } = new URL(req.url);
         const filePath = searchParams.get('file');
+        const token = searchParams.get('token');
+
+        const isValidToken = token && token === process.env.SYNC_SECRET_TOKEN;
+
+        if (!session?.user && !isValidToken) {
+            return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+        }
 
         if (!filePath) {
-            return NextResponse.json({ error: 'Caminho do arquivo não fornecido' }, { status: 400 });
+            return NextResponse.json({ error: 'Arquivo não especificado.' }, { status: 400 });
         }
 
-        const apiKey = process.env.PTERODACTYL_API_KEY;
-        const serverId = process.env.PTERODACTYL_SERVER_ID;
-        const panelUrl = process.env.PTERODACTYL_PANEL_URL;
+        const host = process.env.FTP_HOST;
+        const port = parseInt(process.env.FTP_PORT || '21');
+        const user = process.env.FTP_USER;
+        const password = process.env.FTP_PASS;
 
-        if (!apiKey || !serverId || !panelUrl) {
-            return NextResponse.json({ error: 'Configuração incompleta' }, { status: 500 });
+        if (!host || !user || !password) {
+            return NextResponse.json({ error: 'Configuração de FTP incompleta.' }, { status: 500 });
         }
 
-        // Pterodactyl API: GET /api/client/servers/{server}/files/download?file={path}
-        const url = `${panelUrl}/api/client/servers/${serverId}/files/download?file=${encodeURIComponent(filePath)}`;
+        await client.access({ host, user, password, port, secure: false });
 
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Accept': 'application/json',
-            },
-            cache: 'no-store'
+        // We'll stream the file directly to the response
+        // Note: Next.js App Router response can take a ReadableStream
+        
+        const fileName = filePath.split('/').pop() || 'demo.dem';
+        
+        // basic-ftp downloadToStream returns a promise that resolves when done
+        // We need a way to get a readable stream.
+        // We can use a PassThrough stream.
+        const { PassThrough } = await import('stream');
+        const passThrough = new PassThrough();
+        
+        // Start the download in background
+        client.downloadTo(passThrough, filePath).finally(() => {
+            client.close();
         });
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            return NextResponse.json({
-                error: `Erro ao gerar link de download`,
-                details: errorData
-            }, { status: response.status });
-        }
+        // Convert Node Readable to Web ReadableStream
+        const webStream = new ReadableStream({
+            start(controller) {
+                passThrough.on('data', (chunk) => controller.enqueue(chunk));
+                passThrough.on('end', () => controller.close());
+                passThrough.on('error', (err) => controller.error(err));
+            },
+            cancel() {
+                passThrough.destroy();
+                client.close();
+            }
+        });
 
-        const data = await response.json();
-        
-        // Retorna a URL assinada para o frontend
-        return NextResponse.json({ 
-            downloadUrl: data.attributes.url 
+        return new NextResponse(webStream, {
+            headers: {
+                'Content-Type': 'application/octet-stream',
+                'Content-Disposition': `attachment; filename="${fileName}"`,
+            },
         });
 
     } catch (error: any) {
-        console.error('[SERVER_DEMO_DOWNLOAD]', error);
-        return NextResponse.json({ error: 'Erro interno', message: error.message }, { status: 500 });
+        console.error('[SERVER_DEMO_DOWNLOAD_FTP]', error);
+        client.close();
+        return NextResponse.json({ error: 'Erro ao baixar demo via FTP', message: error.message }, { status: 500 });
     }
 }

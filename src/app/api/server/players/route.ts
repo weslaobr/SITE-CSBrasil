@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 import dgram from 'dgram';
 
 export async function GET() {
-    const IP = '103.14.27.41';
-    const PORT = 27272;
+    const IP = 'tropacs.globalelite.club';
+    const PORT = 26631;
 
     return new Promise((resolve) => {
         const client = dgram.createSocket('udp4');
