@@ -21,11 +21,12 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Sinal inválido' }, { status: 400 });
         }
 
+        const dathostEmail = process.env.DATHOST_EMAIL;
         const dathostApiKey = process.env.DATHOST_API_KEY;
         const dathostServerId = process.env.DATHOST_SERVER_ID;
 
-        if (!dathostApiKey || dathostApiKey === 'COLOQUE_SUA_API_KEY_DA_DATHOST_AQUI') {
-            return NextResponse.json({ error: 'API Key da DatHost não configurada.' }, { status: 500 });
+        if (!dathostEmail || !dathostApiKey || dathostApiKey === 'COLOQUE_SUA_API_KEY_DA_DATHOST_AQUI') {
+            return NextResponse.json({ error: 'Credenciais da DatHost não configuradas.' }, { status: 500 });
         }
 
         try {
@@ -35,8 +36,8 @@ export async function POST(req: NextRequest) {
                 {},
                 {
                     auth: {
-                        username: dathostApiKey,
-                        password: ''
+                        username: dathostEmail,
+                        password: dathostApiKey
                     }
                 }
             );

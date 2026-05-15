@@ -16,10 +16,11 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
         }
 
+        const dathostEmail = process.env.DATHOST_EMAIL;
         const dathostApiKey = process.env.DATHOST_API_KEY;
         const dathostServerId = process.env.DATHOST_SERVER_ID;
 
-        if (!dathostApiKey || dathostApiKey === 'COLOQUE_SUA_API_KEY_DA_DATHOST_AQUI') {
+        if (!dathostEmail || !dathostApiKey || dathostApiKey === 'COLOQUE_SUA_API_KEY_DA_DATHOST_AQUI') {
             return NextResponse.json({
                 attributes: {
                     current_state: 'offline',
@@ -33,8 +34,8 @@ export async function GET(req: NextRequest) {
                 `https://dathost.net/api/0.1/game-servers/${dathostServerId}`,
                 {
                     auth: {
-                        username: dathostApiKey,
-                        password: ''
+                        username: dathostEmail,
+                        password: dathostApiKey
                     }
                 }
             );

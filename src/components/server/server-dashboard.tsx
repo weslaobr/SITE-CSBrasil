@@ -156,6 +156,7 @@ export function ServerDashboard() {
     const [activeMode, setActiveMode] = useState<string | null>(null);
     const [serverControlTab, setServerControlTab] = useState<'modes' | 'maps' | 'controls' | 'config'>('modes');
     const [spectatorMessage, setSpectatorMessage] = useState("<font color='#ffb000'><b>★ TROPA DO CS2 ★</b></font><br/><font color='#ffffff' size='14'>www.tropacs.com.br</font>");
+    const [syncLoading, setSyncLoading] = useState(false);
 
     const consoleRef = useRef<HTMLDivElement>(null);
     const socketRef = useRef<WebSocket | null>(null);
@@ -439,6 +440,21 @@ export function ServerDashboard() {
             }
         } catch { alert('Erro de conexão'); }
         finally { setPowerLoading(null); }
+    };
+
+    const handleSync = async () => {
+        setSyncLoading(true);
+        try {
+            const res = await fetch('/api/server/sync', { method: 'POST' });
+            if (res.ok) {
+                alert('Arquivos sincronizados com sucesso! As alterações nos arquivos .cfg e .json foram aplicadas.');
+                setLogs(prev => [...prev.slice(-150), ">>> Arquivos sincronizados com DatHost."]);
+            } else {
+                const d = await res.json().catch(() => ({}));
+                alert(d.error || 'Falha ao sincronizar arquivos');
+            }
+        } catch { alert('Erro de conexão ao sincronizar'); }
+        finally { setSyncLoading(false); }
     };
 
     const sendCommandRaw = async (cmd: string) => {
@@ -1007,7 +1023,17 @@ export function ServerDashboard() {
                         {serverControlTab === 'config' && (
                             <div className="p-5 space-y-6">
                                 <div className="space-y-4">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40">Configurações Gerais</h4>
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40">Configurações Gerais</h4>
+                                        <button 
+                                            onClick={handleSync}
+                                            disabled={syncLoading}
+                                            className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white border border-blue-500/20 rounded-xl text-[9px] font-black uppercase transition-all disabled:opacity-50"
+                                        >
+                                            {syncLoading ? <RefreshCw size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                                            {syncLoading ? 'Sincronizando...' : 'Sincronizar Arquivos'}
+                                        </button>
+                                    </div>
                                     
                                     <div className="space-y-3">
                                         <div className="flex flex-col gap-1.5">
