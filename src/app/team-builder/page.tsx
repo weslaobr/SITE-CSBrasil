@@ -277,7 +277,14 @@ export default function TeamBuilderPage() {
     const [vetoTurn, setVetoTurn] = useState<"A" | "B">("A");
     const [vetoHistory, setVetoHistory] = useState<{ type: "ban" | "pick", map: string, team: "A" | "B" | "system" }[]>([]);
 
-    useEffect(() => {
+    // Registration States for new players
+    const [registerPlayerModal, setRegisterPlayerModal] = useState<{ isOpen: boolean; discordId: string; defaultNickname: string } | null>(null);
+    const [registerSteamId, setRegisterSteamId] = useState("");
+    const [registerNickname, setRegisterNickname] = useState("");
+    const [registerLoading, setRegisterLoading] = useState(false);
+    const [registerError, setRegisterError] = useState<string | null>(null);
+
+    const fetchDbPlayers = async () => {
         const fetchResenhaRanking = async () => {
             try {
                 const res = await fetch("/api/resenha/ranking");
@@ -289,30 +296,64 @@ export default function TeamBuilderPage() {
             }
         };
 
-        const fetchAll = async () => {
-            setLoading(true);
-            const [playersRes, resenhaRes] = await Promise.all([
-                fetch("/api/ranking"),
-                fetchResenhaRanking()
-            ]);
+        setLoading(true);
+        const [playersRes, resenhaRes] = await Promise.all([
+            fetch("/api/ranking"),
+            fetchResenhaRanking()
+        ]);
 
-            const playersData = await playersRes.json();
-            const playersList = playersData.players || playersData;
-            
-            if (Array.isArray(playersList)) {
-                const formatted = playersList.map(p => {
-                    const resenhaInfo = resenhaRes.find((r: any) => r.steamId === p.steamId);
-                    return {
-                        ...p,
-                        resenhaRating: resenhaInfo?.avgOverall || 5, // Default to 5 if no rating
-                        assignment: "unassigned" as const
-                    };
-                });
-                setDbPlayers(formatted);
+        const playersData = await playersRes.json();
+        const playersList = playersData.players || playersData;
+        
+        if (Array.isArray(playersList)) {
+            const formatted = playersList.map(p => {
+                const resenhaInfo = resenhaRes.find((r: any) => r.steamId === p.steamId);
+                return {
+                    ...p,
+                    resenhaRating: resenhaInfo?.avgOverall || 5, // Default to 5 if no rating
+                    assignment: "unassigned" as const
+                };
+            });
+            setDbPlayers(formatted);
+        }
+        setLoading(false);
+    };
+
+    const handleRegisterPlayerSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!registerPlayerModal) return;
+        setRegisterLoading(true);
+        setRegisterError(null);
+
+        try {
+            const res = await fetch("/api/admin/players/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    steamId: registerSteamId,
+                    discordId: registerPlayerModal.discordId,
+                    nickname: registerNickname
+                })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                await fetchDbPlayers();
+                setRegisterPlayerModal(null);
+                setRegisterSteamId("");
+                setRegisterNickname("");
+            } else {
+                setRegisterError(data.message || "Falha ao registrar jogador.");
             }
-            setLoading(false);
-        };
+        } catch (error: any) {
+            console.error("Error registering player:", error);
+            setRegisterError("Erro de conexão ao servidor.");
+        } finally {
+            setRegisterLoading(false);
+        }
+    };
 
+    useEffect(() => {
         const fetchMaps = async () => {
             try {
                 const res = await fetch("/api/admin/maps");
@@ -327,7 +368,7 @@ export default function TeamBuilderPage() {
             }
         };
 
-        fetchAll();
+        fetchDbPlayers();
         fetchMaps();
         fetchDiscordOnline();
 
@@ -873,26 +914,41 @@ export default function TeamBuilderPage() {
                                                     <div className="min-w-0">
                                                         <p className="font-black text-[10px] text-white truncate uppercase tracking-wider">{player.nickname}</p>
                                                         {isUnmatched && (
-                                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                                 <p className="text-[6.5px] text-yellow-500/90 font-mono font-black uppercase tracking-wider mb-0.5" title="Este usuário do Discord não está vinculado à Steam">
-                                                                     ⚠️ Não Vinculado
-                                                                 </p>
-                                                                 <select
-                                                                     onChange={(e) => {
-                                                                         const val = e.target.value;
-                                                                         if (val) handleLinkDiscord(member.username, val);
-                                                                     }}
-                                                                     className="bg-zinc-900 hover:bg-zinc-800 border border-white/10 hover:border-yellow-500/50 rounded-lg px-2 py-1 text-[10px] text-zinc-200 font-black tracking-wide focus:outline-none focus:ring-1 focus:ring-yellow-500 cursor-pointer transition-all duration-200 outline-none max-w-[120px] truncate"
-                                                                     defaultValue=""
-                                                                 >
-                                                                     <option value="" disabled className="bg-zinc-900 text-zinc-500 font-bold">Vincular...</option>
-                                                                     {dbPlayers.map(p => (
-                                                                         <option key={p.steamId} value={p.steamId} className="bg-zinc-900 text-zinc-200 font-bold py-1">
-                                                                             {p.nickname || p.steamName}
-                                                                         </option>
-                                                                     ))}
-                                                                 </select>
-                                                             </div>
+                                                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                                <p className="text-[6.5px] text-yellow-500/90 font-mono font-black uppercase tracking-wider" title="Este usuário do Discord não está vinculado à Steam">
+                                                                    ⚠️ Não Vinculado
+                                                                </p>
+                                                                <select
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value;
+                                                                        if (val) handleLinkDiscord(member.username, val);
+                                                                    }}
+                                                                    className="bg-zinc-900 hover:bg-zinc-800 border border-white/10 hover:border-yellow-500/50 rounded-lg px-2 py-1 text-[10px] text-zinc-200 font-black tracking-wide focus:outline-none focus:ring-1 focus:ring-yellow-500 cursor-pointer transition-all duration-200 outline-none max-w-[120px] truncate"
+                                                                    defaultValue=""
+                                                                >
+                                                                    <option value="" disabled className="bg-zinc-900 text-zinc-500 font-bold">Vincular...</option>
+                                                                    {dbPlayers.map(p => (
+                                                                        <option key={p.steamId} value={p.steamId} className="bg-zinc-900 text-zinc-200 font-bold py-1">
+                                                                            {p.nickname || p.steamName}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setRegisterNickname(member.nick || member.username);
+                                                                        setRegisterPlayerModal({
+                                                                            isOpen: true,
+                                                                            discordId: member.username,
+                                                                            defaultNickname: member.nick || member.username
+                                                                        });
+                                                                    }}
+                                                                    className="bg-yellow-500/10 hover:bg-yellow-500/25 border border-yellow-500/30 text-yellow-400 rounded-lg px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider transition-all duration-200 outline-none flex items-center gap-0.5 active:scale-95 cursor-pointer shrink-0"
+                                                                    title="Cadastrar novo jogador com esta conta do Discord"
+                                                                >
+                                                                    <span>+</span>
+                                                                    <span>Cadastrar</span>
+                                                                </button>
+                                                            </div>
                                                         )}
                                                         {member.channel_id ? (() => {
                                                             const voiceChannel = discordOnline.channels?.find(c => c.id === member.channel_id);
@@ -1666,6 +1722,102 @@ export default function TeamBuilderPage() {
 
                 </div>
             </div>
+
+            {/* ── CADASTRO DE JOGADOR MODAL ── */}
+            {registerPlayerModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+                    <div className="bg-zinc-950/90 border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative backdrop-blur-2xl animate-scale-up">
+                        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/5">
+                            <span className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse shadow-[0_0_8px_rgba(234,179,8,0.6)]" />
+                            <h3 className="text-yellow-500 font-black text-xs uppercase tracking-widest">
+                                Cadastrar Jogador
+                            </h3>
+                        </div>
+
+                        <form onSubmit={handleRegisterPlayerSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1.5">
+                                    Discord ID (Apelido)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={registerPlayerModal.discordId}
+                                    disabled
+                                    className="w-full bg-zinc-900/40 border border-white/5 rounded-xl px-3.5 py-2 text-zinc-500 text-xs font-semibold select-none cursor-not-allowed outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1.5">
+                                    Nome de Exibição
+                                </label>
+                                <input
+                                    type="text"
+                                    value={registerNickname}
+                                    onChange={(e) => setRegisterNickname(e.target.value)}
+                                    placeholder="Ex: PH, WESLAO..."
+                                    required
+                                    className="w-full bg-zinc-900/60 border border-white/10 hover:border-white/20 focus:border-yellow-500 rounded-xl px-3.5 py-2 text-white text-xs font-semibold focus:outline-none transition-all duration-200"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1.5">
+                                    SteamID64 (17 dígitos)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={registerSteamId}
+                                    onChange={(e) => setRegisterSteamId(e.target.value.replace(/\D/g, ''))}
+                                    placeholder="Ex: 76561198032908374"
+                                    required
+                                    maxLength={17}
+                                    pattern="\d{17}"
+                                    className="w-full bg-zinc-900/60 border border-white/10 hover:border-white/20 focus:border-yellow-500 rounded-xl px-3.5 py-2 text-white text-xs font-mono font-bold tracking-wide focus:outline-none transition-all duration-200"
+                                />
+                                <span className="block text-[6.5px] text-zinc-500 font-semibold mt-1">
+                                    Insira a SteamID64 numérica de 17 dígitos do jogador.
+                                </span>
+                            </div>
+
+                            {registerError && (
+                                <div className="p-2.5 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-wider rounded-xl text-center">
+                                    ⚠️ {registerError}
+                                </div>
+                            )}
+
+                            <div className="flex gap-2 justify-end pt-2 border-t border-white/5">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setRegisterPlayerModal(null);
+                                        setRegisterSteamId("");
+                                        setRegisterNickname("");
+                                        setRegisterError(null);
+                                    }}
+                                    className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-white/5 text-zinc-400 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={registerLoading}
+                                    className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 disabled:bg-zinc-800 text-black disabled:text-zinc-600 font-black uppercase tracking-wider text-[10px] rounded-xl shadow-lg shadow-yellow-500/10 hover:shadow-yellow-500/20 transition-all duration-200 active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                                >
+                                    {registerLoading ? (
+                                        <>
+                                            <span className="w-2.5 h-2.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                            <span>Cadastrando...</span>
+                                        </>
+                                    ) : (
+                                        <span>Cadastrar</span>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
