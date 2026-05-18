@@ -684,6 +684,7 @@ export default function TeamBuilderPage() {
         return found;
     };
 
+    const seenSteamIds = new Set<string>();
     const matchedOnlinePlayers = discordOnline.members
         .map(member => {
             const player = getMatchedPlayer(member);
@@ -705,7 +706,16 @@ export default function TeamBuilderPage() {
                 return { member, player: guestP, isAdded, isUnmatched: true };
             }
         })
-        .filter(item => item !== null) as { member: any, player: Player, isAdded: boolean, isUnmatched?: boolean }[];
+        .filter(item => item !== null)
+        .filter(item => {
+            if (item && !item.isUnmatched) {
+                if (seenSteamIds.has(item.player.steamId)) {
+                    return false;
+                }
+                seenSteamIds.add(item.player.steamId);
+            }
+            return true;
+        }) as { member: any, player: Player, isAdded: boolean, isUnmatched?: boolean }[];
 
     const availableDbPlayers = dbPlayers.filter(dbP => !selectedPlayers.some(sp => sp.steamId === dbP.steamId));
     const filteredDbPool = availableDbPlayers.filter(p => p.nickname.toLowerCase().includes(searchTerm.toLowerCase()));
