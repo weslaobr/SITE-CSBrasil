@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { getAuthOptions } from '@/lib/auth';
 import * as ftp from 'basic-ftp';
 import axios from 'axios';
+import { PassThrough } from 'stream';
 
 export async function GET(req: NextRequest) {
     try {
@@ -36,7 +37,6 @@ export async function GET(req: NextRequest) {
             try {
                 await client.access({ host: ftpHost, user: ftpUser, password: ftpPass, port: ftpPort, secure: false });
 
-                const { PassThrough } = await import('stream');
                 const passThrough = new PassThrough();
 
                 // It is important to catch the promise rejection of downloadTo
