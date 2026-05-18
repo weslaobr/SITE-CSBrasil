@@ -2,14 +2,31 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getAuthOptions } from '@/lib/auth';
 import * as ftp from 'basic-ftp';
+import axios from 'axios';
 
-const DEMOS_PATH = "game/csgo/MatchZy/demos"; 
-const FALLBACK_PATH = "game/csgo/MatchZy";    
+const candidatePaths = [
+    "MatchZy/demos",
+    "MatchZy",
+    "game/csgo/MatchZy/demos",
+    "game/csgo/MatchZy"
+];
+
+function extractDateFromFilename(filename: string): Date {
+    const match = filename.match(/(\d{8})_(\d{4})/);
+    if (match) {
+        const d = match[1]; // YYYYMMDD
+        const t = match[2]; // HHMM
+        const year = parseInt(d.slice(0, 4));
+        const month = parseInt(d.slice(4, 6)) - 1;
+        const day = parseInt(d.slice(6, 8));
+        const hour = parseInt(t.slice(0, 2));
+        const minute = parseInt(t.slice(2, 4));
+        return new Date(year, month, day, hour, minute);
+    }
+    return new Date();
+}
 
 export async function GET(req: NextRequest) {
-    const client = new ftp.Client();
-    client.ftp.verbose = false;
-
     try {
         const session = await getServerSession(getAuthOptions(req));
 
@@ -17,83 +34,127 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Não autorizado. Faça login com a Steam.' }, { status: 401 });
         }
 
-        const host = process.env.FTP_HOST;
-        const port = parseInt(process.env.FTP_PORT || '21');
-        const user = process.env.FTP_USER;
-        const password = process.env.FTP_PASS;
+        // --- TENTATIVA 1: FTP (se configurado) ---
+        const ftpHost = process.env.FTP_HOST;
+        const ftpPort = parseInt(process.env.FTP_PORT || '21');
+        const ftpUser = process.env.FTP_USER;
+        const ftpPass = process.env.FTP_PASS;
 
-        if (!host || !user || !password) {
-            return NextResponse.json({ error: 'Configuração de FTP incompleta no servidor.' }, { status: 500 });
-        }
-
-        await client.access({
-            host,
-            user,
-            password,
-            port,
-            secure: false // DatHost FTP usually doesn't use TLS on port 21, or uses explicit TLS which basic-ftp handles
-        });
-
-        const candidatePaths = [
-            "MatchZy",
-            "MatchZy/demos",
-            "game/csgo/MatchZy",
-            "game/csgo/MatchZy/demos"
-        ];
-
-        let list: ftp.FileInfo[] = [];
-        let currentPath = "";
-
-        for (const path of candidatePaths) {
+        if (ftpHost && ftpUser && ftpPass) {
+            const client = new ftp.Client();
+            client.ftp.verbose = false;
             try {
-                const tempList = await client.list(path);
-                // Check if this list contains any .dem files case-insensitively
-                const hasDemos = tempList.some(item => item.isFile && item.name.toLowerCase().endsWith('.dem'));
-                if (hasDemos || (tempList.length > 0 && !currentPath)) {
-                    list = tempList;
-                    currentPath = path;
-                    if (hasDemos) {
-                        break; // Found the active folder with actual demos, stop searching
+                await client.access({
+                    host: ftpHost,
+                    user: ftpUser,
+                    password: ftpPass,
+                    port: ftpPort,
+                    secure: false
+                });
+
+                let list: ftp.FileInfo[] = [];
+                let currentPath = "";
+
+                for (const path of candidatePaths) {
+                    try {
+                        const tempList = await client.list(path);
+                        const hasDemos = tempList.some(item => item.isFile && item.name.toLowerCase().endsWith('.dem'));
+                        if (hasDemos || (tempList.length > 0 && !currentPath)) {
+                            list = tempList;
+                            currentPath = path;
+                            if (hasDemos) break;
+                        }
+                    } catch (e) {
+                        // ignore
                     }
                 }
-            } catch (e) {
-                // Ignore and try next candidate
+
+                if (currentPath) {
+                    const files = list
+                        .filter(item => item.isFile && item.name.toLowerCase().endsWith('.dem'))
+                        .map(item => ({
+                            name: item.name,
+                            size: item.size,
+                            mimetype: 'application/octet-stream',
+                            createdAt: item.modifiedAt || extractDateFromFilename(item.name).toISOString(),
+                            modifiedAt: item.modifiedAt || extractDateFromFilename(item.name).toISOString(),
+                            path: `${currentPath}/${item.name}`
+                        }));
+
+                    files.sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime());
+                    client.close();
+                    return NextResponse.json({ files });
+                }
+            } catch (ftpError: any) {
+                console.warn('[DEMOS_API] FTP failed, falling back to DatHost REST API...', ftpError.message);
+            } finally {
+                client.close();
             }
         }
 
-        if (!currentPath) {
-            console.error("FTP List error: Could not find any demos directory in candidates", candidatePaths);
-            return NextResponse.json({ 
-                error: `Não foi possível encontrar a pasta de demos no servidor FTP`,
-                tried: candidatePaths
-            }, { status: 404 });
+        // --- TENTATIVA 2: DatHost REST API ---
+        const dathostEmail = process.env.DATHOST_EMAIL;
+        const dathostApiKey = process.env.DATHOST_API_KEY;
+        const dathostServerId = process.env.DATHOST_SERVER_ID;
+
+        if (dathostEmail && dathostApiKey && dathostServerId && dathostApiKey !== 'COLOQUE_SUA_API_KEY_DA_DATHOST_AQUI') {
+            for (const path of candidatePaths) {
+                try {
+                    const response = await axios.get(
+                        `https://dathost.net/api/0.1/game-servers/${dathostServerId}/files/${path}`,
+                        {
+                            auth: {
+                                username: dathostEmail,
+                                password: dathostApiKey
+                            },
+                            headers: {
+                                'Accept': 'application/json'
+                            },
+                            timeout: 8000 // 8s timeout
+                        }
+                    );
+
+                    if (Array.isArray(response.data)) {
+                        const hasDemos = response.data.some((item: any) => {
+                            const name = item.path.split('/').pop() || '';
+                            return name.toLowerCase().endsWith('.dem');
+                        });
+
+                        if (hasDemos) {
+                            const files = response.data
+                                .filter((item: any) => {
+                                    const name = item.path.split('/').pop() || '';
+                                    return name.toLowerCase().endsWith('.dem');
+                                })
+                                .map((item: any) => {
+                                    const name = item.path.split('/').pop() || '';
+                                    const fileDate = extractDateFromFilename(name).toISOString();
+                                    return {
+                                        name,
+                                        size: typeof item.size === 'number' ? item.size : parseInt(item.size || '0'),
+                                        mimetype: 'application/octet-stream',
+                                        createdAt: fileDate,
+                                        modifiedAt: fileDate,
+                                        path: item.path
+                                    };
+                                });
+
+                            files.sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime());
+                            return NextResponse.json({ files });
+                        }
+                    }
+                } catch (apiError: any) {
+                    console.warn(`[DEMOS_API] DatHost API candidate path "${path}" query failed:`, apiError.message);
+                }
+            }
         }
 
-        // Filtrar apenas arquivos .dem (case-insensitive)
-        const files = list
-            .filter(item => item.isFile && item.name.toLowerCase().endsWith('.dem'))
-            .map(item => ({
-                name: item.name,
-                size: item.size,
-                mimetype: 'application/octet-stream',
-                createdAt: item.modifiedAt,
-                modifiedAt: item.modifiedAt,
-                path: `${currentPath}/${item.name}`
-            }));
-
-        // Ordenar por data de modificação (mais recentes primeiro)
-        files.sort((a, b) => {
-            const timeA = a.modifiedAt ? new Date(a.modifiedAt).getTime() : 0;
-            const timeB = b.modifiedAt ? new Date(b.modifiedAt).getTime() : 0;
-            return timeB - timeA;
-        });
-
-        return NextResponse.json({ files });
+        return NextResponse.json({ 
+            error: 'Não foi possível buscar as demos do servidor. Conexão FTP e API REST indisponíveis.' 
+        }, { status: 500 });
 
     } catch (error: any) {
-        console.error('[SERVER_DEMOS_FTP]', error);
-        return NextResponse.json({ error: 'Erro ao buscar demos via FTP', message: error.message }, { status: 500 });
-    } finally {
-        client.close();
+        console.error('[SERVER_DEMOS_API_CRITICAL]', error);
+        return NextResponse.json({ error: 'Erro ao buscar demos', message: error.message }, { status: 500 });
     }
 }
