@@ -28,6 +28,8 @@ export async function GET(req: NextRequest) {
         const ftpPort = parseInt(process.env.FTP_PORT || '21');
         const ftpUser = process.env.FTP_USER;
         const ftpPass = process.env.FTP_PASS;
+        
+        let ftpErrorMsg = "Variáveis de FTP não configuradas.";
 
         if (ftpHost && ftpUser && ftpPass) {
             const client = new ftp.Client();
@@ -37,7 +39,12 @@ export async function GET(req: NextRequest) {
                 const { PassThrough } = await import('stream');
                 const passThrough = new PassThrough();
 
-                client.downloadTo(passThrough, filePath).finally(() => {
+                // It is important to catch the promise rejection of downloadTo
+                client.downloadTo(passThrough, filePath).then(() => {
+                    client.close();
+                }).catch((err) => {
+                    console.error('[DEMO_DOWNLOAD] Stream download error:', err);
+                    passThrough.destroy(err);
                     client.close();
                 });
 
@@ -60,6 +67,7 @@ export async function GET(req: NextRequest) {
                     },
                 });
             } catch (ftpError: any) {
+                ftpErrorMsg = ftpError.message;
                 console.warn('[DEMO_DOWNLOAD] FTP failed, falling back to DatHost REST API...', ftpError.message);
                 client.close();
             }
@@ -69,6 +77,8 @@ export async function GET(req: NextRequest) {
         const dathostEmail = process.env.DATHOST_EMAIL;
         const dathostApiKey = process.env.DATHOST_API_KEY;
         const dathostServerId = process.env.DATHOST_SERVER_ID;
+
+        let apiErrorMsg = "DatHost API credentials missing or invalid.";
 
         if (dathostEmail && dathostApiKey && dathostServerId && dathostApiKey !== 'COLOQUE_SUA_API_KEY_DA_DATHOST_AQUI') {
             try {
@@ -105,11 +115,15 @@ export async function GET(req: NextRequest) {
                 });
 
             } catch (apiError: any) {
+                apiErrorMsg = apiError.message;
                 console.error('[DEMO_DOWNLOAD] DatHost API download failed:', apiError.message);
             }
         }
 
-        return NextResponse.json({ error: 'Erro ao baixar demo via FTP ou API REST' }, { status: 500 });
+        return NextResponse.json({ 
+            error: 'Erro ao baixar demo via FTP ou API REST', 
+            details: { ftp: ftpErrorMsg, api: apiErrorMsg, envVars: { ftpHost, ftpUser } }
+        }, { status: 500 });
 
     } catch (error: any) {
         console.error('[SERVER_DEMO_DOWNLOAD_CRITICAL]', error);
