@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw, Copy, Check, ClipboardList, Send, Loader2, Pencil, Trash2, Flame } from "lucide-react";
+import { Users, UserPlus, X, Shuffle, ArrowRight, ArrowLeft, Search, User as UserIcon, Medal, Plus, Map as MapIcon, History, Trophy, RotateCcw, Copy, Check, ClipboardList, Send, Loader2, Pencil, Trash2, Flame, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Player {
@@ -16,6 +16,8 @@ interface Player {
     faceitLevel?: number;
     faceitElo?: number;
     isGuest?: boolean;
+    discordId?: string;
+    steamName?: string;
     assignment: "unassigned" | "A" | "B";
 }
 
@@ -211,6 +213,40 @@ export default function TeamBuilderPage() {
 
     const [balanceMode, setBalanceMode] = useState<"standard" | "resenha" | "tropa">("standard");
 
+    const [discordOnline, setDiscordOnline] = useState<{ members: any[], guildName?: string, inviteUrl?: string, widgetDisabled: boolean, loading: boolean }>({
+        members: [],
+        widgetDisabled: false,
+        loading: false
+    });
+
+    const fetchDiscordOnline = async () => {
+        setDiscordOnline(prev => ({ ...prev, loading: true }));
+        try {
+            const res = await fetch("/api/discord/online");
+            const data = await res.json();
+            if (data.success) {
+                setDiscordOnline({
+                    members: data.members,
+                    guildName: data.guildName,
+                    inviteUrl: data.instantInvite,
+                    widgetDisabled: false,
+                    loading: false
+                });
+            } else if (data.error === "widget_disabled") {
+                setDiscordOnline({
+                    members: [],
+                    widgetDisabled: true,
+                    loading: false
+                });
+            } else {
+                setDiscordOnline(prev => ({ ...prev, loading: false }));
+            }
+        } catch (error) {
+            console.error("Error fetching Discord online:", error);
+            setDiscordOnline(prev => ({ ...prev, loading: false }));
+        }
+    };
+
     // Map Veto State
     const [vetoMaps, setVetoMaps] = useState<Record<string, { type: "ban" | "pick", team: "A" | "B" | "system" }>>({});
     const [vetoTurn, setVetoTurn] = useState<"A" | "B">("A");
@@ -268,6 +304,10 @@ export default function TeamBuilderPage() {
 
         fetchAll();
         fetchMaps();
+        fetchDiscordOnline();
+
+        const interval = setInterval(fetchDiscordOnline, 45000);
+        return () => clearInterval(interval);
     }, []);
 
     const handleSyncPlayer = async (steamId: string) => {
@@ -519,7 +559,7 @@ export default function TeamBuilderPage() {
     const handleMapAction = (mapId: string, type: "ban" | "pick", isRandom = false) => {
         if (vetoMaps[mapId]) return;
 
-        const team = isRandom ? "system" : vetoTurn;
+        const team = (isRandom ? "system" : vetoTurn) as "A" | "B" | "system";
         const newAction = { type, map: mapId, team };
 
         setVetoMaps(prev => ({ ...prev, [mapId]: { type, team } }));
@@ -580,6 +620,27 @@ export default function TeamBuilderPage() {
         ));
     };
 
+    const getMatchedPlayer = (member: any) => {
+        let found = dbPlayers.find(p => p.discordId === member.id);
+        if (found) return found;
+
+        const searchName = (member.nick || member.username || "").toLowerCase();
+        found = dbPlayers.find(p => 
+            p.nickname.toLowerCase() === searchName || 
+            (p.steamName && p.steamName.toLowerCase() === searchName)
+        );
+        return found;
+    };
+
+    const matchedOnlinePlayers = discordOnline.members
+        .map(member => {
+            const player = getMatchedPlayer(member);
+            if (!player) return null;
+            const isAdded = selectedPlayers.some(sp => sp.steamId === player.steamId);
+            return { member, player, isAdded };
+        })
+        .filter(item => item !== null) as { member: any, player: Player, isAdded: boolean }[];
+
     const availableDbPlayers = dbPlayers.filter(dbP => !selectedPlayers.some(sp => sp.steamId === dbP.steamId));
     const filteredDbPool = availableDbPlayers.filter(p => p.nickname.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -616,6 +677,131 @@ export default function TeamBuilderPage() {
                 
                 {/* Lado Esquerdo: Base de Dados & Convidados */}
                 <div className="lg:w-[22%] flex flex-col space-y-6">
+                    
+                    {/* Widget: Discord Online */}
+                    <div className="bg-zinc-950/85 p-5 rounded-3xl border border-white/5 space-y-4 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-indigo-500/45 to-transparent" />
+                        
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xs font-black uppercase text-zinc-100 tracking-wider flex items-center gap-2">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </span>
+                                Discord Online
+                                {discordOnline.members.length > 0 && (
+                                    <span className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] px-1.5 py-0.5 rounded font-mono font-black ml-1">
+                                        {matchedOnlinePlayers.length}
+                                    </span>
+                                )}
+                            </h2>
+                            <button 
+                                onClick={fetchDiscordOnline}
+                                disabled={discordOnline.loading}
+                                className={`p-2 rounded-xl transition-all border bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 disabled:opacity-50`}
+                                title="Atualizar Discord"
+                            >
+                                <RefreshCw size={14} className={discordOnline.loading ? "animate-spin text-indigo-400" : ""} />
+                            </button>
+                        </div>
+
+                        {discordOnline.loading ? (
+                            <div className="flex flex-col items-center justify-center py-6 gap-2">
+                                <Loader2 size={20} className="animate-spin text-indigo-500" />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Buscando presença...</span>
+                            </div>
+                        ) : discordOnline.widgetDisabled ? (
+                            <div className="bg-indigo-950/20 border border-indigo-500/25 p-4 rounded-2xl space-y-2 text-left">
+                                <h4 className="text-[10px] font-black uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                                    🔌 Widget Desabilitado
+                                </h4>
+                                <p className="text-[9px] text-zinc-400 leading-relaxed font-medium">
+                                    Habilite o widget do servidor no Discord para puxar os membros online automaticamente:
+                                </p>
+                                <ol className="text-[8.5px] text-zinc-500 space-y-1.5 list-decimal list-inside font-mono">
+                                    <li>Abra o **Discord** &gt; **Configurações do Servidor**</li>
+                                    <li>No menu esquerdo, clique em **Engajamento** e depois em **Widget**</li>
+                                    <li>Marque a opção **Habilitar Widget do Servidor**</li>
+                                </ol>
+                                {discordOnline.inviteUrl && (
+                                    <a href={discordOnline.inviteUrl} target="_blank" rel="noreferrer" className="block text-center bg-indigo-650 hover:bg-indigo-500 text-white font-black uppercase text-[8px] tracking-wider py-1.5 rounded-lg mt-2 transition-all">
+                                        Entrar no Servidor
+                                    </a>
+                                )}
+                            </div>
+                        ) : matchedOnlinePlayers.length === 0 ? (
+                            <div className="bg-zinc-900/30 border border-white/5 p-4 rounded-2xl text-center space-y-1">
+                                <p className="text-[10px] text-zinc-400 font-bold">Nenhum jogador online</p>
+                                <p className="text-[8px] text-zinc-600 leading-relaxed font-medium">
+                                    Nenhum membro online no Discord está cadastrado na base com o ID correspondente.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2.5">
+                                <div className="flex items-center justify-between pb-1">
+                                    <span className="text-[8px] text-zinc-500 font-black uppercase tracking-wider">Disponíveis para Jogar</span>
+                                    {matchedOnlinePlayers.some(item => !item.isAdded) && (
+                                        <button 
+                                            onClick={() => {
+                                                const toAdd = matchedOnlinePlayers.filter(item => !item.isAdded).map(item => item.player);
+                                                const spaceLeft = 10 - selectedPlayers.length;
+                                                const slice = toAdd.slice(0, spaceLeft);
+                                                if (slice.length > 0) {
+                                                    setSelectedPlayers(prev => [...prev, ...slice.map(p => ({ ...p, assignment: "unassigned" as const }))]);
+                                                }
+                                            }}
+                                            className="text-[8px] font-black uppercase tracking-wider text-indigo-400 hover:text-indigo-300 transition-colors"
+                                        >
+                                            + Adicionar Todos
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="max-h-56 overflow-y-auto pr-1 space-y-1.5 custom-scrollbar">
+                                    {matchedOnlinePlayers.map(({ member, player, isAdded }) => {
+                                        const premierNorm = Math.min(100, (player.tempRating ?? player.rating ?? 0) / 300);
+                                        const faceitNorm = (player.faceitLevel ?? 0) * 10;
+                                        const gcNorm = ((player.gcLevel ?? 0) / 21) * 100;
+                                        const tropaScore = Math.max(premierNorm, faceitNorm, gcNorm);
+
+                                        let gradeColor = "border-white/5 hover:border-white/20";
+                                        if (tropaScore > 80) gradeColor = "border-purple-500/20 hover:border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.06)]";
+                                        else if (tropaScore > 55) gradeColor = "border-blue-500/20 hover:border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.06)]";
+
+                                        return (
+                                            <div key={player.steamId} className={`flex items-center justify-between p-2.5 bg-zinc-900/45 border rounded-2xl transition-all duration-300 ${gradeColor} ${isAdded ? 'opacity-50' : ''}`}>
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <div className="relative shrink-0">
+                                                        <img src={player.avatar || member.avatar_url} alt={player.nickname} className="w-8 h-8 rounded-xl border border-white/10" />
+                                                        <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-green-500 border border-black" title="Online no Discord" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="font-black text-[10px] text-white truncate uppercase tracking-wider">{player.nickname}</p>
+                                                        {member.game && (
+                                                            <p className="text-[7px] text-zinc-500 font-mono font-bold truncate tracking-wide">
+                                                                Jogando: {member.game.name}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => !isAdded && handleSelectPlayer(player)}
+                                                    disabled={isAdded}
+                                                    className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
+                                                        isAdded 
+                                                            ? 'bg-green-500/10 border border-green-500/20 text-green-400' 
+                                                            : 'bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-indigo-650 hover:border-indigo-500 active:scale-95'
+                                                    }`}
+                                                >
+                                                    {isAdded ? <Check size={10} /> : <Plus size={10} />}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="bg-zinc-950/85 p-5 rounded-3xl border border-white/5 space-y-4 backdrop-blur-xl shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-purple-500/45 to-transparent" />
                         
@@ -919,7 +1105,7 @@ export default function TeamBuilderPage() {
                                 <span className="hidden sm:inline">{copiedTeam === "both" ? "Copiado!" : "Copiar"}</span>
                             </button>
                             <button 
-                                onClick={handleAutoBalance}
+                                onClick={() => handleAutoBalance()}
                                 disabled={selectedPlayers.length !== 10}
                                 className={`flex items-center gap-2 px-5 py-3.5 rounded-xl font-black uppercase text-[10px] tracking-wide transition-all shadow-lg shrink-0 ${selectedPlayers.length === 10 ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/20 active:scale-95 border border-purple-400/50' : 'bg-white/5 text-zinc-750 cursor-not-allowed border border-white/5'}`}
                             >
