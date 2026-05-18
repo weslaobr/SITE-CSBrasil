@@ -65,89 +65,103 @@ function PlayerCard({ player, onRemove, onMoveUnassigned, onMoveRight, onMoveLef
         }
         setEditingField(null);
     };
+
+    const getSkillBorder = () => {
+        const val = getTropaVal();
+        if (val > 80) return "border-purple-500/30 hover:border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.1)]";
+        if (val > 55) return "border-blue-500/30 hover:border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.1)]";
+        return "border-white/5 hover:border-white/10";
+    };
     
     return (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} layout
-            className={`group relative flex items-center bg-zinc-950/80 p-3 rounded-xl border border-white/5 shadow-md ${side === "left" ? "pr-10" : "pl-10"}`}>
+            className={`group relative flex items-center bg-zinc-950/85 p-3 rounded-2xl border transition-all duration-300 hover:bg-zinc-900/60 ${getSkillBorder()} ${side === "left" ? "pr-12" : "pl-12"} shadow-lg backdrop-blur-md`}>
             
             {side === "left" ? (
                 <>
-                    <img src={player.avatar} className="w-8 h-8 rounded-md border border-white/10 shrink-0" />
-                    <div className="flex flex-col flex-1 min-w-0 ml-3">
+                    <div className="relative shrink-0">
+                        <img src={player.avatar} className="w-10 h-10 rounded-xl border border-white/10 shadow-md group-hover:scale-105 transition-transform duration-300" />
+                        <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                    </div>
+                    
+                    <div className="flex flex-col flex-1 min-w-0 ml-3.5">
                         <div className="flex items-center gap-2">
-                            <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.nickname} {player.isGuest && <span className="ml-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>}</p>
+                            <p className="font-black text-xs text-white truncate group-hover:text-yellow-400 transition-colors uppercase tracking-wide">{player.nickname} {player.isGuest && <span className="ml-1 text-[8px] bg-purple-500/25 text-purple-400 px-1.5 py-0.5 rounded font-black uppercase tracking-widest border border-purple-500/20">Guest</span>}</p>
                             {!player.isGuest && (
-                                <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity flex-wrap">
-                                    {balanceMode !== "standard" && <span className="text-[7px] font-black bg-yellow-500/20 text-yellow-400 px-1 rounded uppercase tracking-tighter">{srVal} SR</span>}
-                                    {balanceMode !== "tropa" && <span className="text-[7px] font-black bg-emerald-500/20 text-emerald-400 px-1 rounded uppercase tracking-tighter">{getTropaVal().toFixed(1)} TR</span>}
-                                    {balanceMode !== "resenha" && <span className="text-[7px] font-black bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">{resenhaVal.toFixed(1)} ★</span>}
+                                <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-all flex-wrap">
+                                    {balanceMode !== "standard" && <span className="text-[7px] font-black bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 rounded uppercase tracking-tighter">{srVal} SR</span>}
+                                    {balanceMode !== "tropa" && <span className="text-[7px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 rounded uppercase tracking-tighter">{getTropaVal().toFixed(1)} TR</span>}
+                                    {balanceMode !== "resenha" && <span className="text-[7px] font-black bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 rounded uppercase tracking-tighter">{resenhaVal.toFixed(1)} ★</span>}
                                     
                                     <div className="w-px h-2 bg-white/10 mx-0.5" />
 
-                                    {!!player.faceitLevel && player.faceitLevel > 0 && <span className="text-[7px] font-black bg-orange-500/20 text-orange-400 px-1 rounded uppercase tracking-tighter" title={`Faceit Level ${player.faceitLevel}`}>F{player.faceitLevel}</span>}
-                                    {!!player.gcLevel && player.gcLevel > 0 && <span className="text-[7px] font-black bg-sky-500/20 text-sky-400 px-1 rounded uppercase tracking-tighter" title={`GC Level ${player.gcLevel}`}>G{player.gcLevel}</span>}
+                                    {!!player.faceitLevel && player.faceitLevel > 0 && <span className="text-[7px] font-black bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 rounded uppercase tracking-tighter" title={`Faceit Level ${player.faceitLevel}`}>F{player.faceitLevel}</span>}
+                                    {!!player.gcLevel && player.gcLevel > 0 && <span className="text-[7px] font-black bg-sky-500/10 text-sky-400 border border-sky-500/20 px-1.5 rounded uppercase tracking-tighter" title={`GC Level ${player.gcLevel}`}>G{player.gcLevel}</span>}
                                 </div>
                             )}
                         </div>
                         {editingField ? (
                             <input autoFocus type="number" value={editVal} onChange={e => setEditVal(e.target.value)}
                                 onBlur={commitEdit} onKeyDown={e => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingField(null); }}
-                                className="w-20 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none mt-0.5" />
+                                className="w-20 bg-zinc-900 border border-purple-500/60 rounded-lg px-2 py-0.5 text-[10px] font-mono text-white outline-none mt-1 shadow-inner" />
                         ) : (
-                            <button onClick={startEdit} className={`flex items-center gap-1 text-[10px] font-mono font-bold mt-0.5 w-fit hover:text-purple-400 transition-colors ${isOverridden ? "text-purple-400" : "text-zinc-400"}`} title="Editar pontuação temporária">
-                                {displayRating}{isOverridden && <Pencil size={8} />}
+                            <button onClick={startEdit} className={`flex items-center gap-1.5 text-[10px] font-mono font-bold mt-1 w-fit hover:text-yellow-400 transition-colors ${isOverridden ? "text-purple-400" : "text-zinc-400"}`} title="Editar pontuação temporária">
+                                {displayRating}{isOverridden && <Pencil size={8} className="opacity-60" />}
                             </button>
                         )}
                     </div>
                 </>
             ) : (
                 <>
-                    <div className="flex flex-col flex-1 min-w-0 mr-3 text-right items-end">
+                    <div className="flex flex-col flex-1 min-w-0 mr-3.5 text-right items-end">
                         <div className="flex items-center gap-2 justify-end">
                             {!player.isGuest && (
-                                <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity flex-wrap justify-end">
-                                    {!!player.gcLevel && player.gcLevel > 0 && <span className="text-[7px] font-black bg-sky-500/20 text-sky-400 px-1 rounded uppercase tracking-tighter" title={`GC Level ${player.gcLevel}`}>G{player.gcLevel}</span>}
-                                    {!!player.faceitLevel && player.faceitLevel > 0 && <span className="text-[7px] font-black bg-orange-500/20 text-orange-400 px-1 rounded uppercase tracking-tighter" title={`Faceit Level ${player.faceitLevel}`}>F{player.faceitLevel}</span>}
+                                <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-all flex-wrap justify-end">
+                                    {!!player.gcLevel && player.gcLevel > 0 && <span className="text-[7px] font-black bg-sky-500/10 text-sky-400 border border-sky-500/20 px-1.5 rounded uppercase tracking-tighter" title={`GC Level ${player.gcLevel}`}>G{player.gcLevel}</span>}
+                                    {!!player.faceitLevel && player.faceitLevel > 0 && <span className="text-[7px] font-black bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 rounded uppercase tracking-tighter" title={`Faceit Level ${player.faceitLevel}`}>F{player.faceitLevel}</span>}
                                     
                                     <div className="w-px h-2 bg-white/10 mx-0.5" />
 
-                                    {balanceMode !== "resenha" && <span className="text-[7px] font-black bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">{resenhaVal.toFixed(1)} ★</span>}
-                                    {balanceMode !== "tropa" && <span className="text-[7px] font-black bg-emerald-500/20 text-emerald-400 px-1 rounded uppercase tracking-tighter">{getTropaVal().toFixed(1)} TR</span>}
-                                    {balanceMode !== "standard" && <span className="text-[7px] font-black bg-yellow-500/20 text-yellow-400 px-1 rounded uppercase tracking-tighter">{srVal} SR</span>}
+                                    {balanceMode !== "resenha" && <span className="text-[7px] font-black bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 rounded uppercase tracking-tighter">{resenhaVal.toFixed(1)} ★</span>}
+                                    {balanceMode !== "tropa" && <span className="text-[7px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 rounded uppercase tracking-tighter">{getTropaVal().toFixed(1)} TR</span>}
+                                    {balanceMode !== "standard" && <span className="text-[7px] font-black bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 rounded uppercase tracking-tighter">{srVal} SR</span>}
                                 </div>
                             )}
-                            <p className="font-bold text-xs text-white truncate group-hover:text-purple-400 transition-colors">{player.isGuest && <span className="mr-1 text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase tracking-tighter">Guest</span>} {player.nickname}</p>
+                            <p className="font-black text-xs text-white truncate group-hover:text-blue-400 transition-colors uppercase tracking-wide">{player.isGuest && <span className="mr-1 text-[8px] bg-purple-500/25 text-purple-400 px-1.5 py-0.5 rounded font-black uppercase tracking-widest border border-purple-500/20">Guest</span>} {player.nickname}</p>
                         </div>
                         {editingField ? (
                             <input autoFocus type="number" value={editVal} onChange={e => setEditVal(e.target.value)}
                                 onBlur={commitEdit} onKeyDown={e => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingField(null); }}
-                                className="w-20 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none mt-0.5 text-right" />
+                                className="w-20 bg-zinc-900 border border-purple-500/60 rounded-lg px-2 py-0.5 text-[10px] font-mono text-white outline-none mt-1 shadow-inner text-right" />
                         ) : (
-                            <button onClick={startEdit} className={`flex items-center gap-1 text-[10px] font-mono font-bold mt-0.5 w-fit hover:text-purple-400 transition-colors ${isOverridden ? "text-purple-400" : "text-zinc-400"}`} title="Editar pontuação temporária">
-                                {isOverridden && <Pencil size={8} />}{displayRating}
+                            <button onClick={startEdit} className={`flex items-center gap-1.5 text-[10px] font-mono font-bold mt-1 w-fit hover:text-blue-400 transition-colors ${isOverridden ? "text-purple-400" : "text-zinc-400"}`} title="Editar pontuação temporária">
+                                {isOverridden && <Pencil size={8} className="opacity-60" />}{displayRating}
                             </button>
                         )}
                     </div>
-                    <img src={player.avatar} className="w-8 h-8 rounded-md border border-white/10 shrink-0" />
+                    <div className="relative shrink-0">
+                        <img src={player.avatar} className="w-10 h-10 rounded-xl border border-white/10 shadow-md group-hover:scale-105 transition-transform duration-300" />
+                        <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                    </div>
                 </>
             )}
 
-            <div className={`absolute ${side === "left" ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all`}>
-                <button onClick={onRemove} className="p-1.5 bg-zinc-900 border border-white/10 rounded-md text-zinc-500 hover:text-red-500 hover:border-red-500/30 mx-auto shadow-lg" title="Remover dos selecionados">
-                    <X size={14} />
+            <div className={`absolute ${side === "left" ? "right-2" : "left-2"} top-1/2 -translate-y-1/2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20`}>
+                <button onClick={onRemove} className="p-1 bg-black/85 border border-red-500/30 rounded-lg text-red-500 hover:bg-red-500 hover:text-white hover:border-red-400 transition-all duration-200 shadow-md scale-90 hover:scale-100" title="Remover dos selecionados">
+                    <X size={12} />
                 </button>
-                <div className="flex bg-zinc-900 border border-white/10 rounded-md overflow-hidden shadow-lg" title="Mover">
+                <div className="flex flex-col bg-black/85 border border-white/10 rounded-lg overflow-hidden shadow-md scale-90 hover:scale-100" title="Mover">
                     {onMoveLeft && (
-                        <button onClick={onMoveLeft} className="p-2 text-zinc-400 hover:bg-blue-500 hover:text-white border-r border-white/5 transition-colors">
-                            <ArrowLeft size={14} />
+                        <button onClick={onMoveLeft} className="p-1.5 text-zinc-400 hover:bg-blue-500 hover:text-white transition-colors">
+                            <ArrowLeft size={12} />
                         </button>
                     )}
-                    <button onClick={onMoveUnassigned} className="p-2 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors" title="Mover para Reserva">
-                        <Users size={14} />
+                    <button onClick={onMoveUnassigned} className="p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors" title="Mover para Reserva">
+                        <Users size={12} />
                     </button>
                     {onMoveRight && (
-                        <button onClick={onMoveRight} className="p-2 text-zinc-400 hover:bg-yellow-500 hover:text-black border-l border-white/5 transition-colors">
-                            <ArrowRight size={14} />
+                        <button onClick={onMoveRight} className="p-1.5 text-zinc-400 hover:bg-yellow-500 hover:text-black transition-colors">
+                            <ArrowRight size={12} />
                         </button>
                     )}
                 </div>
@@ -157,12 +171,24 @@ function PlayerCard({ player, onRemove, onMoveUnassigned, onMoveRight, onMoveLef
 }
 
 function EmptySlot({ team, onClick }: { team: string, onClick: ()=>void }) {
+    const isTeamA = team === "A";
     return (
-        <div onClick={onClick} className="flex items-center gap-3 p-3 bg-white/[0.02] border border-dashed border-white/10 rounded-xl cursor-pointer hover:bg-white/[0.05] transition-all justify-center sm:justify-start">
-            <div className="w-8 h-8 rounded-md bg-white/5 flex items-center justify-center text-zinc-600 shrink-0">
-                <UserIcon size={14} />
+        <div 
+            onClick={onClick} 
+            className={`flex items-center gap-3 p-3 bg-white/[0.01] border border-dashed rounded-xl cursor-pointer transition-all duration-300 justify-center sm:justify-start group ${
+                isTeamA 
+                    ? 'border-yellow-500/10 hover:border-yellow-500/30 hover:bg-yellow-500/[0.02] hover:shadow-[0_0_15px_rgba(234,179,8,0.05)]' 
+                    : 'border-blue-500/10 hover:border-blue-500/30 hover:bg-blue-500/[0.02] hover:shadow-[0_0_15px_rgba(59,130,246,0.05)]'
+            }`}
+        >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-300 ${
+                isTeamA 
+                    ? 'bg-yellow-500/5 text-zinc-700 group-hover:text-yellow-500 group-hover:bg-yellow-500/10' 
+                    : 'bg-blue-500/5 text-zinc-700 group-hover:text-blue-400 group-hover:bg-blue-500/10'
+            }`}>
+                <UserIcon size={14} className="transition-transform group-hover:scale-110" />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Espaço Vazio</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-zinc-400 transition-colors">Vaga Disponível</p>
         </div>
     );
 }
@@ -560,25 +586,28 @@ export default function TeamBuilderPage() {
     return (
         <div className="p-4 md:p-8 space-y-8 pb-32">
             {/* ── HERO HEADER ── */}
-            <header className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4 overflow-hidden">
-                <div className="pointer-events-none absolute -top-16 -left-16 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
-                <div className="relative z-10">
-                    <div className="flex items-center gap-4 mb-3">
-                        <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shadow-inner">
-                            <Users className="text-purple-400 w-7 h-7 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]" />
-                        </div>
-                        <div>
-                            <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter leading-none">
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-500">Sorteador de</span>
-                                <span className="text-purple-400"> Times</span>
-                            </h1>
-                            <p className="text-zinc-600 text-[9px] font-black uppercase tracking-[0.5em] mt-1 flex items-center gap-2">
-                                <span className="w-4 h-px bg-purple-500/40" />
-                                Auto-Balance
-                                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-                                <span className="text-zinc-500">Selecione 10 jogadores para o mix mais equilibrado</span>
-                            </p>
-                        </div>
+            <header className="relative flex flex-col md:flex-row justify-between items-start md:items-center p-6 bg-zinc-950/80 rounded-3xl border border-white/5 overflow-hidden backdrop-blur-md shadow-2xl">
+                {/* Background Effects */}
+                <div className="absolute inset-0 bg-grid-white/[0.02] pointer-events-none" />
+                <div className="pointer-events-none absolute -top-24 -left-24 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-24 -right-24 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
+                
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-5 w-full">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-500/5 border border-purple-500/30 flex items-center justify-center shadow-lg relative group overflow-hidden shrink-0">
+                        <div className="absolute inset-0 bg-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm" />
+                        <Users className="text-purple-400 w-8 h-8 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)] relative z-10 transition-transform group-hover:scale-110" />
+                    </div>
+                    <div>
+                        <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter leading-none flex flex-wrap gap-x-3 gap-y-1">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-100 to-zinc-400">Sorteador de</span>
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-purple-600 drop-shadow-[0_0_15px_rgba(168,85,247,0.3)]">Times</span>
+                        </h1>
+                        <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] mt-2 flex flex-wrap items-center gap-2">
+                            <span className="w-4 h-px bg-purple-500/40" />
+                            <span>Auto-Balance System</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                            <span className="text-zinc-400">Monte o saguão com 10 jogadores para um equilíbrio competitivo perfeito</span>
+                        </p>
                     </div>
                 </div>
             </header>
@@ -587,14 +616,16 @@ export default function TeamBuilderPage() {
                 
                 {/* Lado Esquerdo: Base de Dados & Convidados */}
                 <div className="lg:w-[22%] flex flex-col space-y-6">
-                    <div className="bg-zinc-900/40 p-6 rounded-2xl border border-white/5 space-y-4 backdrop-blur-xl">
+                    <div className="bg-zinc-950/85 p-5 rounded-3xl border border-white/5 space-y-4 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-purple-500/45 to-transparent" />
+                        
                         <div className="flex items-center justify-between">
-                            <h2 className="text-sm font-black uppercase text-white tracking-widest flex items-center gap-2">
-                                <Search size={14} className="text-purple-500" /> Plantel de Jogadores
+                            <h2 className="text-xs font-black uppercase text-zinc-100 tracking-wider flex items-center gap-2">
+                                <Search size={14} className="text-purple-500 drop-shadow-[0_0_5px_rgba(168,85,247,0.5)]" /> Plantel do CS
                             </h2>
                             <button 
                                 onClick={() => setShowGuestForm(!showGuestForm)}
-                                className={`p-2 rounded-lg transition-all border ${showGuestForm ? 'bg-purple-500 text-black border-purple-500' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10'}`}
+                                className={`p-2 rounded-xl transition-all border ${showGuestForm ? 'bg-purple-600 text-white border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95'}`}
                                 title="Adicionar Convidado"
                             >
                                 <UserPlus size={14} />
@@ -609,14 +640,14 @@ export default function TeamBuilderPage() {
                                     exit={{ height: 0, opacity: 0 }}
                                     className="overflow-hidden"
                                 >
-                                    <div className="bg-black/30 p-4 rounded-xl border border-purple-500/20 space-y-3 mb-4">
-                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Adicionar Convidado</p>
+                                    <div className="bg-black/45 p-4 rounded-2xl border border-purple-500/20 space-y-3 mb-2 shadow-inner">
+                                        <p className="text-[9px] text-purple-400 font-black uppercase tracking-widest">Novo Convidado</p>
                                         <input 
                                             type="text" 
                                             placeholder="Nome / Apelido"
                                             value={guestName}
                                             onChange={(e) => setGuestName(e.target.value)}
-                                            className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-purple-500 outline-none transition-all"
+                                            className="w-full bg-zinc-900/60 border border-white/10 rounded-xl px-3.5 py-2 text-xs focus:border-purple-500/50 outline-none transition-all text-white placeholder-zinc-600"
                                         />
                                         <div className="flex gap-2">
                                             <input 
@@ -624,11 +655,11 @@ export default function TeamBuilderPage() {
                                                 placeholder="Rating (ex: 15000)"
                                                 value={guestRating}
                                                 onChange={(e) => setGuestRating(e.target.value)}
-                                                className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-purple-500 outline-none transition-all"
+                                                className="w-full bg-zinc-900/60 border border-white/10 rounded-xl px-3.5 py-2 text-xs focus:border-purple-500/50 outline-none transition-all text-white placeholder-zinc-600"
                                             />
                                             <button 
                                                 onClick={handleAddGuest}
-                                                className="bg-purple-500 hover:bg-purple-400 text-black px-4 py-2 rounded-lg font-black text-xs uppercase"
+                                                className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-purple-900/20 transition-all active:scale-95 shrink-0"
                                             >
                                                 Add
                                             </button>
@@ -639,77 +670,76 @@ export default function TeamBuilderPage() {
                         </AnimatePresence>
 
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                             <input
                                 type="text"
-                                placeholder="Buscar jogador..."
+                                placeholder="Buscar jogador no banco..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-zinc-950 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-purple-500/50"
+                                className="w-full bg-zinc-900/40 border border-white/10 rounded-2xl py-2.5 pl-11 pr-4 text-xs focus:outline-none focus:border-purple-500/30 text-white placeholder-zinc-600 transition-all"
                             />
                         </div>
 
-                        <div className="h-[calc(100vh-280px)] min-h-[450px] pb-6 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/10">
+                        <div className="h-[calc(100vh-280px)] min-h-[450px] pb-6 overflow-y-auto space-y-2 pr-1.5 scrollbar-thin scrollbar-thumb-white/5 scrollbar-track-transparent">
                             {loading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
-                                    <div key={i} className="h-16 animate-pulse bg-white/5 rounded-xl" />
+                                    <div key={i} className="h-16 animate-pulse bg-white/5 rounded-2xl border border-white/5" />
                                 ))
                             ) : filteredDbPool.length === 0 ? (
-                                <p className="text-zinc-600 text-xs text-center py-10 font-bold uppercase tracking-widest">Nenhum jogador encontrado.</p>
+                                <p className="text-zinc-600 text-[10px] text-center py-12 font-black uppercase tracking-widest">Nenhum jogador encontrado.</p>
                             ) : (
-                                filteredDbPool.map(p => (
-                                    <div key={p.steamId} onClick={() => handleSelectPlayer(p)} 
-                                        className="flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl cursor-pointer transition-all group">
-                                        <img src={p.avatar} alt={p.nickname} className="w-10 h-10 rounded-md border border-white/10" />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-sm truncate group-hover:text-purple-400 transition-colors">{p.nickname}</p>
-                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                <span className={`text-[10px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 py-0.5 rounded font-mono font-bold ${balanceMode === 'standard' ? 'ring-1 ring-yellow-500/50 shadow-[0_0_10px_rgba(234,179,8,0.2)]' : 'opacity-70'}`}>{p.rating || 0} SR</span>
-                                                <span className={`text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded font-mono font-bold ${balanceMode === 'resenha' ? 'ring-1 ring-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'opacity-70'}`}>{(p.resenhaRating || 5).toFixed(1)} ★</span>
-                                                <span className={`text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-mono font-bold ${balanceMode === 'tropa' ? 'ring-1 ring-emerald-500/50 shadow-[0_0_10px_rgba(52,211,153,0.2)]' : 'opacity-70'}`} title="Tropa Rating (Unified Skill)">
-                                                    {(() => {
-                                                        const premierNorm = Math.min(100, (p.rating ?? 0) / 300);
-                                                        const faceitNorm = (p.faceitLevel ?? 0) * 10;
-                                                        const gcNorm = ((p.gcLevel ?? 0) / 21) * 100;
-                                                        return Math.max(premierNorm, faceitNorm, gcNorm).toFixed(1);
-                                                    })()} TR
-                                                </span>
-                                                {!!p.faceitLevel && p.faceitLevel > 0 && (
-                                                    <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded font-mono font-bold" title={`Faceit Level ${p.faceitLevel} | ELO: ${p.faceitElo || '?'}`}>
-                                                        F{p.faceitLevel} {p.faceitElo ? `(${p.faceitElo})` : ''}
+                                filteredDbPool.map(p => {
+                                    const premierNorm = Math.min(100, (p.rating ?? 0) / 300);
+                                    const faceitNorm = (p.faceitLevel ?? 0) * 10;
+                                    const gcNorm = ((p.gcLevel ?? 0) / 21) * 100;
+                                    const tropaScore = Math.max(premierNorm, faceitNorm, gcNorm);
+
+                                    let gradeColor = "border-white/5 hover:border-purple-500/20";
+                                    if (tropaScore > 80) gradeColor = "border-purple-500/20 hover:border-purple-500/40 shadow-[0_0_10px_rgba(168,85,247,0.05)]";
+                                    else if (tropaScore > 55) gradeColor = "border-blue-500/20 hover:border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.05)]";
+
+                                    return (
+                                        <div key={p.steamId} onClick={() => handleSelectPlayer(p)} 
+                                            className={`flex items-center gap-3 p-3 bg-zinc-900/30 border rounded-2xl cursor-pointer transition-all duration-300 group ${gradeColor}`}>
+                                            <div className="relative shrink-0">
+                                                <img src={p.avatar} alt={p.nickname} className="w-10 h-10 rounded-xl border border-white/10 shadow-md group-hover:scale-105 transition-transform duration-300" />
+                                                <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-black text-xs text-white truncate group-hover:text-purple-400 transition-colors uppercase tracking-wide">{p.nickname}</p>
+                                                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                                    <span className={`text-[8px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1 py-0.5 rounded font-mono font-black ${balanceMode === 'standard' ? 'ring-1 ring-yellow-500/40 shadow-[0_0_10px_rgba(234,179,8,0.25)] opacity-100' : 'opacity-65'}`}>{p.rating || 0} SR</span>
+                                                    <span className={`text-[8px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1 py-0.5 rounded font-mono font-black ${balanceMode === 'resenha' ? 'ring-1 ring-purple-500/40 shadow-[0_0_10px_rgba(168,85,247,0.25)] opacity-100' : 'opacity-65'}`}>{(p.resenhaRating || 5).toFixed(1)} ★</span>
+                                                    <span className={`text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1 py-0.5 rounded font-mono font-black ${balanceMode === 'tropa' ? 'ring-1 ring-emerald-500/40 shadow-[0_0_10px_rgba(52,211,153,0.25)] opacity-100' : 'opacity-65'}`}>
+                                                        {tropaScore.toFixed(1)} TR
                                                     </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                {(p as any).hasSync && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleSyncPlayer(p.steamId);
+                                                        }}
+                                                        disabled={syncingSteamId === p.steamId}
+                                                        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                                                            syncingSteamId === p.steamId 
+                                                                ? 'bg-yellow-500/20 text-yellow-500 animate-spin' 
+                                                                : 'bg-white/5 text-zinc-500 hover:text-yellow-500 hover:bg-yellow-500/10 hover:border-yellow-500/30'
+                                                        } border border-transparent`}
+                                                        title="Sincronizar Partidas"
+                                                    >
+                                                        <Flame size={12} className={syncingSteamId === p.steamId ? 'animate-pulse' : ''} />
+                                                    </button>
                                                 )}
-                                                {!!p.gcLevel && p.gcLevel > 0 && (
-                                                    <span className="text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono font-bold" title={`GamersClub Level ${p.gcLevel}`}>
-                                                        GC{p.gcLevel}
-                                                    </span>
-                                                )}
+                                                <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-zinc-500 group-hover:bg-purple-600 group-hover:border-purple-500 group-hover:text-white transition-all active:scale-95 shrink-0">
+                                                    <Plus size={14} />
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-1.5">
-                                            {(p as any).hasSync && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleSyncPlayer(p.steamId);
-                                                    }}
-                                                    disabled={syncingSteamId === p.steamId}
-                                                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                                                        syncingSteamId === p.steamId 
-                                                            ? 'bg-yellow-500/20 text-yellow-500 animate-spin' 
-                                                            : 'bg-white/5 text-zinc-500 hover:text-yellow-500 hover:bg-yellow-500/10'
-                                                    }`}
-                                                    title="Sincronizar Partidas"
-                                                >
-                                                    <Flame size={14} className={syncingSteamId === p.steamId ? 'animate-pulse' : ''} />
-                                                </button>
-                                            )}
-                                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-500 group-hover:bg-purple-500 group-hover:text-black transition-all">
-                                                <Plus size={16} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
                     </div>
@@ -720,92 +750,93 @@ export default function TeamBuilderPage() {
                     
                     {/* Unassigned Grid (Top) */}
                     {unassigned.length > 0 && (
-                        <div className="bg-zinc-900/20 p-5 rounded-2xl border border-dashed border-white/5 backdrop-blur-sm">
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-4 flex items-center gap-2">
-                                <Users size={14} className="text-zinc-600"/>
+                        <div className="bg-zinc-950/80 p-5 rounded-3xl border border-white/5 backdrop-blur-xl relative overflow-hidden shadow-2xl">
+                            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-zinc-500/20 to-transparent" />
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
+                                <Users size={14} className="text-purple-500 drop-shadow-[0_0_5px_rgba(168,85,247,0.4)]"/>
                                 Jogadores no Saguão
-                                <span className="ml-auto bg-black/40 px-2 py-1 rounded text-zinc-400">{unassigned.length} aguardando alocação</span>
+                                <span className="ml-auto bg-black/45 px-3 py-1.5 rounded-xl text-[9px] text-zinc-500 border border-white/5">{unassigned.length} aguardando alocação</span>
                             </h3>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
-                                {unassigned.map(p => (
-                                    <div key={p.steamId} className="group relative hover:z-50 flex items-center bg-zinc-950 border border-white/5 p-2 pr-4 rounded-2xl hover:border-purple-500/50 transition-all shadow-md">
-                                        <img src={p.avatar} title={p.nickname} className="w-10 h-10 rounded-full border border-white/10 shadow-sm shrink-0 group-hover:opacity-20 transition-all" />
-                                        <div className="flex flex-col ml-3 group-hover:opacity-20 transition-all min-w-0">
-                                            <p className="font-bold text-sm text-white truncate">{p.nickname}</p>
-                                            <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                                                {editingUnassigned?.steamId === p.steamId && editingUnassigned.field === "sr" ? (
-                                                    <input autoFocus type="number" value={editingUnassigned.value}
-                                                        onChange={e => setEditingUnassigned({ ...editingUnassigned, value: e.target.value })}
-                                                        onBlur={() => { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "sr", n); setEditingUnassigned(null); }}
-                                                        onKeyDown={e => { if (e.key === "Enter") { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "sr", n); setEditingUnassigned(null); } if (e.key === "Escape") setEditingUnassigned(null); }}
-                                                        className="w-20 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none" />
-                                                ) : (
-                                                    <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "sr", value: String(p.tempRating ?? p.rating) }); }} className="text-[10px] font-mono font-bold hover:text-yellow-400 transition-colors flex items-center gap-0.5 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 rounded py-0.5" title="Editar SR">
-                                                        {p.tempRating ?? p.rating} SR{p.tempRating !== undefined && <Pencil size={7} />}
-                                                    </button>
-                                                )}
-                                                <span className="text-[10px] font-mono font-black flex items-center gap-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-400/20 px-1.5 rounded py-0.5" title="Tropa Rating (Unified Skill Score)">
-                                                    {(() => {
-                                                        const pR = p.tempRating ?? p.rating ?? 0;
-                                                        const premierNorm = Math.min(100, pR / 300);
-                                                        const faceitNorm = (p.faceitLevel ?? 0) * 10;
-                                                        const gcNorm = ((p.gcLevel ?? 0) / 21) * 100;
-                                                        return Math.max(premierNorm, faceitNorm, gcNorm).toFixed(1);
-                                                    })()} TR
-                                                </span>
-                                                {editingUnassigned?.steamId === p.steamId && editingUnassigned.field === "resenha" ? (
-                                                    <input autoFocus type="number" step="0.1" value={editingUnassigned.value}
-                                                        onChange={e => setEditingUnassigned({ ...editingUnassigned, value: e.target.value })}
-                                                        onBlur={() => { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "resenha", n); setEditingUnassigned(null); }}
-                                                        onKeyDown={e => { if (e.key === "Enter") { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "resenha", n); setEditingUnassigned(null); } if (e.key === "Escape") setEditingUnassigned(null); }}
-                                                        className="w-16 bg-zinc-800 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none" />
-                                                ) : (
-                                                    <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "resenha", value: (p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1) }); }} className="text-[10px] font-mono font-bold hover:text-purple-300 transition-colors flex items-center gap-0.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 rounded py-0.5" title="Editar Resenha">
-                                                        {(p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1)} ★{p.tempResenhaRating !== undefined && <Pencil size={7} />}
-                                                    </button>
-                                                )}
-                                                
-                                                {!p.isGuest && (
-                                                    <>
-                                                        {p.faceitLevel !== undefined && p.faceitLevel > 0 && (
-                                                            <span className="text-[8px] font-black bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1 rounded uppercase tracking-tighter">F{p.faceitLevel}</span>
-                                                        )}
-                                                        {p.gcLevel !== undefined && p.gcLevel > 0 && (
-                                                            <span className="text-[8px] font-black bg-sky-500/10 text-sky-400 border border-sky-500/20 px-1 rounded uppercase tracking-tighter">GC{p.gcLevel}</span>
-                                                        )}
-                                                    </>
-                                                )}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3.5">
+                                {unassigned.map(p => {
+                                    const pR = p.tempRating ?? p.rating ?? 0;
+                                    const premierNorm = Math.min(100, pR / 300);
+                                    const faceitNorm = (p.faceitLevel ?? 0) * 10;
+                                    const gcNorm = ((p.gcLevel ?? 0) / 21) * 100;
+                                    const tropaScore = Math.max(premierNorm, faceitNorm, gcNorm);
+
+                                    let skillBorder = "border-white/5";
+                                    if (tropaScore > 80) skillBorder = "border-purple-500/25 shadow-[0_0_10px_rgba(168,85,247,0.05)]";
+                                    else if (tropaScore > 55) skillBorder = "border-blue-500/25 shadow-[0_0_10px_rgba(59,130,246,0.05)]";
+
+                                    return (
+                                        <div key={p.steamId} className={`group relative hover:z-50 flex items-center bg-zinc-950 border p-2.5 pr-4 rounded-2xl transition-all duration-300 hover:bg-zinc-900/40 hover:border-purple-500/40 shadow-lg ${skillBorder}`}>
+                                            <div className="relative shrink-0 group-hover:opacity-10 transition-opacity duration-300">
+                                                <img src={p.avatar} title={p.nickname} className="w-10 h-10 rounded-xl border border-white/10 shadow-md" />
+                                                <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                                            </div>
+                                            <div className="flex flex-col ml-3 group-hover:opacity-10 transition-opacity duration-300 min-w-0 flex-1">
+                                                <p className="font-black text-xs text-white truncate uppercase tracking-wide">{p.nickname}</p>
+                                                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                                    {editingUnassigned?.steamId === p.steamId && editingUnassigned.field === "sr" ? (
+                                                        <input autoFocus type="number" value={editingUnassigned.value}
+                                                            onChange={e => setEditingUnassigned({ ...editingUnassigned, value: e.target.value })}
+                                                            onBlur={() => { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "sr", n); setEditingUnassigned(null); }}
+                                                            onKeyDown={e => { if (e.key === "Enter") { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "sr", n); setEditingUnassigned(null); } if (e.key === "Escape") setEditingUnassigned(null); }}
+                                                            className="w-20 bg-zinc-900 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none" />
+                                                    ) : (
+                                                        <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "sr", value: String(p.tempRating ?? p.rating) }); }} className="text-[8px] font-mono font-black hover:text-yellow-400 transition-colors flex items-center gap-0.5 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 rounded py-0.5" title="Editar SR">
+                                                            {p.tempRating ?? p.rating} SR{p.tempRating !== undefined && <Pencil size={7} />}
+                                                        </button>
+                                                    )}
+                                                    <span className="text-[8px] font-mono font-black flex items-center gap-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-400/20 px-1.5 rounded py-0.5" title="Tropa Rating (Unified Skill Score)">
+                                                        {tropaScore.toFixed(1)} TR
+                                                    </span>
+                                                    {editingUnassigned?.steamId === p.steamId && editingUnassigned.field === "resenha" ? (
+                                                        <input autoFocus type="number" step="0.1" value={editingUnassigned.value}
+                                                            onChange={e => setEditingUnassigned({ ...editingUnassigned, value: e.target.value })}
+                                                            onBlur={() => { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "resenha", n); setEditingUnassigned(null); }}
+                                                            onKeyDown={e => { if (e.key === "Enter") { const n = parseFloat(editingUnassigned.value); if (!isNaN(n) && n > 0) handleTempRating(p.steamId, "resenha", n); setEditingUnassigned(null); } if (e.key === "Escape") setEditingUnassigned(null); }}
+                                                            className="w-16 bg-zinc-900 border border-purple-500/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-white outline-none" />
+                                                    ) : (
+                                                        <button onClick={e => { e.stopPropagation(); setEditingUnassigned({ steamId: p.steamId, field: "resenha", value: (p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1) }); }} className="text-[8px] font-mono font-black hover:text-purple-300 transition-colors flex items-center gap-0.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 rounded py-0.5" title="Editar Resenha">
+                                                            {(p.tempResenhaRating ?? p.resenhaRating ?? 5).toFixed(1)} ★{p.tempResenhaRating !== undefined && <Pencil size={7} />}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Modern overlay selector */}
+                                            <div className="absolute inset-0 flex items-stretch justify-center opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 transition-all duration-300 z-50 bg-black/90 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10">
+                                                <button onClick={() => handleAssign(p.steamId, "A")} className="flex-1 bg-gradient-to-r from-yellow-500/20 to-yellow-500/5 hover:from-yellow-500/30 hover:to-yellow-500/15 text-yellow-500 hover:text-yellow-400 flex flex-col items-center justify-center gap-1.5 text-[9px] font-black uppercase transition-all" title="Para Time A"><ArrowLeft size={14} className="animate-pulse" /> Time A</button>
+                                                <button onClick={() => handleRemovePlayer(p.steamId)} className="px-5 bg-zinc-900 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 border-x border-white/5 transition-all flex items-center justify-center" title="Remover"><X size={14} /></button>
+                                                <button onClick={() => handleAssign(p.steamId, "B")} className="flex-1 bg-gradient-to-l from-blue-500/20 to-blue-500/5 hover:from-blue-500/30 hover:to-blue-500/15 text-blue-400 hover:text-blue-300 flex flex-col items-center justify-center gap-1.5 text-[9px] font-black uppercase transition-all" title="Para Time B">Time B <ArrowRight size={14} className="animate-pulse" /></button>
                                             </div>
                                         </div>
-                                        
-                                        <div className="absolute inset-0 flex items-stretch justify-center opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 transition-all z-50 bg-zinc-900/95 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10">
-                                            <button onClick={() => handleAssign(p.steamId, "A")} className="flex-1 bg-yellow-500 text-black hover:bg-yellow-400 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-colors" title="Para Time A"><ArrowLeft size={16} /> A</button>
-                                            <button onClick={() => handleRemovePlayer(p.steamId)} className="px-5 bg-red-500 text-white hover:bg-red-400 border-x border-red-600/50 transition-colors flex items-center justify-center" title="Remover"><X size={16} /></button>
-                                            <button onClick={() => handleAssign(p.steamId, "B")} className="flex-1 bg-blue-500 text-white hover:bg-blue-400 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-colors" title="Para Time B">B <ArrowRight size={16} /></button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
                     
                     {/* Status Bar */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between bg-zinc-900/40 p-5 rounded-2xl border border-white/5 backdrop-blur-xl gap-4">
+                    <div className="flex flex-col xl:flex-row xl:items-center justify-between bg-zinc-950/85 p-5 rounded-3xl border border-white/5 backdrop-blur-xl gap-4 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-zinc-500/10 to-transparent" />
                         <div className="flex items-center gap-5 shrink-0">
                             {/* SVG Circular Progress */}
-                            <div className="relative flex items-center justify-center w-16 h-16">
-                                <svg className="absolute inset-0 -rotate-90 w-full h-full drop-shadow-lg" viewBox="0 0 36 36">
+                            <div className="relative flex items-center justify-center w-14 h-14 shrink-0">
+                                <svg className="absolute inset-0 -rotate-90 w-full h-full drop-shadow-[0_0_8px_rgba(168,85,247,0.15)]" viewBox="0 0 36 36">
                                     <path
-                                        className="text-black/50"
-                                        strokeWidth="3"
+                                        className="text-zinc-900"
+                                        strokeWidth="3.5"
                                         stroke="currentColor"
                                         fill="none"
                                         d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                     />
                                     <path
-                                        className={`${selectedPlayers.length === 10 ? 'text-green-500' : 'text-purple-500'} transition-all duration-500`}
-                                        strokeWidth="3"
+                                        className={`${selectedPlayers.length === 10 ? 'text-green-500 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'text-purple-500 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]'} transition-all duration-500`}
+                                        strokeWidth="3.5"
                                         strokeDasharray={`${(selectedPlayers.length / 10) * 100}, 100`}
                                         strokeLinecap="round"
                                         stroke="currentColor"
@@ -815,89 +846,89 @@ export default function TeamBuilderPage() {
                                 </svg>
                                 
                                 <div className="absolute inset-0 flex items-center justify-center mt-0.5">
-                                    <span className={`text-xl font-black ${selectedPlayers.length === 10 ? 'text-green-400' : 'text-white'}`}>
+                                    <span className={`text-lg font-black ${selectedPlayers.length === 10 ? 'text-green-400' : 'text-white'}`}>
                                         {selectedPlayers.length}
                                     </span>
                                 </div>
                             </div>
                             
                             <div className="flex flex-col justify-center">
-                                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-none mb-1">
-                                    Plantel
+                                <span className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.2em] leading-none mb-1">
+                                    Membros
                                 </span>
-                                <span className="text-sm text-white font-black uppercase tracking-wider leading-none">
+                                <span className="text-xs text-white font-black uppercase tracking-wider leading-none">
                                     Selecionados
                                 </span>
-                                <span className={`text-[10px] font-mono mt-1 ${selectedPlayers.length === 10 ? 'text-green-500/80 font-bold' : 'text-zinc-600'}`}>
+                                <span className={`text-[9px] font-mono mt-1 ${selectedPlayers.length === 10 ? 'text-green-500/80 font-black uppercase' : 'text-zinc-600'}`}>
                                     {selectedPlayers.length === 10 ? 'Lobby Completo' : `${10 - selectedPlayers.length} vaga(s) restante(s)`}
                                 </span>
                             </div>
                         </div>
 
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <div className="flex bg-zinc-800 p-1 rounded-xl border border-white/5 mr-2">
-                                        <button 
-                                            onClick={() => { setBalanceMode("standard"); handleAutoBalance("standard"); }}
-                                            className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${balanceMode === "standard" ? "bg-yellow-500 text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}
-                                        >
-                                            Standard
-                                        </button>
-                                        <button 
-                                            onClick={() => { setBalanceMode("tropa"); handleAutoBalance("tropa"); }}
-                                            className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${balanceMode === "tropa" ? "bg-emerald-500 text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}
-                                        >
-                                            Tropa
-                                        </button>
-                                        <button 
-                                            onClick={() => { setBalanceMode("resenha"); handleAutoBalance("resenha"); }}
-                                            className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${balanceMode === "resenha" ? "bg-purple-500 text-black shadow-lg" : "text-zinc-500 hover:text-white"}`}
-                                        >
-                                            Resenha
-                                        </button>
-                                    </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex bg-zinc-900/50 p-1.5 rounded-2xl border border-white/5 mr-2">
+                                <button 
+                                    onClick={() => { setBalanceMode("standard"); handleAutoBalance("standard"); }}
+                                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${balanceMode === "standard" ? "bg-yellow-500 text-black shadow-lg shadow-yellow-900/20" : "text-zinc-500 hover:text-white"}`}
+                                >
+                                    Standard
+                                </button>
+                                <button 
+                                    onClick={() => { setBalanceMode("tropa"); handleAutoBalance("tropa"); }}
+                                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${balanceMode === "tropa" ? "bg-emerald-500 text-black shadow-lg shadow-emerald-900/20" : "text-zinc-500 hover:text-white"}`}
+                                >
+                                    Tropa
+                                </button>
+                                <button 
+                                    onClick={() => { setBalanceMode("resenha"); handleAutoBalance("resenha"); }}
+                                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${balanceMode === "resenha" ? "bg-purple-500 text-black shadow-lg shadow-purple-900/20" : "text-zinc-500 hover:text-white"}`}
+                                >
+                                    Resenha
+                                </button>
+                            </div>
 
-                                    <button 
-                                        onClick={handleResetTeams}
+                            <button 
+                                onClick={handleResetTeams}
                                 disabled={selectedPlayers.every(p => p.assignment === "unassigned")}
-                                className={`flex items-center justify-center p-4 rounded-xl font-black transition-all shrink-0 border ${!selectedPlayers.every(p => p.assignment === "unassigned") ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white border-white/10 hover:border-white/30 active:scale-95 shadow-md' : 'bg-white/5 text-zinc-700 border-white/5 cursor-not-allowed'}`}
+                                className={`flex items-center justify-center p-3 rounded-xl font-black transition-all shrink-0 border ${!selectedPlayers.every(p => p.assignment === "unassigned") ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border-white/10 hover:border-white/30 active:scale-95 shadow-md' : 'bg-white/5 text-zinc-800 border-white/5 cursor-not-allowed'}`}
                                 title="Voltar times para o Saguão"
                             >
-                                <Users size={16} />
+                                <Users size={14} />
                             </button>
                             <button 
                                 onClick={handleClearLobby}
                                 disabled={selectedPlayers.length === 0}
-                                className={`flex items-center justify-center p-4 rounded-xl font-black transition-all shrink-0 border ${selectedPlayers.length > 0 ? 'bg-red-900/20 hover:bg-red-900/40 text-red-500 hover:text-red-400 border-red-500/20 hover:border-red-500/40 active:scale-95 shadow-md' : 'bg-white/5 text-zinc-700 border-white/5 cursor-not-allowed'}`}
+                                className={`flex items-center justify-center p-3 rounded-xl font-black transition-all shrink-0 border ${selectedPlayers.length > 0 ? 'bg-red-900/10 hover:bg-red-900/20 text-red-500 hover:text-red-400 border-red-500/20 hover:border-red-500/40 active:scale-95 shadow-md' : 'bg-white/5 text-zinc-800 border-white/5 cursor-not-allowed'}`}
                                 title="Limpar todo o Saguão"
                             >
-                                <Trash2 size={16} />
+                                <Trash2 size={14} />
                             </button>
                             <button 
                                 onClick={() => handleCopyTeam("both")}
                                 disabled={teamA.length === 0 && teamB.length === 0}
-                                className={`flex items-center gap-2 px-4 py-4 rounded-xl font-black uppercase text-xs transition-all shadow-lg shrink-0 border ${
+                                className={`flex items-center gap-2 px-4 py-3.5 rounded-xl font-black uppercase text-[10px] tracking-wide transition-all shadow-lg shrink-0 border ${
                                     copiedTeam === "both"
                                         ? 'bg-green-600 text-white border-green-500/50 shadow-green-500/20'
                                         : (teamA.length > 0 || teamB.length > 0)
-                                            ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border-white/10 hover:border-white/30 active:scale-95'
-                                            : 'bg-white/5 text-zinc-600 cursor-not-allowed border-white/5'
+                                            ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border-white/10 hover:border-white/30 active:scale-95'
+                                            : 'bg-white/5 text-zinc-700 cursor-not-allowed border-white/5'
                                 }`}
                                 title="Copiar nomes dos dois times"
                             >
-                                {copiedTeam === "both" ? <Check size={16} /> : <ClipboardList size={16} />}
+                                {copiedTeam === "both" ? <Check size={14} /> : <ClipboardList size={14} />}
                                 <span className="hidden sm:inline">{copiedTeam === "both" ? "Copiado!" : "Copiar"}</span>
                             </button>
                             <button 
                                 onClick={handleAutoBalance}
                                 disabled={selectedPlayers.length !== 10}
-                                className={`flex items-center gap-2 px-6 py-4 rounded-xl font-black uppercase text-xs transition-all shadow-lg shrink-0 ${selectedPlayers.length === 10 ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/20 active:scale-95 border border-purple-400/50' : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'}`}
+                                className={`flex items-center gap-2 px-5 py-3.5 rounded-xl font-black uppercase text-[10px] tracking-wide transition-all shadow-lg shrink-0 ${selectedPlayers.length === 10 ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/20 active:scale-95 border border-purple-400/50' : 'bg-white/5 text-zinc-750 cursor-not-allowed border border-white/5'}`}
                             >
-                                <Shuffle size={16} /> Auto-Balance
+                                <Shuffle size={14} /> Auto-Balance
                             </button>
                             <button
                                 onClick={handleSendDiscord}
                                 disabled={discordStatus === "sending" || (teamA.length === 0 && teamB.length === 0)}
-                                className={`flex items-center gap-2 px-4 py-4 rounded-xl font-black uppercase text-xs transition-all shadow-lg shrink-0 border ${
+                                className={`flex items-center gap-2 px-4 py-3.5 rounded-xl font-black uppercase text-[10px] tracking-wide transition-all shadow-lg shrink-0 border ${
                                     discordStatus === "sent"
                                         ? 'bg-green-600 text-white border-green-500/50 shadow-green-500/20'
                                         : discordStatus === "error"
@@ -905,8 +936,8 @@ export default function TeamBuilderPage() {
                                             : discordStatus === "sending"
                                                 ? 'bg-indigo-700 text-white border-indigo-500/50 cursor-wait'
                                                 : (teamA.length > 0 || teamB.length > 0)
-                                                    ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-400/50 active:scale-95'
-                                                    : 'bg-white/5 text-zinc-600 cursor-not-allowed border-white/5'
+                                                    ? 'bg-indigo-650 hover:bg-indigo-500 text-white border-indigo-400/50 active:scale-95 shadow-indigo-900/20 shadow-lg'
+                                                    : 'bg-white/5 text-zinc-700 cursor-not-allowed border-white/5'
                                 }`}
                                 title="Enviar times para o Discord"
                             >
@@ -945,35 +976,36 @@ export default function TeamBuilderPage() {
                         </div>
                     </div>
 
-
                     {/* Veto Arena / Time A vs Time B */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative">
                         {/* VS Badge with Pulse */}
-                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 z-10 pointer-events-none flex items-center justify-center">
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 z-20 pointer-events-none flex items-center justify-center">
                             <motion.div 
-                                animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                                className="absolute inset-0 bg-yellow-500/20 rounded-full blur-xl"
+                                animate={{ scale: [1, 1.15, 1], opacity: [0.2, 0.45, 0.2] }}
+                                transition={{ duration: 2.5, repeat: Infinity }}
+                                className="absolute inset-0 bg-purple-500/10 rounded-full blur-xl animate-pulse"
                             />
-                            <div className="w-12 h-12 bg-zinc-950 border-4 border-zinc-900 rounded-full flex items-center justify-center font-black italic text-zinc-500 select-none shadow-2xl">
-                                VS
+                            <div className="w-12 h-12 bg-zinc-950/95 border-2 border-white/10 rounded-full flex items-center justify-center font-black italic text-zinc-300 select-none shadow-2xl relative overflow-hidden backdrop-blur-md">
+                                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-indigo-500/5 pointer-events-none" />
+                                <span className="relative z-10 drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]">VS</span>
                             </div>
                         </div>
 
                         {/* TEAM A */}
-                        <div className="bg-zinc-900/60 rounded-3xl border border-yellow-500/20 overflow-hidden ring-1 ring-inset ring-transparent hover:ring-yellow-500/30 transition-all h-full">
-                            <div className="bg-gradient-to-br from-yellow-500/20 to-transparent p-6 border-b border-yellow-500/10">
+                        <div className="bg-zinc-950/85 rounded-3xl border border-yellow-500/10 hover:border-yellow-500/35 overflow-hidden transition-all duration-300 h-full shadow-2xl relative backdrop-blur-xl group">
+                            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-yellow-500/20 to-transparent" />
+                            <div className="bg-gradient-to-br from-yellow-500/10 via-yellow-500/[0.02] to-transparent p-6 border-b border-white/5">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-yellow-500 drop-shadow-md">Time TR</h3>
+                                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.4)]">Time TR</h3>
                                     <button
                                         onClick={() => handleCopyTeam("A")}
                                         disabled={teamA.length === 0}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border ${
                                             copiedTeam === "A"
-                                                ? 'bg-green-600/20 text-green-400 border-green-500/30'
+                                                ? 'bg-green-600 text-white border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.3)]'
                                                 : teamA.length > 0
-                                                    ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20 active:scale-95'
-                                                    : 'bg-white/5 text-zinc-600 border-white/5 cursor-not-allowed'
+                                                    ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500 hover:text-black active:scale-95 shadow-md hover:border-yellow-400'
+                                                    : 'bg-white/5 text-zinc-700 border-white/5 cursor-not-allowed'
                                         }`}
                                         title="Copiar nomes do Time TR"
                                     >
@@ -981,10 +1013,10 @@ export default function TeamBuilderPage() {
                                         {copiedTeam === "A" ? "Copiado" : "Copiar"}
                                     </button>
                                 </div>
-                                <div className="flex items-center gap-2 mt-2">
-                                    <Medal size={14} className="text-zinc-400" />
-                                    <p className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-widest">
-                                        Média {balanceMode === "resenha" ? "Resenha" : balanceMode === "tropa" ? "Tropa" : "SR"}: <span className={`text-sm ${balanceMode === 'tropa' ? 'text-emerald-400' : 'text-white'}`}>{avgA}{balanceMode === "resenha" ? " ★" : balanceMode === "tropa" ? " TR" : ""}</span>
+                                <div className="flex items-center gap-2 mt-3">
+                                    <Medal size={14} className="text-yellow-500/60" />
+                                    <p className="text-[10px] font-mono text-zinc-500 font-black uppercase tracking-wider">
+                                        Média {balanceMode === "resenha" ? "Resenha" : balanceMode === "tropa" ? "Tropa" : "SR"}: <span className={`text-xs font-black ${balanceMode === 'tropa' ? 'text-emerald-400' : 'text-white'}`}>{avgA}{balanceMode === "resenha" ? " ★" : balanceMode === "tropa" ? " TR" : ""}</span>
                                     </p>
                                 </div>
                             </div>
@@ -1002,31 +1034,32 @@ export default function TeamBuilderPage() {
                         </div>
 
                         {/* TEAM B */}
-                        <div className="bg-zinc-900/60 rounded-3xl border border-blue-500/20 overflow-hidden ring-1 ring-inset ring-transparent hover:ring-blue-500/30 transition-all h-full">
-                            <div className="bg-gradient-to-bl from-blue-500/20 to-transparent p-6 border-b border-blue-500/10">
+                        <div className="bg-zinc-950/85 rounded-3xl border border-blue-500/10 hover:border-blue-500/35 overflow-hidden transition-all duration-300 h-full shadow-2xl relative backdrop-blur-xl group">
+                            <div className="absolute top-0 right-0 w-full h-[1px] bg-gradient-to-l from-blue-500/20 to-transparent" />
+                            <div className="bg-gradient-to-bl from-blue-500/10 via-blue-500/[0.02] to-transparent p-6 border-b border-white/5">
                                 <div className="flex items-center justify-between">
                                     <button
                                         onClick={() => handleCopyTeam("B")}
                                         disabled={teamB.length === 0}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border ${
                                             copiedTeam === "B"
-                                                ? 'bg-green-600/20 text-green-400 border-green-500/30'
+                                                ? 'bg-green-600 text-white border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.3)]'
                                                 : teamB.length > 0
-                                                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20 active:scale-95'
-                                                    : 'bg-white/5 text-zinc-600 border-white/5 cursor-not-allowed'
+                                                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500 hover:text-white active:scale-95 shadow-md hover:border-blue-400'
+                                                    : 'bg-white/5 text-zinc-700 border-white/5 cursor-not-allowed'
                                         }`}
                                         title="Copiar nomes do Time CT"
                                     >
                                         {copiedTeam === "B" ? <Check size={12} /> : <Copy size={12} />}
                                         {copiedTeam === "B" ? "Copiado" : "Copiar"}
                                     </button>
-                                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-blue-500 drop-shadow-md">Time CT</h3>
+                                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-blue-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.4)]">Time CT</h3>
                                 </div>
-                                <div className="flex items-center gap-2 mt-2 justify-end text-right">
-                                    <p className="text-[11px] font-mono text-zinc-400 font-bold uppercase tracking-widest">
-                                        <span className={`text-sm ${balanceMode === 'tropa' ? 'text-emerald-400' : 'text-white'}`}>{avgB}{balanceMode === "resenha" ? " ★" : balanceMode === "tropa" ? " TR" : ""}</span> :{balanceMode === "resenha" ? "Resenha" : balanceMode === "tropa" ? "Tropa" : "SR"} Média
+                                <div className="flex items-center gap-2 mt-3 justify-end text-right">
+                                    <p className="text-[10px] font-mono text-zinc-500 font-black uppercase tracking-wider">
+                                        <span className={`text-xs font-black ${balanceMode === 'tropa' ? 'text-emerald-400' : 'text-white'}`}>{avgB}{balanceMode === "resenha" ? " ★" : balanceMode === "tropa" ? " TR" : ""}</span> :{balanceMode === "resenha" ? "Resenha" : balanceMode === "tropa" ? "Tropa" : "SR"} Média
                                     </p>
-                                    <Medal size={14} className="text-zinc-400" />
+                                    <Medal size={14} className="text-blue-500/60" />
                                 </div>
                             </div>
                             <div className="p-4 space-y-2 min-h-[300px]">
@@ -1041,9 +1074,8 @@ export default function TeamBuilderPage() {
                                 ))}
                             </div>
                         </div>
-
                     </div>
-
+                    
                     {/* BALANCE DASHBOARD */}
                     <div className="bg-zinc-950/90 rounded-3xl border border-white/5 p-6 flex flex-col lg:flex-row items-center justify-between gap-8 backdrop-blur-xl relative overflow-hidden shadow-2xl mt-4">
                         {/* Immersive Background Gradients */}
@@ -1151,41 +1183,43 @@ export default function TeamBuilderPage() {
 
 
                     {/* ── MAP VETO SECTION (Integrated) ── */}
-                    <div className="mt-6 space-y-4 bg-zinc-900/20 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
+                    <div className="mt-6 space-y-4 bg-zinc-950/80 p-6 rounded-3xl border border-white/5 backdrop-blur-xl relative overflow-hidden shadow-2xl">
+                        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-500/20 to-transparent" />
                         <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-4 border-b border-white/5 pb-5">
                             <div>
                                 <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
-                                        <MapIcon className="text-yellow-500 w-5 h-5" />
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-500/5 border border-yellow-500/30 flex items-center justify-center shadow-lg">
+                                        <MapIcon className="text-yellow-500 w-5 h-5 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]" />
                                     </div>
                                     Veto de Mapas
                                 </h2>
-                                <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em] mt-1.5 flex items-center gap-2">
+                                <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
                                     <span className="w-6 h-px bg-yellow-500/30" />
-                                    Selecione os mapas ou use o sorteador aleatório
+                                    <span>Selecione os mapas ou use o sorteador aleatório</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
                                 </p>
                             </div>
                             
                             <div className="flex items-center gap-2">
                                 <button 
                                     onClick={resetVeto}
-                                    className="p-3 bg-zinc-900 border border-white/10 rounded-xl text-zinc-500 hover:text-white hover:border-white/30 transition-all active:scale-95 shadow-lg"
+                                    className="p-3 bg-zinc-900 border border-white/10 rounded-xl text-zinc-500 hover:text-white hover:border-white/30 hover:bg-zinc-800 transition-all active:scale-95 shadow-lg"
                                     title="Resetar Veto"
                                 >
-                                    <RotateCcw size={16} />
+                                    <RotateCcw size={15} />
                                 </button>
                                 <button 
                                     onClick={handleRandomMap}
-                                    className="flex items-center gap-2 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase text-[10px] rounded-xl transition-all shadow-xl active:scale-95 border border-yellow-300/30"
+                                    className="flex items-center gap-2 px-5 py-3.5 bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase text-[10px] tracking-wide rounded-xl transition-all shadow-xl active:scale-95 border border-yellow-400/50 shadow-yellow-950/20"
                                 >
-                                    <Shuffle size={14} /> Mapa Aleatório
+                                    <Shuffle size={12} /> Mapa Aleatório
                                 </button>
                             </div>
                         </div>
 
                         <div className="flex flex-col 2xl:flex-row gap-6">
                             {/* Map Grid */}
-                            <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                            <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5">
                                 {mapPool.map((map) => {
                                     const state = vetoMaps[map.id];
                                     const isBanned = state?.type === "ban";
@@ -1195,25 +1229,25 @@ export default function TeamBuilderPage() {
                                         <motion.div 
                                             key={map.id}
                                             layout
-                                            className={`relative aspect-[4/3] rounded-xl overflow-hidden border transition-all group ${
-                                                isBanned ? 'border-red-500/50 opacity-40 grayscale' :
-                                                isPicked ? 'border-green-500 shadow-xl shadow-green-500/10' :
+                                            className={`relative aspect-[4/3] rounded-2xl overflow-hidden border transition-all duration-300 group ${
+                                                isBanned ? 'border-red-500/40 opacity-30 grayscale' :
+                                                isPicked ? 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.25)] ring-1 ring-green-500/50' :
                                                 'border-white/5 hover:border-yellow-500/40'
                                             }`}
                                         >
                                             <img src={map.image} alt={map.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-black/10" />
                                             
-                                            <div className="absolute inset-0 p-3 flex flex-col justify-between">
+                                            <div className="absolute inset-0 p-3 flex flex-col justify-between z-10">
                                                 <div className="flex justify-between items-start">
-                                                    <span className="text-sm font-black italic uppercase tracking-tighter text-white drop-shadow-lg">
+                                                    <span className="text-xs font-black italic uppercase tracking-tighter text-white drop-shadow-md">
                                                         {map.name}
                                                     </span>
                                                     {state && (
-                                                        <span className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-tighter ${
-                                                            state.type === "pick" ? 'bg-green-500 text-black' : 'bg-red-500 text-white'
+                                                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider ${
+                                                            state.type === "pick" ? 'bg-green-500 text-black shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-red-600 text-white shadow-[0_0_8px_rgba(239,68,68,0.4)]'
                                                         }`}>
-                                                            {state.type === "pick" ? "Picked" : "Banned"}
+                                                            {state.type === "pick" ? "Pick" : "Ban"}
                                                         </span>
                                                     )}
                                                 </div>
@@ -1222,13 +1256,13 @@ export default function TeamBuilderPage() {
                                                     <div className="flex gap-1.5 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                                                         <button 
                                                             onClick={() => handleMapAction(map.id, "pick")}
-                                                            className="flex-1 bg-green-500 hover:bg-green-400 text-black py-1.5 rounded-lg font-black text-[9px] uppercase shadow-lg shadow-green-900/30"
+                                                            className="flex-1 bg-green-600 hover:bg-green-500 text-white py-1.5 rounded-xl font-black text-[9px] uppercase tracking-wider shadow-lg shadow-green-950/20 active:scale-95 transition-all"
                                                         >
                                                             Pick
                                                         </button>
                                                         <button 
                                                             onClick={() => handleMapAction(map.id, "ban")}
-                                                            className="flex-1 bg-red-500 hover:bg-red-400 text-white py-1.5 rounded-lg font-black text-[9px] uppercase shadow-lg shadow-red-900/30"
+                                                            className="flex-1 bg-red-600 hover:bg-red-500 text-white py-1.5 rounded-xl font-black text-[9px] uppercase tracking-wider shadow-lg shadow-red-950/20 active:scale-95 transition-all"
                                                         >
                                                             Ban
                                                         </button>
@@ -1237,8 +1271,8 @@ export default function TeamBuilderPage() {
                                             </div>
 
                                             {isBanned && (
-                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                    <div className="text-red-500 text-2xl font-black border-4 border-red-500 px-4 py-1 rounded-xl rotate-[-15deg] shadow-2xl bg-black/40 backdrop-blur-sm">
+                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                                                    <div className="text-red-500 text-lg font-black border-2 border-red-500/80 px-3.5 py-0.5 rounded-xl rotate-[-12deg] shadow-2xl bg-black/60 backdrop-blur-sm tracking-wider uppercase">
                                                         BAN
                                                     </div>
                                                 </div>
@@ -1248,51 +1282,52 @@ export default function TeamBuilderPage() {
                                 })}
                             </div>
 
-                            {/* Veto Log / History (Simplified) */}
+                            {/* Veto Log / History */}
                             <div className="2xl:w-72 shrink-0">
-                                <div className="bg-black/30 p-4 rounded-2xl border border-white/5 h-full flex flex-col shadow-inner">
+                                <div className="bg-black/45 p-5 rounded-3xl border border-white/5 h-full flex flex-col shadow-inner backdrop-blur-md">
                                     <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
-                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                                            <History size={14} className="text-yellow-500" /> Log de Veto
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                            <History size={14} className="text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.4)]" /> Log de Veto
                                         </h3>
-                                        <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${vetoTurn === "A" ? 'bg-yellow-500 text-black' : 'bg-blue-500 text-white'}`}>
+                                        <span className={`text-[8px] font-black tracking-wider px-2.5 py-1 rounded-xl ${vetoTurn === "A" ? 'bg-yellow-500 text-black shadow-[0_0_8px_rgba(234,179,8,0.25)]' : 'bg-blue-500 text-white shadow-[0_0_8px_rgba(59,130,246,0.25)]'}`}>
                                             TURNO {vetoTurn}
                                         </span>
                                     </div>
 
-                                    <div className="flex-1 space-y-2 max-h-[450px] overflow-y-auto no-scrollbar">
+                                    <div className="flex-1 space-y-2 max-h-[450px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/5">
                                         {vetoHistory.length === 0 ? (
-                                            <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-10">
-                                                <MapIcon size={32} className="mb-2" />
-                                                <p className="text-[8px] font-black uppercase tracking-widest">Aguardando ações</p>
+                                            <div className="h-full flex flex-col items-center justify-center text-center opacity-20 py-12">
+                                                <MapIcon size={32} className="mb-2 text-zinc-600" />
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Aguardando ações</p>
                                             </div>
                                         ) : (
                                             <div className="space-y-2">
                                                 {vetoHistory.map((entry, i) => {
                                                     const mapData = mapPool.find(m => m.id === entry.map);
+                                                    const actionColor = entry.type === "pick" ? "border-l-green-500 bg-green-500/5 hover:bg-green-500/10" : "border-l-red-500 bg-red-500/5 hover:bg-red-500/10";
                                                     return (
                                                         <motion.div 
                                                             initial={{ opacity: 0, x: 10 }}
                                                             animate={{ opacity: 1, x: 0 }}
                                                             key={i} 
-                                                            className="flex items-center gap-3 p-2 bg-zinc-900/50 rounded-xl border border-white/5 hover:border-white/10 transition-all overflow-hidden relative group"
+                                                            className={`flex items-center gap-3 p-2.5 rounded-2xl border-l-4 border-y border-r border-white/5 transition-all duration-300 overflow-hidden relative group ${actionColor}`}
                                                         >
-                                                            <div className="absolute inset-0 opacity-20 pointer-events-none">
-                                                                <img src={mapData?.image} className="w-full h-full object-cover blur-[2px]" />
+                                                            <div className="absolute inset-0 opacity-10 pointer-events-none group-hover:scale-105 transition-transform duration-500">
+                                                                <img src={mapData?.image} className="w-full h-full object-cover blur-[1px]" />
                                                             </div>
                                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 z-10 shadow-lg ${
                                                                 entry.team === "A" ? 'bg-yellow-500 text-black font-black' : 
                                                                 entry.team === "B" ? 'bg-blue-500 text-white font-black' : 
-                                                                'bg-zinc-800 text-zinc-500'
+                                                                'bg-zinc-800 text-zinc-400'
                                                             }`}>
-                                                                <span className="text-[10px]">{entry.team === "system" ? "?" : entry.team}</span>
+                                                                <span className="text-[10px]">{entry.team === "system" ? "SYS" : entry.team}</span>
                                                             </div>
                                                             <div className="flex-1 min-w-0 z-10">
                                                                 <p className="font-black text-xs uppercase text-white truncate drop-shadow-md">
                                                                     {mapData?.name}
                                                                 </p>
                                                                 <div className="flex items-center gap-2 mt-0.5">
-                                                                    <div className={`w-1.5 h-1.5 rounded-full ${entry.type === "pick" ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]'}`} />
+                                                                    <div className={`w-1.5 h-1.5 rounded-full ${entry.type === "pick" ? 'bg-green-500' : 'bg-red-500'}`} />
                                                                     <p className="text-[8px] text-zinc-400 font-black uppercase tracking-widest">
                                                                         {entry.type === "pick" ? "Selecionado" : "Banido"}
                                                                     </p>
