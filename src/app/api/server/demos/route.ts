@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
             for (const path of candidatePaths) {
                 try {
                     const response = await axios.get(
-                        `https://dathost.net/api/0.1/game-servers/${dathostServerId}/files/${path}`,
+                        `https://dathost.net/api/0.1/game-servers/${dathostServerId}/files/${encodeURIComponent(path)}`,
                         {
                             auth: {
                                 username: dathostEmail,

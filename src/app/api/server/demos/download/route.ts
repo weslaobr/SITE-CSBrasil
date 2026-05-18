@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
             try {
                 // Request the file stream from DatHost REST API
                 const response = await axios.get(
-                    `https://dathost.net/api/0.1/game-servers/${dathostServerId}/files/${filePath}`,
+                    `https://dathost.net/api/0.1/game-servers/${dathostServerId}/files/${encodeURIComponent(filePath)}`,
                     {
                         auth: {
                             username: dathostEmail,
