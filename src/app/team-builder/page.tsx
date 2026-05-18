@@ -221,6 +221,26 @@ export default function TeamBuilderPage() {
     });
 
     const [discordOnlyVoice, setDiscordOnlyVoice] = useState(true);
+    const [localDiscordMappings, setLocalDiscordMappings] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("tropacs_discord_mappings");
+            if (saved) {
+                try {
+                    setLocalDiscordMappings(JSON.parse(saved));
+                } catch (e) {
+                    console.error("Failed to parse local discord mappings:", e);
+                }
+            }
+        }
+    }, []);
+
+    const handleLinkDiscord = (username: string, steamId: string) => {
+        const updated = { ...localDiscordMappings, [username.toLowerCase()]: steamId };
+        setLocalDiscordMappings(updated);
+        localStorage.setItem("tropacs_discord_mappings", JSON.stringify(updated));
+    };
 
     const fetchDiscordOnline = async () => {
         setDiscordOnline(prev => ({ ...prev, loading: true }));
@@ -626,14 +646,41 @@ export default function TeamBuilderPage() {
     };
 
     const getMatchedPlayer = (member: any) => {
-        let found = dbPlayers.find(p => p.discordId === member.id);
+        // 1. Local manual mapping (highly stable)
+        if (member.username) {
+            const mappedSteamId = localDiscordMappings[member.username.toLowerCase()];
+            if (mappedSteamId) {
+                const found = dbPlayers.find(p => p.steamId === mappedSteamId);
+                if (found) return found;
+            }
+        }
+
+        // 2. Database discordId mapping
+        let found = dbPlayers.find(p => p.discordId === member.id || (p.discordId && member.username && p.discordId.toLowerCase() === member.username.toLowerCase()));
         if (found) return found;
 
+        // 3. Robust substring/fuzzy matching
         const searchName = (member.nick || member.username || "").toLowerCase();
+        const normSearch = searchName.replace(/[^a-z0-9]/g, "");
+        if (!normSearch) return undefined;
+
+        // Exact match first
         found = dbPlayers.find(p => 
             p.nickname.toLowerCase() === searchName || 
             (p.steamName && p.steamName.toLowerCase() === searchName)
         );
+        if (found) return found;
+
+        // Substring / alphanumeric check
+        found = dbPlayers.find(p => {
+            const dbNick = p.nickname.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const dbSteam = (p.steamName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            return (
+                (dbNick && (dbNick.includes(normSearch) || normSearch.includes(dbNick))) ||
+                (dbSteam && (dbSteam.includes(normSearch) || normSearch.includes(dbSteam)))
+            );
+        });
+
         return found;
     };
 
@@ -816,9 +863,26 @@ export default function TeamBuilderPage() {
                                                     <div className="min-w-0">
                                                         <p className="font-black text-[10px] text-white truncate uppercase tracking-wider">{player.nickname}</p>
                                                         {isUnmatched && (
-                                                            <p className="text-[6.5px] text-yellow-500/90 font-mono font-black uppercase tracking-wider mb-0.5">
-                                                                ⚠️ Não Vinculado
-                                                            </p>
+                                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                                 <p className="text-[6.5px] text-yellow-500/90 font-mono font-black uppercase tracking-wider mb-0.5" title="Este usuário do Discord não está vinculado à Steam">
+                                                                     ⚠️ Não Vinculado
+                                                                 </p>
+                                                                 <select
+                                                                     onChange={(e) => {
+                                                                         const val = e.target.value;
+                                                                         if (val) handleLinkDiscord(member.username, val);
+                                                                     }}
+                                                                     className="bg-zinc-900 hover:bg-zinc-800 border border-white/10 hover:border-yellow-500/50 rounded-lg px-2 py-1 text-[10px] text-zinc-200 font-black tracking-wide focus:outline-none focus:ring-1 focus:ring-yellow-500 cursor-pointer transition-all duration-200 outline-none max-w-[120px] truncate"
+                                                                     defaultValue=""
+                                                                 >
+                                                                     <option value="" disabled className="bg-zinc-900 text-zinc-500 font-bold">Vincular...</option>
+                                                                     {dbPlayers.map(p => (
+                                                                         <option key={p.steamId} value={p.steamId} className="bg-zinc-900 text-zinc-200 font-bold py-1">
+                                                                             {p.nickname || p.steamName}
+                                                                         </option>
+                                                                     ))}
+                                                                 </select>
+                                                             </div>
                                                         )}
                                                         {member.channel_id ? (() => {
                                                             const voiceChannel = discordOnline.channels?.find(c => c.id === member.channel_id);

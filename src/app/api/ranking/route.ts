@@ -380,6 +380,7 @@ export async function GET() {
 
                 return {
                     steamId: p.steamId,
+                    discordId: p.discordId,
                     nickname: userData?.name || (p as any).steamName || p.faceitName || `Player #${p.steamId.slice(-4)}`,
                     avatar: userData?.image || (p as any).steamAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.steamId}`,
                     rating: rating || 0,
