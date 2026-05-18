@@ -48,21 +48,7 @@ export default function DemosTab() {
     };
 
     const handleDownload = async (file: DemoFile) => {
-        setDownloadingFile(file.name);
-        try {
-            const res = await fetch(`/api/server/demos/download?file=${encodeURIComponent(file.path)}`);
-            if (!res.ok) throw new Error('Erro ao gerar link de download');
-            
-            const data = await res.json();
-            if (data.downloadUrl) {
-                // Abrir em nova aba para iniciar o download
-                window.open(data.downloadUrl, '_blank');
-            }
-        } catch (err: any) {
-            alert(err.message);
-        } finally {
-            setDownloadingFile(null);
-        }
+        window.location.href = `/api/server/demos/download?file=${encodeURIComponent(file.path)}`;
     };
 
     const handleProcess = async (file: DemoFile) => {
@@ -70,22 +56,10 @@ export default function DemosTab() {
         setProcessingStatus(prev => ({ ...prev, [file.name]: 'loading' }));
         
         try {
-            const downloadRes = await fetch(`/api/server/demos/download?file=${encodeURIComponent(file.path)}`);
-            if (!downloadRes.ok) throw new Error('Erro ao obter link da demo');
-            
-            let downloadData;
-            try {
-                downloadData = await downloadRes.json();
-            } catch (e) {
-                throw new Error('Servidor retornou resposta inválida ao gerar link.');
-            }
-            
-            if (!downloadData?.downloadUrl) throw new Error('Link de download não gerado');
-
             const res = await fetch('/api/sync/manual-demo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: downloadData.downloadUrl }),
+                body: JSON.stringify({ filePath: file.path }),
             });
 
             if (!res.ok) {
@@ -103,7 +77,7 @@ export default function DemosTab() {
         } catch (err: any) {
             console.error('[AdminDemos]', err);
             setProcessingStatus(prev => ({ ...prev, [file.name]: 'error' }));
-            alert(err.message); // Mostrar o erro para o usuário em vez de crashar
+            alert(err.message);
             setTimeout(() => setProcessingStatus(prev => ({ ...prev, [file.name]: 'idle' })), 5000);
         } finally {
             setProcessingFile(null);

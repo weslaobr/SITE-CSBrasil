@@ -34,27 +34,44 @@ export async function GET(req: NextRequest) {
             secure: false // DatHost FTP usually doesn't use TLS on port 21, or uses explicit TLS which basic-ftp handles
         });
 
-        let list: ftp.FileInfo[] = [];
-        let currentPath = DEMOS_PATH;
+        const candidatePaths = [
+            "MatchZy",
+            "MatchZy/demos",
+            "game/csgo/MatchZy",
+            "game/csgo/MatchZy/demos"
+        ];
 
-        try {
-            list = await client.list(DEMOS_PATH);
-        } catch (err) {
+        let list: ftp.FileInfo[] = [];
+        let currentPath = "";
+
+        for (const path of candidatePaths) {
             try {
-                list = await client.list(FALLBACK_PATH);
-                currentPath = FALLBACK_PATH;
-            } catch (err2) {
-                console.error("FTP List error", err2);
-                return NextResponse.json({ 
-                    error: `Não foi possível encontrar a pasta de demos no servidor FTP`,
-                    tried: [DEMOS_PATH, FALLBACK_PATH]
-                }, { status: 404 });
+                const tempList = await client.list(path);
+                // Check if this list contains any .dem files case-insensitively
+                const hasDemos = tempList.some(item => item.isFile && item.name.toLowerCase().endsWith('.dem'));
+                if (hasDemos || (tempList.length > 0 && !currentPath)) {
+                    list = tempList;
+                    currentPath = path;
+                    if (hasDemos) {
+                        break; // Found the active folder with actual demos, stop searching
+                    }
+                }
+            } catch (e) {
+                // Ignore and try next candidate
             }
         }
 
-        // Filtrar apenas arquivos .dem
+        if (!currentPath) {
+            console.error("FTP List error: Could not find any demos directory in candidates", candidatePaths);
+            return NextResponse.json({ 
+                error: `Não foi possível encontrar a pasta de demos no servidor FTP`,
+                tried: candidatePaths
+            }, { status: 404 });
+        }
+
+        // Filtrar apenas arquivos .dem (case-insensitive)
         const files = list
-            .filter(item => item.isFile && item.name.endsWith('.dem'))
+            .filter(item => item.isFile && item.name.toLowerCase().endsWith('.dem'))
             .map(item => ({
                 name: item.name,
                 size: item.size,
@@ -65,7 +82,11 @@ export async function GET(req: NextRequest) {
             }));
 
         // Ordenar por data de modificação (mais recentes primeiro)
-        files.sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime());
+        files.sort((a, b) => {
+            const timeA = a.modifiedAt ? new Date(a.modifiedAt).getTime() : 0;
+            const timeB = b.modifiedAt ? new Date(b.modifiedAt).getTime() : 0;
+            return timeB - timeA;
+        });
 
         return NextResponse.json({ files });
 
