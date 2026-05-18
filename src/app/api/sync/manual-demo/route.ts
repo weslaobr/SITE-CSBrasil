@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        if (!finalUrl || (!finalUrl.startsWith('http') && !finalUrl.startsWith('CSGO-'))) {
+        if (!finalUrl || (!finalUrl.startsWith('http') && !finalUrl.startsWith('ftp://') && !finalUrl.startsWith('CSGO-'))) {
             return NextResponse.json({ error: "URL, Caminho ou Código de compartilhamento inválido." }, { status: 400 });
         }
 
