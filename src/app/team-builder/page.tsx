@@ -1045,69 +1045,88 @@ export default function TeamBuilderPage() {
                     </div>
 
                     {/* BALANCE DASHBOARD */}
-                    <div className="bg-zinc-900/40 rounded-3xl border border-white/5 p-4 flex flex-col sm:flex-row items-center justify-center gap-8 backdrop-blur-sm overflow-hidden relative">
-                        <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-transparent to-blue-500/5 pointer-events-none" />
-                        
-                        <div className="flex flex-col items-center gap-1">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Diferença de Força</span>
-                            <div className="flex items-center gap-4">
-                                <div className="text-center">
-                                    <p className="text-[10px] font-bold text-yellow-500 uppercase">Média {balanceMode.toUpperCase()}</p>
-                                    <p className="text-xl font-black text-white">{avgA}</p>
-                                </div>
-                                <div className="h-8 w-px bg-white/10" />
-                                <div className="text-center">
-                                    <p className="text-[10px] font-bold text-emerald-400 uppercase">Gap de Equilíbrio</p>
-                                    <p className={`text-xl font-black ${Math.abs(parseFloat(avgA) - parseFloat(avgB)) < 2 ? 'text-green-500' : 'text-yellow-500'}`}>
-                                        {Math.abs(parseFloat(avgA) - parseFloat(avgB)).toFixed(1)}
-                                    </p>
-                                </div>
-                                <div className="h-8 w-px bg-white/10" />
-                                <div className="text-center">
-                                    <p className="text-[10px] font-bold text-blue-500 uppercase">Média {balanceMode.toUpperCase()}</p>
-                                    <p className="text-xl font-black text-white">{avgB}</p>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="bg-zinc-950/90 rounded-3xl border border-white/5 p-6 flex flex-col lg:flex-row items-center justify-between gap-8 backdrop-blur-xl relative overflow-hidden shadow-2xl mt-4">
+                        {/* Immersive Background Gradients */}
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-yellow-500/10 via-yellow-500/5 to-transparent pointer-events-none" />
+                        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-blue-500/10 via-blue-500/5 to-transparent pointer-events-none" />
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-                        <div className="flex-1 max-w-md w-full h-2 bg-white/5 rounded-full overflow-hidden relative border border-white/5">
-                            <motion.div 
-                                initial={{ width: "50%" }}
-                                animate={{ 
-                                    width: (() => {
-                                        const diff = parseFloat(avgA) - parseFloat(avgB);
-                                        // Aumentamos a sensibilidade para que pequenas diferenças sejam visíveis
-                                        let sensitivity = 1;
-                                        if (balanceMode === "standard") sensitivity = 0.02;  // Diferença de 500 SR = 10%
-                                        else if (balanceMode === "tropa") sensitivity = 4;    // Diferença de 2.5 TR = 10%
-                                        else if (balanceMode === "resenha") sensitivity = 30; // Diferença de 0.3 estrela = 10%
-                                        
-                                        const percentage = 50 + (diff * sensitivity);
-                                        return `${Math.max(5, Math.min(95, percentage))}%`;
-                                    })(),
-                                    backgroundColor: Math.abs(parseFloat(avgA) - parseFloat(avgB)) < (balanceMode === "standard" ? 400 : balanceMode === "tropa" ? 2 : 0.2) ? "#22c55e" : "#eab308"
-                                }}
-                                className="absolute inset-0 h-full shadow-[0_0_15px_rgba(34,197,94,0.3)]"
-                            />
-                            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/50 shadow-[0_0_10px_white]" />
+                        {/* Center/Main Stats Area */}
+                        <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-12 w-full lg:w-auto flex-1 justify-center z-10">
                             
-                            {/* Advantage Labels */}
-                            <div className="absolute inset-x-0 -top-6 flex justify-between px-2">
-                                {parseFloat(avgA) > parseFloat(avgB) && (
-                                    <span className="text-[8px] font-black text-yellow-500 uppercase animate-pulse">Favorito A</span>
-                                )}
-                                <div className="flex-1" />
-                                {parseFloat(avgB) > parseFloat(avgA) && (
-                                    <span className="text-[8px] font-black text-blue-400 uppercase animate-pulse">Favorito B</span>
-                                )}
+                            {/* Team A Stats */}
+                            <div className="flex flex-col items-center sm:items-end w-32 shrink-0">
+                                <span className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-1 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]">Time TR</span>
+                                <div className="flex items-baseline gap-1.5">
+                                    <span className="text-3xl font-black text-white drop-shadow-[0_0_10px_rgba(234,179,8,0.3)] tracking-tighter">{avgA}</span>
+                                    <span className="text-[9px] text-zinc-500 font-bold uppercase">{balanceMode === "standard" ? "SR" : balanceMode === "tropa" ? "TR" : "★"}</span>
+                                </div>
                             </div>
+
+                            {/* Center Balance Visualization */}
+                            <div className="flex flex-col items-center flex-1 max-w-md w-full gap-4">
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1.5">Diferença de Força</span>
+                                    <div className={`px-4 py-1.5 rounded-xl border flex items-center justify-center gap-2 backdrop-blur-md transition-all ${Math.abs(Number(avgA) - Number(avgB)) < (balanceMode === "standard" ? 400 : balanceMode === "tropa" ? 2 : 0.2) ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.15)]' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]'}`}>
+                                        <span className="text-xs font-bold opacity-70">GAP</span>
+                                        <span className="text-lg font-black leading-none">{Math.abs(Number(avgA) - Number(avgB)).toFixed(1)}</span>
+                                    </div>
+                                </div>
+
+                                {/* Modern Progress Bar */}
+                                <div className="w-full relative pt-4">
+                                    {/* Labels floating above the bar */}
+                                    <div className="absolute inset-x-0 top-0 flex justify-between px-1">
+                                        {Number(avgA) > Number(avgB) ? (
+                                            <span className="text-[9px] font-black text-yellow-500 uppercase animate-pulse drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]">Favorito</span>
+                                        ) : <span className="opacity-0">.</span>}
+                                        {Number(avgB) > Number(avgA) ? (
+                                            <span className="text-[9px] font-black text-blue-400 uppercase animate-pulse drop-shadow-[0_0_5px_rgba(59,130,246,0.5)]">Favorito</span>
+                                        ) : <span className="opacity-0">.</span>}
+                                    </div>
+                                    
+                                    <div className="h-2.5 bg-black/60 rounded-full overflow-hidden relative border border-white/10 shadow-inner">
+                                        <motion.div 
+                                            initial={{ width: "50%" }}
+                                            animate={{ 
+                                                width: (() => {
+                                                    const diff = Number(avgA) - Number(avgB);
+                                                    let sensitivity = 1;
+                                                    if (balanceMode === "standard") sensitivity = 0.02;
+                                                    else if (balanceMode === "tropa") sensitivity = 4;
+                                                    else if (balanceMode === "resenha") sensitivity = 30;
+                                                    const percentage = 50 + (diff * sensitivity);
+                                                    return `${Math.max(5, Math.min(95, percentage))}%`;
+                                                })(),
+                                                backgroundColor: Math.abs(Number(avgA) - Number(avgB)) < (balanceMode === "standard" ? 400 : balanceMode === "tropa" ? 2 : 0.2) ? "#10b981" : "#f59e0b"
+                                            }}
+                                            className="absolute inset-0 h-full shadow-[0_0_15px_currentColor] rounded-full transition-all duration-700 ease-out"
+                                        />
+                                        <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white shadow-[0_0_10px_white] z-10" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Team B Stats */}
+                            <div className="flex flex-col items-center sm:items-start w-32 shrink-0">
+                                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 drop-shadow-[0_0_5px_rgba(59,130,246,0.5)]">Time CT</span>
+                                <div className="flex items-baseline gap-1.5">
+                                    <span className="text-3xl font-black text-white drop-shadow-[0_0_10px_rgba(59,130,246,0.3)] tracking-tighter">{avgB}</span>
+                                    <span className="text-[9px] text-zinc-500 font-bold uppercase">{balanceMode === "standard" ? "SR" : balanceMode === "tropa" ? "TR" : "★"}</span>
+                                </div>
+                            </div>
+
                         </div>
 
-                        <div className="text-center sm:text-right">
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Nível do Lobby</p>
-                            <div className="flex items-center gap-2">
+                        {/* Divider for Desktop */}
+                        <div className="hidden lg:block w-px h-16 bg-gradient-to-b from-transparent via-white/10 to-transparent z-10" />
+
+                        {/* Lobby Level */}
+                        <div className="flex flex-col items-center lg:items-start z-10 w-full lg:w-48 shrink-0">
+                            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-2">Classificação do Lobby</span>
+                            <div className="w-full bg-white/5 border border-white/10 px-4 py-3 rounded-2xl flex items-center justify-center backdrop-blur-md hover:bg-white/10 transition-colors">
                                 {(() => {
-                                    const avgTotal = (parseFloat(avgA) + parseFloat(avgB)) / 2;
+                                    const avgTotal = (Number(avgA) + Number(avgB)) / 2;
                                     let isElite = false;
                                     let isComp = false;
 
@@ -1122,13 +1141,14 @@ export default function TeamBuilderPage() {
                                         isComp = avgTotal > 6.5;
                                     }
 
-                                    if (isElite) return <span className="text-xs font-black text-purple-400 flex items-center gap-1 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]"><Trophy size={14} /> ELITE MIX</span>;
-                                    if (isComp) return <span className="text-xs font-black text-blue-400 flex items-center gap-1"><Medal size={14} /> COMPETITIVO</span>;
-                                    return <span className="text-xs font-black text-zinc-400 flex items-center gap-1"><Users size={14} /> CASUAL</span>;
+                                    if (isElite) return <span className="text-sm font-black text-purple-400 flex items-center gap-2 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]"><Trophy size={18} /> ELITE MIX</span>;
+                                    if (isComp) return <span className="text-sm font-black text-blue-400 flex items-center gap-2 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]"><Medal size={18} /> COMPETITIVO</span>;
+                                    return <span className="text-sm font-black text-zinc-400 flex items-center gap-2"><Users size={18} /> CASUAL</span>;
                                 })()}
                             </div>
                         </div>
                     </div>
+
 
                     {/* ── MAP VETO SECTION (Integrated) ── */}
                     <div className="mt-6 space-y-4 bg-zinc-900/20 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
