@@ -18,32 +18,43 @@ export async function POST(req: NextRequest) {
         let finalUrl = url;
 
         if (filePath) {
-            // Estratégia preferida: URL de download DIRETO da DatHost REST API
-            // O Discloud faz o download diretamente, sem passar pelo Vercel (que bloqueia FTP).
+            // Estratégia 1: URL de download DIRETO da DatHost REST API (quando API key disponível)
             const dathostEmail = process.env.DATHOST_EMAIL;
             const dathostApiKey = process.env.DATHOST_API_KEY;
             const dathostServerId = process.env.DATHOST_SERVER_ID;
 
-            const dathostConfigured = 
+            const dathostApiConfigured = 
                 dathostEmail && 
                 dathostApiKey && 
                 dathostServerId && 
                 dathostApiKey !== 'COLOQUE_SUA_API_KEY_DA_DATHOST_AQUI';
 
-            if (dathostConfigured) {
-                // Gera URL com credenciais embutidas via HTTP Basic Auth
-                // Formato: https://user:pass@dathost.net/api/0.1/game-servers/{id}/files/{path}
+            if (dathostApiConfigured) {
+                // URL direta da DatHost REST API com Basic Auth embutido
                 const encodedEmail = encodeURIComponent(dathostEmail!);
                 const encodedKey = encodeURIComponent(dathostApiKey!);
                 const encodedPath = encodeURIComponent(filePath);
                 finalUrl = `https://${encodedEmail}:${encodedKey}@dathost.net/api/0.1/game-servers/${dathostServerId}/files/${encodedPath}`;
-                console.log(`[ManualSync] Usando URL direta da DatHost para: ${filePath}`);
+                console.log(`[ManualSync] Usando URL direta da DatHost REST API`);
             } else {
-                // Fallback: usa o endpoint de download do próprio site
-                const siteUrl = process.env.SITE_URL || 'https://www.tropacs.com.br';
-                const secret = process.env.SYNC_SECRET_TOKEN;
-                finalUrl = `${siteUrl}/api/server/demos/download?file=${encodeURIComponent(filePath)}&token=${secret}`;
-                console.log(`[ManualSync] DatHost não configurado, usando fallback via site`);
+                // Estratégia 2: URL FTP direta — o Discloud (servidor Go persistente) pode fazer FTP
+                const ftpHost = process.env.FTP_HOST;
+                const ftpUser = process.env.FTP_USER;
+                const ftpPass = process.env.FTP_PASS;
+                const ftpPort = process.env.FTP_PORT || '21';
+
+                if (ftpHost && ftpUser && ftpPass) {
+                    const encodedUser = encodeURIComponent(ftpUser);
+                    const encodedPass = encodeURIComponent(ftpPass);
+                    finalUrl = `ftp://${encodedUser}:${encodedPass}@${ftpHost}:${ftpPort}/${filePath}`;
+                    console.log(`[ManualSync] Usando URL FTP direta para o Discloud`);
+                } else {
+                    // Último fallback: via endpoint do site
+                    const siteUrl = process.env.SITE_URL || 'https://www.tropacs.com.br';
+                    const secret = process.env.SYNC_SECRET_TOKEN;
+                    finalUrl = `${siteUrl}/api/server/demos/download?file=${encodeURIComponent(filePath)}&token=${secret}`;
+                    console.log(`[ManualSync] Fallback via endpoint do site`);
+                }
             }
         }
 
