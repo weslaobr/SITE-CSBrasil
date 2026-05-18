@@ -18,9 +18,33 @@ export async function POST(req: NextRequest) {
         let finalUrl = url;
 
         if (filePath) {
-            const siteUrl = process.env.SITE_URL || 'https://www.tropacs.com.br';
-            const secret = process.env.SYNC_SECRET_TOKEN;
-            finalUrl = `${siteUrl}/api/server/demos/download?file=${encodeURIComponent(filePath)}&token=${secret}`;
+            // Estratégia preferida: URL de download DIRETO da DatHost REST API
+            // O Discloud faz o download diretamente, sem passar pelo Vercel (que bloqueia FTP).
+            const dathostEmail = process.env.DATHOST_EMAIL;
+            const dathostApiKey = process.env.DATHOST_API_KEY;
+            const dathostServerId = process.env.DATHOST_SERVER_ID;
+
+            const dathostConfigured = 
+                dathostEmail && 
+                dathostApiKey && 
+                dathostServerId && 
+                dathostApiKey !== 'COLOQUE_SUA_API_KEY_DA_DATHOST_AQUI';
+
+            if (dathostConfigured) {
+                // Gera URL com credenciais embutidas via HTTP Basic Auth
+                // Formato: https://user:pass@dathost.net/api/0.1/game-servers/{id}/files/{path}
+                const encodedEmail = encodeURIComponent(dathostEmail!);
+                const encodedKey = encodeURIComponent(dathostApiKey!);
+                const encodedPath = encodeURIComponent(filePath);
+                finalUrl = `https://${encodedEmail}:${encodedKey}@dathost.net/api/0.1/game-servers/${dathostServerId}/files/${encodedPath}`;
+                console.log(`[ManualSync] Usando URL direta da DatHost para: ${filePath}`);
+            } else {
+                // Fallback: usa o endpoint de download do próprio site
+                const siteUrl = process.env.SITE_URL || 'https://www.tropacs.com.br';
+                const secret = process.env.SYNC_SECRET_TOKEN;
+                finalUrl = `${siteUrl}/api/server/demos/download?file=${encodeURIComponent(filePath)}&token=${secret}`;
+                console.log(`[ManualSync] DatHost não configurado, usando fallback via site`);
+            }
         }
 
         if (!finalUrl || (!finalUrl.startsWith('http') && !finalUrl.startsWith('CSGO-'))) {
@@ -35,7 +59,7 @@ export async function POST(req: NextRequest) {
 
         const pythonApiUrl = process.env.PYTHON_API_URL || 'https://tropacsdemos.discloud.app';
         
-        console.log(`[ManualSync] Forwarding demo to analyzer: ${pythonApiUrl}`);
+        console.log(`[ManualSync] Encaminhando demo para o analisador: ${pythonApiUrl}`);
         
         const response = await axios.post(`${pythonApiUrl}/api/importer/import-match`, {
             steamid: user?.steamId || "0",
