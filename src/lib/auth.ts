@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import type { NextAuthOptions } from "next-auth";
 import { NextRequest } from "next/server";
+import { randomUUID } from "crypto";
 
 export function getAuthOptions(req?: NextRequest): NextAuthOptions {
     const adapter = PrismaAdapter(prisma) as any;
@@ -14,7 +15,30 @@ export function getAuthOptions(req?: NextRequest): NextAuthOptions {
             if ('steamId' in account) {
                 delete account.steamId;
             }
+            if (!account.id) {
+                account.id = randomUUID();
+            }
             return originalLinkAccount(account);
+        };
+    }
+
+    if (adapter.createSession) {
+        const originalCreateSession = adapter.createSession;
+        adapter.createSession = async (session: any) => {
+            if (!session.id) {
+                session.id = randomUUID();
+            }
+            return originalCreateSession(session);
+        };
+    }
+
+    if (adapter.createUser) {
+        const originalCreateUser = adapter.createUser;
+        adapter.createUser = async (user: any) => {
+            if (!user.id) {
+                user.id = randomUUID();
+            }
+            return originalCreateUser(user);
         };
     }
 
