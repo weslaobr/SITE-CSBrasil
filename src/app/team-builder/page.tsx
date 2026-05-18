@@ -213,11 +213,14 @@ export default function TeamBuilderPage() {
 
     const [balanceMode, setBalanceMode] = useState<"standard" | "resenha" | "tropa">("standard");
 
-    const [discordOnline, setDiscordOnline] = useState<{ members: any[], guildName?: string, inviteUrl?: string, widgetDisabled: boolean, loading: boolean }>({
+    const [discordOnline, setDiscordOnline] = useState<{ members: any[], channels: any[], guildName?: string, inviteUrl?: string, widgetDisabled: boolean, loading: boolean }>({
         members: [],
+        channels: [],
         widgetDisabled: false,
         loading: false
     });
+
+    const [discordOnlyVoice, setDiscordOnlyVoice] = useState(true);
 
     const fetchDiscordOnline = async () => {
         setDiscordOnline(prev => ({ ...prev, loading: true }));
@@ -227,6 +230,7 @@ export default function TeamBuilderPage() {
             if (data.success) {
                 setDiscordOnline({
                     members: data.members,
+                    channels: data.channels || [],
                     guildName: data.guildName,
                     inviteUrl: data.instantInvite,
                     widgetDisabled: false,
@@ -235,6 +239,7 @@ export default function TeamBuilderPage() {
             } else if (data.error === "widget_disabled") {
                 setDiscordOnline({
                     members: [],
+                    channels: [],
                     widgetDisabled: true,
                     loading: false
                 });
@@ -635,11 +640,25 @@ export default function TeamBuilderPage() {
     const matchedOnlinePlayers = discordOnline.members
         .map(member => {
             const player = getMatchedPlayer(member);
-            if (!player) return null;
-            const isAdded = selectedPlayers.some(sp => sp.steamId === player.steamId);
-            return { member, player, isAdded };
+            if (discordOnlyVoice && !member.channel_id) return null;
+            if (player) {
+                const isAdded = selectedPlayers.some(sp => sp.steamId === player.steamId);
+                return { member, player, isAdded };
+            } else {
+                const isAdded = selectedPlayers.some(sp => sp.steamId === `discord_${member.id}`);
+                const guestP: Player = {
+                    steamId: `discord_${member.id}`,
+                    nickname: member.nick || member.username,
+                    avatar: member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.username}`,
+                    rating: 5000,
+                    resenhaRating: 5,
+                    isGuest: true,
+                    assignment: "unassigned" as const
+                };
+                return { member, player: guestP, isAdded, isUnmatched: true };
+            }
         })
-        .filter(item => item !== null) as { member: any, player: Player, isAdded: boolean }[];
+        .filter(item => item !== null) as { member: any, player: Player, isAdded: boolean, isUnmatched?: boolean }[];
 
     const availableDbPlayers = dbPlayers.filter(dbP => !selectedPlayers.some(sp => sp.steamId === dbP.steamId));
     const filteredDbPool = availableDbPlayers.filter(p => p.nickname.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -705,6 +724,21 @@ export default function TeamBuilderPage() {
                             </button>
                         </div>
 
+                        <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 gap-1.5 shadow-inner">
+                            <button
+                                onClick={() => setDiscordOnlyVoice(true)}
+                                className={`flex-1 py-2 text-[8px] font-black uppercase tracking-wider rounded-xl transition-all ${discordOnlyVoice ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-zinc-500 hover:text-zinc-300'}`}
+                            >
+                                Salas de Voz
+                            </button>
+                            <button
+                                onClick={() => setDiscordOnlyVoice(false)}
+                                className={`flex-1 py-2 text-[8px] font-black uppercase tracking-wider rounded-xl transition-all ${!discordOnlyVoice ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-zinc-500 hover:text-zinc-300'}`}
+                            >
+                                Todos Online
+                            </button>
+                        </div>
+
                         {discordOnline.loading ? (
                             <div className="flex flex-col items-center justify-center py-6 gap-2">
                                 <Loader2 size={20} className="animate-spin text-indigo-500" />
@@ -757,28 +791,54 @@ export default function TeamBuilderPage() {
                                     )}
                                 </div>
                                 <div className="max-h-56 overflow-y-auto pr-1 space-y-1.5 custom-scrollbar">
-                                    {matchedOnlinePlayers.map(({ member, player, isAdded }) => {
-                                        const premierNorm = Math.min(100, (player.tempRating ?? player.rating ?? 0) / 300);
-                                        const faceitNorm = (player.faceitLevel ?? 0) * 10;
-                                        const gcNorm = ((player.gcLevel ?? 0) / 21) * 100;
-                                        const tropaScore = Math.max(premierNorm, faceitNorm, gcNorm);
-
+                                    {matchedOnlinePlayers.map(({ member, player, isAdded, isUnmatched }) => {
                                         let gradeColor = "border-white/5 hover:border-white/20";
-                                        if (tropaScore > 80) gradeColor = "border-purple-500/20 hover:border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.06)]";
-                                        else if (tropaScore > 55) gradeColor = "border-blue-500/20 hover:border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.06)]";
+                                        
+                                        if (isUnmatched) {
+                                            gradeColor = "border-yellow-500/10 border-dashed hover:border-yellow-500/35 hover:bg-yellow-500/[0.01]";
+                                        } else {
+                                            const premierNorm = Math.min(100, (player.tempRating ?? player.rating ?? 0) / 300);
+                                            const faceitNorm = (player.faceitLevel ?? 0) * 10;
+                                            const gcNorm = ((player.gcLevel ?? 0) / 21) * 100;
+                                            const tropaScore = Math.max(premierNorm, faceitNorm, gcNorm);
+
+                                            if (tropaScore > 80) gradeColor = "border-purple-500/20 hover:border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.06)]";
+                                            else if (tropaScore > 55) gradeColor = "border-blue-500/20 hover:border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.06)]";
+                                        }
 
                                         return (
                                             <div key={player.steamId} className={`flex items-center justify-between p-2.5 bg-zinc-900/45 border rounded-2xl transition-all duration-300 ${gradeColor} ${isAdded ? 'opacity-50' : ''}`}>
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <div className="relative shrink-0">
                                                         <img src={player.avatar || member.avatar_url} alt={player.nickname} className="w-8 h-8 rounded-xl border border-white/10" />
-                                                        <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-green-500 border border-black" title="Online no Discord" />
+                                                        <span className={`absolute bottom-0 right-0 h-2 w-2 rounded-full border border-black ${member.channel_id ? 'bg-green-500 animate-pulse' : 'bg-green-600'}`} title={member.channel_id ? "Em canal de voz" : "Online no Discord"} />
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="font-black text-[10px] text-white truncate uppercase tracking-wider">{player.nickname}</p>
-                                                        {member.game && (
+                                                        {isUnmatched && (
+                                                            <p className="text-[6.5px] text-yellow-500/90 font-mono font-black uppercase tracking-wider mb-0.5">
+                                                                ⚠️ Não Vinculado
+                                                            </p>
+                                                        )}
+                                                        {member.channel_id ? (() => {
+                                                            const voiceChannel = discordOnline.channels?.find(c => c.id === member.channel_id);
+                                                            const voiceName = voiceChannel ? voiceChannel.name : "Sala de Voz";
+                                                            return (
+                                                                <p className="text-[7px] text-green-400 font-bold truncate tracking-wide flex items-center gap-1">
+                                                                    <span className="relative flex h-1.5 w-1.5 shrink-0">
+                                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                                                                    </span>
+                                                                    🔊 {voiceName}
+                                                                </p>
+                                                            );
+                                                        })() : member.game ? (
                                                             <p className="text-[7px] text-zinc-500 font-mono font-bold truncate tracking-wide">
                                                                 Jogando: {member.game.name}
+                                                            </p>
+                                                        ) : (
+                                                            <p className="text-[7px] text-zinc-500 font-mono font-bold truncate tracking-wide">
+                                                                Online
                                                             </p>
                                                         )}
                                                     </div>

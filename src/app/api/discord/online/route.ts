@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
             success: true,
             guildName: data.name,
             instantInvite: data.instant_invite,
-            members: data.members || []
+            members: data.members || [],
+            channels: data.channels || []
         });
 
     } catch (error: any) {
