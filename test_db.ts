@@ -3,7 +3,7 @@ const prisma = new PrismaClient()
 
 async function main() {
   const match = await prisma.globalMatch.findFirst({
-    include: { players: true }
+    include: { GlobalMatchPlayer: true }
   })
   console.log(JSON.stringify(match, null, 2))
 }
