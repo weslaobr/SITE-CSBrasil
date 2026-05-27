@@ -549,21 +549,23 @@ const MatchesDashboard: React.FC<MatchesDashboardProps> = ({
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
-                            <div className="flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-white/[0.06]">
-                                <button
-                                    onClick={handleSyncWithTimestamp}
-                                    disabled={loading}
-                                    className="flex items-center justify-center gap-2.5 px-5 py-2.5 w-full bg-white/[0.03] hover:bg-yellow-500/10 hover:text-yellow-400 transition-all disabled:opacity-40 group"
-                                >
-                                    <RefreshCw className={`w-4 h-4 text-yellow-500 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-yellow-400 transition-colors">
-                                        {loading ? 'Atualizando' : 'Atualizar'}
+                            {onSync && (
+                                <div className="flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-white/[0.06]">
+                                    <button
+                                        onClick={handleSyncWithTimestamp}
+                                        disabled={loading}
+                                        className="flex items-center justify-center gap-2.5 px-5 py-2.5 w-full bg-white/[0.03] hover:bg-yellow-500/10 hover:text-yellow-400 transition-all disabled:opacity-40 group"
+                                    >
+                                        <RefreshCw className={`w-4 h-4 text-yellow-500 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-yellow-400 transition-colors">
+                                            {loading ? 'Atualizando' : 'Atualizar'}
+                                        </span>
+                                    </button>
+                                    <span className="text-[8px] font-bold text-zinc-700 uppercase tracking-widest pb-1 leading-none">
+                                        {formatLastSync(lastSync)}
                                     </span>
-                                </button>
-                                <span className="text-[8px] font-bold text-zinc-700 uppercase tracking-widest pb-1 leading-none">
-                                    {formatLastSync(lastSync)}
-                                </span>
-                            </div>
+                                </div>
+                            )}
                             <button
                                 onClick={() => window.location.href = '/settings'}
                                 className="flex items-center justify-center gap-2.5 px-5 py-3.5 bg-white/[0.03] hover:bg-white/[0.06] transition-all group border-b md:border-b-0 border-white/[0.06] md:border-r"

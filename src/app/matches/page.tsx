@@ -1,20 +1,15 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-    Swords, RefreshCw, Search, ExternalLink, ChevronLeft,
-    ChevronRight, X, Target, Crosshair, Trophy, Clock,
-    Calendar, Activity, Zap, Shield, TrendingUp, BarChart3
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Swords } from "lucide-react";
 import MatchesDashboard from "@/components/dashboard/matches-dashboard";
 
 export default function MatchesPage() {
     const { data: session } = useSession();
     const [matches,   setMatches]   = useState<any[]>([]);
     const [loading,   setLoading]   = useState(false);
-    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [syncing,   setSyncing]   = useState(false);
 
     const fetchMatches = async () => {
         setLoading(true);
@@ -27,6 +22,24 @@ export default function MatchesPage() {
             console.error("Error fetching matches:", e); 
         }
         finally { setLoading(false); }
+    };
+
+    const handleSync = async () => {
+        const steamId = (session?.user as any)?.steamId;
+        if (!steamId) return;
+        setSyncing(true);
+        try {
+            await fetch('/api/sync/player', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ steamId })
+            });
+            await fetchMatches();
+        } catch (e) {
+            console.error("Sync error:", e);
+        } finally {
+            setSyncing(false);
+        }
     };
 
     useEffect(() => {
@@ -46,20 +59,15 @@ export default function MatchesPage() {
                         </h1>
                         <p className="text-zinc-400 mt-1">Histórico completo de confrontos e desempenho</p>
                     </div>
-                    <button 
-                        onClick={fetchMatches}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                        Atualizar
-                    </button>
+                    <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                        {syncing ? 'Sincronizando...' : `${matches.length} partidas`}
+                    </div>
                 </div>
 
                 <MatchesDashboard 
                     matches={matches} 
-                    loading={loading}
-                    onRefresh={fetchMatches}
+                    loading={loading || syncing}
+                    onSync={handleSync}
                 />
             </div>
         </div>

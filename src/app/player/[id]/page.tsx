@@ -477,7 +477,6 @@ export default function PlayerProfilePage() {
                 <div className="pt-12 border-t border-white/5">
                     <MatchHistory
                         matches={matches && matches.length > 0 ? matches : (leetifyData?.recentMatches || [])}
-                        onSync={handleSync}
                         loading={syncing}
                         steamId={steamId}
                         steamNickname={profile?.personaname}

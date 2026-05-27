@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const LEETIFY_API_KEY = process.env.LEETIFY_API_KEY;
+const LEETIFY_API_KEY = process.env.LEETIFY_API_KEY || '4549d73d-8a0d-40ff-9051-a3166c518dae';
 const LEETIFY_BASE_URL = 'https://api-public.cs-prod.leetify.com/v3';
 
 export interface LeetifyPlayerStats {
