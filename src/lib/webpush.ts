@@ -1,12 +1,6 @@
-import webpush from "web-push";
-
 const publicKey = process.env.VAPID_PUBLIC_KEY || "";
 const privateKey = process.env.VAPID_PRIVATE_KEY || "";
 const subject = process.env.VAPID_SUBJECT || "mailto:contato@tropacs.com.br";
-
-if (publicKey && privateKey) {
-  webpush.setVapidDetails(subject, publicKey, privateKey);
-}
 
 export function getVapidPublicKey(): string {
   return publicKey;
@@ -22,7 +16,9 @@ export async function sendPushNotification(
 ): Promise<boolean> {
   if (!isVapidConfigured()) return false;
   try {
-    await webpush.sendNotification(
+    const webpush = await import("web-push");
+    webpush.default.setVapidDetails(subject, publicKey, privateKey);
+    await webpush.default.sendNotification(
       subscription,
       JSON.stringify(payload),
       { TTL: 86400 }
@@ -37,5 +33,3 @@ export async function sendPushNotification(
     return false;
   }
 }
-
-export { webpush };
