@@ -33,7 +33,9 @@ export async function POST(req: NextRequest) {
                 // URL direta da DatHost REST API com Basic Auth embutido
                 const encodedEmail = encodeURIComponent(dathostEmail!);
                 const encodedKey = encodeURIComponent(dathostApiKey!);
-                const encodedPath = encodeURIComponent(filePath);
+                // Codificar cada segmento do path individualmente para preservar a estrutura
+                const pathSegments = filePath.split('/').map(s => encodeURIComponent(s));
+                const encodedPath = pathSegments.join('/');
                 finalUrl = `https://${encodedEmail}:${encodedKey}@dathost.net/api/0.1/game-servers/${dathostServerId}/files/${encodedPath}`;
                 console.log(`[ManualSync] Usando URL direta da DatHost REST API`);
             } else {
