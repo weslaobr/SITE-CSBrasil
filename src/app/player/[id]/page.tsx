@@ -173,8 +173,8 @@ export default function PlayerProfilePage() {
 
     return (
         <div className="min-h-screen bg-[#0a0a0b] text-white selection:bg-emerald-500 selection:text-black font-sans">
-            <main className="p-4 md:p-8 lg:p-12 space-y-10">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+            <main className="p-4 md:p-8 lg:p-12 space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     {/* LEFT SIDEBAR */}
                     <motion.div
                         initial={{ opacity: 0, x: -15 }}
@@ -193,7 +193,7 @@ export default function PlayerProfilePage() {
                     </motion.div>
 
                     {/* MAIN CONTENT */}
-                    <div className="lg:col-span-9 space-y-6">
+                    <div className="lg:col-span-9 space-y-4">
                         {/* SYNC BAR */}
                         {(isOwner || (dbUser?.steamMatchAuthCode && dbUser?.steamLatestMatchCode)) && (
                             <motion.div
@@ -346,50 +346,45 @@ export default function PlayerProfilePage() {
                             <AccountReputation data={repData} />
                         </motion.div>
 
-                        {/* STATS GRID: Trust Rating + Radar + Map Performance */}
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {/* TRUST RATING */}
+                        {/* TRUST + RADAR */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <motion.div
-                                initial={{ opacity: 0, y: 10 }}
+                                initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 }}
-                                className="bg-gradient-to-b from-zinc-900/40 to-zinc-900/20 rounded-[28px] border border-white/5 p-6 backdrop-blur-xl flex flex-col"
+                                className="bg-zinc-900/40 rounded-[20px] border border-white/5 p-4 backdrop-blur-xl"
                             >
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-1 h-5 rounded-full bg-emerald-500" />
-                                    <h3 className="text-sm font-black italic uppercase tracking-tight text-white">Reputação</h3>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <span className="w-1 h-3.5 rounded-full bg-emerald-500" />
+                                    <span className="text-[10px] font-black italic uppercase tracking-tight text-white">Reputação</span>
                                 </div>
-                                <div className="flex-1 flex flex-col items-center gap-4">
+                                <div className="flex items-start gap-4">
                                     <TrustRating rating={trustRating} status={trustRating >= 90 ? "Normal" : trustRating >= 70 ? "Estável" : "Arriscado"} />
-                                    <TrustCriteria breakdown={trustBreakdown} />
-                                    <p className="text-[7px] text-zinc-700 font-bold uppercase tracking-widest text-center">
-                                        Análise baseada em padrões de gameplay e performance.
-                                    </p>
+                                    <div className="flex-1 min-w-0 pt-1">
+                                        <TrustCriteria breakdown={trustBreakdown} />
+                                    </div>
                                 </div>
                             </motion.div>
 
-                            {/* RADAR CHART */}
                             <motion.div
-                                initial={{ opacity: 0, y: 10 }}
+                                initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.15 }}
-                                className="bg-gradient-to-b from-zinc-900/40 to-zinc-900/20 rounded-[28px] border border-white/5 p-6 backdrop-blur-xl flex flex-col"
+                                className="bg-zinc-900/40 rounded-[20px] border border-white/5 p-4 backdrop-blur-xl"
                             >
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-1 h-5 rounded-full bg-yellow-500" />
-                                    <h3 className="text-sm font-black italic uppercase tracking-tight text-white">Performance</h3>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="w-1 h-3.5 rounded-full bg-yellow-500" />
+                                    <span className="text-[10px] font-black italic uppercase tracking-tight text-white">Performance</span>
                                 </div>
-                                <div className="flex-1 flex items-center justify-center">
-                                    {leetifyData?.ratings ? (
-                                        <div className="w-full flex items-center justify-center">
-                                            <AttributesRadarChart data={leetifyData.ratings} />
-                                        </div>
-                                    ) : (
-                                        <div className="h-56 flex items-center justify-center text-zinc-600 font-bold uppercase text-[8px] tracking-widest text-center">
-                                            Aguardando dados do Leetify...
-                                        </div>
-                                    )}
-                                </div>
+                                {leetifyData?.ratings ? (
+                                    <div className="w-full max-h-[160px] flex items-center justify-center">
+                                        <AttributesRadarChart data={leetifyData.ratings} compact />
+                                    </div>
+                                ) : (
+                                    <div className="h-[120px] flex items-center justify-center text-zinc-600 font-bold uppercase text-[7px] tracking-widest text-center">
+                                        Aguardando Leetify...
+                                    </div>
+                                )}
                             </motion.div>
                         </div>
 

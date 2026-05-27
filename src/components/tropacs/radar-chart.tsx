@@ -17,9 +17,10 @@ interface AttributesRadarChartProps {
         opening?: number;
         [key: string]: any;
     } | null;
+    compact?: boolean;
 }
 
-export default function AttributesRadarChart({ data }: AttributesRadarChartProps) {
+export default function AttributesRadarChart({ data, compact }: AttributesRadarChartProps) {
     if (!data) return null;
 
     const chartData: RadarData[] = [
@@ -35,24 +36,21 @@ export default function AttributesRadarChart({ data }: AttributesRadarChartProps
 
     if (isAllZero) {
         return (
-            <div className="w-full h-64 flex flex-col items-center justify-center bg-zinc-900/50 rounded-3xl border border-white/5 p-8 text-center">
-                <p className="text-zinc-600 font-bold uppercase text-[10px] tracking-widest leading-relaxed">
-                    Dados Insuficientes para Gráfico Radar
-                </p>
-                <p className="text-zinc-800 text-[8px] mt-2 uppercase tracking-tighter">
-                    O Leetify ainda está calculando suas médias de performance
+            <div className={`w-full flex flex-col items-center justify-center bg-zinc-900/50 rounded-3xl border border-white/5 p-4 text-center ${compact ? 'h-[120px]' : 'h-64'}`}>
+                <p className="text-zinc-600 font-bold uppercase tracking-widest leading-relaxed">
+                    Dados Insuficientes
                 </p>
             </div>
         );
     }
 
     return (
-        <div className="w-full h-[320px] flex items-center justify-center bg-black/20 rounded-[40px] border border-white/5 p-2 backdrop-blur-xl relative overflow-hidden group">
+        <div className={`w-full flex items-center justify-center bg-black/20 rounded-[20px] border border-white/5 p-2 relative overflow-hidden ${compact ? 'h-[140px]' : 'h-[320px]'}`}>
             {/* Ambient Glow */}
             <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
             
             <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chartData}>
+                <RadarChart cx="50%" cy="50%" outerRadius={compact ? "65%" : "75%"} data={chartData}>
                     <PolarGrid stroke="rgba(255,255,255,0.05)" radialLines={true} />
                     <PolarAngleAxis
                         dataKey="subject"

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Info, ShieldAlert, Clock, Package, Trophy, User } from 'lucide-react';
+import { ShieldAlert, Clock, Package, Trophy, User } from 'lucide-react';
 
 interface TrustBreakdown {
     base: number;
@@ -17,42 +17,38 @@ interface TrustCriteriaProps {
     breakdown?: TrustBreakdown;
 }
 
-const Criterion: React.FC<{ 
-    icon: React.ReactNode, 
-    label: string, 
-    value: number | string, 
-    tooltip: string,
-    isPenalty?: boolean
+const Criterion: React.FC<{
+    icon: React.ReactNode;
+    label: string;
+    value: number | string;
+    tooltip: string;
+    isPenalty?: boolean;
 }> = ({ icon, label, value, tooltip, isPenalty }) => {
-    const [isHovered, setIsHovered] = useState(false);
-
+    const [hover, setHover] = useState(false);
     return (
-        <div 
-            className={`relative flex items-center justify-between text-[9px] font-bold uppercase tracking-wider px-3 py-2 rounded-lg border transition-colors ${
-                isPenalty 
-                ? 'bg-red-500/5 border-red-500/10 text-red-400 hover:bg-red-500/10' 
-                : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'
+        <div
+            className={`relative flex items-center justify-between text-[8px] font-bold uppercase tracking-wider px-2 py-1.5 rounded-lg border transition-colors ${
+                isPenalty
+                    ? 'bg-red-500/5 border-red-500/10 text-red-400 hover:bg-red-500/10'
+                    : 'bg-zinc-800/30 border-white/5 text-zinc-500 hover:bg-zinc-800/50'
             }`}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
         >
-            <span className="flex items-center gap-1.5">{icon} {label}</span>
-            <span className={isPenalty ? 'text-red-500' : 'text-emerald-500'}>
+            <span className="flex items-center gap-1">{icon} {label}</span>
+            <span className={isPenalty ? 'text-red-500' : 'text-emerald-500 text-[9px]'}>
                 {typeof value === 'number' && value > 0 ? `+${value}` : value}
             </span>
-
             <AnimatePresence>
-                {isHovered && (
+                {hover && (
                     <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        initial={{ opacity: 0, y: 8, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        className="absolute bottom-full left-0 mb-2 w-48 p-3 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl z-50 pointer-events-none"
+                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                        className="absolute bottom-full left-0 mb-1.5 w-40 p-2 bg-zinc-950 border border-white/10 rounded-lg shadow-2xl z-50 pointer-events-none"
                     >
-                        <p className="text-[10px] leading-relaxed normal-case font-medium text-zinc-300">
-                            {tooltip}
-                        </p>
-                        <div className="absolute top-full left-4 w-2 h-2 bg-zinc-900 border-r border-b border-white/10 transform rotate-45 -translate-y-1" />
+                        <p className="text-[8px] leading-relaxed normal-case font-medium text-zinc-300">{tooltip}</p>
+                        <div className="absolute top-full left-3 w-1.5 h-1.5 bg-zinc-950 border-r border-b border-white/10 transform rotate-45 -translate-y-0.5" />
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -64,50 +60,23 @@ const TrustCriteria: React.FC<TrustCriteriaProps> = ({ breakdown }) => {
     if (!breakdown) return null;
 
     return (
-        <div className="mt-4 pt-4 border-t border-white/5 w-full">
-            <div className="flex items-center gap-2 mb-3">
-                <Info size={14} className="text-zinc-500" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Distribuição de Pontos</span>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2">
-                <Criterion 
-                    icon={<Clock size={10} />} 
-                    label="Idade Conta" 
-                    value={breakdown.age} 
-                    tooltip="Ganha +2.5 pontos por cada ano de conta Steam. Máximo de +25 pontos."
-                />
-                <Criterion 
-                    icon={<Package size={10} />} 
-                    label="Inventário" 
-                    value={breakdown.inventory} 
-                    tooltip="Baseado no valor total dos itens. >$500=+20, >$100=+10, >$20=+5."
-                />
-                <Criterion 
-                    icon={<User size={10} />} 
-                    label="Nível Steam" 
-                    value={breakdown.level} 
-                    tooltip="Baseado no nível da sua conta. Lvl 50+=+10, Lvl 20+=+7, Lvl 10+=+5."
-                />
-                <Criterion 
-                    icon={<Trophy size={10} />} 
-                    label="Perf. IA" 
-                    value={breakdown.leetify} 
-                    tooltip="Análise de habilidade pelo Leetify. Rating 1.2+=+10, Rating 0.8+=+5."
-                />
+        <div className="w-full">
+            <div className="grid grid-cols-2 gap-1.5">
+                <Criterion icon={<Clock size={8} />} label="Idade" value={breakdown.age}
+                    tooltip="+2.5 pts/ano de conta Steam. Máx +25." />
+                <Criterion icon={<Package size={8} />} label="Inventário" value={breakdown.inventory}
+                    tooltip=">$500=+20, >$100=+10, >$20=+5." />
+                <Criterion icon={<User size={8} />} label="Nível" value={breakdown.level}
+                    tooltip="Lvl 50+=+10, Lvl 20+=+7, Lvl 10+=+5." />
+                <Criterion icon={<Trophy size={8} />} label="IA" value={breakdown.leetify}
+                    tooltip="Rating 1.2+=+10, 0.8+=+5." />
                 <div className="col-span-2">
-                    <Criterion 
-                        icon={<ShieldAlert size={10} />} 
-                        label="Penalidades (Bans)" 
-                        value={breakdown.penalties} 
-                        tooltip="Bans ativos reduzem drasticamente o Trust. VAC: -60, Community: -30, Economy: -20."
-                        isPenalty={breakdown.penalties < 0}
-                    />
+                    <Criterion icon={<ShieldAlert size={8} />} label="Penalidades" value={breakdown.penalties}
+                        tooltip="VAC: -60, Community: -30, Economy: -20." isPenalty={breakdown.penalties < 0} />
                 </div>
             </div>
-
-            <div className="mt-3 flex items-center justify-between px-3 py-2 bg-zinc-800/30 rounded-lg text-[9px] font-bold uppercase tracking-widest text-zinc-500">
-                <span>Pontuação Base</span>
+            <div className="mt-1.5 flex items-center justify-between px-2 py-1 bg-zinc-800/20 rounded-lg text-[7px] font-bold uppercase tracking-widest text-zinc-600">
+                <span>Base</span>
                 <span className="text-white">+50</span>
             </div>
         </div>
