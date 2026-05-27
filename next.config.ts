@@ -14,7 +14,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images.leetify.com" },
       { protocol: "https", hostname: "cdn.akamai.steamstatic.com" }
     ]
-  }
+  },
+  serverExternalPackages: ["web-push"]
 };
 
 export default nextConfig;
