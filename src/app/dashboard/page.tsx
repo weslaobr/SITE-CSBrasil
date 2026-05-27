@@ -4,6 +4,8 @@ import PlayerCard from "@/components/dashboard/player-card";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import DuoSuggestions from "@/components/duo/duo-suggestions";
+import PushNotificationSetup from "@/components/notifications/push-notification-setup";
 import {
     Swords,
     History,
@@ -219,6 +221,9 @@ export default function DashboardPage() {
                 </div>
             </section>
 
+            {/* Duo Suggestions */}
+            <DuoSuggestions steamId={(session.user as any)?.steamId} />
+
             {/* Activity Feed + Sidebar */}
             <section className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                 <motion.div
@@ -342,6 +347,8 @@ export default function DashboardPage() {
                             <Swords size={160} />
                         </div>
                     </div>
+
+                    <PushNotificationSetup />
 
                     <div className="bg-zinc-900/40 border border-white/5 p-8 rounded-[40px] backdrop-blur-xl">
                         <h3 className="text-lg font-black italic uppercase tracking-tighter mb-6">Notícias e atualizações</h3>
