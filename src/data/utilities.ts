@@ -11,12 +11,14 @@ export interface Utility {
   /** Onde a granada cai (ex: "CT Spawn", "Jungle") */
   to: string;
   videoId: string;
+  /** Duração do vídeo em segundos */
+  duration: number;
   /** Tempo inicial em segundos para vídeos longos (opcional) */
   startTime?: number;
   difficulty: 'Easy' | 'Medium' | 'Hard';
 }
 
-export const MAPS = ['Mirage', 'Inferno', 'Dust2', 'Nuke', 'Ancient', 'Anubis', 'Overpass', 'Vertigo'] as const;
+export const MAPS = ['Mirage', 'Inferno', 'Dust2', 'Nuke', 'Ancient', 'Cache', 'Anubis', 'Overpass', 'Vertigo'] as const;
 export type MapName = typeof MAPS[number];
 
 export const UTILITIES: Utility[] = [
@@ -29,7 +31,7 @@ export const UTILITIES: Utility[] = [
     shortName: 'Janelão',
     from: 'T Spawn (lixeira)',
     to: 'Window (Sniper)',
-    videoId: 'AtPDL4hlADI', difficulty: 'Easy',
+    videoId: 'AtPDL4hlADI', duration: 16, difficulty: 'Easy',
   },
   {
     id: 'mir-2', map: 'Mirage', type: 'smoke', side: 'T',
@@ -37,7 +39,7 @@ export const UTILITIES: Utility[] = [
     shortName: 'Janelão v2',
     from: 'T Spawn (lixeira)',
     to: 'Window',
-    videoId: '238d2fTt0KY', difficulty: 'Easy',
+    videoId: '238d2fTt0KY', duration: 14, difficulty: 'Easy',
   },
   {
     id: 'mir-3', map: 'Mirage', type: 'smoke', side: 'T',
@@ -45,7 +47,7 @@ export const UTILITIES: Utility[] = [
     shortName: 'Cabecinha',
     from: 'T Ramp (parede)',
     to: 'Stairs (escada)',
-    videoId: '7mECGs1tYds', difficulty: 'Easy',
+    videoId: '7mECGs1tYds', duration: 16, difficulty: 'Easy',
   },
   {
     id: 'mir-4', map: 'Mirage', type: 'smoke', side: 'T',
@@ -53,7 +55,7 @@ export const UTILITIES: Utility[] = [
     shortName: 'CT + Jungle',
     from: 'T Ramp (porta)',
     to: 'CT Spawn + Jungle',
-    videoId: 'qLiN37rxKL4', difficulty: 'Medium',
+    videoId: 'qLiN37rxKL4', duration: 10, difficulty: 'Medium',
   },
 
   // ═══════════════════════════════════════════════════════
@@ -65,7 +67,7 @@ export const UTILITIES: Utility[] = [
     shortName: 'One-Way Banana',
     from: 'CT (perto do muro)',
     to: 'Banana (meio)',
-    videoId: 'DSK8sZqEHYk', difficulty: 'Easy',
+    videoId: 'DSK8sZqEHYk', duration: 19, difficulty: 'Easy',
   },
   {
     id: 'inf-6', map: 'Inferno', type: 'molotov', side: 'T',
@@ -73,7 +75,7 @@ export const UTILITIES: Utility[] = [
     shortName: 'Sacada',
     from: 'Apartamentos',
     to: 'Balcony (A)',
-    videoId: 'MsuAidCsg5w', difficulty: 'Medium',
+    videoId: 'MsuAidCsg5w', duration: 30, difficulty: 'Medium',
   },
 
   // ═══════════════════════════════════════════════════════
@@ -85,7 +87,7 @@ export const UTILITIES: Utility[] = [
     shortName: 'Porta Meio',
     from: 'T Spawn (grade)',
     to: 'Mid Doors',
-    videoId: 'wUIwgfpHGyw', difficulty: 'Easy',
+    videoId: 'wUIwgfpHGyw', duration: 29, difficulty: 'Easy',
   },
   {
     id: 'd2-2', map: 'Dust2', type: 'smoke', side: 'T',
@@ -93,7 +95,7 @@ export const UTILITIES: Utility[] = [
     shortName: 'CT',
     from: 'Mid (Xbox)',
     to: 'CT Spawn',
-    videoId: '1cFKIBeQeT4', difficulty: 'Easy',
+    videoId: '1cFKIBeQeT4', duration: 29, difficulty: 'Easy',
   },
   {
     id: 'd2-3', map: 'Dust2', type: 'smoke', side: 'T',
@@ -101,7 +103,7 @@ export const UTILITIES: Utility[] = [
     shortName: 'CT Short',
     from: 'Short (parede)',
     to: 'CT Spawn',
-    videoId: 'WjqUrDjsp2k', difficulty: 'Easy',
+    videoId: 'WjqUrDjsp2k', duration: 17, difficulty: 'Easy',
   },
   {
     id: 'd2-5', map: 'Dust2', type: 'smoke', side: 'T',
@@ -109,7 +111,7 @@ export const UTILITIES: Utility[] = [
     shortName: 'Porta B',
     from: 'T Spawn',
     to: 'B Doors',
-    videoId: 'oVe9xgcqP_U', difficulty: 'Medium',
+    videoId: 'oVe9xgcqP_U', duration: 22, difficulty: 'Medium',
   },
   {
     id: 'd2-6', map: 'Dust2', type: 'smoke', side: 'T',
@@ -117,7 +119,19 @@ export const UTILITIES: Utility[] = [
     shortName: 'Janela B',
     from: 'T Spawn',
     to: 'B Window',
-    videoId: 'oVe9xgcqP_U', difficulty: 'Medium',
+    videoId: 'oVe9xgcqP_U', duration: 22, difficulty: 'Medium',
+  },
+
+  // ═══════════════════════════════════════════════════════
+  //  CACHE
+  // ═══════════════════════════════════════════════════════
+  {
+    id: 'cac-1', map: 'Cache', type: 'smoke', side: 'T',
+    title: 'Smoke Z (Connector) do T Spawn',
+    shortName: 'Connector',
+    from: 'T Spawn (traseira)',
+    to: 'Connector (Mid)',
+    videoId: 'f8A6dnjDBPY', duration: 26, difficulty: 'Easy',
   },
 
   // ═══════════════════════════════════════════════════════
@@ -129,6 +143,6 @@ export const UTILITIES: Utility[] = [
     shortName: 'Heaven + Site',
     from: 'T Spawn (canto)',
     to: 'Heaven + B Site',
-    videoId: 'GnpIAJA25tc', difficulty: 'Easy',
+    videoId: 'GnpIAJA25tc', duration: 51, difficulty: 'Easy',
   },
 ];

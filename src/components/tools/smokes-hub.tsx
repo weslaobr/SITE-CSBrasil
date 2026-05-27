@@ -166,6 +166,10 @@ const SmokesHub: React.FC = () => {
                     <Play className="w-5 h-5 fill-current ml-0.5" />
                   </div>
                 </div>
+                {/* Duration */}
+                <div className="absolute bottom-2 right-2 z-20 bg-black/80 text-xs font-bold px-2 py-1 rounded-md border border-white/10">
+                  <span className="text-xs font-black">{u.duration >= 60 ? `${Math.floor(u.duration / 60)}:${String(u.duration % 60).padStart(2, '0')}` : `${u.duration}s`}</span>
+                </div>
                 {/* Badges */}
                 <div className="absolute top-2 left-2 z-20 flex gap-1.5">
                   <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider border backdrop-blur-sm ${
