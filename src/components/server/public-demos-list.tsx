@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { 
     Download, Clock, HardDrive, RefreshCw, 
     FileWarning, Loader2, Search, ExternalLink,
@@ -24,6 +26,7 @@ export function PublicDemosList() {
     const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
     const [processingFile, setProcessingFile] = useState<string | null>(null);
     const [processingStatus, setProcessingStatus] = useState<Record<string, 'idle' | 'loading' | 'success' | 'error'>>({});
+    const router = useRouter();
 
     useEffect(() => {
         fetchDemos();
@@ -64,16 +67,24 @@ export function PublicDemosList() {
                 body: JSON.stringify({ filePath: file.path }),
             });
 
+            const data = await res.json();
+
             if (!res.ok) {
-                const data = await res.json();
                 throw new Error(data.error || 'Erro no processamento');
             }
 
-            setProcessingStatus(prev => ({ ...prev, [file.name]: 'success' }));
+            const matchId = data.python_response?.match_id;
+            if (matchId) {
+                toast.success("Demo enviada para processamento! Redirecionando...");
+                setTimeout(() => router.push('/matches'), 2000);
+            } else {
+                setProcessingStatus(prev => ({ ...prev, [file.name]: 'success' }));
+            }
             setTimeout(() => setProcessingStatus(prev => ({ ...prev, [file.name]: 'idle' })), 5000);
         } catch (err: any) {
             console.error(err);
             setProcessingStatus(prev => ({ ...prev, [file.name]: 'error' }));
+            toast.error(err.message);
             setTimeout(() => setProcessingStatus(prev => ({ ...prev, [file.name]: 'idle' })), 5000);
         } finally {
             setProcessingFile(null);

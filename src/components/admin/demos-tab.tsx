@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { 
     Download, Clock, HardDrive, RefreshCw, 
     FileWarning, Loader2, Search, ExternalLink,
-    ChevronRight, FileText, Check
+    ChevronRight, FileText, Check, Play
 } from 'lucide-react';
 
 interface DemoFile {
@@ -24,6 +26,7 @@ export default function DemosTab() {
     const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
     const [processingFile, setProcessingFile] = useState<string | null>(null);
     const [processingStatus, setProcessingStatus] = useState<Record<string, 'idle' | 'loading' | 'success' | 'error'>>({});
+    const router = useRouter();
 
     useEffect(() => {
         fetchDemos();
@@ -62,22 +65,24 @@ export default function DemosTab() {
                 body: JSON.stringify({ filePath: file.path }),
             });
 
+            const data = await res.json();
+
             if (!res.ok) {
-                let errorData;
-                try {
-                    errorData = await res.json();
-                } catch (e) {
-                    throw new Error(`Erro ${res.status}: Servidor de processamento indisponível.`);
-                }
-                throw new Error(errorData.error || errorData.details || 'Erro no processamento');
+                throw new Error(data.error || data.details || 'Erro no processamento');
             }
 
-            setProcessingStatus(prev => ({ ...prev, [file.name]: 'success' }));
+            const matchId = data.python_response?.match_id;
+            if (matchId) {
+                toast.success("Demo enviada para processamento! Redirecionando...");
+                setTimeout(() => router.push('/matches'), 2000);
+            } else {
+                setProcessingStatus(prev => ({ ...prev, [file.name]: 'success' }));
+            }
             setTimeout(() => setProcessingStatus(prev => ({ ...prev, [file.name]: 'idle' })), 5000);
         } catch (err: any) {
             console.error('[AdminDemos]', err);
             setProcessingStatus(prev => ({ ...prev, [file.name]: 'error' }));
-            alert(err.message);
+            toast.error(err.message);
             setTimeout(() => setProcessingStatus(prev => ({ ...prev, [file.name]: 'idle' })), 5000);
         } finally {
             setProcessingFile(null);
@@ -284,11 +289,11 @@ export default function DemosTab() {
                                                 ) : processingStatus[demo.name] === 'error' ? (
                                                     <FileWarning size={16} className="text-red-500" />
                                                 ) : (
-                                                    <RefreshCw size={16} />
+                                                    <Play size={16} />
                                                 )}
                                                 {processingFile === demo.name ? 'Processando...' : 
                                                  processingStatus[demo.name] === 'success' ? 'Enviado!' :
-                                                 processingStatus[demo.name] === 'error' ? 'Falhou' : 'Analisar Demo'}
+                                                 processingStatus[demo.name] === 'error' ? 'Falhou' : 'Processar'}
                                             </button>
 
                                             <button 

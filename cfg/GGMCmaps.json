@@ -1,0 +1,20 @@
+{
+  "default": {
+    "de_dust2": { "ws": false, "display": "Dust II", "weight": 1 },
+    "de_inferno": { "ws": false, "display": "Inferno", "weight": 1 },
+    "de_mirage": { "ws": false, "display": "Mirage", "weight": 1 },
+    "de_nuke": { "ws": false, "display": "Nuke", "weight": 1 },
+    "de_vertigo": { "ws": false, "display": "Vertigo", "weight": 1 },
+    "de_ancient": { "ws": false, "display": "Ancient", "weight": 1 },
+    "de_anubis": { "ws": false, "display": "Anubis", "weight": 1 },
+    "de_overpass": { "ws": false, "display": "Overpass", "weight": 1 },
+    "de_train": { "ws": false, "display": "Train", "weight": 1 },
+    "de_cache": { "ws": false, "display": "Cache", "weight": 1 },
+    "ar_baggage": { "ws": false, "display": "Baggage", "weight": 1 },
+    "ar_pool_day": { "ws": false, "display": "Pool Day", "weight": 1 },
+    "ar_shoots": { "ws": false, "display": "Shoots", "weight": 1 },
+    "de_alpine": { "ws": false, "display": "Alpine", "weight": 1 },
+    "workshop/3472828046/shipment": { "ws": true, "display": "Shipment", "mapid": "3472828046", "weight": 1 },
+    "workshop/3070549948/aim_map": { "ws": true, "display": "Aim Map", "mapid": "3070549948", "weight": 1 }
+  }
+}
